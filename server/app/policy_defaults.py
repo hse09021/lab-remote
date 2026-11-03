@@ -175,6 +175,9 @@ def default_policy(name: str = "", root: str = "") -> dict:
             "experimentsDir": L.experiments_dir(),
             "experimentIdRe": "^EXP-[0-9]{3}$",
             "prevAppendable": ["analysis.md"],
+            # 결과가 나온 실험 폴더만 "이전 실험" 으로 본다. 이 표식이 없는
+            # 폴더는 아직 안 돌린 실험이라 자유롭게 준비할 수 있어야 한다.
+            "prevMarkers": ["result.csv", "analysis.md"],
             # spec 은 폴더 밖 쓰기·삭제만 막는다. 읽기는 막지 않는다.
             "allowOutsideRead": True,
             # 데이터셋 심볼릭 링크 예외. [데이터셋 링크 경로 — 미확인]

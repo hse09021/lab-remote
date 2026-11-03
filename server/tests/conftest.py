@@ -33,3 +33,69 @@ def project_root(tmp_path):
     for sub in ("docs", "specifications", "logs", "experiments/EXP-007", "src"):
         (root / sub).mkdir(parents=True, exist_ok=True)
     return os.path.realpath(str(root))
+
+
+@pytest.fixture()
+def project(project_root):
+    """등록까지 끝난 프로젝트. 훅 판정 테스트의 기본 픽스처."""
+    from app import policy, registry
+
+    for sub in ("docs", "specifications", "logs", "state", "templates", "src"):
+        os.makedirs(os.path.join(project_root, sub), exist_ok=True)
+    registry.register(project_root, "hook-sandbox")
+    return policy.ensure("hook-sandbox", project_root)
+
+
+@pytest.fixture()
+def ctx(project, project_root):
+    """수동제어 · 실험이 안 도는 상태."""
+    from app import runstate
+    from app.hooks.classify import Ctx
+
+    return Ctx(
+        root=project_root,
+        cwd=project_root,
+        name="hook-sandbox",
+        policy=project,
+        run=runstate.RunState(),
+        event={},
+    )
+
+
+@pytest.fixture()
+def hook_event():
+    """실측 모양 그대로의 PreToolUse 이벤트를 만든다."""
+
+    def make(tool, tool_input, *, cwd=None, **extra):
+        event = {
+            "session_id": "sess-테스트",
+            "cwd": cwd or "",
+            "prompt_id": "prompt-테스트",
+            "permission_mode": "default",
+            "effort": {"level": "medium"},
+            "hook_event_name": "PreToolUse",
+            "tool_name": tool,
+            "tool_input": tool_input,
+            "tool_use_id": "toolu_테스트",
+        }
+        event.update(extra)
+        return event
+
+    return make
+
+
+FIXTURE_EVENTS = pathlib.Path(__file__).resolve().parent / "fixtures" / "hook_events"
+
+
+@pytest.fixture()
+def real_event():
+    """실측 덤프를 이름 조각으로 찾아 돌려준다."""
+    import json
+
+    def find(fragment):
+        for path in sorted(FIXTURE_EVENTS.glob("*.json")):
+            if fragment in path.name:
+                return json.loads(path.read_text(encoding="utf-8"))
+        raise AssertionError(f"픽스처가 없어요: {fragment}")
+
+    return find

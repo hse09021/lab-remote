@@ -162,6 +162,10 @@
     "prevAppendable": [
       "analysis.md"
     ],
+    "prevMarkers": [
+      "result.csv",
+      "analysis.md"
+    ],
     "allowOutsideRead": true,
     "extraWritableRoots": []
   },
