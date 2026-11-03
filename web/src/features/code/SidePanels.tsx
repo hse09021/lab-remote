@@ -8,23 +8,36 @@ import {
   ProgressBar,
   VisuallyHidden,
 } from '@/components'
+import { PanelIcon, Resizer } from '@/components'
+import { usePaneResize } from '@/lib/usePaneResize'
 import { FileTree } from './FileTree'
+import type { TreeTarget } from './TreeContextMenu'
 import s from './SidePanels.module.css'
 
 function PanelHead({
   title,
   caption,
   actions,
+  onCollapse,
 }: {
   title: string
   caption?: string
   actions?: ReactNode
+  onCollapse?: () => void
 }) {
   return (
     <div className={s.head}>
       <span className={s.title}>{title}</span>
       {caption && <span className={s.caption}>{caption}</span>}
-      {actions && <div className={s.actions}>{actions}</div>}
+      <div className={s.actions}>
+        {actions}
+        {/* 접기 버튼도 같은 줄에 둬야 다른 아이콘과 높이가 맞아요 */}
+        {onCollapse && (
+          <IconButton label="사이드바 접기" aria-expanded size={28} onClick={onCollapse}>
+            <PanelIcon side="left" />
+          </IconButton>
+        )}
+      </div>
     </div>
   )
 }
@@ -43,6 +56,14 @@ interface ExplorerProps {
   collapseSignal: number
   onCollapseAll: () => void
   onRefresh: () => void
+  onCollapse: () => void
+  /** 탐색기 오른쪽 클릭 */
+  onContextMenu: (target: TreeTarget, at: { x: number; y: number }) => void
+  renaming: string | null
+  onRename: (path: string, name: string) => void
+  onCancelRename: () => void
+  createAt: string | null
+  onShortcut: (action: 'rename' | 'delete' | 'cut' | 'copy' | 'paste', target: TreeTarget) => void
 }
 
 export function ExplorerPanel({
@@ -57,11 +78,19 @@ export function ExplorerPanel({
   collapseSignal,
   onCollapseAll,
   onRefresh,
+  onCollapse,
+  onContextMenu,
+  renaming,
+  onRename,
+  onCancelRename,
+  createAt,
+  onShortcut,
 }: ExplorerProps) {
   return (
     <div className={s.panel}>
       <PanelHead
         title="탐색기"
+        onCollapse={onCollapse}
         actions={
           <>
             <IconButton label="새 파일" size={28} onClick={() => onStartCreate('file')}>
@@ -89,6 +118,12 @@ export function ExplorerPanel({
           onCancelCreate={onCancelCreate}
           created={created}
           collapseSignal={collapseSignal}
+          onContextMenu={onContextMenu}
+          renaming={renaming}
+          onRename={onRename}
+          onCancelRename={onCancelRename}
+          createAt={createAt}
+          onShortcut={onShortcut}
         />
       ) : (
         <LoadingState label="파일 목록을 불러오는 중이에요…" />
@@ -99,10 +134,10 @@ export function ExplorerPanel({
 
 /* ── 검색 ─────────────────────────────────────────────────── */
 
-export function SearchPanel() {
+export function SearchPanel({ onCollapse }: { onCollapse: () => void }) {
   return (
     <div className={s.panel}>
-      <PanelHead title="검색" />
+      <PanelHead title="검색" onCollapse={onCollapse} />
       <div className={s.body}>
         <VisuallyHidden>
           <label htmlFor="code-find">프로젝트에서 검색</label>
@@ -119,14 +154,29 @@ export function SearchPanel() {
 export function SourceControlPanel({
   run,
   commits,
+  onCollapse,
 }: {
   run: RunPayload | undefined
   commits: Commit[] | undefined
+  onCollapse: () => void
 }) {
   const sc = run?.sourceControl
+  // VS Code 처럼 그래프 영역 높이를 끌어서 바꿔요
+  const graph = usePaneResize({
+    initial: 220,
+    min: 80,
+    max: 520,
+    dir: -1,
+    orientation: 'horizontal',
+  })
+
   return (
     <div className={s.panel}>
-      <PanelHead title="소스 제어" caption={sc ? `${sc.branch} · ${sc.ahead}` : undefined} />
+      <PanelHead
+        title="소스 제어"
+        caption={sc ? `${sc.branch} · ${sc.ahead}` : undefined}
+        onCollapse={onCollapse}
+      />
 
       {sc && (
         <div className={s.block}>
@@ -150,17 +200,22 @@ export function SourceControlPanel({
       {sc && (
         <>
           <span className={s.subTitle}>변경 내용 · {sc.changes.length}</span>
-          {sc.changes.map((c) => (
-            <div key={c.path} className={s.changeRow}>
-              <span className={s.changePath}>{c.path}</span>
-              <span className={s.status}>{c.status}</span>
-            </div>
-          ))}
+          <div className={s.changeList}>
+            {sc.changes.map((c) => (
+              <div key={c.path} className={s.changeRow}>
+                <span className={s.changePath}>{c.path}</span>
+                <span className={s.status}>{c.status}</span>
+              </div>
+            ))}
+          </div>
         </>
       )}
 
+      <Resizer handle={graph.resizerProps} label="그래프 높이 조절" />
+
       <span className={s.subTitle}>그래프</span>
-      {commits?.map((c, i) => (
+      <div style={graph.style} className={s.graphList}>
+        {commits?.map((c, i) => (
         <div key={c.sha} className={s.commitRow}>
           <svg width="14" height="34" aria-hidden="true" className={s.graph}>
             <line
@@ -185,21 +240,28 @@ export function SourceControlPanel({
             {c.author && <span className={s.aiTag}>{c.author} · </span>}
             {c.sha} · {c.branch}
           </span>
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
 /* ── 실험 실행 ────────────────────────────────────────────── */
 
-export function RunPanel({ run }: { run: RunPayload | undefined }) {
+export function RunPanel({
+  run,
+  onCollapse,
+}: {
+  run: RunPayload | undefined
+  onCollapse: () => void
+}) {
   if (!run) return <LoadingState label="실행 정보를 불러오는 중이에요…" />
   const { draft } = run
 
   return (
     <div className={s.panel}>
-      <PanelHead title="실험 실행" caption={run.caption} />
+      <PanelHead title="실험 실행" caption={run.caption} onCollapse={onCollapse} />
 
       <div className={s.block}>
         <span className={s.title}>새 실험</span>

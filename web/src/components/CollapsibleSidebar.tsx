@@ -85,7 +85,8 @@ export function CollapsibleSidebar({
   )
 }
 
-function PanelIcon({ side }: { side: Side }) {
+/** 사이드바 접기·펼치기 아이콘. 논문·실험 화면과 같은 모양이에요 */
+export function PanelIcon({ side = 'left' }: { side?: Side }) {
   return (
     <svg
       width="18"

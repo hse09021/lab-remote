@@ -301,3 +301,21 @@
   border-top: 1px solid var(--border-soft);
   margin-top: 4px;
 }
+
+/* 탐색기에서 더한 첨부 칩의 빼기 버튼 */
+.fileChipRemove {
+  border: none;
+  background: transparent;
+  padding: 0 0 0 2px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fileChipRemove:hover,
+.fileChipRemove:focus-visible {
+  color: var(--text);
+  outline: none;
+}

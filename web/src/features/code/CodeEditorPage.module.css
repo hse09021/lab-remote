@@ -1,23 +1,28 @@
 .main {
   flex: 1 1 0;
   min-width: 0;
-  padding: 16px 20px 32px;
+  min-height: 0;
+  display: flex;
 }
 
+/*
+ * 목업(FocusCode)만 둥근 흰 카드로 떠 있었어요 — 나머지 5개 화면은
+ * 화면에 꽉 차요. 다른 화면과 같게 여백·모서리·그림자를 뺐어요.
+ */
 .frame {
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
-  border-radius: var(--radius-2xl);
   background: var(--bg);
-  box-shadow: var(--shadow-card);
 }
 
 /*
  * 목업은 940px 고정 높이였는데 그건 캔버스 산물이에요.
- * 화면 높이에서 머리말·여백을 뺀 만큼 쓰고, 좁아지면 가로 스크롤이에요.
+ * 화면 높이에서 머리말을 뺀 만큼 쓰고, 좁아지면 가로 스크롤이에요.
  */
 .shell {
   min-width: 1160px;
-  height: calc(100vh - var(--header-h) - 48px);
+  height: calc(100vh - var(--header-h));
   min-height: 640px;
   display: flex;
   flex-direction: column;
@@ -108,6 +113,11 @@
   flex-direction: column;
 }
 
+/* 하단 패널을 최대화하면 자리만 비워요 (편집기를 떼지는 않아요) */
+.editorSection[data-collapsed] {
+  display: none;
+}
+
 .tabs {
   flex: 0 0 auto;
   display: flex;
@@ -187,7 +197,10 @@
 .countPill {
   font-family: var(--font-mono);
   font-size: 11px;
-  background: var(--surface-sunken);
+  font-weight: 700;
+  /* 상태바와 같은 초록 */
+  background: var(--accent);
+  color: var(--bg);
   border-radius: var(--radius-pill);
   padding: 1px 6px;
 }
@@ -237,9 +250,32 @@
   color: var(--bg);
   font-family: var(--font-mono);
   font-size: 12px;
-  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
 }
 
 .statusRight {
   margin-left: auto;
+}
+
+
+
+
+/* 접힌 하단 패널 — 누르면 다시 펼쳐져요 */
+.bottomRail {
+  flex: 0 0 28px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: var(--surface-muted);
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: left;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.bottomRail:hover,
+.bottomRail:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+  outline: none;
 }

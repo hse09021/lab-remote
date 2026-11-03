@@ -15,6 +15,7 @@ const T = {
   purple: '6B3FA0',
   bg: 'FFFFFF',
   border: 'E1E5E4',
+  accent: '0E6E5C',
   accentRow: 'F6FBF9',
   diffAdd: 'DDF1EA',
   diffDel: 'FCE9E2',
@@ -53,6 +54,11 @@ export const labTheme: editor.IStandaloneThemeData = {
     'diffEditor.removedTextBackground': `#${T.diffDel}80`,
     'diffEditor.insertedLineBackground': `#${T.diffAdd}`,
     'diffEditor.removedLineBackground': `#${T.diffDel}`,
+    // 안 정하면 Monaco 기본값(#0090f1 파랑)이 나와요
+    focusBorder: `#${T.accent}`,
+    'diffEditor.border': `#${T.border}`,
+    'editorWidget.border': `#${T.border}`,
+    'editorOverviewRuler.border': `#${T.bg}`,
   },
 }
 
