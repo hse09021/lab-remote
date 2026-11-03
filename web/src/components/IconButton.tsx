@@ -6,7 +6,7 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className
   /** 스크린 리더용 이름. 아이콘만 있으니 꼭 필요해요 */
   label: string
   size?: number
-  variant?: 'ghost' | 'tint' | 'outline'
+  variant?: 'ghost' | 'tint' | 'outline' | 'primary'
   children: ReactNode
   className?: string
 }

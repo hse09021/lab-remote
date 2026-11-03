@@ -34,14 +34,11 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        // Monaco는 /code 에서만 지연 로딩하므로 별도 청크로 떼어 둡니다.
-        manualChunks(id) {
-          if (id.includes('monaco-editor')) return 'monaco'
-          return undefined
-        },
-      },
-    },
+    /*
+     * Monaco를 manualChunks로 따로 떼면 진입 HTML에 modulepreload가 붙어서
+     * 모든 화면이 3.8MB를 미리 받아요. 그냥 두면 /code 의 동적 import 그래프
+     * 안에 들어가 그 화면에 들어갈 때만 받아요.
+     */
+    chunkSizeWarningLimit: 4096,
   },
 })

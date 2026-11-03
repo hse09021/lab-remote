@@ -208,19 +208,29 @@ export interface PermissionAction {
 
 /* ── 코드 ───────────────────────────────────────────────────── */
 
-export type FileLang = 'yaml' | 'python' | 'markdown'
+export type FileLang = 'yaml' | 'python' | 'markdown' | 'plaintext'
+
+export interface EditorBanner {
+  tone: 'info' | 'warn'
+  title: string
+  text: string
+  actions: string[]
+}
 
 export interface CodeFile {
   id: string
+  /** 프로젝트 기준 경로. 확장자로 언어를 정해요 */
   path: string
   label: string
-  lang: FileLang
   readOnly: boolean
   /** "experiments › EXP-007 › config.yaml" */
   crumb: string
   content: string
   /** AI가 수정한 파일이면 수정 전 내용. DiffEditor 입력 */
   original: string | null
+  banner: EditorBanner | null
+  /** 바뀐 줄 옆에 붙일 꼬리말. "← AI 변경" */
+  diffNote: string | null
 }
 
 export interface FileNode {
@@ -235,6 +245,96 @@ export interface FileNode {
   lock?: string
   /** 눌렀을 때 열 CodeFile.id */
   fileId?: string
+  /** 루트 뒤에 붙는 꼬리말. "[GPU 서버]" */
+  note?: string
+  /** gitignore 대상처럼 흐리게 */
+  muted?: boolean
+}
+
+/* ── 하단 패널 ─────────────────────────────────────────────── */
+
+export interface TerminalLine {
+  kind: 'log' | 'prompt'
+  text: string
+  /** prompt 줄만: 사용자와 경로를 따로 칠해요 */
+  user?: string
+  path?: string
+}
+
+export interface TerminalPayload {
+  session: string
+  problems: number
+  lines: TerminalLine[]
+}
+
+/* ── 소스 제어 ─────────────────────────────────────────────── */
+
+export interface Commit {
+  msg: string
+  /** AI가 만든 커밋이면 'AI' */
+  author: string | null
+  sha: string
+  branch: string
+}
+
+export interface ChangedFile {
+  path: string
+  status: 'M' | 'U' | 'D'
+}
+
+export interface SourceControl {
+  branch: string
+  ahead: string
+  commitPlaceholder: string
+  changes: ChangedFile[]
+}
+
+/* ── 실험 실행 패널 ────────────────────────────────────────── */
+
+export interface RunDraft {
+  name: string
+  base: string
+  changed: string
+  env: string
+  autoCommit: boolean
+  newBranch: boolean
+  newBranchName: string
+  hint: string
+}
+
+export interface QueueItem {
+  id: string
+  state: string
+  progress: number | null
+  detail: string | null
+  stoppable: boolean
+}
+
+export interface RecentRun {
+  id: string
+  result: string
+  failed: boolean
+}
+
+export interface RunPayload {
+  caption: string
+  draft: RunDraft
+  queue: QueueItem[]
+  recent: RecentRun[]
+  sourceControl: SourceControl
+}
+
+/* ── Claude Code 채팅 ──────────────────────────────────────── */
+
+export type ChatNode =
+  | { kind: 'user'; text: string }
+  | { kind: 'assistant'; text: string; sources?: string[] }
+  | { kind: 'tool'; tool: string; path: string; added: number; removed: number; text: string }
+  | { kind: 'approval'; title: string; text: string }
+
+export interface CodeChatPayload {
+  session: string
+  messages: ChatNode[]
 }
 
 /* ── 권한 설정 화면 ─────────────────────────────────────────── */
