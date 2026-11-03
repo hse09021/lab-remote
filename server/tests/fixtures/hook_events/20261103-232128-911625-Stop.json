@@ -1,0 +1,15 @@
+{
+  "session_id": "sess-08-ebc0c6fe",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-dump-scratch/935981aa-3520-4f04-81f4-328295e77752.jsonl",
+  "cwd": "/home/사용자/projects/dump-scratch",
+  "prompt_id": "prompt-09-14c617c7",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "아직 아무것도 고치지 않았어요. 확인해 보니 두 파일 상태가 이렇습니다.\n\n- **`README.md`**: 아래 세 줄이 전부예요.\n  ```\n  # 덤프 실측용 임시 폴더\n\n  훅 필드명 실측이 끝나면 지워도 돼 …(줄임)",
+  "background_tasks": [],
+  "session_crons": []
+}

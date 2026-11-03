@@ -1,0 +1,17 @@
+{
+  "session_id": "sess-12-8628f05e",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-dump-scratch/84cd75ec-ee32-4e00-b1b3-7a6d6249c9ac.jsonl",
+  "cwd": "/home/사용자/projects/dump-scratch",
+  "prompt_id": "prompt-13-ec445113",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "sed -i -e 's/덤프/실측/g' -e 's/지워도/삭제해도/g' README.md && sed -n '1,3p' README.md",
+    "description": "Replace both words in README and show result"
+  },
+  "tool_use_id": "toolu_01RM7twUTZ7kePvASM2UwsGL"
+}

@@ -1,0 +1,25 @@
+{
+  "session_id": "sess-12-8628f05e",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-dump-scratch/84cd75ec-ee32-4e00-b1b3-7a6d6249c9ac.jsonl",
+  "cwd": "/home/사용자/projects/dump-scratch",
+  "prompt_id": "prompt-13-ec445113",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "grep -n -e '덤프' -e '지워도' README.md",
+    "description": "Find occurrences of target words in README"
+  },
+  "tool_response": {
+    "stdout": "1:# 덤프 실측용 임시 폴더\n3:훅 필드명 실측이 끝나면 지워도 돼요.",
+    "stderr": "",
+    "interrupted": false,
+    "isImage": false,
+    "noOutputExpected": false
+  },
+  "tool_use_id": "toolu_014RJou2w9Gz96tNjR3Eh6Uy",
+  "duration_ms": 17
+}
