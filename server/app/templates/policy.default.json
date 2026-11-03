@@ -146,11 +146,12 @@
       "logs/hook_events.jsonl"
     ],
     "journalFiles": [
-      "[PDF 확인]",
-      "[PDF 확인]",
-      "[PDF 확인]",
-      "[PDF 확인]",
+      "state/State.yaml",
+      "logs/Experiment_log.csv",
+      "logs/Decision_log.md",
+      "logs/Failures.md",
       "README.md",
+      "experiments/*/result.csv",
       "experiments/*/analysis.md"
     ],
     "hparamFiles": [
