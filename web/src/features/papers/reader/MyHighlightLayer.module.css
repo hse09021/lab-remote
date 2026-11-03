@@ -1,0 +1,18 @@
+/* 내가 칠한 하이라이트 — 목업의 분홍(--user-hl) */
+.mark {
+  position: absolute;
+  z-index: 3;
+  border: none;
+  padding: 0;
+  border-radius: 2px;
+  background: rgb(var(--user-hl-rgb) / 0.75);
+  mix-blend-mode: multiply;
+  cursor: pointer;
+}
+
+.mark:hover,
+.mark:focus-visible {
+  background: rgb(var(--user-hl-rgb) / 0.95);
+  outline: 1px solid var(--anno-edge);
+  outline-offset: 0;
+}

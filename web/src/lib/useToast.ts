@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ToastAction } from '@/components/Toast'
 
 /**
  * 토스트 한 개를 보여 주고 시간이 지나면 지워요.
@@ -6,22 +7,29 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  */
 export function useToast(durationMs = 2400) {
   const [message, setMessage] = useState('')
+  const [action, setAction] = useState<ToastAction | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clear = useCallback(() => {
     if (timer.current) clearTimeout(timer.current)
     timer.current = null
     setMessage('')
+    setAction(null)
   }, [])
 
   const show = useCallback(
-    (text: string) => {
+    (text: string, opts?: { action?: ToastAction; durationMs?: number }) => {
       if (timer.current) clearTimeout(timer.current)
       setMessage(text)
-      timer.current = setTimeout(() => {
-        timer.current = null
-        setMessage('')
-      }, durationMs)
+      setAction(opts?.action ?? null)
+      timer.current = setTimeout(
+        () => {
+          timer.current = null
+          setMessage('')
+          setAction(null)
+        },
+        opts?.durationMs ?? durationMs,
+      )
     },
     [durationMs],
   )
@@ -33,5 +41,5 @@ export function useToast(durationMs = 2400) {
     [],
   )
 
-  return { message, show, clear, visible: message !== '' }
+  return { message, action, show, clear, visible: message !== '' }
 }

@@ -163,3 +163,87 @@
   padding: 3px 8px;
   margin-bottom: 8px;
 }
+
+/* 출처와 도구를 한 줄에 — 도구는 오른쪽 끝 */
+.noteFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* 도구가 숨어 있어도 줄 높이가 같아야 해서 최소 높이를 잡아 둬요 */
+  min-height: 22px;
+}
+
+.noteWhereStatic {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* 올리거나 포커스가 들어올 때만 보여요 (자리는 늘 차지해요) */
+.noteTools,
+.noteToolsOpen {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.noteTools {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.noteRow:hover .noteTools,
+.noteRow:focus-within .noteTools {
+  opacity: 1;
+}
+
+/* 마우스가 없는 기기에서는 늘 보여요 */
+@media (hover: none) {
+  .noteTools {
+    opacity: 1;
+  }
+}
+
+.noteTool {
+  border: none;
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.noteTool:hover,
+.noteTool:focus-visible {
+  background: var(--surface-muted);
+  color: var(--text);
+  outline: none;
+}
+
+.noteToolDanger:hover,
+.noteToolDanger:focus-visible {
+  background: var(--attention-tint);
+  color: var(--attention-text);
+}
+
+.noteEdit {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.noteEdit:focus {
+  outline: none;
+}

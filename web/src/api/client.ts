@@ -1,4 +1,6 @@
 import { loadMock } from './mock'
+import { applyMockWrite } from './mock/writes'
+import { resetMockStore } from './mockStore'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 const BASE = import.meta.env.VITE_API_BASE ?? '/api'
@@ -46,8 +48,8 @@ export async function send<T>(
 ): Promise<T> {
   if (USE_MOCK) {
     await sleep(MOCK_DELAY_MS)
-    // mock 단계에서는 쓰기를 흉내만 내고 보낸 값을 그대로 돌려줘요.
-    return body as T
+    // 목업 모드에서는 모듈 저장소를 고쳐요. 부른 쪽이 쿼리를 무효화해요.
+    return applyMockWrite(method, path, body) as T
   }
 
   const res = await fetch(BASE + path, {
@@ -62,4 +64,20 @@ export async function send<T>(
 }
 
 export const isMockMode = () => USE_MOCK
+
+/**
+ * 개발 모드에서 ?reset-mock 을 붙이면 목업 저장소를 처음 상태로 돌려요.
+ * 주소에서 바로 빼서 새로 고침해도 다시 지워지지 않게 해요.
+ */
+export function resetMockFromUrl() {
+  if (!import.meta.env.DEV || !USE_MOCK) return false
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has('reset-mock')) return false
+  resetMockStore()
+  url.searchParams.delete('reset-mock')
+  window.history.replaceState(null, '', url.toString())
+  return true
+}
+
+export { resetMockStore }
 export const apiBase = () => BASE

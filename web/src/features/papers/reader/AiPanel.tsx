@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
+import type { UserAnnotation } from '@/api/annotations'
 import type {
   Highlight,
   PaperReaderPayload,
@@ -31,6 +33,8 @@ interface Props {
   summaryView: SummaryView
   onSummaryViewChange: (v: SummaryView) => void
   mdDraft: string | null
+  /** 이미 저장된 MD — "수정됨" 판정 기준 */
+  mdSaved: string | null
   onMdDraftChange: (text: string) => void
   onMdSave: () => void
   /** 하이라이트 켜고 끈 상태 — 노트 탭도 같이 걸러져요 */
@@ -39,7 +43,11 @@ interface Props {
   /** 채팅 탭 위에 붙는 맥락 칩 */
   chatContext: string | null
   /** 사용자가 직접 친 하이라이트·주석 */
-  userNotes: Array<{ id: string; kind: 'highlight' | 'note'; text: string; where: string; sectionId: string }>
+  userNotes: UserAnnotation[]
+  /** 위치 표기 — 번호 없는 섹션은 § 없이 */
+  sectionLabel: (sectionId: string) => string
+  onEditNote: (annotation: UserAnnotation, text: string) => void
+  onDeleteNote: (annotation: UserAnnotation) => void
   /** 인용 카드로 보관한 참고문헌인지 — 라이브러리 캐시에서 봐요 */
   isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
 }
@@ -54,12 +62,16 @@ export function AiPanel({
   summaryView,
   onSummaryViewChange,
   mdDraft,
+  mdSaved,
   onMdDraftChange,
   onMdSave,
   toggles,
   onJumpSection,
   chatContext,
   userNotes,
+  sectionLabel,
+  onEditNote,
+  onDeleteNote,
   isRefSaved,
 }: Props) {
   return (
@@ -88,6 +100,7 @@ export function AiPanel({
                 view={summaryView}
                 onViewChange={onSummaryViewChange}
                 draft={mdDraft}
+                saved={mdSaved}
                 onDraftChange={onMdDraftChange}
                 onSave={onMdSave}
                 textareaId="reader-md"
@@ -117,6 +130,9 @@ export function AiPanel({
             toggles={toggles}
             onJump={onJumpSection}
             userNotes={userNotes}
+            label={sectionLabel}
+            onEdit={onEditNote}
+            onDelete={onDeleteNote}
           />
         )}
       </div>
@@ -181,12 +197,19 @@ function NotesTab({
   toggles,
   onJump,
   userNotes,
+  label: locationLabel,
+  onEdit,
+  onDelete,
 }: {
   highlights: Highlight[]
   sections: PaperReaderPayload['sections']
   toggles: HighlightToggles
   onJump: (id: string) => void
-  userNotes: Array<{ id: string; kind: 'highlight' | 'note'; text: string; where: string; sectionId: string }>
+  userNotes: UserAnnotation[]
+  /** 위치 표기 — 번호 없는 섹션은 § 없이 */
+  label: (sectionId: string) => string
+  onEdit: (annotation: UserAnnotation, text: string) => void
+  onDelete: (annotation: UserAnnotation) => void
 }) {
   const label = (cat: Highlight['category']) =>
     HIGHLIGHT_CATEGORIES.find((c) => c.id === cat)?.label ?? cat
@@ -200,15 +223,14 @@ function NotesTab({
         하이라이트와 주석을 모아 둬요. 아웃라인에서 종류를 끄면 여기서도 숨겨져요.
       </span>
       {userNotes.map((n) => (
-        <div key={n.id} className={s.noteRow}>
-          <span data-cat="memo" className={s.notePill}>
-            {n.kind === 'highlight' ? '내 하이라이트' : '주석'}
-          </span>
-          <span className={s.noteText}>{n.text}</span>
-          <button type="button" onClick={() => onJump(n.sectionId)} className={s.noteWhere}>
-            {n.where}
-          </button>
-        </div>
+        <MyNoteRow
+          key={n.id}
+          annotation={n}
+          where={locationLabel(n.sectionId)}
+          onJump={() => onJump(n.sectionId)}
+          onEdit={(text) => onEdit(n, text)}
+          onDelete={() => onDelete(n)}
+        />
       ))}
       {rows.length === 0 && userNotes.length === 0 && (
         <p className={s.todo}>켜 둔 종류의 하이라이트가 없어요.</p>
@@ -221,9 +243,11 @@ function NotesTab({
               {label(h.category)}
             </span>
             <span className={s.noteText}>{h.note}</span>
-            <button type="button" onClick={() => onJump(h.section)} className={s.noteWhere}>
-              {sec?.n ? `§${sec.n}` : (sec?.title ?? h.section)} · p.{h.page}
-            </button>
+            <div className={s.noteFoot}>
+              <button type="button" onClick={() => onJump(h.section)} className={s.noteWhere}>
+                {sec?.n ? `§${sec.n}` : (sec?.title ?? h.section)} · p.{h.page}
+              </button>
+            </div>
           </div>
         )
       })}
@@ -247,5 +271,104 @@ function PanelIcon(): ReactNode {
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <path d="M15 4v16" />
     </svg>
+  )
+}
+
+/**
+ * 노트 탭의 내 항목 한 줄.
+ * 마우스를 올리거나 키보드로 들어오면 수정(주석만)·삭제 버튼이 보여요.
+ */
+function MyNoteRow({
+  annotation,
+  where,
+  onJump,
+  onEdit,
+  onDelete,
+}: {
+  annotation: UserAnnotation
+  where: string
+  onJump: () => void
+  onEdit: (text: string) => void
+  onDelete: () => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(annotation.text)
+  const isNote = annotation.kind === 'note'
+
+  if (editing) {
+    return (
+      <div className={s.noteRow}>
+        <span data-cat="memo" className={s.notePill}>
+          주석
+        </span>
+        <textarea
+          autoFocus
+          aria-label="주석 고치기"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setEditing(false)
+          }}
+          className={s.noteEdit}
+        />
+        <div className={s.noteFoot}>
+          <span className={s.noteWhereStatic}>고치는 중</span>
+          <div className={s.noteToolsOpen}>
+            <button
+              type="button"
+              onClick={() => {
+                const text = draft.trim()
+                if (text) onEdit(text)
+                setEditing(false)
+              }}
+              className={s.noteTool}
+            >
+              저장
+            </button>
+            <button type="button" onClick={() => setEditing(false)} className={s.noteTool}>
+              취소
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={s.noteRow}>
+      <span data-cat="memo" className={s.notePill}>
+        {isNote ? '주석' : '내 하이라이트'}
+      </span>
+      <span className={s.noteText}>{annotation.text}</span>
+      <div className={s.noteFoot}>
+        <button type="button" onClick={onJump} className={s.noteWhere}>
+          {where}
+        </button>
+        {/* 자리는 늘 잡아 두고 보이기만 바꿔요 — 줄 높이가 흔들리지 않게 */}
+        <div className={s.noteTools}>
+          {isNote && (
+            <button
+              type="button"
+              aria-label="주석 고치기"
+              onClick={() => {
+                setDraft(annotation.text)
+                setEditing(true)
+              }}
+              className={s.noteTool}
+            >
+              수정
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label={isNote ? '주석 삭제' : '하이라이트 삭제'}
+            onClick={onDelete}
+            className={`${s.noteTool} ${s.noteToolDanger}`}
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

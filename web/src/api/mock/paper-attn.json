@@ -929,7 +929,8 @@
         "value": "41.0",
         "label": "41.0 · 본문 기준"
       }
-    ]
+    ],
+    "chosen": null
   },
   "inlineMemo": {
     "title": "내 메모",

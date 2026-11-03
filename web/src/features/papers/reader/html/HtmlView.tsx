@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import type { UserAnnotation } from '@/api/annotations'
 import type { PaperReaderPayload } from '@/api/types'
 import { Button } from '@/components'
 import { copyText } from '@/lib/clipboard'
 import type { HighlightToggles } from '../highlightCategories'
 import { anchorFrom, anchorFromRect } from '../floating/useReaderOverlays'
 import type { SelectionAnchor as Anchor } from '../floating/SelectionMenu'
+import { MyHighlightLayer } from '../MyHighlightLayer'
+import { placeFromRange } from '../selectionPlace'
+import type { SelectionPlace } from '../selectionPlace'
 import { loadPaperHtml } from './loadPaperHtml'
 import { CheckNote, ConfigCard, MemoCard } from './blocks'
 import { Sparkle } from './Sparkle'
@@ -28,8 +32,12 @@ interface Props {
   onExplain: (key: string, anchor: Anchor) => void
   /** 본문 인용 칩 */
   onCite: (n: number, anchor: Anchor) => void
-  /** 실제 드래그 선택 */
-  onSelect: (anchor: Anchor, text: string, sectionId: string) => void
+  /** 실제 드래그 선택 — 다시 그릴 자리(블록 id + 오프셋)까지 넘겨요 */
+  onSelect: (anchor: Anchor, text: string, sectionId: string, place: SelectionPlace) => void
+  /** 내가 칠한 하이라이트 (저장소에 있어요) */
+  myHighlights: UserAnnotation[]
+  /** 본문의 내 하이라이트를 눌렀을 때 */
+  onMyHighlight: (annotation: UserAnnotation, anchor: Anchor) => void
   onHover: (key: string | null, anchor: Anchor | null) => void
   floating: ReactNode
   onToast: (msg: string) => void
@@ -48,6 +56,8 @@ export function HtmlView({
   onExplain,
   onCite,
   onSelect,
+  myHighlights,
+  onMyHighlight,
   onHover,
   floating,
   onToast,
@@ -164,8 +174,15 @@ export function HtmlView({
       const sectionEl = (node.nodeType === 1 ? node : node.parentElement)?.closest<HTMLElement>(
         '[data-section]',
       )
-      const rect = sel.getRangeAt(0).getBoundingClientRect()
-      onSelect(anchorFromRect(rect, scroller), text, sectionEl?.dataset.section ?? 'abs')
+      const range = sel.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+      const sectionId = sectionEl?.dataset.section ?? 'abs'
+      const page = reader.sections.find((x) => x.id === sectionId)?.page ?? 1
+      onSelect(anchorFromRect(rect, scroller), text, sectionId, {
+        page,
+        anchor: placeFromRange(range),
+        boxes: null,
+      })
     }
 
     const onOver = (e: Event) => {
@@ -183,7 +200,7 @@ export function HtmlView({
       root.removeEventListener('mouseup', onMouseUp)
       root.removeEventListener('mouseover', onOver)
     }
-  }, [html, onCite, onExplain, onSelect, onHover])
+  }, [html, onCite, onExplain, onSelect, onHover, reader.sections])
 
   /* ── 스크롤 추적 ─────────────────────────────────────────── */
   useEffect(() => {
@@ -300,6 +317,18 @@ export function HtmlView({
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )}
+
+        {/* 내가 칠한 하이라이트를 블록 id + 오프셋으로 되살려 그려요 */}
+        <MyHighlightLayer
+          bodyRef={bodyRef}
+          scrollRef={scrollRef}
+          annotations={myHighlights}
+          revision={html}
+          onPick={(annotation, rect) => {
+            const scroller = scrollRef.current
+            if (scroller) onMyHighlight(annotation, anchorFromRect(rect, scroller))
+          }}
+        />
 
         {/* 주입된 HTML 안에 React 조각을 끼워 넣어요 */}
         {slots.sparkles.map((x) =>

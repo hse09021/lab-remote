@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import type { CSSProperties } from 'react'
+import type { UserAnnotation } from '@/api/annotations'
 import type { ExplainZone, Highlight, PaperSection, PtRect } from '@/api/types'
 import type { PdfPageContext } from '../pdf/types'
 import { HIGHLIGHT_CATEGORIES } from '../highlightCategories'
@@ -348,3 +349,34 @@ const CopyIcon = () => (
     <path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1" />
   </svg>
 )
+
+/* ── 내가 칠한 하이라이트 (PDF) ───────────────────────────── */
+
+export function MyPdfHighlights({
+  ctx,
+  annotations,
+  onPick,
+}: {
+  ctx: PdfPageContext
+  annotations: UserAnnotation[]
+  onPick: (annotation: UserAnnotation, el: HTMLElement) => void
+}) {
+  return (
+    <>
+      {annotations.map((a) =>
+        (a.boxes ?? [])
+          .filter(() => a.page === ctx.page)
+          .map((box, i) => (
+            <button
+              key={`${a.id}-${i}`}
+              type="button"
+              aria-label={`내 하이라이트 · ${a.text.slice(0, 24)}`}
+              style={ctx.rectToStyle(box)}
+              onClick={(e) => onPick(a, e.currentTarget)}
+              className={s.myHighlight}
+            />
+          )),
+      )}
+    </>
+  )
+}

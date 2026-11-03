@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSavePermissions } from '@/api/permissions'
 import clsx from 'clsx'
 import { useQueries } from '@tanstack/react-query'
 import { permissionsQuery, projectsQuery } from '@/api/experiments'
@@ -87,7 +88,17 @@ export default function PermissionSettings() {
 
 /* ── 머리말 ───────────────────────────────────────────────── */
 
-function Header({ modeName }: { modeName: string | null | undefined }) {
+function Header({
+  modeName,
+  dirty,
+  saving,
+  onSave,
+}: {
+  modeName: string | null | undefined
+  dirty?: boolean
+  saving?: boolean
+  onSave?: () => void
+}) {
   return (
     <div className={s.headerRow}>
       <div className={s.titleBlock}>
@@ -102,8 +113,8 @@ function Header({ modeName }: { modeName: string | null | undefined }) {
           </span>
         )}
       </div>
-      <Button variant="primary" disabled={!modeName}>
-        변경 사항 저장
+      <Button variant="primary" disabled={!modeName || !dirty || saving} onClick={onSave}>
+        {saving ? '저장하는 중' : '변경 사항 저장'}
       </Button>
     </div>
   )
@@ -112,9 +123,17 @@ function Header({ modeName }: { modeName: string | null | undefined }) {
 /* ── 본문 ─────────────────────────────────────────────────── */
 
 function PermissionBody({ data }: { data: PermissionsPayload }) {
+  // 저장해 둔 값이 있으면 그걸로 시작해요 (저장소에 남아 있어요)
   // 프리셋을 바꾸면 행별 수동 설정은 초기화해요 (목업과 같은 동작)
-  const [mode, setMode] = useState<PermissionMode>('full')
-  const [overrides, setOverrides] = useState<Record<string, Permission>>({})
+  const [mode, setMode] = useState<PermissionMode>(data.saved?.mode ?? 'full')
+  const [overrides, setOverrides] = useState<Record<string, Permission>>(
+    data.saved?.overrides ?? {},
+  )
+  const savePermissions = useSavePermissions()
+
+  const dirty =
+    mode !== (data.saved?.mode ?? 'full') ||
+    JSON.stringify(overrides) !== JSON.stringify(data.saved?.overrides ?? {})
 
   const current = data.modes.find((m) => m.id === mode)
   const permissionOf = (a: PermissionAction) => overrides[a.key] ?? a.defaults[mode]
@@ -162,7 +181,12 @@ function PermissionBody({ data }: { data: PermissionsPayload }) {
 
   return (
     <>
-      <Header modeName={current?.name ?? ''} />
+      <Header
+        modeName={current?.name ?? ''}
+        dirty={dirty}
+        saving={savePermissions.isPending}
+        onSave={() => savePermissions.mutate({ mode, overrides })}
+      />
 
       {/* 권한 단계 */}
       <section id="mode" aria-label="권한 단계" className={clsx(s.section, s.sectionTight)}>

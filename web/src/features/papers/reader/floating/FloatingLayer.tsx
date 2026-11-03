@@ -2,8 +2,10 @@ import type { RefObject } from 'react'
 import type { PaperReaderPayload } from '@/api/types'
 import { CiteCard } from './CiteCard'
 import { FloatingChat } from './FloatingChat'
+import { MyHighlightMenu } from './MyHighlightMenu'
 import { NotePopover, SelectionMenu, TranslatePopover } from './SelectionMenu'
-import type { SelectionAction } from './SelectionMenu'
+import type { SelectionAction, SelectionAnchor } from './SelectionMenu'
+import type { UserAnnotation } from '@/api/annotations'
 import type { useFloatingChat } from './useFloatingChat'
 import type { useReaderOverlays } from './useReaderOverlays'
 
@@ -19,6 +21,13 @@ export interface FloatingHandlers {
   onSaveRef: (n: number) => void
   /** 라이브러리에 들어 있는지 — papers 캐시에서 봐요 */
   isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
+  /** 고른 글이 이미 내 하이라이트인지 (저장소에서 봐요) */
+  isMine: (text: string) => boolean
+  /** 본문에서 내 하이라이트를 눌렀을 때 뜨는 메뉴 */
+  myMenu: { annotation: UserAnnotation; anchor: SelectionAnchor } | null
+  onMyMenuAnnotate: () => void
+  onMyMenuDelete: () => void
+  onMyMenuClose: () => void
   /** 주석 팝오버 저장 — 위치 라벨 계산이 필요해서 화면이 맡아요 */
   onSaveNote: (body: string) => void
   onWorth: (n: number) => void
@@ -40,6 +49,11 @@ export function FloatingLayer({
   onOpenPaper,
   onSaveRef,
   isRefSaved,
+  isMine,
+  myMenu,
+  onMyMenuAnnotate,
+  onMyMenuDelete,
+  onMyMenuClose,
   onSaveNote,
   onWorth,
   onToast,
@@ -48,18 +62,13 @@ export function FloatingLayer({
     ? reader.references.find((r) => r.n === overlays.cite!.n)
     : undefined
 
-  const highlighted =
-    !!overlays.selection &&
-    overlays.userNotes.some(
-      (n) => n.kind === 'highlight' && n.text === overlays.selection!.text,
-    )
 
   return (
     <>
       {overlays.selection && (
         <SelectionMenu
           anchor={overlays.selection.anchor}
-          highlighted={highlighted}
+          highlighted={isMine(overlays.selection.text)}
           onAct={onSelectionAct}
         />
       )}
@@ -87,6 +96,16 @@ export function FloatingLayer({
           anchor={overlays.popover.anchor}
           onSave={onSaveNote}
           onClose={() => overlays.setPopover(null)}
+        />
+      )}
+
+      {myMenu && (
+        <MyHighlightMenu
+          annotation={myMenu.annotation}
+          anchor={myMenu.anchor}
+          onAnnotate={onMyMenuAnnotate}
+          onDelete={onMyMenuDelete}
+          onClose={onMyMenuClose}
         />
       )}
 

@@ -26,8 +26,10 @@ export interface Paper {
   title: string
   authors: string
   venue: string
-  field: string
-  model: string
+  /** Research Field 태그. 아직 분류 전이면 null */
+  field: string | null
+  /** 모델 태그. 아직 확인 전이면 null */
+  model: string | null
   status: ReadStatus
   source: PaperSource
   summaryState: SummaryState
@@ -412,6 +414,8 @@ export interface PermissionsPayload {
   claudePush: ClaudePushCard
   logPath: string
   approvalLog: ApprovalLogEntry[]
+  /** 저장해 둔 권한 설정. 저장한 적 없으면 null */
+  saved: { mode: PermissionMode; overrides: Record<string, Permission> } | null
 }
 
 /* ── 논문 리더 ──────────────────────────────────────────────── */
@@ -494,6 +498,8 @@ export interface DiscrepancyNote {
   title: string
   text: string
   options: Array<{ value: string; label: string }>
+  /** 내가 고른 재현 목표. 아직 안 골랐으면 null */
+  chosen: string | null
 }
 
 export interface InlineMemo {
