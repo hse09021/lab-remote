@@ -55,6 +55,7 @@ export function CiteCard({
       role="dialog"
       aria-label={`참고문헌 ${r.n}번`}
       style={style}
+      data-reader-overlay=""
       className={s.card}
     >
       <div className={s.head}>

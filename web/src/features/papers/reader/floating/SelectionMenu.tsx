@@ -61,7 +61,14 @@ export function SelectionMenu({ anchor, highlighted, onAct }: Props) {
 
   return (
     <>
-      <div ref={ref} role="menu" aria-label="선택한 글" style={style} className={s.menu}>
+      <div
+        ref={ref}
+        role="menu"
+        aria-label="선택한 글"
+        data-reader-overlay=""
+        style={style}
+        className={s.menu}
+      >
         {items.map((it) => (
           <button
             key={it.id}
@@ -87,6 +94,7 @@ export function SelectionMenu({ anchor, highlighted, onAct }: Props) {
       {infoHover && (
         <div
           style={{ left: previewLeft, top: anchor.y + 8 }}
+          data-reader-overlay=""
           className={s.preview}
           aria-hidden="true"
         >
@@ -128,6 +136,7 @@ export function TranslatePopover({
       aria-label="번역"
       ref={ref}
       style={style}
+      data-reader-overlay=""
       className={s.popover}
     >
       <span className={s.popTitle}>번역</span>
@@ -164,6 +173,7 @@ export function NotePopover({
       aria-label="주석 남기기"
       ref={ref}
       style={style}
+      data-reader-overlay=""
       className={s.popover}
     >
       <span className={s.popTitle}>주석</span>
