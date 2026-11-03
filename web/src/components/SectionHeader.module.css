@@ -1,0 +1,28 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.baseline {
+  align-items: baseline;
+}
+
+.center {
+  align-items: center;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.aside {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}

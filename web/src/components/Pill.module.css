@@ -1,0 +1,45 @@
+/*
+ * display는 inline이에요 (inline-flex 아님).
+ * 목업의 알약은 평범한 inline span이라 세로 안쪽 여백이 줄 상자 높이를
+ * 키우지 않아요. inline-flex로 바꾸면 표 행이 줄마다 ~5px씩 높아져요.
+ */
+.pill {
+  display: inline;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* 헤더·메타용 — 3px 10px */
+.meta {
+  padding: 3px 10px;
+}
+
+/* 표 상태용 — 4px 10px, 항상 굵게 */
+.status {
+  padding: 4px 10px;
+  font-weight: 700;
+}
+
+.neutral {
+  background: var(--surface-sunken);
+  color: var(--text-soft);
+}
+
+.success {
+  background: var(--accent-tint);
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.warn {
+  background: var(--attention-tint);
+  color: var(--attention-text);
+  font-weight: 700;
+}
+
+.solid {
+  background: var(--primary-btn);
+  color: var(--bg);
+  font-weight: 700;
+}

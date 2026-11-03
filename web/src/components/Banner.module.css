@@ -1,0 +1,35 @@
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid;
+}
+
+.warn {
+  border-color: var(--attention-border);
+  background: var(--attention-tint);
+}
+
+.neutral {
+  border-color: var(--border);
+  background: var(--surface-muted);
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--attention-text);
+}
+
+.body {
+  flex: 1 1 300px;
+  font-size: 14px;
+  color: var(--attention-deep);
+}
+
+.neutral .body {
+  color: var(--text-soft);
+}

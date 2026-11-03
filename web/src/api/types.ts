@@ -72,6 +72,8 @@ export interface Experiment {
   /** "AI 제안" 같은 꼬리말 */
   knobNote: string | null
   state: ExperimentState
+  /** 실패 사유 등. "실패 · 발산"의 뒷부분 */
+  stateNote: string | null
   /** 대기 순번 (queued일 때) */
   queuePosition: number | null
   /** 0–100, running일 때 */
@@ -83,6 +85,102 @@ export interface Experiment {
   report: string | null
   /** "epoch 34/50 · 약 1시간 12분" */
   detail: string | null
+}
+
+/* ── 프로젝트 사이드바 ──────────────────────────────────────── */
+
+export interface Project {
+  id: string
+  name: string
+  running: boolean
+  stateLabel: string
+}
+
+export interface SidebarView {
+  id: string
+  label: string
+  to: string
+  icon: 'grid' | 'shield'
+  /** 권한 설정의 승인 대기 건수 같은 꼬리 배지 */
+  badge: string | null
+}
+
+export interface Integration {
+  label: string
+  ok: boolean
+}
+
+export interface ProjectsPayload {
+  projects: Project[]
+  views: SidebarView[]
+  integrations: Integration[]
+}
+
+/* ── 대시보드 ───────────────────────────────────────────────── */
+
+export interface MetricTileData {
+  label: string
+  value: string
+  /** 값 뒤에 작게 붙는 글자. "34" + " / 50" */
+  valueSuffix: string | null
+  valueTone: 'default' | 'accent'
+  sub: string
+  subTone: 'muted' | 'accent'
+  /** 0–100. 있으면 값 아래 진행바가 생겨요 */
+  progress: number | null
+}
+
+export interface ResourceMeter {
+  label: string
+  /** 0–100 */
+  pct: number
+  value: string
+  tone: 'accent' | 'attention' | 'neutral'
+}
+
+/** 좌표가 아니라 loss 값으로 저장해요 — 그려 주는 쪽이 스케일을 계산해요 */
+export interface LearningCurve {
+  title: string
+  /** 측정한 epoch 번호 */
+  epochs: number[]
+  train: number[]
+  val: number[]
+  /** x축 전체 범위 */
+  totalEpochs: number
+  /** 현재 epoch. 점선 세로줄 위치 */
+  currentEpoch: number
+  /** y축 최댓값 (loss) */
+  yMax: number
+  wandbHref: string
+}
+
+export interface ApprovalNotice {
+  count: number
+  text: string
+  ctaLabel: string
+  ctaHref: string
+}
+
+export interface Dashboard {
+  project: string
+  modeLabel: string
+  loopLabel: string
+  /** 승인 대기가 없으면 null */
+  approval: ApprovalNotice | null
+  metrics: MetricTileData[]
+  learningCurve: LearningCurve
+  resources: ResourceMeter[]
+  queueCaption: string
+  eventsCaption: string
+}
+
+/* ── 결정·이벤트 기록 ───────────────────────────────────────── */
+
+export interface EventEntry {
+  time: string
+  kind: string
+  tone: 'warn' | 'success' | 'neutral'
+  text: string
 }
 
 /* ── 권한 ───────────────────────────────────────────────────── */

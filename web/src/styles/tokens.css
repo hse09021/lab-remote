@@ -36,7 +36,8 @@
   --accent-hover: #08493d;
   --accent-soft: #9ccbbe;
   --attention-deep: #4a2205;
-  --attention-border: #e0b08a;
+  --attention-border: #f0c9a8;        /* 승인 대기 배너 테두리 */
+  --attention-border-strong: #e0b08a; /* 주황 외곽선 버튼 */
   --attention-row: #fffaf5;
   --info: #1f5fa8;
   --cite: #2457b5;            /* 인용 카드 */
@@ -86,7 +87,9 @@
   /* ── 치수 ─────────────────────────────────────────────────── */
   --header-h: 64px;
   --rail-w: 48px;        /* 사이드바를 접었을 때 띠 너비 */
-  --resizer-w: 5px;
+  --resizer-line: 1px;  /* 패널 경계선: 눈에 보이는 두께 */
+  --resizer-hit: 8px;   /* 패널 경계선: 실제로 잡히는 너비 */
+  --resizer-slot: 5px;  /* 패널 경계선: 레이아웃에서 차지하는 자리 (목업과 같게) */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 10px;

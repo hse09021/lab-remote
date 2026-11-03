@@ -1,0 +1,36 @@
+.grid {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 0 12px;
+  font-size: 13px;
+}
+
+/*
+ * 경계선을 셀마다 걸어야 가로줄이 끝까지 이어져요 (목업과 같은 방식).
+ * 마지막 줄 3칸은 경계선을 빼요.
+ */
+.label,
+.bar,
+.value {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.grid > .label:nth-last-child(3),
+.grid > .bar:nth-last-child(2),
+.grid > .value:nth-last-child(1) {
+  border-bottom: none;
+}
+
+.label {
+  color: var(--text-muted);
+}
+
+.value {
+  font-family: var(--font-mono);
+}
+
+.value[data-tone='attention'] {
+  color: var(--attention-text);
+}

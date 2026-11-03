@@ -1,0 +1,58 @@
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-left: 1px solid var(--border-soft);
+}
+
+/*
+ * 목업은 첫/마지막 칸의 안쪽 여백을 지워 본문 좌우 기준선에 맞췄어요.
+ * auto-fit으로 줄바꿈되면 :first-child 규칙만으로는 어긋나는데, 목업도
+ * 같은 한계가 있어서 그대로 뒀어요.
+ */
+.tile:first-child {
+  padding: 16px 18px 16px 0;
+  border-left: none;
+}
+
+.tile:last-child {
+  padding: 16px 0 16px 18px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.value {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.value[data-tone='accent'] {
+  color: var(--accent);
+}
+
+.suffix {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sub[data-tone='accent'] {
+  color: var(--accent-dark);
+  font-weight: 500;
+}
