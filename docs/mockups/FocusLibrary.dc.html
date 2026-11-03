@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>논문 라이브러리</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F7}
+a{color:#0E6E5C}a:hover{color:#08493D}
+.rs{transition:background .15s}.rs:hover,.rs:focus-visible{background:#0E6E5C !important;outline:none}
+.tg:hover{background:#E9ECEB !important;color:#141A19 !important}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #FFFFFF; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+
+<header style="background: #FFFFFF; border-bottom: 1px solid #E1E5E4">
+<div style="box-sizing: border-box; padding: 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="FocusLibrary.dc.html" aria-current="page" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid #0E6E5C; color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none">논문</a>
+<a href="AltFocus.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">실험</a>
+<a href="FocusCode.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">코드</a>
+</nav>
+<div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #56605E">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>모든 연결 정상</span>
+</div>
+</div>
+</header>
+
+<div style="flex: 1; display: flex; align-items: stretch">
+
+<sc-if value="{{ navClosed }}" hint-placeholder-val="{{ false }}">
+<div style="flex: 0 0 48px; box-sizing: border-box; background: #F6F7F7; border-right: 1px solid #E1E5E4; padding: 14px 0; display: flex; flex-direction: column; align-items: center"><button type="button" class="tg" aria-label="사이드바 펼치기" title="사이드바 펼치기" aria-expanded="false" onClick="{{ navToggle }}" style="width: 32px; height: 32px; flex: 0 0 32px; border-radius: 8px; border: none; background: transparent; color: #56605E; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg></button></div>
+</sc-if>
+<nav aria-label="라이브러리 메뉴" style="{{ navStyle }}">
+<div style="display: flex; justify-content: flex-end; margin: -8px -4px 0"><button type="button" class="tg" aria-label="사이드바 접기" title="사이드바 접기" aria-expanded="true" onClick="{{ navToggle }}" style="width: 32px; height: 32px; flex: 0 0 32px; border-radius: 8px; border: none; background: transparent; color: #56605E; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg></button></div>
+<button type="button" onClick="{{ nav.recent.pick }}" aria-pressed="{{ nav.recent.pressed }}" style="{{ nav.recent.style }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span style="flex: 1">최근 열어본 논문</span></button>
+<label for="lib-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">라이브러리 검색</label>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #E1E5E4; background: #FFFFFF">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#56605E" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+<input id="lib-search" type="text" placeholder="라이브러리 검색" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-family: inherit; font-size: 14px">
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 4px 4px 12px">
+<span style="display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"></path><path d="M4 19a2 2 0 012-2h13"></path></svg>라이브러리</span>
+<button type="button" aria-label="폴더 추가" style="width: 32px; height: 32px; border-radius: 8px; border: none; background: #E3F2EE; color: #0E6E5C; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<button type="button" onClick="{{ nav.all.pick }}" aria-pressed="{{ nav.all.pressed }}" style="{{ nav.all.style }}"><span style="flex: 1">전체 논문</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px">5</span></button>
+<button type="button" onClick="{{ nav.todo.pick }}" aria-pressed="{{ nav.todo.pressed }}" style="{{ nav.todo.style }}"><span style="flex: 1">읽을 예정</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px">1</span></button>
+<button type="button" onClick="{{ nav.reading.pick }}" aria-pressed="{{ nav.reading.pressed }}" style="{{ nav.reading.style }}"><span style="flex: 1">읽는 중</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px">2</span></button>
+<button type="button" onClick="{{ nav.done.pick }}" aria-pressed="{{ nav.done.pressed }}" style="{{ nav.done.style }}"><span style="flex: 1">완료</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px">2</span></button>
+
+<span style="font-size: 12px; color: #56605E; padding: 14px 12px 2px">Research Field</span>
+<button type="button" onClick="{{ nav.peft.pick }}" aria-pressed="{{ nav.peft.pressed }}" style="{{ nav.peft.style }}"><span style="flex: 1"># PEFT</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px">4</span></button>
+<button type="button" onClick="{{ nav.vision.pick }}" aria-pressed="{{ nav.vision.pressed }}" style="{{ nav.vision.style }}"><span style="flex: 1"># Vision</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px">1</span></button>
+<button type="button" onClick="{{ nav.nlp.pick }}" aria-pressed="{{ nav.nlp.pressed }}" style="{{ nav.nlp.style }}"><span style="flex: 1"># NLP</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px">1</span></button>
+
+<div style="margin-top: auto; border-top: 1px solid #E1E5E4; padding-top: 10px">
+<button type="button" style="width: 100%; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border: none; border-radius: 10px; background: transparent; color: #3D4644; font-family: inherit; font-size: 14px; cursor: pointer; text-align: left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>휴지통</button>
+</div>
+</nav>
+<div class="rs" role="separator" aria-orientation="vertical" aria-label="라이브러리 메뉴 너비 조절" tabIndex="0" onPointerDown="{{ navDrag }}" onKeyDown="{{ navKey }}" style="{{ navRs }}"></div>
+
+<main style="flex: 1 1 0; min-width: 0; box-sizing: border-box; padding: 28px 32px 120px; position: relative; display: flex; flex-direction: column; gap: 18px; min-height: 1180px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<h1 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em">{{ title }}</h1>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<div role="group" aria-label="보기 방식" style="display: flex; gap: 2px; background: #F0F2F2; border-radius: 10px; padding: 3px">
+<button type="button" aria-label="자세히 보기" aria-pressed="{{ den.list.pressed }}" onClick="{{ den.list.pick }}" style="{{ den.list.style }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="1.5"></rect><rect x="4" y="13" width="16" height="7" rx="1.5"></rect></svg></button>
+<button type="button" aria-label="간단히 보기" aria-pressed="{{ den.compact.pressed }}" onClick="{{ den.compact.pick }}" style="{{ den.compact.style }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg></button>
+</div>
+<button type="button" aria-label="필터" style="width: 42px; height: 42px; border-radius: 10px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3D4644" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg></button>
+<div style="position: relative; display: flex">
+<button type="button" style="min-height: 42px; padding: 0 16px; border-radius: 10px 0 0 10px; border: none; background: #141A19; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">논문 업로드</button>
+<button type="button" aria-label="업로드 방법 더보기" aria-expanded="{{ uploadOpen }}" onClick="{{ toggleUpload }}" style="width: 40px; min-height: 42px; border-radius: 0 10px 10px 0; border: none; border-left: 1px solid #3D4644; background: #141A19; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+<sc-if value="{{ uploadOpen }}" hint-placeholder-val="{{ true }}">
+<div role="menu" aria-label="논문 업로드" style="position: absolute; top: 50px; right: 0; z-index: 5; width: 380px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 14px; box-shadow: 0 8px 24px rgba(20,26,25,0.12); display: flex; flex-direction: column">
+<button type="button" role="menuitem" style="min-height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 18px; border: none; background: transparent; font-family: inherit; font-size: 15px; cursor: pointer; text-align: left"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3D4644" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"></path><path d="M12 17v-6M9 14l3-3 3 3"></path></svg>PDF 파일 업로드</button>
+<div style="border-top: 1px solid #EEF1F0; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; gap: 8px">
+<label for="lib-url" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">arXiv 링크 또는 PDF URL</label>
+<input id="lib-url" type="text" placeholder="arXiv 링크 또는 PDF URL" style="flex: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #C8D0CE; font-family: inherit; font-size: 14px">
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #0E6E5C; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">추가</button>
+</div>
+<span style="font-size: 12px; color: #56605E">arXiv HTML이 있으면 HTML을, 없으면 PDF를 써요</span>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 820px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #56605E; font-size: 13px">
+<th style="font-weight: 500; padding: 12px 8px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; width: 32px"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">선택</span></th>
+<th style="font-weight: 500; padding: 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4">제목</th>
+<th style="font-weight: 500; padding: 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0; width: 110px">상태</th>
+<th style="font-weight: 500; padding: 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0; width: 170px">태그</th>
+<th style="font-weight: 500; padding: 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0; width: 100px">요약</th>
+<th style="font-weight: 500; padding: 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0; width: 110px">마지막 접근</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ papers }}" as="p" hint-placeholder-count="5">
+<tr>
+<td style="{{ p.cell }}"><input type="checkbox" checked="{{ p.checked }}" onChange="{{ p.toggle }}" aria-label="{{ p.title }} 선택" style="width: 18px; height: 18px; accent-color: #0E6E5C"></td>
+<td style="{{ p.cell }}"><div style="display: flex; flex-direction: column; gap: 3px"><a href="FocusReader.dc.html" style="font-size: 15px; font-weight: 700; color: #141A19; text-decoration: none">{{ p.title }}</a><sc-if value="{{ showMeta }}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; color: #56605E">{{ p.authors }} · {{ p.venue }} · {{ p.source }}</span></sc-if></div></td>
+<td style="{{ p.cell }}"><div style="position: relative; display: inline-block"><button type="button" aria-haspopup="menu" aria-expanded="{{ p.statusOpen }}" aria-label="{{ p.statusAria }}" onClick="{{ p.toggleStatus }}" style="{{ p.statusStyle }}">{{ p.statusLabel }} <span aria-hidden="true" style="font-size: 10px">▾</span></button><sc-if value="{{ p.statusOpen }}" hint-placeholder-val="{{ false }}"><div role="menu" style="position: absolute; top: 36px; left: 0; z-index: 4; width: 160px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 10px; box-shadow: 0 8px 24px rgba(20,26,25,0.12); padding: 4px; display: flex; flex-direction: column"><sc-for list="{{ p.statusOpts }}" as="s" hint-placeholder-count="3"><button type="button" role="menuitemradio" aria-checked="{{ s.checked }}" onClick="{{ s.pick }}" style="{{ s.style }}"><span style="flex: 1">{{ s.label }}</span><span aria-hidden="true" style="color: #0E6E5C">{{ s.mark }}</span></button></sc-for></div></sc-if></div></td>
+<td style="{{ p.cell }}"><div style="display: flex; flex-wrap: wrap; gap: 4px"><span style="font-size: 12px; background: #F0F2F2; border-radius: 6px; padding: 2px 8px">{{ p.field }}</span><span style="font-size: 12px; background: #F0F2F2; border-radius: 6px; padding: 2px 8px">{{ p.model }}</span></div></td>
+<td style="{{ p.cell }}"><sc-if value="{{ p.hasSummary }}" hint-placeholder-val="{{ true }}"><button type="button" aria-label="{{ p.summaryAria }}" onClick="{{ p.openSummary }}" style="{{ p.summaryBtnStyle }}">요약 MD</button></sc-if><sc-if value="{{ p.noSummary }}" hint-placeholder-val="{{ false }}"><span style="{{ p.summaryStyle }}">{{ p.summary }}</span></sc-if></td>
+<td style="{{ p.cell }}"><span style="font-size: 13px; color: #56605E">{{ p.access }}</span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+
+<sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; background: #141A19; color: #FFFFFF">
+<span style="font-size: 14px; font-weight: 700; flex: 1 1 140px">{{ selectedCount }}편 선택됨</span>
+<a href="FocusDesign.dc.html" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 10px; border: 1px solid #56605E; color: #FFFFFF; font-size: 13px; text-decoration: none">실험 설계 초안</a>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #56605E; background: transparent; color: #FFFFFF; font-family: inherit; font-size: 13px; cursor: pointer">BibTeX</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ chatOpen }}" hint-placeholder-val="{{ false }}">
+<section aria-label="라이브러리에 묻기" style="position: fixed; right: 28px; bottom: 100px; z-index: 20; width: 380px; max-width: calc(100vw - 56px); background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 16px; box-shadow: 0 12px 32px rgba(20,26,25,0.16); display: flex; flex-direction: column">
+<div style="padding: 16px 18px 10px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; font-weight: 700">라이브러리에 묻기</span>
+<span style="font-size: 12px; color: #56605E">전체 논문에서 답을 찾고 인용마다 근거를 붙여요</span>
+</div>
+<div style="padding: 6px 18px 12px; display: flex; flex-direction: column; gap: 10px">
+<div style="align-self: flex-end; max-width: 85%; background: #141A19; color: #FFFFFF; border-radius: 14px 14px 4px 14px; padding: 9px 12px; font-size: 13px; line-height: 1.6">LoRA 변형 기법들의 차이를 정리해줘</div>
+<div style="background: #F6F7F7; border-radius: 14px 14px 14px 4px; padding: 10px 12px; font-size: 13px; line-height: 1.7">QLoRA는 기반 모델을 4-bit로 양자화해 메모리를 줄이는 데, DoRA는 가중치를 크기와 방향으로 나눠 학습 방식을 바꾸는 데 초점을 둬요. <a href="FocusReader.dc.html" style="font-size: 12px">QLoRA 근거</a> · <a href="FocusReader.dc.html" style="font-size: 12px">DoRA 근거</a></div>
+</div>
+<div style="padding: 0 14px 14px; display: flex; gap: 8px">
+<label for="lib-ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">라이브러리에 질문하기</label>
+<input id="lib-ask" type="text" placeholder="질문하기" style="flex: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #C8D0CE; background: #F6F7F7; font-family: inherit; font-size: 14px">
+<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 10px; border: none; background: #0E6E5C; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">보내기</button>
+</div>
+</section>
+</sc-if>
+
+<button type="button" aria-expanded="{{ chatOpen }}" onClick="{{ toggleChat }}" style="position: fixed; right: 28px; bottom: 28px; z-index: 21; min-height: 56px; padding: 0 22px 0 18px; border-radius: 999px; border: none; background: #0E6E5C; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; box-shadow: 0 8px 22px rgba(14,110,92,0.35); cursor: pointer; display: flex; align-items: center; gap: 10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18l-1.5 3.5L8 20a8.5 8.5 0 10-3-2z"></path><path d="M9 11h6M9 14h4"></path></svg>{{ chatLabel }}</button>
+
+</main>
+
+<sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ true }}">
+<div style="flex: 0 0 auto; display: flex">
+<div class="rs" role="separator" aria-orientation="vertical" aria-label="요약 패널 너비 조절" tabIndex="0" onPointerDown="{{ drawerDrag }}" onKeyDown="{{ drawerKey }}" style="flex: 0 0 5px; background: #E1E5E4; cursor: col-resize; touch-action: none"></div>
+<aside aria-label="요약 미리보기" style="{{ drawerStyle }}">
+<div style="display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #EEF1F0">
+<span style="font-size: 13px; font-weight: 700">요약 MD</span>
+<span style="flex: 1; min-width: 0; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ d.path }}</span>
+<button type="button" aria-label="이전 요약" onClick="{{ prevSummary }}" style="width: 34px; height: 34px; border-radius: 8px; border: 1px solid #E1E5E4; background: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3D4644" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<button type="button" aria-label="다음 요약" onClick="{{ nextSummary }}" style="width: 34px; height: 34px; border-radius: 8px; border: 1px solid #E1E5E4; background: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3D4644" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+<button type="button" aria-label="요약 닫기" onClick="{{ closeDrawer }}" style="width: 34px; height: 34px; border-radius: 8px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3D4644" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+
+<div style="flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 900; line-height: 1.4">{{ d.title }}</h2>
+<span style="font-size: 12px; color: #56605E">{{ d.meta }}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<a href="FocusReader.dc.html" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: 10px; background: #141A19; color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none">리더에서 열기</a>
+<div role="group" aria-label="요약 보기 방식" style="margin-left: auto; display: flex; gap: 2px; background: #F0F2F2; border-radius: 10px; padding: 3px">
+<sc-for list="{{ views }}" as="v" hint-placeholder-count="2"><button type="button" aria-pressed="{{ v.pressed }}" onClick="{{ v.pick }}" style="{{ v.style }}">{{ v.label }}</button></sc-for>
+</div>
+</div>
+
+<sc-if value="{{ rawView }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="md-raw" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">요약 MD 원문</label>
+<textarea id="md-raw" value="{{ mdText }}" onChange="{{ onMd }}" spellCheck="false" style="min-height: 560px; box-sizing: border-box; padding: 12px 14px; border-radius: 10px; border: 1px solid #E1E5E4; background: #F6F7F7; font-family: 'Roboto Mono', monospace; font-size: 12.5px; line-height: 1.7; color: #141A19; resize: vertical; white-space: pre"></textarea>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex: 1; font-size: 12px; color: #56605E">{{ mdStatus }}</span>
+<button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 8px; border: none; background: #141A19; color: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer">저장</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ niceView }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; flex-direction: column">
+<span style="font-size: 13px; font-weight: 700; padding-bottom: 6px">3줄 요약</span>
+<sc-for list="{{ d.lines }}" as="l" hint-placeholder-count="3">
+<div style="display: flex; gap: 10px; font-size: 14px; line-height: 1.6; padding: 8px 0; border-top: 1px solid #EEF1F0"><span style="font-family: 'Roboto Mono', monospace; font-weight: 500; color: #0E6E5C">{{ l.n }}</span><span>{{ l.text }} <a href="FocusReader.dc.html" style="font-size: 12px">근거</a></span></div>
+</sc-for>
+</div>
+
+<dl style="margin: 0; display: grid; grid-template-columns: 100px 1fr; font-size: 13px; border-top: 1px solid #E1E5E4">
+<sc-for list="{{ d.fields }}" as="f" hint-placeholder-count="4">
+<dt style="padding: 8px 0; color: #56605E; border-bottom: 1px solid #EEF1F0">{{ f.k }}</dt><dd style="margin: 0; padding: 8px 0; border-bottom: 1px solid #EEF1F0">{{ f.v }}</dd>
+</sc-for>
+</dl>
+
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 700; color: #0E6E5C">METHOD</span><span style="font-size: 14px; line-height: 1.6">{{ d.method }} <a href="FocusReader.dc.html" style="font-size: 12px">근거</a></span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 700; color: #0E6E5C">RESULT</span><span style="font-size: 14px; line-height: 1.6">{{ d.result }} <a href="FocusReader.dc.html" style="font-size: 12px">근거</a></span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 700; color: #0E6E5C">LIMITATION</span><span style="font-size: 14px; line-height: 1.6; color: #56605E">[OpenReview 리뷰가 있으면 요약해 반영 · 출처 표기]</span></div>
+</div>
+</sc-if>
+</div>
+</aside>
+</div>
+</sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { view: 'recent', density: 'list', uploadOpen: false, chatOpen: false, statusOpen: null, statuses: {}, drawer: 'attn', drawerView: 'nice', mdEdits: {}, selected: { lora: true, qlora: true, dora: true }, navW: 250, drawerW: 400, navOpen: true };
+    this.drag = null;
+    this.panes = { nav: { key: 'navW', open: 'navOpen', min: 200, max: 400, dir: 1, base: 'min-width:0;box-sizing:border-box;background:#F6F7F7;padding:18px 14px;display:flex;flex-direction:column;gap:6px;' }, drawer: { key: 'drawerW', min: 320, max: 720, dir: -1, base: 'min-width:0;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;' } };
+  }
+  componentDidMount() {
+    this.onMove = (e) => {
+      const d = this.drag;
+      if (!d) return;
+      const p = this.panes[d.kind];
+      this.setState({ [p.key]: Math.max(p.min, Math.min(p.max, d.start + p.dir * (e.clientX - d.x))) });
+    };
+    this.onUp = () => { this.drag = null; };
+    window.addEventListener('pointermove', this.onMove);
+    window.addEventListener('pointerup', this.onUp);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('pointermove', this.onMove);
+    window.removeEventListener('pointerup', this.onUp);
+  }
+  startDrag(kind, e) {
+    e.preventDefault();
+    this.drag = { kind: kind, x: e.clientX, start: this.state[this.panes[kind].key] };
+  }
+  nudge(kind, e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const p = this.panes[kind];
+    const v = this.state[p.key] + (e.key === 'ArrowRight' ? 16 : -16) * p.dir;
+    this.setState({ [p.key]: Math.max(p.min, Math.min(p.max, v)) });
+  }
+  resizeVals() {
+    const out = {};
+    Object.keys(this.panes).forEach((k) => {
+      const p = this.panes[k];
+      const open = !p.open || this.state[p.open];
+      out[k + 'Style'] = open ? p.base + 'flex:0 0 ' + this.state[p.key] + 'px;' : 'display:none;';
+      out[k + 'Rs'] = open ? 'flex:0 0 5px;background:#E1E5E4;cursor:col-resize;touch-action:none;' : 'display:none;';
+      out[k + 'Closed'] = !open;
+      out[k + 'Toggle'] = () => this.setState({ [p.open]: !this.state[p.open] });
+      out[k + 'Drag'] = (e) => this.startDrag(k, e);
+      out[k + 'Key'] = (e) => this.nudge(k, e);
+    });
+    return out;
+  }
+  renderVals() {
+    const PAPERS = [
+      { id: 'attn', title: 'Attention Is All You Need', authors: 'Vaswani et al. · 2017', venue: 'NeurIPS 2017', field: 'NLP', model: 'Transformer', status: 'reading', source: 'arXiv HTML', summary: 'done', access: '방금' },
+      { id: 'dora', title: 'DoRA: Weight-Decomposed Low-Rank Adaptation', authors: 'Liu et al. · 2024', venue: 'ICML 2024', field: 'PEFT', model: 'LLaMA', status: 'reading', source: 'arXiv HTML', summary: 'done', access: '오늘 08:40' },
+      { id: 'lora', title: 'LoRA: Low-Rank Adaptation of Large Language Models', authors: 'Hu et al. · 2021', venue: 'ICLR 2022', field: 'PEFT', model: 'GPT-3', status: 'done', source: 'PDF', summary: 'done', access: '어제' },
+      { id: 'qlora', title: 'QLoRA: Efficient Finetuning of Quantized LLMs', authors: 'Dettmers et al. · 2023', venue: 'NeurIPS 2023', field: 'PEFT', model: 'LLaMA', status: 'done', source: 'PDF', summary: 'done', access: '11월 1일' },
+      { id: 'adalora', title: 'AdaLoRA: Adaptive Budget Allocation for Parameter-Efficient Fine-Tuning', authors: 'Zhang et al. · 2023', venue: 'ICLR 2023', field: 'PEFT', model: 'DeBERTaV3', status: 'reading', source: 'PDF', summary: 'running', access: '10월 30일' },
+      { id: 'vit', title: 'An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale', authors: 'Dosovitskiy et al. · 2020', venue: 'ICLR 2021', field: 'Vision', model: 'ViT', status: 'todo', source: 'PDF', summary: 'none', access: '10월 28일' }
+    ];
+    const PILL = 'min-height:30px;font-family:inherit;font-size:12px;font-weight:700;border:none;border-radius:999px;padding:0 10px;white-space:nowrap;cursor:pointer;';
+    const MENU_ITEM = 'min-height:38px;display:flex;align-items:center;gap:8px;padding:0 10px;border:none;border-radius:8px;font-family:inherit;font-size:13px;text-align:left;cursor:pointer;';
+    const STATUS = {
+      todo: { label: '읽을 예정', style: PILL + 'background:#F0F2F2;color:#3D4644;' },
+      reading: { label: '읽는 중', style: PILL + 'background:#E3F2EE;color:#0B5A4B;' },
+      done: { label: '완료', style: PILL + 'background:#141A19;color:#FFFFFF;' }
+    };
+    const SUMMARY = {
+      done: { label: '요약 MD', style: 'font-family:Roboto Mono,monospace;font-size:12px;color:#0B5A4B;' },
+      running: { label: '요약 중', style: 'font-size:12px;color:#8A3D09;' },
+      none: { label: '—', style: 'font-size:12px;color:#7A8482;' }
+    };
+    const VIEWS = {
+      recent: { title: '최근 열어본 논문', test: () => true },
+      all: { title: '전체 논문', test: () => true },
+      todo: { title: '읽을 예정', test: (p) => p.status === 'todo' },
+      reading: { title: '읽는 중', test: (p) => p.status === 'reading' },
+      done: { title: '완료', test: (p) => p.status === 'done' },
+      peft: { title: '# PEFT', test: (p) => p.field === 'PEFT' },
+      vision: { title: '# Vision', test: (p) => p.field === 'Vision' },
+      nlp: { title: '# NLP', test: (p) => p.field === 'NLP' }
+    };
+    const view = this.state.view;
+    const NAV = 'width:100%;min-height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;border:none;border-radius:10px;font-family:inherit;font-size:14px;cursor:pointer;text-align:left;';
+    const navItem = (id) => ({
+      pressed: view === id ? 'true' : 'false',
+      style: NAV + (view === id ? 'background:#FFFFFF;color:#141A19;font-weight:700;box-shadow:0 1px 2px rgba(20,26,25,0.1);' : 'background:transparent;color:#3D4644;'),
+      pick: () => this.setState({ view: id })
+    });
+    const nav = {};
+    Object.keys(VIEWS).forEach((k) => { nav[k] = navItem(k); });
+    const DEN = 'width:38px;height:36px;border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+    const denBtn = (id) => ({
+      pressed: this.state.density === id ? 'true' : 'false',
+      style: DEN + (this.state.density === id ? 'background:#FFFFFF;color:#141A19;box-shadow:0 1px 2px rgba(20,26,25,0.12);' : 'background:transparent;color:#7A8482;'),
+      pick: () => this.setState({ density: id })
+    });
+    const dense = this.state.density === 'compact';
+    const cell = 'padding:' + (dense ? '9px' : '16px') + ' 12px;border-bottom:1px solid #EEF1F0;vertical-align:middle;';
+    const sel = this.state.selected;
+    const papers = PAPERS.map((p) => Object.assign({}, p, { status: this.state.statuses[p.id] || p.status })).filter(VIEWS[view].test).map((p) => ({
+      title: p.title,
+      authors: p.authors,
+      venue: p.venue,
+      source: p.source,
+      field: p.field,
+      model: p.model,
+      access: p.access,
+      cell: cell,
+      statusLabel: STATUS[p.status].label,
+      statusStyle: STATUS[p.status].style,
+      summary: SUMMARY[p.summary].label,
+      summaryStyle: SUMMARY[p.summary].style,
+      hasSummary: p.summary === 'done',
+      noSummary: p.summary !== 'done',
+      summaryAria: p.title + ' 요약 보기',
+      summaryBtnStyle: 'min-height:30px;padding:0 10px;border-radius:8px;font-family:Roboto Mono,monospace;font-size:12px;font-weight:500;cursor:pointer;' + (this.state.drawer === p.id ? 'background:#0E6E5C;color:#FFFFFF;border:1px solid #0E6E5C;' : 'background:#FFFFFF;color:#0B5A4B;border:1px solid #9CCBBE;'),
+      openSummary: () => this.setState({ drawer: p.id }),
+      statusAria: '읽음 상태: ' + STATUS[p.status].label + ', 바꾸기',
+      statusOpen: this.state.statusOpen === p.id,
+      toggleStatus: () => this.setState({ statusOpen: this.state.statusOpen === p.id ? null : p.id }),
+      statusOpts: ['todo', 'reading', 'done'].map((k) => ({
+        label: STATUS[k].label,
+        checked: p.status === k ? 'true' : 'false',
+        mark: p.status === k ? '✓' : '',
+        style: MENU_ITEM + (p.status === k ? 'background:#F6FBF9;color:#0B5A4B;font-weight:700;' : 'background:transparent;color:#141A19;'),
+        pick: () => this.setState({ statuses: Object.assign({}, this.state.statuses, { [p.id]: k }), statusOpen: null })
+      })),
+      checked: !!sel[p.id],
+      toggle: () => this.setState({ selected: Object.assign({}, this.state.selected, { [p.id]: !this.state.selected[p.id] }) })
+    }));
+    const count = Object.keys(sel).filter((k) => sel[k]).length;
+    const SUMMARIES = {
+      attn: {
+        path: 'vault/Papers/Transformer.md',
+        file: 'Transformer.html',
+        html: true,
+        authors: 'Vaswani et al.',
+        venue: 'NeurIPS 2017',
+        title: 'Attention Is All You Need',
+        meta: 'Vaswani et al. · NeurIPS 2017 · arXiv HTML',
+        lines: ['순환·합성곱 없이 어텐션만으로 된 인코더-디코더 모델 Transformer를 제안', 'scaled dot-product attention을 여러 head로 병렬 실행하고 위치 정보는 사인·코사인 인코딩으로 넣음', 'WMT14 EN-DE 28.4, EN-FR 41.8 BLEU로 기존 최고 성능을 더 적은 학습 비용으로 넘어섬'],
+        fields: [['Field', 'NLP · 기계 번역'], ['Base Model', 'Transformer base 65M · big 213M'], ['Paper URL', 'arxiv.org/abs/1706.03762'], ['Code', 'github.com/tensorflow/tensor2tensor']],
+        method: '인코더·디코더 각 6층, 층마다 multi-head attention과 position-wise FFN, residual + layer norm',
+        result: 'EN-DE 28.4 / EN-FR 41.8 BLEU · 본문은 EN-FR을 41.0으로 적어 확인 필요'
+      },
+      dora: {
+        path: 'vault/Papers/DoRA.md',
+        file: 'DoRA.html',
+        html: true,
+        authors: 'Liu et al.',
+        venue: 'ICML 2024',
+        title: 'DoRA: Weight-Decomposed Low-Rank Adaptation',
+        meta: 'Liu et al. · ICML 2024 · arXiv HTML',
+        lines: ['LoRA와 full fine-tuning의 학습 양상을 가중치의 크기·방향 관점에서 비교', '방향은 LoRA로, 크기는 별도 벡터로 학습하는 DoRA 제안', '추론 비용 없이 여러 과제에서 LoRA보다 나은 결과 보고'],
+        fields: [['Field', 'PEFT'], ['Base Model', 'LLaMA 등'], ['Paper URL', '[arXiv 링크]'], ['Code', '[공식 레포 링크]']],
+        method: '사전학습 가중치를 크기 벡터와 방향 행렬로 분해하고, 방향에만 LoRA를 적용',
+        result: '추론 비용을 늘리지 않고 LoRA보다 나은 결과 보고'
+      },
+      lora: {
+        path: 'vault/Papers/LoRA.md',
+        file: 'LoRA.pdf',
+        html: false,
+        authors: 'Hu et al.',
+        venue: 'ICLR 2022',
+        title: 'LoRA: Low-Rank Adaptation of Large Language Models',
+        meta: 'Hu et al. · ICLR 2022 · PDF',
+        lines: ['사전학습 가중치는 고정하고 저랭크 행렬 B·A만 학습해 파인튜닝 비용을 줄임', '학습한 BA를 원래 가중치에 합칠 수 있어 추론 지연이 늘지 않음', '학습 파라미터를 크게 줄이면서 full fine-tuning과 비슷한 성능'],
+        fields: [['Field', 'PEFT'], ['Base Model', 'GPT-3 · RoBERTa'], ['Paper URL', '[arXiv 링크]'], ['Code', '[공식 레포 링크]']],
+        method: '가중치 업데이트를 두 저랭크 행렬의 곱으로 근사해 학습',
+        result: '학습 파라미터를 크게 줄이면서 full fine-tuning과 비슷한 성능'
+      },
+      qlora: {
+        path: 'vault/Papers/QLoRA.md',
+        file: 'QLoRA.pdf',
+        html: false,
+        authors: 'Dettmers et al.',
+        venue: 'NeurIPS 2023',
+        title: 'QLoRA: Efficient Finetuning of Quantized LLMs',
+        meta: 'Dettmers et al. · NeurIPS 2023 · PDF',
+        lines: ['4-bit NF4로 양자화한 고정 모델 위에서 LoRA를 학습', 'double quantization과 paged optimizer로 메모리를 더 줄임', '65B 모델을 48GB GPU 1장에서 파인튜닝'],
+        fields: [['Field', 'PEFT'], ['Base Model', 'LLaMA'], ['Paper URL', '[arXiv 링크]'], ['Code', '[공식 레포 링크]']],
+        method: '양자화한 기반 모델은 고정하고 LoRA 어댑터만 학습',
+        result: '65B 모델을 48GB GPU 1장에서 파인튜닝'
+      }
+    };
+    const ORDER = ['attn', 'dora', 'lora', 'qlora'];
+    const cur = SUMMARIES[this.state.drawer];
+    const idx = ORDER.indexOf(this.state.drawer);
+    const d = cur ? {
+      path: cur.path,
+      title: cur.title,
+      meta: cur.meta,
+      method: cur.method,
+      result: cur.result,
+      lines: cur.lines.map((t, i) => ({ n: String(i + 1), text: t })),
+      fields: cur.fields.map((f) => ({ k: f[0], v: f[1] }))
+    } : { path: '', title: '', meta: '', method: '', result: '', lines: [], fields: [] };
+    const cite = (n) => cur.html ? ' ([[' + cur.file + '#S' + n + '|§' + n + ']])' : ' ([[' + cur.file + '#page=[쪽]]] · p.[쪽], §' + n + ')';
+    const buildMd = () => {
+      const fm = ['---', 'title: "' + cur.title + '"', 'authors: ' + cur.authors, 'venue: ' + cur.venue];
+      cur.fields.forEach((f) => fm.push(f[0].toLowerCase().replace(' ', '_') + ': ' + f[1]));
+      fm.push('source: ' + (cur.html ? 'arxiv_html' : 'pdf'));
+      fm.push('---', '', '## 3줄 요약');
+      cur.lines.forEach((t, i) => fm.push((i + 1) + '. ' + t + cite(i + 3)));
+      fm.push('', '## Method', cur.method + cite(4), '', '## Result', cur.result + cite(5), '', '## Limitation', '[OpenReview 리뷰가 있으면 요약해 반영 · 출처 표기]');
+      return fm.join('\n');
+    };
+    const VBTN = 'min-height:34px;padding:0 12px;border-radius:8px;border:none;font-family:inherit;font-size:12px;cursor:pointer;';
+    const dv = this.state.drawerView;
+    const edited = cur && this.state.mdEdits[this.state.drawer] !== undefined;
+    return {
+      ...this.resizeVals(),
+      views: [{ id: 'nice', label: '정리된 보기' }, { id: 'raw', label: 'MD 원문' }].map((v) => ({
+        label: v.label,
+        pressed: dv === v.id ? 'true' : 'false',
+        style: VBTN + (dv === v.id ? 'background:#FFFFFF;color:#141A19;font-weight:700;box-shadow:0 1px 2px rgba(20,26,25,0.12);' : 'background:transparent;color:#56605E;'),
+        pick: () => this.setState({ drawerView: v.id })
+      })),
+      niceView: dv === 'nice',
+      rawView: dv === 'raw',
+      mdText: cur ? (edited ? this.state.mdEdits[this.state.drawer] : buildMd()) : '',
+      onMd: (e) => this.setState({ mdEdits: Object.assign({}, this.state.mdEdits, { [this.state.drawer]: e.target.value }) }),
+      mdStatus: edited ? '수정됨 · 아직 저장하지 않았어요' : 'vault 파일과 같아요',
+      drawerOpen: !!cur,
+      d: d,
+      closeDrawer: () => this.setState({ drawer: null }),
+      prevSummary: () => this.setState({ drawer: ORDER.at((idx - 1 + ORDER.length) % ORDER.length) }),
+      nextSummary: () => this.setState({ drawer: ORDER.at((idx + 1) % ORDER.length) }),
+      title: VIEWS[view].title,
+      nav: nav,
+      den: { list: denBtn('list'), compact: denBtn('compact') },
+      showMeta: !dense,
+      papers: papers,
+      selectedCount: String(count),
+      hasSelection: count > 0,
+      uploadOpen: this.state.uploadOpen,
+      toggleUpload: () => this.setState({ uploadOpen: !this.state.uploadOpen }),
+      chatOpen: this.state.chatOpen,
+      chatLabel: this.state.chatOpen ? '닫기' : '라이브러리에 묻기',
+      toggleChat: () => this.setState({ chatOpen: !this.state.chatOpen })
+    };
+  }
+}
+</script>
+</body>
+</html>

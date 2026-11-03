@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>권한·종료 조건</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#0E6E5C}a:hover{color:#08493D}
+.rs{transition:background .15s}.rs:hover,.rs:focus-visible{background:#0E6E5C !important;outline:none}
+.tg:hover{background:#E9ECEB !important;color:#141A19 !important}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #FFFFFF; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+
+<header style="background: #FFFFFF; border-bottom: 1px solid #E1E5E4">
+<div style="box-sizing: border-box; padding: 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="FocusLibrary.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">논문</a>
+<a href="AltFocus.dc.html" aria-current="page" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid #0E6E5C; color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none">실험</a>
+<a href="FocusCode.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">코드</a>
+</nav>
+<div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #56605E">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>모든 연결 정상</span>
+</div>
+</div>
+</header>
+
+<div style="flex: 1; display: flex; align-items: stretch">
+
+<sc-if value="{{ navClosed }}" hint-placeholder-val="{{ false }}">
+<div style="flex: 0 0 48px; box-sizing: border-box; background: #F6F7F7; border-right: 1px solid #E1E5E4; padding: 14px 0; display: flex; flex-direction: column; align-items: center"><button type="button" class="tg" aria-label="사이드바 펼치기" title="사이드바 펼치기" aria-expanded="false" onClick="{{ navToggle }}" style="width: 32px; height: 32px; flex: 0 0 32px; border-radius: 8px; border: none; background: transparent; color: #56605E; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg></button></div>
+</sc-if>
+<nav aria-label="실험 메뉴" style="{{ navStyle }}">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px 12px">
+<span style="font-size: 13px; color: #56605E">프로젝트</span>
+<div style="display: flex; gap: 4px">
+<button type="button" aria-label="새 프로젝트" style="width: 32px; height: 32px; border-radius: 8px; border: none; background: #E3F2EE; color: #0E6E5C; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<button type="button" class="tg" aria-label="사이드바 접기" title="사이드바 접기" aria-expanded="true" onClick="{{ navToggle }}" style="width: 32px; height: 32px; flex: 0 0 32px; border-radius: 8px; border: none; background: transparent; color: #56605E; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg></button>
+</div>
+</div>
+<a href="AltFocus.dc.html" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(20,26,25,0.1); color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span><span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px">lora-rank-ablation</span><span style="font-size: 11px; color: #0B5A4B">실행 중</span></a>
+<a href="#vit-distill" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; color: #3D4644; font-size: 14px; text-decoration: none"><span style="width: 8px; height: 8px; border-radius: 50%; background: #B7BFBD"></span><span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px">vit-distill</span><span style="font-size: 11px; color: #56605E">대기</span></a>
+
+<span style="font-size: 13px; color: #56605E; padding: 16px 12px 2px">보기</span>
+<a href="AltFocus.dc.html" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; color: #3D4644; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>대시보드</a>
+<a href="FocusAuthority.dc.html" aria-current="page" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(20,26,25,0.1); color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"></path></svg><span style="flex: 1">권한 설정</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #8A3D09">1</span></a>
+
+<div style="margin-top: auto; border-top: 1px solid #E1E5E4; padding: 14px 12px 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #3D4644">
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #0E6E5C"></span>Hooks 활성</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #0E6E5C"></span>Claude Code · Remote Control</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #0E6E5C"></span>Discord 웹훅</span>
+</div>
+</nav>
+<div class="rs" role="separator" aria-orientation="vertical" aria-label="실험 메뉴 너비 조절" tabIndex="0" onPointerDown="{{ navDrag }}" onKeyDown="{{ navKey }}" style="{{ navRs }}"></div>
+
+<main style="flex: 1 1 0; min-width: 0; box-sizing: border-box; padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 30px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em">권한·종료 조건</h1>
+<span style="font-size: 14px; color: #56605E">지금은 <span style="font-weight: 700; color: #0B5A4B">{{ modeName }}</span> 단계예요</span>
+</div>
+<button type="button" style="min-height: 42px; padding: 0 18px; border-radius: 10px; border: none; background: #141A19; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">변경 사항 저장</button>
+</div>
+
+<section id="mode" aria-label="권한 단계" style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">권한 단계</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<sc-for list="{{ modes }}" as="m" hint-placeholder-count="3">
+<button type="button" aria-pressed="{{ m.pressed }}" onClick="{{ m.pick }}" style="{{ m.style }}">
+<span style="display: flex; align-items: center; gap: 10px"><span style="{{ m.radio }}"></span><span style="font-size: 15px; font-weight: 700">{{ m.name }}</span></span>
+<span style="font-size: 13px; color: #56605E; line-height: 1.6; padding-left: 28px">{{ m.desc }}</span>
+</button>
+</sc-for>
+</div>
+</section>
+
+<section id="actions" aria-label="행동별 권한" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">행동별 권한</h2>
+<span style="font-size: 12px; color: #56605E">승인 필요 행동은 "앞으로 계속 허용"을 눌러도 매번 다시 물어요</span>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 720px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #56605E; font-size: 13px">
+<th style="font-weight: 500; padding: 11px 12px 11px 0; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4">행동</th>
+<th style="font-weight: 500; padding: 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">범위</th>
+<th style="font-weight: 500; padding: 11px 0 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0; width: 300px">권한</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ rows }}" as="row" hint-placeholder-count="9">
+<tr>
+<td style="padding: 10px 12px 10px 0; border-bottom: 1px solid #EEF1F0; font-weight: 500">{{ row.name }}</td>
+<td style="padding: 10px 12px; border-bottom: 1px solid #EEF1F0; font-size: 13px; color: #56605E">{{ row.desc }}</td>
+<td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #EEF1F0">
+<div role="group" aria-label="{{ row.name }}" style="display: inline-flex; gap: 2px; background: #F0F2F2; border-radius: 10px; padding: 3px">
+<sc-for list="{{ row.opts }}" as="opt" hint-placeholder-count="3">
+<button type="button" aria-pressed="{{ opt.pressed }}" disabled="{{ row.locked }}" onClick="{{ opt.pick }}" style="{{ opt.style }}">{{ opt.label }}</button>
+</sc-for>
+</div>
+</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="stop" aria-label="종료 조건" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">종료 조건</h2>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">specifications/Config.yaml</span>
+</div>
+<sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 16px; border-radius: 10px; border: 1px solid #E1E5E4; background: #F6F7F7">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#56605E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 018 0v3"></path></svg>
+<span style="flex: 1 1 300px; font-size: 14px">실험이 도는 동안 AI는 종료 조건을 바꿀 수 없어요. 루프를 멈추면 직접 고치거나 승인 창을 거쳐 AI에게 맡길 수 있어요.</span>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #C8D0CE; background: #FFFFFF; font-family: inherit; font-size: 13px; cursor: pointer">일시정지 후 수정</button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4">
+<div style="padding: 16px 18px 16px 0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #56605E">목표</span><span style="font-family: 'Roboto Mono', monospace; font-size: 22px; font-weight: 500">≥ 82.0%</span><span style="font-size: 12px; color: #56605E">val_accuracy</span></div>
+<div style="padding: 16px 18px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #56605E">최대 실행</span><span style="font-family: 'Roboto Mono', monospace; font-size: 22px; font-weight: 500">20회</span><span style="font-size: 12px; color: #56605E">현재 7회</span></div>
+<div style="padding: 16px 18px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #56605E">GPU 시간</span><span style="font-family: 'Roboto Mono', monospace; font-size: 22px; font-weight: 500">48h</span><span style="font-size: 12px; color: #56605E">사용 18.4h</span></div>
+<div style="padding: 16px 18px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #56605E">마감</span><span style="font-family: 'Roboto Mono', monospace; font-size: 22px; font-weight: 500">11-09</span><span style="font-size: 12px; color: #56605E">23:59 · D-7</span></div>
+<div style="padding: 16px 0 16px 18px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #56605E">사용량 한도</span><span style="font-size: 15px; font-weight: 700; padding-top: 4px">대기 후 재개</span><span style="font-size: 12px; color: #56605E">추가 사용량 자동 구매 안 함</span></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ notFull }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 14px; color: #56605E; padding: 12px 0; border-top: 1px solid #E1E5E4">종료 조건은 연구 전체 자동화 단계에서만 써요. 다른 단계에서는 실험마다 직접 시작합니다.</span>
+</sc-if>
+</section>
+
+<section id="notify" aria-label="알림" style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">알림</h2>
+<div style="display: flex; flex-wrap: wrap; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4">
+<div style="flex: 1 1 320px; padding: 16px 20px 16px 0; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Discord 웹훅</span><span style="font-size: 12px; color: #56605E">시스템 이벤트</span></div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="font-size: 12px; background: #F0F2F2; border-radius: 6px; padding: 3px 8px">실험 완료</span>
+<span style="font-size: 12px; background: #F0F2F2; border-radius: 6px; padding: 3px 8px">이상 감지</span>
+<span style="font-size: 12px; background: #F0F2F2; border-radius: 6px; padding: 3px 8px">에러 · push 실패</span>
+<span style="font-size: 12px; background: #F0F2F2; border-radius: 6px; padding: 3px 8px">사용량 한도</span>
+</div>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E; overflow-wrap: anywhere">discord.com/api/webhooks/••••••••</span>
+<button type="button" style="align-self: flex-start; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #C8D0CE; background: #FFFFFF; font-family: inherit; font-size: 13px; cursor: pointer">테스트 알림 보내기</button>
+</div>
+<div style="flex: 1 1 320px; padding: 16px 0 16px 20px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Claude 앱 푸시</span><span style="font-size: 12px; color: #56605E">권한 승인 · 의사결정</span></div>
+<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 14px; padding: 6px 0"><span>Remote Control 세션</span><span style="color: #0E6E5C; font-weight: 700">연결됨</span></div>
+<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 14px; padding: 6px 0"><span>Push when actions required</span><span style="color: #0E6E5C; font-weight: 700">켜짐</span></div>
+<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 14px; padding: 6px 0"><span>재연결 실패 시</span><span style="color: #56605E">State.yaml 기준 새 세션</span></div>
+</div>
+</div>
+</section>
+
+<section id="log" aria-label="승인 기록" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">승인 기록</h2>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">logs/Approval_log.csv</span>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 720px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #56605E; font-size: 13px">
+<th style="font-weight: 500; padding: 11px 12px 11px 0; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4">시각</th>
+<th style="font-weight: 500; padding: 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">행동</th>
+<th style="font-weight: 500; padding: 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">요청</th>
+<th style="font-weight: 500; padding: 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">결과</th>
+<th style="font-weight: 500; padding: 11px 0 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">처리</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding: 12px 12px 12px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">11-02 21:43</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">패키지 설치</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">peft 패키지 설치</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0"><span style="font-size: 12px; font-weight: 700; color: #8A3D09; background: #FDF0E5; border-radius: 999px; padding: 4px 10px">대기 중</span></td><td style="padding: 12px 0 12px 12px; border-bottom: 1px solid #EEF1F0">Claude 앱</td></tr>
+<tr><td style="padding: 12px 12px 12px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">11-02 21:42</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">연구 결정</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">다음 실험 rank 32 vs lr 1e-4</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">rank 32 선택</td><td style="padding: 12px 0 12px 12px; border-bottom: 1px solid #EEF1F0">AI · 권한 단계</td></tr>
+<tr><td style="padding: 12px 12px 12px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">11-02 18:30</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">파일 삭제</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">EXP-005 재개용 체크포인트 정리</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">허용</td><td style="padding: 12px 0 12px 12px; border-bottom: 1px solid #EEF1F0">Claude 앱</td></tr>
+<tr><td style="padding: 12px 12px 12px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">11-02 15:02</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">외부 네트워크</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">huggingface.co 가중치 다운로드</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">허용</td><td style="padding: 12px 0 12px 12px; border-bottom: 1px solid #EEF1F0">Claude 앱</td></tr>
+<tr><td style="padding: 12px 12px 12px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">11-01 23:10</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">코드 수정</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">데이터 로더 수정</td><td style="padding: 12px; border-bottom: 1px solid #EEF1F0">거부 후 다른 방법 지시</td><td style="padding: 12px 0 12px 12px; border-bottom: 1px solid #EEF1F0">Claude 앱</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1640}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'full', overrides: {}, navW: 250, navOpen: true };
+    this.drag = null;
+    this.panes = { nav: { key: 'navW', open: 'navOpen', min: 200, max: 400, dir: 1, base: 'min-width:0;box-sizing:border-box;background:#F6F7F7;padding:18px 14px;display:flex;flex-direction:column;gap:6px;' } };
+  }
+  componentDidMount() {
+    this.onMove = (e) => {
+      const d = this.drag;
+      if (!d) return;
+      const p = this.panes[d.kind];
+      this.setState({ [p.key]: Math.max(p.min, Math.min(p.max, d.start + p.dir * (e.clientX - d.x))) });
+    };
+    this.onUp = () => { this.drag = null; };
+    window.addEventListener('pointermove', this.onMove);
+    window.addEventListener('pointerup', this.onUp);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('pointermove', this.onMove);
+    window.removeEventListener('pointerup', this.onUp);
+  }
+  startDrag(kind, e) {
+    e.preventDefault();
+    this.drag = { kind: kind, x: e.clientX, start: this.state[this.panes[kind].key] };
+  }
+  nudge(kind, e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const p = this.panes[kind];
+    const v = this.state[p.key] + (e.key === 'ArrowRight' ? 16 : -16) * p.dir;
+    this.setState({ [p.key]: Math.max(p.min, Math.min(p.max, v)) });
+  }
+  resizeVals() {
+    const out = {};
+    Object.keys(this.panes).forEach((k) => {
+      const p = this.panes[k];
+      const open = !p.open || this.state[p.open];
+      out[k + 'Style'] = open ? p.base + 'flex:0 0 ' + this.state[p.key] + 'px;' : 'display:none;';
+      out[k + 'Rs'] = open ? 'flex:0 0 5px;background:#E1E5E4;cursor:col-resize;touch-action:none;' : 'display:none;';
+      out[k + 'Closed'] = !open;
+      out[k + 'Toggle'] = () => this.setState({ [p.open]: !this.state[p.open] });
+      out[k + 'Drag'] = (e) => this.startDrag(k, e);
+      out[k + 'Key'] = (e) => this.nudge(k, e);
+    });
+    return out;
+  }
+  renderVals() {
+    const MODES = [
+      { id: 'manual', name: '수동제어', desc: '모든 의사결정을 내가 직접 승인해요.' },
+      { id: 'error', name: '오류 대응 자동화', desc: '실험 중 생긴 에러 수정만 AI가 처리해요.' },
+      { id: 'full', name: '연구 전체 자동화', desc: '결과 판단과 다음 실험 결정까지 AI가 하고, 종료 조건에서 멈춰요.' }
+    ];
+    const ACTIONS = [
+      { key: 'code', name: '코드 수정', desc: '실험 코드·설정 파일 · 수정 전 자동 커밋', manual: 'ask', error: 'allow', full: 'allow' },
+      { key: 'hparam', name: '하이퍼파라미터 변경', desc: 'config.yaml의 허용된 조작변인만', manual: 'ask', error: 'ask', full: 'allow' },
+      { key: 'pkg', name: '패키지 설치', desc: 'conda, pip', manual: 'ask', error: 'ask', full: 'ask' },
+      { key: 'del', name: '파일 삭제', desc: '프로젝트 폴더 안', manual: 'ask', error: 'ask', full: 'ask' },
+      { key: 'newexp', name: '새 실험 시작', desc: '작업 큐에 추가하고 실행', manual: 'ask', error: 'ask', full: 'allow' },
+      { key: 'net', name: '외부 네트워크 접근', desc: '데이터셋·모델 다운로드 등', manual: 'ask', error: 'ask', full: 'ask' },
+      { key: 'outside', name: '프로젝트 폴더 밖 쓰기·삭제', desc: '잠김 · 항상 차단', manual: 'block', error: 'block', full: 'block', locked: true },
+      { key: 'stop', name: '종료 조건·Evaluation.md 수정', desc: '잠김 · 실험 진행 중 차단', manual: 'block', error: 'block', full: 'block', locked: true },
+      { key: 'prev', name: '이전 실험 폴더 덮어쓰기', desc: '잠김 · 항상 차단', manual: 'block', error: 'block', full: 'block', locked: true }
+    ];
+    const LABEL = { allow: '자동 허용', ask: '승인 필요', block: '차단' };
+    const BASE = 'min-height:36px;padding:0 14px;border-radius:8px;border:none;font-family:inherit;font-size:13px;cursor:pointer;';
+    const ON = {
+      allow: BASE + 'background:#0E6E5C;color:#FFFFFF;font-weight:700;',
+      ask: BASE + 'background:#B4530F;color:#FFFFFF;font-weight:700;',
+      block: BASE + 'background:#141A19;color:#FFFFFF;font-weight:700;'
+    };
+    const OFF = BASE + 'background:transparent;color:#56605E;';
+    const OFF_LOCKED = BASE + 'background:transparent;color:#7A8482;cursor:not-allowed;';
+    const CARD = 'flex:1 1 260px;text-align:left;display:flex;flex-direction:column;gap:6px;padding:16px 18px;border-radius:12px;font-family:inherit;cursor:pointer;color:#141A19;background:#FFFFFF;';
+    const RADIO = 'width:16px;height:16px;border-radius:50%;box-sizing:border-box;flex:0 0 16px;';
+    const mode = this.state.mode;
+    const overrides = this.state.overrides;
+    const modes = MODES.map((m) => ({
+      name: m.name,
+      desc: m.desc,
+      pressed: m.id === mode ? 'true' : 'false',
+      style: CARD + (m.id === mode ? 'border:2px solid #0E6E5C;background:#F6FBF9;' : 'border:2px solid #E1E5E4;'),
+      radio: RADIO + (m.id === mode ? 'border:5px solid #0E6E5C;' : 'border:2px solid #B7BFBD;'),
+      pick: () => this.setState({ mode: m.id, overrides: {} })
+    }));
+    const rows = ACTIONS.map((a) => {
+      const cur = overrides[a.key] || a[mode];
+      return {
+        name: a.name,
+        desc: a.desc,
+        locked: !!a.locked,
+        opts: ['allow', 'ask', 'block'].map((v) => ({
+          label: LABEL[v],
+          pressed: cur === v ? 'true' : 'false',
+          style: cur === v ? ON[v] : (a.locked ? OFF_LOCKED : OFF),
+          pick: () => {
+            if (a.locked) return;
+            this.setState({ overrides: Object.assign({}, this.state.overrides, { [a.key]: v }) });
+          }
+        }))
+      };
+    });
+    const current = MODES.find((m) => m.id === mode);
+    return { ...this.resizeVals(), modes, rows, modeName: current ? current.name : '', isFull: mode === 'full', notFull: mode !== 'full' };
+  }
+}
+</script>
+</body>
+</html>

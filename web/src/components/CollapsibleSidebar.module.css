@@ -1,0 +1,51 @@
+.rail {
+  flex: 0 0 var(--rail-w);
+  display: flex;
+  justify-content: center;
+  padding: 14px 0;
+  background: var(--surface-muted);
+}
+
+.rail[data-side='left'] {
+  border-right: 1px solid var(--border);
+}
+
+.rail[data-side='right'] {
+  border-left: 1px solid var(--border);
+}
+
+.toggle {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.toggle:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-muted);
+}
+
+.panel[data-bare='true'] {
+  background: transparent;
+}
+
+.header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px 0;
+}

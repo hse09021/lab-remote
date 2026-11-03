@@ -1,0 +1,36 @@
+{
+  "name": "lab-remote-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/noto-sans-kr": "^5.2.5",
+    "@fontsource/noto-serif": "^5.2.5",
+    "@fontsource/roboto-mono": "^5.2.5",
+    "@monaco-editor/react": "^4.7.0",
+    "@tanstack/react-query": "^5.62.0",
+    "clsx": "^2.1.1",
+    "dompurify": "^3.2.3",
+    "js-yaml": "^4.1.0",
+    "monaco-editor": "^0.52.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "sirv": "^3.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}

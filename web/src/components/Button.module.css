@@ -1,0 +1,129 @@
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: inherit;
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.base:disabled,
+.base[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ── 크기 ─────────────────────────────────────────────────── */
+.sm {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+}
+
+.md {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.lg {
+  min-height: 42px;
+  padding: 0 18px;
+}
+
+/* ── 변형 ─────────────────────────────────────────────────── */
+.primary {
+  background: var(--primary-btn);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--text-soft);
+}
+
+.accent {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.accent:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.outline {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+.outline:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* 테두리만 있는 알약. 코드 화면의 "변경 전 보기", "되돌리기" */
+.pill {
+  background: var(--bg);
+  color: var(--accent-dark);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-pill);
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pill:hover:not(:disabled) {
+  background: var(--accent-tint);
+}
+
+/* 승인 대기 배너의 CTA */
+.attention {
+  background: var(--attention);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.attention:hover:not(:disabled) {
+  background: var(--attention-text);
+}
+
+/* 실험 정지처럼 되돌리기 어려운 동작 */
+.danger {
+  background: var(--attention-text);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.dangerOutline {
+  background: var(--bg);
+  color: var(--attention-text);
+  border: 1px solid var(--attention-border);
+  font-weight: 700;
+}
+
+.dangerOutline:hover:not(:disabled) {
+  background: var(--attention-tint);
+}
+
+.full {
+  width: 100%;
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.vite/
+
+# 개발용 샘플 자산 — 배포물에 넣지 않아요 (docs/HANDOFF.md 1절)
+fixtures/*
+!fixtures/.gitkeep
+
+.env
+.env.local
+*.local

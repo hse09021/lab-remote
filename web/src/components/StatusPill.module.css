@@ -1,0 +1,104 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 0 10px;
+}
+
+.pill[data-interactive='true'] {
+  cursor: pointer;
+}
+
+.sm {
+  min-height: 24px;
+  font-size: 11.5px;
+  padding: 0 9px;
+}
+
+.md {
+  min-height: 28px;
+  font-size: 12px;
+}
+
+.lg {
+  min-height: 30px;
+  font-size: 12px;
+}
+
+.todo {
+  background: var(--surface-sunken);
+  color: var(--text-soft);
+}
+
+.reading {
+  background: var(--accent-tint);
+  color: var(--accent-dark);
+}
+
+.done {
+  background: var(--primary-btn);
+  color: var(--bg);
+}
+
+.caret {
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* ── 드롭다운 ─────────────────────────────────────────────── */
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 6;
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.item {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--surface-muted);
+}
+
+.item[aria-checked='true'] {
+  background: var(--accent-row);
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.mark {
+  width: 14px;
+  color: var(--accent);
+}
