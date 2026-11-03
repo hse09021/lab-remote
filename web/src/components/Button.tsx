@@ -19,6 +19,8 @@ interface Common {
   size?: ButtonSize
   /** 상자 크기는 그대로 두고 글자만 한 단계 작게 */
   compact?: boolean
+  /** 좌우 여백을 16px로 (목업마다 달라요) */
+  padWide?: boolean
   fullWidth?: boolean
   children?: ReactNode
   className?: string
@@ -42,6 +44,7 @@ export function Button(props: ButtonProps) {
     variant = 'outline',
     size = 'lg',
     compact = false,
+    padWide = false,
     fullWidth = false,
     className,
     children,
@@ -53,6 +56,7 @@ export function Button(props: ButtonProps) {
     s[size],
     s[variant],
     compact && s.compact,
+    padWide && s.padWide,
     fullWidth && s.full,
     className,
   )

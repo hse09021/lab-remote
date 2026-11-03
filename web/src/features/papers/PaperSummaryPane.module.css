@@ -1,0 +1,160 @@
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewToggle {
+  margin-left: auto;
+}
+
+/* ── MD 원문 ──────────────────────────────────────────────── */
+.rawBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.textarea {
+  min-height: 560px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text);
+  resize: vertical;
+  white-space: pre;
+}
+
+.saveRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mdStatus {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mdStatus[data-dirty='true'] {
+  color: var(--attention-text);
+}
+
+/* ── 정리된 보기 ──────────────────────────────────────────── */
+.niceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.groupTitle {
+  font-size: 13px;
+  font-weight: 700;
+  padding-bottom: 6px;
+}
+
+.line {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.lineNo {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.dt {
+  padding: 8px 0;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.dd {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sectionText {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.limitation {
+  color: var(--text-muted);
+}
+
+/* 근거 링크 */
+.ref {
+  font-size: 12px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ref:hover {
+  color: var(--accent-hover);
+}

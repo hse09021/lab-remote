@@ -1,0 +1,178 @@
+{
+  "attn": {
+    "path": "vault/Papers/Transformer.md",
+    "file": "Transformer.html",
+    "html": true,
+    "authors": "Vaswani et al.",
+    "venue": "NeurIPS 2017",
+    "title": "Attention Is All You Need",
+    "meta": "Vaswani et al. · NeurIPS 2017 · arXiv HTML",
+    "lines": [
+      {
+        "text": "순환·합성곱 없이 어텐션만으로 된 인코더-디코더 모델 Transformer를 제안",
+        "ref": "§3"
+      },
+      {
+        "text": "scaled dot-product attention을 여러 head로 병렬 실행하고 위치 정보는 사인·코사인 인코딩으로 넣음",
+        "ref": "§4"
+      },
+      {
+        "text": "WMT14 EN-DE 28.4, EN-FR 41.8 BLEU로 기존 최고 성능을 더 적은 학습 비용으로 넘어섬",
+        "ref": "§5"
+      }
+    ],
+    "fields": [
+      {
+        "label": "Field",
+        "value": "NLP · 기계 번역"
+      },
+      {
+        "label": "Base Model",
+        "value": "Transformer base 65M · big 213M"
+      },
+      {
+        "label": "Paper URL",
+        "value": "arxiv.org/abs/1706.03762"
+      },
+      {
+        "label": "Code",
+        "value": "github.com/tensorflow/tensor2tensor"
+      }
+    ],
+    "method": "인코더·디코더 각 6층, 층마다 multi-head attention과 position-wise FFN, residual + layer norm",
+    "result": "EN-DE 28.4 / EN-FR 41.8 BLEU · 본문은 EN-FR을 41.0으로 적어 확인 필요",
+    "limitation": "[OpenReview 리뷰가 있으면 요약해 반영 · 출처 표기]"
+  },
+  "dora": {
+    "path": "vault/Papers/DoRA.md",
+    "file": "DoRA.html",
+    "html": true,
+    "authors": "Liu et al.",
+    "venue": "ICML 2024",
+    "title": "DoRA: Weight-Decomposed Low-Rank Adaptation",
+    "meta": "Liu et al. · ICML 2024 · arXiv HTML",
+    "lines": [
+      {
+        "text": "LoRA와 full fine-tuning의 학습 양상을 가중치의 크기·방향 관점에서 비교",
+        "ref": "§3"
+      },
+      {
+        "text": "방향은 LoRA로, 크기는 별도 벡터로 학습하는 DoRA 제안",
+        "ref": "§4"
+      },
+      {
+        "text": "추론 비용 없이 여러 과제에서 LoRA보다 나은 결과 보고",
+        "ref": "§5"
+      }
+    ],
+    "fields": [
+      {
+        "label": "Field",
+        "value": "PEFT"
+      },
+      {
+        "label": "Base Model",
+        "value": "LLaMA 등"
+      },
+      {
+        "label": "Paper URL",
+        "value": "[arXiv 링크]"
+      },
+      {
+        "label": "Code",
+        "value": "[공식 레포 링크]"
+      }
+    ],
+    "method": "사전학습 가중치를 크기 벡터와 방향 행렬로 분해하고, 방향에만 LoRA를 적용",
+    "result": "추론 비용을 늘리지 않고 LoRA보다 나은 결과 보고",
+    "limitation": "[OpenReview 리뷰가 있으면 요약해 반영 · 출처 표기]"
+  },
+  "lora": {
+    "path": "vault/Papers/LoRA.md",
+    "file": "LoRA.pdf",
+    "html": false,
+    "authors": "Hu et al.",
+    "venue": "ICLR 2022",
+    "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+    "meta": "Hu et al. · ICLR 2022 · PDF",
+    "lines": [
+      {
+        "text": "사전학습 가중치는 고정하고 저랭크 행렬 B·A만 학습해 파인튜닝 비용을 줄임",
+        "ref": "p.[쪽]"
+      },
+      {
+        "text": "학습한 BA를 원래 가중치에 합칠 수 있어 추론 지연이 늘지 않음",
+        "ref": "p.[쪽]"
+      },
+      {
+        "text": "학습 파라미터를 크게 줄이면서 full fine-tuning과 비슷한 성능",
+        "ref": "p.[쪽]"
+      }
+    ],
+    "fields": [
+      {
+        "label": "Field",
+        "value": "PEFT"
+      },
+      {
+        "label": "Base Model",
+        "value": "GPT-3 · RoBERTa"
+      },
+      {
+        "label": "Paper URL",
+        "value": "[arXiv 링크]"
+      },
+      {
+        "label": "Code",
+        "value": "[공식 레포 링크]"
+      }
+    ],
+    "method": "가중치 업데이트를 두 저랭크 행렬의 곱으로 근사해 학습",
+    "result": "학습 파라미터를 크게 줄이면서 full fine-tuning과 비슷한 성능",
+    "limitation": "[OpenReview 리뷰가 있으면 요약해 반영 · 출처 표기]"
+  },
+  "qlora": {
+    "path": "vault/Papers/QLoRA.md",
+    "file": "QLoRA.pdf",
+    "html": false,
+    "authors": "Dettmers et al.",
+    "venue": "NeurIPS 2023",
+    "title": "QLoRA: Efficient Finetuning of Quantized LLMs",
+    "meta": "Dettmers et al. · NeurIPS 2023 · PDF",
+    "lines": [
+      {
+        "text": "4-bit NF4로 양자화한 고정 모델 위에서 LoRA를 학습",
+        "ref": "p.[쪽]"
+      },
+      {
+        "text": "double quantization과 paged optimizer로 메모리를 더 줄임",
+        "ref": "p.[쪽]"
+      },
+      {
+        "text": "65B 모델을 48GB GPU 1장에서 파인튜닝",
+        "ref": "p.[쪽]"
+      }
+    ],
+    "fields": [
+      {
+        "label": "Field",
+        "value": "PEFT"
+      },
+      {
+        "label": "Base Model",
+        "value": "LLaMA"
+      },
+      {
+        "label": "Paper URL",
+        "value": "[arXiv 링크]"
+      },
+      {
+        "label": "Code",
+        "value": "[공식 레포 링크]"
+      }
+    ],
+    "method": "양자화한 기반 모델은 고정하고 LoRA 어댑터만 학습",
+    "result": "65B 모델을 48GB GPU 1장에서 파인튜닝",
+    "limitation": "[OpenReview 리뷰가 있으면 요약해 반영 · 출처 표기]"
+  }
+}

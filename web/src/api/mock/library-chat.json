@@ -1,0 +1,25 @@
+{
+  "title": "라이브러리에 묻기",
+  "caption": "전체 논문에서 답을 찾고 인용마다 근거를 붙여요",
+  "messages": [
+    {
+      "role": "user",
+      "text": "LoRA 변형 기법들의 차이를 정리해줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "text": "QLoRA는 기반 모델을 4-bit로 양자화해 메모리를 줄이는 데, DoRA는 가중치를 크기와 방향으로 나눠 학습 방식을 바꾸는 데 초점을 둬요.",
+      "sources": [
+        {
+          "label": "QLoRA 근거",
+          "paperId": "qlora"
+        },
+        {
+          "label": "DoRA 근거",
+          "paperId": "dora"
+        }
+      ]
+    }
+  ]
+}

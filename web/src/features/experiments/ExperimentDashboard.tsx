@@ -283,6 +283,7 @@ function ExperimentTable({
           columns={COLUMNS}
           rows={rows}
           rowKey={(e) => e.id}
+          cellY={13}
           rowTinted={(e) => e.state === 'running'}
         />
       ) : (

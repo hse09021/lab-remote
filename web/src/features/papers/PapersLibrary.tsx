@@ -1,11 +1,359 @@
-import { ScreenPlaceholder } from '../ScreenPlaceholder'
+import { useState } from 'react'
+import { useQueries } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import {
+  libraryChatQuery,
+  paperSummariesQuery,
+  papersQuery,
+  useSetReadStatus,
+} from '@/api/papers'
+import type { Paper, ReadStatus } from '@/api/types'
+import {
+  Button,
+  CollapsedRail,
+  DataTable,
+  ErrorState,
+  IconButton,
+  LoadingState,
+  Resizer,
+  SegmentedControl,
+  SplitButton,
+  StatusPill,
+  TagChip,
+  VisuallyHidden,
+} from '@/components'
+import type { Column, SegmentedItem } from '@/components'
+import { usePaneResize } from '@/lib/usePaneResize'
+import { AskLibrary } from './AskLibrary'
+import { LIBRARY_VIEWS, LibrarySidebar } from './LibrarySidebar'
+import type { LibraryView } from './LibrarySidebar'
+import { PaperSummaryPane } from './PaperSummaryPane'
+import type { SummaryView } from './PaperSummaryPane'
+import s from './PapersLibrary.module.css'
+
+type Density = 'list' | 'compact'
+
+const DENSITY_ITEMS: SegmentedItem<Density>[] = [
+  { value: 'list', label: <ListIcon />, ariaLabel: '자세히 보기' },
+  { value: 'compact', label: <CompactIcon />, ariaLabel: '간단히 보기' },
+]
 
 export default function PapersLibrary() {
+  const nav = usePaneResize({ initial: 250, min: 200, max: 400, dir: 1, collapsible: true })
+  const drawer = usePaneResize({ initial: 400, min: 320, max: 720, dir: -1 })
+
+  const [view, setView] = useState<LibraryView>('recent')
+  const [search, setSearch] = useState('')
+  const [density, setDensity] = useState<Density>('list')
+  const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [openSummaryId, setOpenSummaryId] = useState<string | null>('attn')
+  const [summaryView, setSummaryView] = useState<SummaryView>('nice')
+  const [mdDrafts, setMdDrafts] = useState<Record<string, string>>({})
+
+  const [papers, summaries, chat] = useQueries({
+    queries: [papersQuery(), paperSummariesQuery(), libraryChatQuery()],
+  })
+  const setStatus = useSetReadStatus()
+
+  const query = search.trim().toLowerCase()
+  const rows = (papers.data ?? [])
+    .filter(LIBRARY_VIEWS[view].test)
+    .filter(
+      (p) =>
+        !query ||
+        p.title.toLowerCase().includes(query) ||
+        p.authors.toLowerCase().includes(query) ||
+        p.field.toLowerCase().includes(query) ||
+        p.model.toLowerCase().includes(query),
+    )
+
+  const selectedCount = Object.values(selected).filter(Boolean).length
+
+  // 요약이 있는 논문만 이전/다음으로 돌아요
+  const order = (papers.data ?? []).filter((p) => summaries.data?.[p.id]).map((p) => p.id)
+  const openSummary = openSummaryId ? summaries.data?.[openSummaryId] : undefined
+  const step = (delta: number) => {
+    if (!openSummaryId || order.length === 0) return
+    const i = order.indexOf(openSummaryId)
+    const next = order[(i + delta + order.length) % order.length]
+    if (next) setOpenSummaryId(next)
+  }
+
+  const columns: Column<Paper>[] = [
+    {
+      key: 'select',
+      label: '선택',
+      // 목업 32px(내용) + 좌우 패딩 16 = 48 (이 열은 테두리가 없어요)
+      width: 48,
+      headerHidden: true,
+      render: (p) => (
+        <input
+          type="checkbox"
+          checked={selected[p.id] ?? false}
+          onChange={() => setSelected((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+          aria-label={`${p.title} 선택`}
+          className={s.checkbox}
+        />
+      ),
+    },
+    {
+      key: 'title',
+      label: '제목',
+      render: (p) => (
+        <div className={s.titleCell}>
+          <Link to={`/papers/${p.id}`} className={s.titleLink}>
+            {p.title}
+          </Link>
+          {density === 'list' && (
+            <span className={s.paperMeta}>
+              {p.authors} · {p.venue} · {p.source === 'arxiv-html' ? 'arXiv HTML' : 'PDF'}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      label: '상태',
+      // 목업 110px(내용) + 패딩 24 + 테두리 1
+      width: 135,
+      render: (p) => (
+        <StatusPill
+          status={p.status}
+          size="lg"
+          label={`${p.title} 읽음 상태`}
+          onChange={(status: ReadStatus) => setStatus.mutate({ id: p.id, status })}
+        />
+      ),
+    },
+    {
+      key: 'tags',
+      label: '태그',
+      width: 195,
+      render: (p) => (
+        <div className={s.tags}>
+          <TagChip>{p.field}</TagChip>
+          <TagChip>{p.model}</TagChip>
+        </div>
+      ),
+    },
+    {
+      key: 'summary',
+      label: '요약',
+      width: 125,
+      render: (p) => {
+        if (p.summaryState === 'done') {
+          return (
+            <button
+              type="button"
+              aria-pressed={openSummaryId === p.id}
+              aria-label={`${p.title} 요약 MD 보기`}
+              onClick={() => setOpenSummaryId(p.id)}
+              className={s.summaryBtn}
+            >
+              요약 MD
+            </button>
+          )
+        }
+        if (p.summaryState === 'running') {
+          return <span className={s.summaryRunning}>요약 중</span>
+        }
+        return <span className={s.summaryNone}>—</span>
+      },
+    },
+    {
+      key: 'access',
+      label: '마지막 접근',
+      width: 135,
+      render: (p) => <span className={s.access}>{p.access}</span>,
+    },
+  ]
+
   return (
-    <ScreenPlaceholder
-      title="논문 라이브러리"
-      mockup="FocusLibrary.dc.html"
-      note="사이드바 · 목록 · 요약 MD 드로어 · 라이브러리에 묻기"
-    />
+    <>
+      {nav.closed && (
+        <CollapsedRail side="left" label="사이드바 펼치기" onExpand={nav.toggle} />
+      )}
+      <LibrarySidebar
+        style={nav.style}
+        onCollapse={nav.toggle}
+        papers={papers.data}
+        view={view}
+        onViewChange={setView}
+        search={search}
+        onSearchChange={setSearch}
+      />
+      <Resizer handle={nav.resizerProps} label="라이브러리 메뉴 너비 조절" />
+
+      <main className={s.main}>
+        <div className={s.toolbar}>
+          <h1 className={s.title}>{LIBRARY_VIEWS[view].title}</h1>
+          <div className={s.tools}>
+            <SegmentedControl
+              items={DENSITY_ITEMS}
+              value={density}
+              onChange={setDensity}
+              label="보기 방식"
+              variant="icon"
+            />
+            <IconButton label="필터" size={42}>
+              <FilterIcon />
+            </IconButton>
+            <SplitButton
+              label="논문 업로드"
+              menuLabel="논문 업로드"
+              menuWidth={380}
+              items={[{ label: 'PDF 파일 업로드' }]}
+              footer={<UrlUploadRow />}
+            />
+          </div>
+        </div>
+
+        {papers.isError ? (
+          <ErrorState
+            title="논문 목록을 불러오지 못했어요"
+            error={papers.error}
+            onRetry={() => void papers.refetch()}
+          />
+        ) : papers.data ? (
+          <DataTable
+            label="논문 목록"
+            columns={columns}
+            rows={rows}
+            rowKey={(p) => p.id}
+            cellY={density === 'list' ? 16 : 9}
+            headY={12}
+            flushEdges={false}
+            minWidth={820}
+            emptyMessage="조건에 맞는 논문이 없어요."
+          />
+        ) : (
+          <LoadingState label="논문 목록을 불러오는 중이에요…" />
+        )}
+
+        {selectedCount > 0 && (
+          <div className={s.selectionBar}>
+            <span className={s.selectionCount}>{selectedCount}편 선택됨</span>
+            <Link to="/experiments/new/from-paper" className={s.onDark}>
+              실험 설계 초안
+            </Link>
+            <button type="button" className={s.onDark}>
+              BibTeX
+            </button>
+          </div>
+        )}
+
+        <AskLibrary chat={chat.data} />
+      </main>
+
+      {openSummary && openSummaryId && (
+        <div className={s.drawerWrap}>
+          <Resizer handle={drawer.resizerProps} label="요약 패널 너비 조절" />
+          <aside aria-label="요약 미리보기" style={drawer.style} className={s.drawer}>
+            <div className={s.drawerHead}>
+              <span className={s.drawerTitle}>요약 MD</span>
+              <span className={s.drawerPath}>{openSummary.path}</span>
+              <IconButton label="이전 요약" size={34} variant="outline" onClick={() => step(-1)}>
+                <ChevronLeft />
+              </IconButton>
+              <IconButton label="다음 요약" size={34} variant="outline" onClick={() => step(1)}>
+                <ChevronRight />
+              </IconButton>
+              <IconButton label="요약 닫기" size={34} onClick={() => setOpenSummaryId(null)}>
+                <CloseIcon />
+              </IconButton>
+            </div>
+
+            <div className={s.drawerBody}>
+              <PaperSummaryPane
+                summary={openSummary}
+                view={summaryView}
+                onViewChange={setSummaryView}
+                draft={mdDrafts[openSummaryId] ?? null}
+                onDraftChange={(text) =>
+                  setMdDrafts((prev) => ({ ...prev, [openSummaryId]: text }))
+                }
+                onSave={() =>
+                  setMdDrafts((prev) => {
+                    const next = { ...prev }
+                    delete next[openSummaryId]
+                    return next
+                  })
+                }
+                textareaId="library-md"
+                leadAction={
+                  <Button variant="primary" size="md" padWide href={`/papers/${openSummaryId}`}>
+                    리더에서 열기
+                  </Button>
+                }
+              />
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
   )
 }
+
+function UrlUploadRow() {
+  return (
+    <>
+      <VisuallyHidden>
+        <label htmlFor="lib-url">arXiv 링크 또는 PDF URL</label>
+      </VisuallyHidden>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input id="lib-url" type="text" placeholder="arXiv 링크 또는 PDF URL" />
+        <Button variant="accent">추가</Button>
+      </div>
+      <span>arXiv HTML이 있으면 HTML을, 없으면 PDF를 써요</span>
+    </>
+  )
+}
+
+const st = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const
+
+function ListIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...st} aria-hidden="true">
+      <rect x="4" y="4" width="16" height="7" rx="1.5" />
+      <rect x="4" y="13" width="16" height="7" rx="1.5" />
+    </svg>
+  )
+}
+function CompactIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...st} aria-hidden="true">
+      <path d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+  )
+}
+function FilterIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" {...st} aria-hidden="true">
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+    </svg>
+  )
+}
+const ChevronLeft = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" {...st} strokeWidth="2.2" aria-hidden="true">
+    <path d="M15 6l-6 6 6 6" />
+  </svg>
+)
+const ChevronRight = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" {...st} strokeWidth="2.2" aria-hidden="true">
+    <path d="M9 6l6 6-6 6" />
+  </svg>
+)
+const CloseIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" {...st} strokeWidth="2" aria-hidden="true">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
