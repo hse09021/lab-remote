@@ -114,20 +114,33 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
             request=M.bypass_attempt(bypass["rel"], bypass["before"], bypass["now"]),
             result="차단",
             handled_by=M.BY_LOCK,
+            tool_use_id=tool_use_id,
         )
 
-    # 권한 우회 모드로 떠 있으면 그 사실 자체를 남긴다 (실측 항목).
-    if str(event.get("permission_mode") or "") not in ("", "default", "plan", "acceptEdits"):
+    # 평소와 다른 권한 모드로 떠 있으면 그 사실 자체를 남긴다 (실측 항목).
+    # ⚠ **막은 게 아니다.** 판정은 permission_mode 를 읽지 않는다 — 잠금은
+    # 그대로 deny, ask 는 그대로 Claude 앱의 승인창으로 간다. 그래서 결과 칸은
+    # `기록` 이다. 2.1.317 은 사용자 설정에 defaultMode 가 없으면 auto 로 뜬다.
+    mode_now = str(event.get("permission_mode") or "")
+    if mode_now not in ("", "default", "plan", "acceptEdits"):
         A.append_row(
             log,
             action="권한 우회 모드",
-            request=f"permission_mode={event.get('permission_mode')}",
-            result="차단",
+            request=f"permission_mode={mode_now} · 훅 판정은 {decision.kind}",
+            result="기록",
             handled_by=M.BY_SYSTEM,
+            tool_use_id=tool_use_id,
         )
 
     if decision.kind == "allow":
-        A.append_row(log, action=label, request=request, result="허용", handled_by=M.BY_POLICY)
+        A.append_row(
+            log,
+            action=label,
+            request=request,
+            result="허용",
+            handled_by=M.BY_POLICY,
+            tool_use_id=tool_use_id,
+        )
     elif decision.kind == "deny":
         locked = decision.action in decide_mod.LOCK_ACTIONS
         A.append_row(
@@ -136,6 +149,7 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
             request=request,
             result="차단",
             handled_by=M.BY_LOCK if locked else M.BY_POLICY,
+            tool_use_id=tool_use_id,
         )
         if decision.rel:
             A.remember_denied(ctx.name, session_id, decision.rel, tool, prompt_id)
@@ -150,6 +164,7 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
                 "action": label,
                 "request": request,
                 "rel": decision.rel,
+                **_agent_of(event),
             },
         )
         A.append_row(
@@ -159,17 +174,58 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
             result="대기 중",
             pending=True,
             handled_by=M.BY_APP,
+            tool_use_id=tool_use_id,
         )
         if decision.rel:
             A.remember_denied(ctx.name, session_id, decision.rel, tool, prompt_id)
 
     # 헤드리스에서 승인창을 못 띄워 거절한 경우 — 조용히 멈추지 않게 알린다.
-    if decision.meta.get("headlessDeny") and (ctx.policy.headless or {}).get("notifyDiscord", True):
-        result = notify.send(
-            f"[lab.remote] 승인 대기 · {ctx.name}\n{label} · {request}\n"
-            "자동 실행이라 사람에게 물어볼 수 없어 일단 막았어요."
+    # 대기 건(pending/)이 아니라 **승인 요청(requests/)** 으로 남긴다. 닫아 줄
+    # 주체가 Claude 앱이 아니라 ②의 승인 대기열이라, 대기 폴더에 두면 영원히
+    # 안 닫히는 대기 건이 된다.
+    if decision.meta.get("headlessDeny"):
+        A.open_request(
+            ctx.name,
+            tool_use_id or f"{prompt_id}:{tool}",
+            {
+                "promptId": prompt_id,
+                "sessionId": session_id,
+                "tool": tool,
+                "action": label,
+                "request": request,
+                "rel": decision.rel,
+                "reason": decision.reason,
+                **_agent_of(event),  # ②의 대기열이 누가 낸 요청인지 알아야 한다
+            },
         )
-        A.log_event(events, {"event": "notify", "result": result})
+        if (ctx.policy.headless or {}).get("notifyDiscord", True):
+            result = notify.send(
+                f"[lab.remote] 승인 대기 · {ctx.name}\n{label} · {request}\n"
+                f"{decision.reason}"
+            )
+            A.log_event(events, {"event": "notify", "result": result})
+
+
+def _agent_of(event: dict) -> dict:
+    """대기 건에 남길 에이전트 정보.
+
+    **구분자는 `agent_id` 하나다.** 실측(2026-11-04)과 2.1.317 번들의 스키마
+    설명이 근거다:
+
+        agent_id   "Present only when the hook fires from within a subagent
+                    (e.g., a tool called by an AgentTool worker). Absent for
+                    the main thread, **even in --agent sessions**."
+        agent_type "Present when the hook fires from within a subagent
+                    (alongside agent_id), **or on the main thread of a session
+                    started with --agent** (without agent_id)."
+
+    그래서 `agent_type` 으로 구분하면 `--agent` 로 띄운 메인 세션의 대기 건이
+    영원히 안 닫힌다. `agentType` 은 사람이 보는 표시용으로만 남긴다.
+    """
+    return {
+        "agentId": str(event.get("agent_id") or ""),
+        "agentType": str(event.get("agent_type") or ""),
+    }
 
 
 def _request_summary(event: dict) -> str:
@@ -181,11 +237,41 @@ def _request_summary(event: dict) -> str:
     return str(event.get("tool_name") or "")
 
 
+def _close_previous_turn(ctx) -> None:
+    """같은 세션의 **이전 응답** 대기 건을 닫는다 (Stop 이 안 돈 경우의 안전망).
+
+    PC 터미널에서 승인을 거부하면 턴이 끊겨 Stop 이 돌지 않는다
+    (`userprompt.py` 의 설명). UserPromptSubmit 훅이 1차로 닫지만, 그 훅이
+    아직 설치 안 된 경우에도 대기 뱃지가 거짓으로 켜져 있지 않게 여기서 한 번
+    더 본다. **지금 응답(`prompt_id`)의 대기 건은 건드리지 않는다.**
+
+    기록이 실패해도 판정은 그대로 나가야 하므로 예외를 전부 삼킨다.
+    """
+    session_id = str(ctx.event.get("session_id") or "")
+    prompt_id = str(ctx.event.get("prompt_id") or "")
+    if not session_id or not prompt_id:
+        return
+    try:
+        A.close_stale(
+            ctx.name,
+            ctx.root,
+            ctx.policy,
+            session_id=session_id,
+            keep_prompt_id=prompt_id,
+            main_only=True,  # 서브에이전트는 자기 턴이 끝나도 계속 돈다
+            by="PreToolUse",
+        )
+    except Exception:
+        pass
+
+
 def handle(event: dict) -> Decision:
     """판정만. 기록과 출력은 main 이 한다."""
     ctx = _ctx_from(event)
     if ctx is None:
         return DEFER()  # 등록된 실험 프로젝트가 아니면 간섭하지 않는다
+
+    _close_previous_turn(ctx)
 
     findings = classify.classify_event(event, ctx)
     if not findings:

@@ -31,6 +31,10 @@ __all__ = [
     "render_template",
     "write_template",
     "seed_default",
+    "migrate",
+    "conflicting_writable_roots",
+    "claude_settings_path",
+    "ensure_permission_mode",
 ]
 
 
@@ -235,7 +239,144 @@ def load(name: str) -> Policy:
 
 
 def save(policy: Policy) -> None:
+    bad = conflicting_writable_roots(policy)
+    if bad:
+        raise PolicyError(
+            "extraWritableRoots 에 서버 보호 경로가 들어 있어 저장하지 않았어요: "
+            + ", ".join(bad)
+            + " · 이 경로는 어떤 설정에서도 막히니 목록에서 빼 주세요."
+        )
     registry.write_json(policy.path, policy.data)
+
+
+def conflicting_writable_roots(policy: Policy) -> list[str]:
+    """`extraWritableRoots` 중 보호 목록과 겹치는 것.
+
+    판정은 보호 목록이 먼저라 겹쳐도 뚫리지 않는다. 그래도 조용히 두면
+    설정한 사람이 "열렸다" 고 오해하므로 `doctor` 가 알리고 `policy set` 이
+    저장을 거부한다.
+    """
+    protected = [paths.real(p) for p in D.hard_protected_roots()]
+    bad = []
+    for item in (policy.paths.get("extraWritableRoots") or []):
+        if not item:
+            continue
+        target = paths.real(str(item))
+        # 어느 쪽이 상위든 겹치는 것이다
+        if any(
+            paths.is_inside(p, target) or paths.is_inside(target, p) for p in protected
+        ):
+            bad.append(str(item))
+    return bad
+
+
+# --- 프로젝트 쪽 권한 모드 ---------------------------------------------------
+
+
+def claude_settings_path(root: str) -> str:
+    return os.path.join(root, ".claude", "settings.json")
+
+
+def ensure_permission_mode(root: str, mode: str = D.DEFAULT_PERMISSION_MODE) -> dict:
+    """프로젝트 `.claude/settings.json` 에 `permissions.defaultMode` 를 박는다.
+
+    **왜 프로젝트 설정인가** — 2.1.317 은 사용자 설정에 `defaultMode` 가 없으면
+    `auto` 로 뜬다(실측: `claude --remote-control` 로 새로 띄운 세션이 auto 였고
+    훅이 "권한 우회 모드" 를 남겼다). 프로젝트 설정이 사용자 설정보다 우선하고,
+    `.claude/**` 는 `selfProtect` 라 AI 가 되돌릴 수 없다.
+
+    이미 값이 있으면 **건드리지 않는다.** 다른 키도 그대로 둔다 (병합).
+    """
+    path = claude_settings_path(root)
+    data = {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        if isinstance(loaded, dict):
+            data = loaded
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        data = {}
+
+    perms = data.get("permissions")
+    if not isinstance(perms, dict):
+        perms = {}
+    before = perms.get("defaultMode")
+    if before:
+        return {"path": path, "changed": False, "mode": str(before)}
+
+    perms["defaultMode"] = mode
+    data["permissions"] = perms
+    registry.write_json(path, data)
+    return {"path": path, "changed": True, "mode": mode}
+
+
+def migrate(name: str) -> dict:
+    """정책 파일을 지금 판으로 올린다. **`saved` 만 보존**한다.
+
+    모드·행동 유형·경로 목록·bash·headless 는 코드가 단일 출처이므로 전부
+    다시 쓴다. 사람이 고른 프리셋과 예외(`saved`)만 옮긴다.
+
+    같이 이행하는 것
+      - 프로젝트 `.claude/settings.json` 의 `permissions.defaultMode`
+      - 승인 로그 CSV 헤더 (판 2 에서 `toolUseId` 열이 생겼다)
+    """
+    from . import approval_log
+
+    try:
+        path = registry.policy_path(name)
+    except registry.InvalidName as exc:
+        raise PolicyError(str(exc)) from None
+
+    old: dict = {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        if isinstance(loaded, dict):
+            old = loaded
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        old = {}
+
+    root = str((old.get("project") or {}).get("root") or "") or (registry.root_of(name) or "")
+    if not root:
+        raise PolicyError(
+            f"프로젝트 루트를 알 수 없어요: {name!r} · labremote init-project 로 만든 "
+            "프로젝트인지 확인해 주세요."
+        )
+
+    before_version = old.get("version")
+    data = D.default_policy(name, paths.real(root))
+    saved = old.get("saved")
+    if isinstance(saved, dict):
+        data["saved"] = saved
+    data["updatedAt"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    data["updatedBy"] = "migrate"
+    registry.write_json(path, data)
+
+    policy = load(name)  # 올린 결과가 실제로 유효한지 (fail-closed 검사)
+    settings = ensure_permission_mode(policy.root)
+    log = approval_log.migrate_log(approval_log.log_path(policy.root, policy))
+
+    approval_log.log_event(
+        approval_log.event_path(policy.root, policy),
+        {
+            "event": "policy-migrate",
+            "from": before_version,
+            "to": D.POLICY_VERSION,
+            "mode": policy.effective_mode(),
+            "settings": settings,
+            "log": log,
+        },
+    )
+    return {
+        "path": path,
+        "from": before_version,
+        "to": D.POLICY_VERSION,
+        "mode": policy.effective_mode(),
+        "overrides": policy.overrides(),
+        "settings": settings,
+        "log": log,
+        "conflicts": conflicting_writable_roots(policy),
+    }
 
 
 def ensure(name: str, root: str) -> Policy:

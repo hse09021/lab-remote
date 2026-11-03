@@ -173,4 +173,12 @@ def _update(target: str, spec: ProjectSpec, plan: list[PlannedFile]) -> dict:
 
     added = _write_all(target, spec, plan, only_missing=True)
     _write_all(target, spec, regen)
-    return {"target": target, "added": added, "refreshed": [i.path for i in regen], "backup": backup if changed else None}
+    # 권한 기본 모드는 **병합**한다 (사용자가 넣은 다른 키를 날리지 않게).
+    settings = policy.ensure_permission_mode(target)
+    return {
+        "target": target,
+        "added": added,
+        "refreshed": [i.path for i in regen],
+        "backup": backup if changed else None,
+        "settings": settings,
+    }

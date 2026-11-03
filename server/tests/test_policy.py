@@ -5,6 +5,7 @@
 """
 
 import json
+import os
 
 import pytest
 
@@ -203,3 +204,101 @@ def test_ensure_가_기본_템플릿을_씨뿌린다(project_root):
     policy.ensure("hook-sandbox", project_root)
     with open(seeded, encoding="utf-8") as fh:
         assert json.load(fh) == policy.render_template()
+
+
+# --- 판 올림 (1 -> 2) --------------------------------------------------------
+# 판 2 에서 보호 목록·비밀 파일·산출물 보존이 생기고 headless 기본값이
+# deny-with-reason 으로 바뀌었다. 옛 파일은 fail-closed 로 거절된다.
+
+
+def old_policy(project, version=1):
+    """판 1 짜리 정책 파일을 만든다 (프리셋·예외는 사람이 고른 값)."""
+    from app import registry
+
+    data = dict(project.data)
+    data["version"] = version
+    data["saved"] = {"mode": "error", "overrides": {"pkg": "allow"}}
+    data["headless"] = {"onAsk": "ask", "notifyDiscord": True}
+    registry.write_json(project.path, data)
+    return data
+
+
+def test_낡은_판은_거절된다(project):
+    old_policy(project)
+    with pytest.raises(policy.PolicyError) as exc:
+        policy.load("hook-sandbox")
+    assert "판이 맞지 않아요" in str(exc.value)
+
+
+def test_migrate_가_프리셋과_예외를_보존한다(project, project_root):
+    old_policy(project)
+    info = policy.migrate("hook-sandbox")
+    assert info["from"] == 1 and info["to"] == D.POLICY_VERSION
+    pol = policy.load("hook-sandbox")
+    assert pol.effective_mode() == "error"
+    assert pol.overrides() == {"pkg": "allow"}
+
+
+def test_migrate_가_코드_기본값을_가져온다(project, project_root):
+    old_policy(project)
+    policy.migrate("hook-sandbox")
+    pol = policy.load("hook-sandbox")
+    assert pol.headless["onAsk"] == "deny-with-reason"
+    assert pol.paths["outputDirs"]
+    assert pol.paths["secretFilesExtra"] == []
+
+
+def test_migrate_가_권한_기본_모드를_넣는다(project, project_root):
+    old_policy(project)
+    info = policy.migrate("hook-sandbox")
+    assert info["settings"]["changed"] is True
+    with open(policy.claude_settings_path(project_root), encoding="utf-8") as fh:
+        assert json.load(fh)["permissions"]["defaultMode"] == "default"
+
+
+def test_migrate_가_승인_로그_헤더를_올린다(project, project_root):
+    from app import approval_log
+
+    path = approval_log.log_path(project_root)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        fh.write("time,action,request,result,resultPending,handledBy\n")
+        fh.write("2026-11-04T00:00:00+09:00,패키지 설치,pip install x,차단,false,Hooks · 잠금\n")
+
+    old_policy(project)
+    info = policy.migrate("hook-sandbox")
+    assert info["log"]["changed"] is True
+    assert os.path.exists(info["log"]["backup"])
+    with open(path, encoding="utf-8") as fh:
+        assert fh.readline().strip() == ",".join(approval_log.COLUMNS)
+
+
+def test_migrate_는_루트를_모르면_거절한다():
+    """등록도 안 됐고 정책 파일도 없으면 어디를 고칠지 알 수 없다."""
+    with pytest.raises(policy.PolicyError) as exc:
+        policy.migrate("ghost-project")
+    assert "프로젝트 루트를 알 수 없어요" in str(exc.value)
+
+
+def test_migrate_는_이상한_이름을_거절한다():
+    with pytest.raises(policy.PolicyError) as exc:
+        policy.migrate("../탈출")
+    assert "이름이 규칙에 안 맞아요" in str(exc.value)
+
+
+def test_migrate_뒤에도_잠금은_잠겨_있다(project):
+    old_policy(project)
+    policy.migrate("hook-sandbox")
+    pol = policy.load("hook-sandbox")
+    for key in D.LOCKED_KEYS:
+        assert pol.resolve(key) == "block"
+
+
+def test_migrate_기록이_JSONL_에_남는다(project, project_root):
+    from app import approval_log
+
+    old_policy(project)
+    policy.migrate("hook-sandbox")
+    path = approval_log.event_path(project_root)
+    lines = [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
+    assert any(item["event"] == "policy-migrate" for item in lines)

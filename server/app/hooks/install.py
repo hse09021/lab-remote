@@ -46,14 +46,22 @@ SHELL_LIMITATION_NOTE = (
     "폴더 밖에서 켜면 권한 훅이 뜨지 않아 잠긴 항목이 막히지 않아요."
 )
 
-TOOL_MATCHER = "Bash|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch"
+#: `Read|Grep` 은 **비밀 파일만** 보려고 들어 있다 (`classify.SECRET_READ_TOOLS`).
+#: 그 밖의 읽기는 판정하지 않는다 — 전면 차단은 소음만 크고 막을 게 없다.
+TOOL_MATCHER = "Bash|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|Read|Grep"
 HOOK_TIMEOUT = 10
 
 #: (이벤트, matcher, 모듈, onFailure)
 ENFORCE_EVENTS = [
     ("PreToolUse", TOOL_MATCHER, "app.hooks.pretooluse", "block"),
     ("PostToolUse", TOOL_MATCHER, "app.hooks.posttooluse", "continue"),
+    # 거부로 턴이 끊기면 Stop 이 안 돈다. 새 프롬프트에서 이전 턴 대기 건을
+    # 마감하는 게 이 훅의 전부다 (app/hooks/userprompt.py 의 설명).
+    ("UserPromptSubmit", None, "app.hooks.userprompt", "continue"),
     ("Stop", None, "app.hooks.stop", "continue"),
+    # 서브에이전트는 메인 턴이 끝나도 계속 돈다. 그 대기 건은 이 훅이 닫는다
+    # (app/hooks/subagentstop.py 의 설명).
+    ("SubagentStop", None, "app.hooks.subagentstop", "continue"),
     ("SessionEnd", None, "app.hooks.sessionend", "continue"),
 ]
 
@@ -61,11 +69,22 @@ ENFORCE_EVENTS = [
 DUMP_EVENTS = [
     ("PreToolUse", ".*", "app.hooks.debug", "continue"),
     ("PostToolUse", ".*", "app.hooks.debug", "continue"),
+    ("UserPromptSubmit", None, "app.hooks.debug", "continue"),
     ("Stop", None, "app.hooks.debug", "continue"),
+    ("SubagentStop", None, "app.hooks.debug", "continue"),
     ("SessionEnd", None, "app.hooks.debug", "continue"),
 ]
 
 MODES = {"dump": DUMP_EVENTS, "enforce": ENFORCE_EVENTS}
+
+
+def expected_events(mode: str = "enforce") -> set[str]:
+    """그 모드에서 등록돼 있어야 하는 이벤트 이름.
+
+    `doctor` 가 이걸로 "설치는 했는데 그 뒤에 이벤트가 늘어난" 경우를 잡는다.
+    UserPromptSubmit 이 그 예다 — 재설치하지 않으면 조용히 빠져 있다.
+    """
+    return {event for event, *_ in MODES.get(mode, ENFORCE_EVENTS)}
 
 _SERVER_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -308,7 +327,10 @@ def limitations() -> list[str]:
         f"훅이 도는 범위는 설치할 때 박은 프로젝트 루트 아래뿐이에요: {registry.projects_root()} "
         "· 바꾸려면 labremote hooks install 을 다시 돌려 주세요.",
         "쓰기 가능한 MCP 서버를 붙이면 이 게이트를 지나갈 수 있어요. "
-        "①단계에서는 프로젝트에 .mcp.json 을 두지 마세요.",
+        "설정 파일(~/.claude.json · 프로젝트 .mcp.json)은 이제 항상 막지만, "
+        "**이미 붙어 있는** 서버는 그대로 지나가요.",
+        "읽기는 비밀 파일(.env · 자격 증명)만 막아요. 대상이 폴더인 재귀 읽기"
+        "(grep -r · find -exec cat)는 못 막으니 비밀은 프로젝트 폴더 밖에 두세요.",
     ]
 
 

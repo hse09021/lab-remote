@@ -224,3 +224,186 @@ def test_doctor_json(capsys, made):
     run(["--json", "doctor"])
     report = json.loads(capsys.readouterr().out)
     assert "checks" in report and "limitations" in report
+
+
+# --- log 표시 (실측: 긴 경로가 잘려 무엇이 막혔는지 안 보였다) ----------------
+
+
+def test_긴_경로는_앞을_줄여_파일_이름을_남긴다():
+    path = "/home/hse09021/Desktop/lab-remote/server/data/policies/hook-sandbox.json"
+    got = cli._shorten(path, 60)
+    assert len(got) <= 60
+    assert got.startswith("…")
+    assert got.endswith("policies/hook-sandbox.json")
+
+
+def test_긴_명령은_뒤를_줄여_명령_이름을_남긴다():
+    command = "pip install " + "아주긴패키지이름 " * 20
+    got = cli._shorten(command, 60)
+    assert got.startswith("pip install")
+    assert got.endswith("…")
+
+
+def test_짧은_건_그대로():
+    assert cli._shorten("src/a.py", 60) == "src/a.py"
+
+
+def test_log_는_한_호출을_한_줄로(capsys, made):
+    from app import approval_log as A
+
+    path = A.log_path(made["target"])
+    A.append_row(path, action="패키지 설치", request="pip install peft", result="대기 중",
+                 pending=True, tool_use_id="t1")
+    A.append_row(path, action="패키지 설치", request="pip install peft",
+                 result="거부 또는 미응답", tool_use_id="t1")
+    A.append_row(path, action="패키지 설치", request="pip install peft", result="허용",
+                 tool_use_id="t1")
+
+    assert run(["log", "hook-sandbox"]) == 0
+    out = capsys.readouterr().out
+    assert out.count("패키지 설치") == 1
+    assert "허용" in out and "거부 또는 미응답" not in out
+
+
+def test_log_raw_는_전부_보여_준다(capsys, made):
+    from app import approval_log as A
+
+    path = A.log_path(made["target"])
+    A.append_row(path, action="패키지 설치", request="pip install peft", result="대기 중",
+                 pending=True, tool_use_id="t1")
+    A.append_row(path, action="패키지 설치", request="pip install peft", result="허용",
+                 tool_use_id="t1")
+    assert run(["log", "hook-sandbox", "--raw"]) == 0
+    out = capsys.readouterr().out
+    assert out.count("패키지 설치") == 2
+
+
+# --- pending ----------------------------------------------------------------
+
+
+def open_ask(tool_use_id="t1", session_id="sess-1"):
+    from app import approval_log as A
+
+    A.open_pending(
+        "hook-sandbox",
+        tool_use_id,
+        {
+            "promptId": "p1",
+            "sessionId": session_id,
+            "tool": "Bash",
+            "action": "패키지 설치",
+            "request": "pip install peft",
+        },
+    )
+
+
+def test_pending_list(capsys, made):
+    open_ask()
+    assert run(["pending", "list", "hook-sandbox"]) == 0
+    out = capsys.readouterr().out
+    assert "패키지 설치" in out and "sess-1" in out
+
+
+def test_pending_list_가_비면_그렇게_말한다(capsys, made):
+    assert run(["pending", "list", "hook-sandbox"]) == 0
+    assert "없어요" in capsys.readouterr().out
+
+
+def test_pending_sweep_이_마감_행을_남긴다(capsys, made):
+    from app import approval_log as A
+
+    open_ask()
+    assert run(["pending", "sweep", "hook-sandbox"]) == 0
+    assert "1건을 마감했어요" in capsys.readouterr().out
+    assert A.list_pending("hook-sandbox") == []
+    assert A.read_rows(A.log_path(made["target"]))[-1]["result"] == A.RESULT_NO_ANSWER
+
+
+def test_pending_sweep_은_세션을_고를_수_있다(capsys, made):
+    from app import approval_log as A
+
+    open_ask("t1", "sess-1")
+    open_ask("t2", "sess-2")
+    run(["pending", "sweep", "hook-sandbox", "--session", "sess-1"])
+    left = [item["toolUseId"] for item in A.list_pending("hook-sandbox")]
+    assert left == ["t2"]
+
+
+def test_pending_은_등록_안_된_프로젝트에_1(capsys):
+    assert run(["pending", "list", "없는것"]) == 1
+
+
+# --- requests ---------------------------------------------------------------
+
+
+def test_requests_list_와_clear(capsys, made):
+    from app import approval_log as A
+
+    A.open_request("hook-sandbox", "r1", {"action": "패키지 설치", "request": "pip install peft"})
+    assert run(["requests", "list", "hook-sandbox"]) == 0
+    out = capsys.readouterr().out
+    assert "r1" in out and "②의 승인 대기열" in out
+
+    assert run(["requests", "clear", "hook-sandbox"]) == 0
+    assert "1건을 정리했어요" in capsys.readouterr().out
+    assert A.list_requests("hook-sandbox") == []
+    assert A.read_rows(A.log_path(made["target"]))[-1]["action"] == "승인 요청 정리"
+
+
+def test_requests_clear_는_하나만_고를_수_있다(capsys, made):
+    from app import approval_log as A
+
+    A.open_request("hook-sandbox", "r1", {"action": "패키지 설치", "request": "a"})
+    A.open_request("hook-sandbox", "r2", {"action": "파일 삭제", "request": "b"})
+    run(["requests", "clear", "hook-sandbox", "--id", "r1"])
+    assert [item["requestId"] for item in A.list_requests("hook-sandbox")] == ["r2"]
+
+
+# --- policy migrate ---------------------------------------------------------
+
+
+def test_policy_migrate(capsys, made):
+    from app import policy, registry
+
+    pol = policy.load("hook-sandbox")
+    data = dict(pol.data)
+    data["version"] = 1
+    registry.write_json(pol.path, data)
+
+    assert run(["policy", "migrate", "hook-sandbox"]) == 0
+    out = capsys.readouterr().out
+    assert "1 → 2" in out
+    assert "defaultMode=default" in out
+    assert policy.load("hook-sandbox").headless["onAsk"] == "deny-with-reason"
+
+
+def test_pending_list_가_에이전트를_찍는다(capsys, made):
+    from app import approval_log as A
+
+    A.open_pending(
+        "hook-sandbox",
+        "t-agent",
+        {
+            "promptId": "p1",
+            "sessionId": "sess-1",
+            "tool": "Write",
+            "action": "코드 수정",
+            "request": "experiments/EXP-002/c.py",
+            "agentId": "a85e6d7a23abaefce",
+            "agentType": "general-purpose",
+        },
+    )
+    assert run(["pending", "list", "hook-sandbox"]) == 0
+    out = capsys.readouterr().out
+    assert "에이전트 general-purpose" in out
+    assert "a85e6d7a" in out
+
+
+def test_pending_sweep_은_서브에이전트_건도_닫는다(capsys, made):
+    """사람이 손으로 정리할 때는 전부 닫아요."""
+    from app import approval_log as A
+
+    A.open_pending("hook-sandbox", "t-agent", {"sessionId": "s", "action": "코드 수정",
+                                               "request": "c.py", "agentId": "aaaa1111"})
+    assert run(["pending", "sweep", "hook-sandbox"]) == 0
+    assert A.list_pending("hook-sandbox") == []

@@ -1,0 +1,10 @@
+{
+  "session_id": "sess-10-fabe9dd2",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-hook-sandbox/sess-10-fabe9dd2.jsonl",
+  "cwd": "/home/사용자/projects/hook-sandbox",
+  "scratchpad_dir": "/tmp/claude-1000/-home-사용자-projects-hook-sandbox/sess-10-fabe9dd2/scratchpad",
+  "prompt_id": "prompt-10-pkg",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "훅 시험 중이야. Bash 로 pip install peft 를 실제로 한 번만 실행해 줘. 막히면 다른 방법 쓰지 말고 그대로 보고만 해."
+}

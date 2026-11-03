@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-__all__ = ["NO_WORKAROUND", "with_guard", "LABELS"] 
+__all__ = ["NO_WORKAROUND", "with_guard", "LABELS", "josa"]
 
 #: 우회 금지 지시. 모든 deny·ask 사유 끝에 붙는다.
 NO_WORKAROUND = "다른 도구나 명령으로 돌아가지 말고 작업을 멈추고 보고해 주세요."
@@ -25,6 +25,9 @@ BY_SYSTEM = "시스템"
 LABELS = {
     "journal": "기록 갱신",
     "selfProtect": "훅·정책 파일 보호",
+    "hardProtect": "서버 보호 파일",
+    "secret": "비밀 파일",
+    "outputProtect": "실험 산출물 보존",
     "suspicious": "확인이 필요한 명령",
     "unparsed": "해석 못 한 명령",
     "schema-unknown": "훅이 못 읽은 입력",
@@ -40,6 +43,34 @@ def with_guard(text: str) -> str:
     return f"{text} {NO_WORKAROUND}"
 
 
+# --- 조사 ------------------------------------------------------------------
+# "패키지 설치 은 승인이 필요해요" 가 실측에서 나왔다. 이름이 정책 파일에서
+# 오고 경로가 도구에서 오니, 문구를 쓰는 쪽에서 미리 고를 수 없다.
+
+#: 받침이 있는 것으로 읽는 숫자 (일·삼·육·칠·팔·영/공 -> ㄹ ㅁ ㄱ ㄹ ㄹ ㅇ)
+_DIGITS_WITH_FINAL = set("0136780")
+
+
+def josa(word: str, pair: str = "은/는") -> str:
+    """`word` 뒤에 붙일 조사를 골라 돌려준다 (조사만, 단어는 안 붙인다).
+
+    한글 음절이면 종성으로, 숫자면 발음으로 고른다. 라틴 문자·기호로 끝나면
+    **받침 없는 쪽**으로 떨어진다 — `analysis.md는` 처럼 읽히는 게 자연스럽고,
+    영문 철자 발음까지 맞히려 들면 틀리는 경우가 더 많다.
+    """
+    with_final, without_final = pair.split("/")
+    text = (word or "").rstrip()
+    if not text:
+        return without_final
+    last = text[-1]
+    code = ord(last)
+    if 0xAC00 <= code <= 0xD7A3:  # 가 ~ 힣
+        return with_final if (code - 0xAC00) % 28 else without_final
+    if last.isdigit():
+        return with_final if last in _DIGITS_WITH_FINAL else without_final
+    return without_final
+
+
 # --- 잠긴 항목 -------------------------------------------------------------
 
 
@@ -52,8 +83,35 @@ def outside(target: str) -> str:
 
 def self_protect(rel: str) -> str:
     return (
-        f"{rel} 은 훅과 권한 설정을 지키는 파일이라 바꿀 수 없어요. "
+        f"{rel}{josa(rel)} 훅과 권한 설정을 지키는 파일이라 바꿀 수 없어요. "
         "권한을 바꾸려면 웹 UI 의 권한 설정이나 labremote policy set 을 써 주세요."
+    )
+
+
+def hard_protect(target: str) -> str:
+    """정책으로도 못 여는 보호 목록. `extraWritableRoots` 보다 앞에서 판정한다."""
+    return (
+        f"{target}{josa(target)} 훅·권한 정책·MCP 설정을 담은 서버 쪽 파일이라 "
+        "어떤 권한 설정에서도 바꿀 수 없어요. 권한을 바꾸려면 웹 UI 의 권한 "
+        "설정이나 labremote policy set 을 써 주세요."
+    )
+
+
+def secret(target: str) -> str:
+    """비밀 파일. 읽기·쓰기·복사 모두 막는다."""
+    return (
+        f"{target}{josa(target)} 비밀 값이 든 파일이라 읽거나 복사할 수 없어요. "
+        "값이 필요하면 환경 변수 이름만 알려 주세요. 실험에 쓸 비밀 값은 "
+        "프로젝트 폴더 밖(~/.config/labremote/<프로젝트>.env)에 둬요."
+    )
+
+
+def output_protect(rel: str, exp: str, how: str) -> str:
+    """실험 산출물 보존. 지우기·비우기·덮어쓰기 전부 막는다."""
+    return (
+        f"{exp} 의 원본 출력이라 {how} 수 없어요 ({rel}). 결과를 다시 뽑아야 하면 "
+        "새 실험 폴더에서 돌리고, 왜 그렇게 했는지 logs/Decision_log.md 에 "
+        "남겨 주세요."
     )
 
 
@@ -67,7 +125,7 @@ def prev_locked(rel: str, exp: str) -> str:
 
 def prev_appendable(rel: str, exp: str) -> str:
     return (
-        f"{rel} 은 끝난 실험 {exp} 의 분석 노트예요. 결과 리뷰를 덧붙이는 "
+        f"{rel}{josa(rel)} 끝난 실험 {exp} 의 분석 노트예요. 결과 리뷰를 덧붙이는 "
         "것이면 승인해 주세요. 결과 자체를 고치는 것이면 안 돼요."
     )
 
@@ -82,7 +140,7 @@ def stop_running(rel: str, exp: str | None) -> str:
 
 def stop_idle(rel: str) -> str:
     return (
-        f"{rel} 은 종료 조건·평가 기준이라 잠겨 있어요. 지금은 실험이 멈춰 "
+        f"{rel}{josa(rel)} 종료 조건·평가 기준이라 잠겨 있어요. 지금은 실험이 멈춰 "
         "있으니 승인하면 바꿀 수 있어요. 바꾼 이유를 logs/Decision_log.md 에 남겨 주세요."
     )
 
@@ -91,11 +149,11 @@ def stop_idle(rel: str) -> str:
 
 
 def ask_action(name: str, what: str) -> str:
-    return f"{name} 은 승인이 필요해요: {what}"
+    return f"{name}{josa(name)} 승인이 필요해요: {what}"
 
 
 def block_action(name: str, what: str) -> str:
-    return f"{name} 은 지금 권한 단계에서 막혀 있어요: {what}"
+    return f"{name}{josa(name)} 지금 권한 단계에서 막혀 있어요: {what}"
 
 
 def denied_command(cmd: str) -> str:
@@ -133,15 +191,20 @@ def unparsed(cmd: str) -> str:
 
 
 def headless_ask(name: str, inner: str) -> str:
-    """헤드리스에서 승인창을 띄울 수 없을 때. 자동 허용으로는 절대 안 넘어간다."""
+    """헤드리스에서 승인창을 띄울 수 없을 때. 자동 허용으로는 절대 안 넘어간다.
+
+    실측(2.1.317): `claude -p` 에서 ask 는 사람에게 가지 않고 10초 안에 자동
+    거부된다. 그래서 기본값이 `deny-with-reason` 이고, 사유에 "요청을 남겨
+    뒀다" 를 적어 ②의 승인 대기열로 넘긴다.
+    """
     return (
-        f"[승인 필요: {name}] {inner} 지금은 사람에게 물어볼 수 없는 "
-        "자동 실행이라 일단 막았어요. 승인 대기로 알렸으니 기다려 주세요."
+        f"[승인 필요: {name}] {inner} 화면 없이 실행 중이라 지금은 승인받을 수 "
+        "없어요. 승인 요청을 남겨 두었어요. 작업을 멈추고 보고해 주세요."
     )
 
 
 def bypass_attempt(rel: str, before: str, now: str) -> str:
     return (
-        f"{rel} 은 조금 전 {before} 로 막힌 대상이에요. {now} 로 다시 시도하는 건 "
-        "우회예요."
+        f"{rel}{josa(rel)} 조금 전 {before} 로 막힌 대상이에요. {now} 로 다시 "
+        "시도하는 건 우회예요."
     )

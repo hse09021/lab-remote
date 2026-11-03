@@ -8,6 +8,14 @@
       session_id, transcript_path, cwd, prompt_id, permission_mode,
       effort{level}, hook_event_name, tool_name, tool_input, tool_use_id
 
+    2026-11-04 에 더 본 것 (2.1.317):
+      scratchpad_dir          임시 작업 폴더
+      agent_id, agent_type    **서브에이전트 안에서 뜬 훅에만** 온다
+
+    `agent_id` 가 대기 건 마감의 구분자다. 번들 스키마 설명대로 메인 스레드에는
+    `--agent` 세션에서도 안 오고, `agent_type` 은 `--agent` 메인 스레드에도
+    오므로 구분에 쓰면 안 된다 (`pretooluse._agent_of` 의 주석 참고).
+
     Edit   tool_input: file_path(절대), old_string, new_string, replace_all
     Write  tool_input: file_path(절대), content
     Bash   tool_input: command, description
@@ -28,8 +36,18 @@ import re
 from dataclasses import dataclass, field
 
 from .. import paths
+from .. import policy_defaults as D
 
-__all__ = ["Finding", "Ctx", "classify_event", "classify_path", "target_paths"]
+__all__ = [
+    "Finding",
+    "Ctx",
+    "classify_event",
+    "classify_path",
+    "target_paths",
+    "is_device_sink",
+    "is_hard_protected",
+    "is_secret",
+]
 
 
 # --- 실측한 키 -------------------------------------------------------------
@@ -76,10 +94,32 @@ WRITE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 #: 바깥으로 나가는 도구
 NET_TOOLS = ("WebFetch", "WebSearch")
 
-#: 읽기 전용이라 판정하지 않는 도구. matcher 에도 넣지 않는다.
+#: 읽기 전용이라 경로 판정은 하지 않는 도구.
 #  ToolSearch 는 도구 스키마만 불러온다 (실측: tool_input = {query, max_results}).
 #  다만 쓰기 가능한 MCP 도구를 불러올 수는 있으므로 MCP 구멍 안내에 함께 적는다.
 READ_ONLY_TOOLS = ("Read", "Glob", "Grep", "ToolSearch", "TodoWrite")
+
+#: 읽기 도구 중 **비밀 파일만** 보는 것. 그 밖의 읽기는 건드리지 않는다.
+#  Read 는 file_path, Grep 은 path 를 쓴다.
+SECRET_READ_TOOLS = {"Read": WRITE_PATH_KEYS, "Grep": ("path", "file_path")}
+
+#: 쓰기 대상으로 보지 않는 장치 파일. **정확한 이름만** 본다 —
+#  `/dev/shm/x` 는 진짜 쓸 수 있는 폴더라 계속 막아야 한다.
+#  실측: `ls .claude 2>/dev/null` 이 "폴더 밖 쓰기" 로 막혔다.
+DEVICE_SINKS = frozenset(
+    ["/dev/null", "/dev/zero", "/dev/stdin", "/dev/stdout", "/dev/stderr", "/dev/tty"]
+)
+#: `/dev/stderr` 는 `/proc/self/fd/2` 로 이어진다. 해소된 쪽도 알아봐야 한다.
+_DEV_FD_RE = re.compile(r"\A(?:/dev/fd|/proc/self/fd|/proc/[0-9]+/fd)/[0-9]+\Z")
+
+
+def is_device_sink(target: str) -> bool:
+    """`/dev/null` 류인가. 쓰기 판정에서 아예 뺀다.
+
+    `realpath` **전후 둘 다** 봐야 한다 — `/dev/stdout` 은 심볼릭 링크라
+    해소하면 `/dev/pts/3` 이나 파이프 이름이 되어 알아볼 수 없다.
+    """
+    return target in DEVICE_SINKS or _DEV_FD_RE.match(target) is not None
 
 
 @dataclass
@@ -174,14 +214,113 @@ def previous_experiment(rel: str, ctx: Ctx) -> str | None:
     return None
 
 
-def classify_path(raw: str, ctx: Ctx, *, deleting: bool = False) -> list[Finding]:
+def is_hard_protected(target: str) -> bool:
+    """정책과 무관하게 항상 막는 서버 쪽 파일인가 (`extraWritableRoots` 보다 앞)."""
+    return paths.match_abs_globs(target, D.HARD_PROTECTED())
+
+
+def secret_patterns(ctx: Ctx) -> list[str]:
+    """코드 목록 + 정책이 **더한** 목록. 빼지는 못한다."""
+    extra = ctx.paths_cfg.get("secretFilesExtra") or []
+    return list(D.SECRET_FILES) + [str(p) for p in extra if p]
+
+
+def is_secret(target: str, ctx: Ctx) -> bool:
+    """비밀 값이 든 파일인가. 예시 파일(`.env.example`)은 비밀이 아니다."""
+    if paths.match_abs_globs(target, D.SECRET_EXEMPT):
+        return False
+    return paths.match_abs_globs(target, secret_patterns(ctx))
+
+
+def protected_experiment(rel: str, ctx: Ctx) -> str | None:
+    """원본 출력을 지켜야 하는 실험 ID. **지금 도는 실험도 포함**한다.
+
+    `previous_experiment` 와 다른 점이 여기다 — 이전 실험은 `prev` 잠금이
+    이미 덮지만, "돌고 있는 실험의 output 을 지우는 것" 은 아무도 안 막고
+    있었다(실측 8번에서 ask -> 승인으로 지워졌다). CLAUDE.md 는 "원본 출력을
+    보존해요" 라고 적어 두고 훅은 ask 로 뒀던 불일치를 메운다.
+    """
+    cfg = ctx.paths_cfg
+    parts = rel.split("/")
+    if len(parts) < 2 or parts[0] != cfg.get("experimentsDir", "experiments"):
+        return None
+    exp = parts[1]
+    if not re.match(cfg.get("experimentIdRe", "^EXP-[0-9]{3}$"), exp):
+        return None
+    if exp == getattr(ctx.run, "experiment_id", None):
+        return exp
+    if exp in (getattr(ctx.run, "started", None) or []):
+        return exp
+    folder = os.path.join(ctx.root, parts[0], exp)
+    markers = cfg.get("prevMarkers") or ["result.csv", "analysis.md"]
+    if any(os.path.exists(os.path.join(folder, m)) for m in markers):
+        return exp
+    return None
+
+
+def _output_finding(rel: str, target: str, ctx: Ctx, *, deleting: bool, destructive: bool):
+    """실험 산출물 보존 판정. 대상이 아니면 None."""
+    if not destructive:
+        return None
+    exp = protected_experiment(rel, ctx)
+    if not exp:
+        return None
+    cfg = ctx.paths_cfg
+    inner = rel.split("/")[2:]  # experiments/EXP-NNN/<여기부터>
+    if not inner:
+        return None
+    if inner[0] in (cfg.get("outputDirs") or ["output"]):
+        how = "지우거나 비우거나 덮어쓸"
+        return Finding(
+            "outputProtect", rel=rel, target=target, exp=exp, detail=how, writes=True
+        )
+    # result.csv·로그는 **삭제·이동만** 막는다. 수정은 기록(journal)이다.
+    if deleting and paths.match_globs(inner[-1], cfg.get("outputDeleteOnly") or []):
+        return Finding(
+            "outputProtect", rel=rel, target=target, exp=exp, detail="지우거나 옮길", writes=True
+        )
+    return None
+
+
+def classify_path(
+    raw: str,
+    ctx: Ctx,
+    *,
+    deleting: bool = False,
+    truncating: bool = False,
+    overwrite: bool = False,
+) -> list[Finding]:
     """경로 하나를 보고 Finding 을 만든다.
 
     여러 개가 나올 수 있다 (예: 이전 실험 폴더의 config.yaml -> prev + hparam).
     가장 제한적인 것이 이기는 건 decide.combine 이 한다.
+
+    `deleting` 지우거나 밖으로 옮김 · `truncating` 비움(`>` · truncate) ·
+    `overwrite` 기존 내용을 덮어씀(Write·Edit·cp 목적지). 셋 다 "파괴적" 이고,
+    `overwrite` 는 **파일이 이미 있을 때만** 그렇다.
     """
     cfg = ctx.paths_cfg
+
+    # /dev/null 류는 쓰기 대상이 아니다. `2>/dev/null` 이 막히면 읽기 명령까지
+    # 승인을 받게 된다 (실측). 심볼릭 링크를 해소하면 /dev/pts/3 처럼 바뀌므로
+    # **해소 전** 이름도 같이 본다.
+    plain = os.path.expanduser(raw)
+    if not os.path.isabs(plain):
+        plain = os.path.normpath(os.path.join(ctx.cwd, plain))
+    if is_device_sink(plain):
+        return []
+
     target = paths.safe_resolve(raw, ctx.cwd)
+    if is_device_sink(target):
+        return []
+
+    # 정책보다 앞선다. extraWritableRoots 예외로도 못 연다.
+    if is_hard_protected(target):
+        return [Finding("hardProtect", target=target, detail=raw, writes=True)]
+
+    if is_secret(target, ctx):
+        return [Finding("secret", target=target, detail=raw, writes=True)]
+
     rel = paths.rel_or_none(ctx.root, target)
 
     if rel is None:
@@ -193,6 +332,12 @@ def classify_path(raw: str, ctx: Ctx, *, deleting: bool = False) -> list[Finding
         return [Finding("outside", target=target, writes=True)]
 
     out: list[Finding] = []
+    destructive = deleting or truncating or (overwrite and os.path.isfile(target))
+    output_hit = _output_finding(
+        rel, target, ctx, deleting=deleting, destructive=destructive
+    )
+    if output_hit:
+        out.append(output_hit)
     if paths.match_globs(rel, cfg.get("selfProtectedFiles") or []):
         out.append(Finding("selfProtect", rel=rel, target=target, writes=True))
     if paths.match_globs(rel, cfg.get("stopLockedFiles") or []):
@@ -236,8 +381,19 @@ def classify_event(event: dict, ctx: Ctx) -> list[Finding]:
             ]
         found: list[Finding] = []
         for item in targets:
-            found.extend(classify_path(item, ctx))
+            # 쓰기 도구는 기존 내용을 덮어쓴다. 파일이 이미 있으면 파괴적이다.
+            found.extend(classify_path(item, ctx, overwrite=True))
         return found
+
+    if tool in SECRET_READ_TOOLS:
+        # 읽기는 막지 않는다 — **비밀 파일만** 본다. 그 밖은 판정하지 않는다.
+        raw = pick(tool_input, SECRET_READ_TOOLS[tool])
+        if not raw:
+            return []
+        target = paths.safe_resolve(str(raw), ctx.cwd)
+        if is_secret(target, ctx):
+            return [Finding("secret", target=target, detail=f"{tool} · {raw}")]
+        return []
 
     if tool == "Bash":
         from . import bashparse

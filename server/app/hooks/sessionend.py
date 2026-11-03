@@ -1,7 +1,8 @@
 """SessionEnd — Stop 이 못 돈 잔여분 정리.
 
 세션이 강제로 끝나거나 크래시하면 Stop 이 안 돌 수 있다. 그때 남은 대기 건을
-같은 사유로 마감한다. 여기서는 **세션 전체**를 본다 (응답 단위가 아니라).
+같은 사유로 마감한다. 여기서는 **세션 전체**를 보고, **서브에이전트 대기 건도
+닫는다** — 대기 건 마감의 마지막 그물이다.
 
 실측(2.1.317)의 SessionEnd 최상위:
     session_id, transcript_path, cwd, prompt_id, hook_event_name, reason
@@ -25,7 +26,9 @@ __all__ = ["main", "handle"]
 def handle(event: dict) -> list[dict]:
     # prompt_id 를 비워 세션 전체를 훑게 한다.
     scoped = {k: v for k, v in event.items() if k != "prompt_id"}
-    return stop.handle(scoped, event_name="SessionEnd")
+    # 마지막 그물이라 **서브에이전트 대기 건까지** 닫는다 (main_only=False).
+    # 세션이 끝났으면 그 에이전트도 더는 돌지 않는다.
+    return stop.handle(scoped, event_name="SessionEnd", main_only=False)
 
 
 def main() -> int:

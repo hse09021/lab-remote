@@ -23,14 +23,15 @@
 
 from __future__ import annotations
 
+import glob as globmod
 import os
 import re
 import shlex
 
 from .. import paths
-from .classify import Ctx, Finding, classify_path
+from .classify import Ctx, Finding, classify_path, is_secret
 
-__all__ = ["classify", "split_segments", "strip_wrappers"]
+__all__ = ["classify", "split_segments", "strip_wrappers", "secret_findings"]
 
 #: 안에 다른 명령을 끼워 넣는 흔적. 보이면 해석을 포기한다.
 SUSPICIOUS_RE = re.compile(
@@ -45,8 +46,8 @@ WRAPPERS = {"env", "nohup", "sudo", "stdbuf", "nice", "ionice", "time", "command
 DELETE_CMDS = {"rm", "unlink", "shred", "trash", "trash-put"}
 #: 목적지에 쓰는 명령 (마지막 피연산자가 목적지)
 COPY_CMDS = {"cp", "install"}
-#: 파일을 만드는 명령 (모든 피연산자가 대상)
-CREATE_CMDS = {"touch", "mkdir", "tee"}
+#: 파일을 만드는 명령 (모든 피연산자가 대상). `tee` 는 비우고 쓰므로 따로 본다.
+CREATE_CMDS = {"touch", "mkdir"}
 #: 패키지
 PKG_CMDS = {"pip", "pip3", "uv", "conda", "mamba", "micromamba", "poetry", "apt", "apt-get", "npm", "pnpm", "yarn"}
 PKG_SUBS = {"install", "add", "remove", "uninstall", "upgrade", "update"}
@@ -197,9 +198,13 @@ def _sed_targets(argv: list[str]) -> list[str]:
     return files if in_place else []
 
 
-def _redirect_targets(segment: str) -> list[str]:
-    """`> file` `>> file` `2> file` 의 대상."""
-    out: list[str] = []
+def _redirect_targets(segment: str) -> list[tuple[str, bool]]:
+    """`> file` `>> file` `2> file` 의 `(대상, 덧붙이기인가)`.
+
+    `>` 는 **비우고** 쓰므로 원본 출력을 날린다 (`: > output/x`). `>>` 는
+    덧붙이기라 파괴적이지 않다. 산출물 보존 판정이 이 둘을 구분해야 한다.
+    """
+    out: list[tuple[str, bool]] = []
     try:
         tokens = shlex.split(segment, posix=True)
     except ValueError:
@@ -207,12 +212,13 @@ def _redirect_targets(segment: str) -> list[str]:
     i = 0
     while i < len(tokens):
         token = tokens[i]
-        match = re.match(r"\A[0-9&]?>>?(.*)\Z", token)
+        match = re.match(r"\A[0-9&]?(>>?)(.*)\Z", token)
         if match:
-            if match.group(1):
-                out.append(match.group(1))
+            append = match.group(1) == ">>"
+            if match.group(2):
+                out.append((match.group(2), append))
             elif i + 1 < len(tokens):
-                out.append(tokens[i + 1])
+                out.append((tokens[i + 1], append))
                 i += 1
         i += 1
     return out
@@ -220,6 +226,59 @@ def _redirect_targets(segment: str) -> list[str]:
 
 def _dd_target(argv: list[str]) -> list[str]:
     return [t[3:] for t in argv[1:] if t.startswith("of=") and len(t) > 3]
+
+
+#: 와일드카드를 펼칠 때 받는 최대 개수. `*` 하나로 폴더를 통째로 훑는 걸 막는다.
+GLOB_LIMIT = 200
+
+
+def _expand(token: str, cwd: str) -> list[str]:
+    """와일드카드가 있으면 `cwd` 기준으로 펼친다. 없으면 그대로 한 개.
+
+    `.en*`·`.e?v` 처럼 비밀 파일 이름을 가린 채 읽는 걸 막으려고 쓴다.
+    셸이 실제로 하는 전개와 완전히 같을 수는 없고(변수 치환은 이미
+    `suspicious` 로 올린다), 못 펼치면 원래 토큰만 돌려준다.
+    """
+    if not any(c in token for c in "*?["):
+        return [token]
+    try:
+        pattern = token if os.path.isabs(token) else os.path.join(cwd, token)
+        found = sorted(globmod.glob(pattern, recursive=False))[:GLOB_LIMIT]
+    except (OSError, ValueError, re.error):
+        return [token]
+    return found or [token]
+
+
+def secret_findings(segment: str, argv: list[str], ctx: Ctx) -> list[Finding]:
+    """명령이 건드리는 모든 피연산자 중 비밀 파일이 있으면 Finding.
+
+    읽기 명령 목록을 따로 관리하지 않고 **피연산자 전체**를 본다. 그래야
+    `cat`·`head`·`grep`·`cp .env ./x`·`tar` 를 한 번에 덮는다. 읽기든
+    쓰기든 비밀 파일이 대상이면 막는다.
+
+    못 막는 것: `grep -r SECRET .` 처럼 **대상이 폴더**인 재귀 읽기.
+    그래서 "비밀은 프로젝트 폴더 밖에 둔다" 가 1차 방어다
+    (docs/operations.md 의 한계).
+    """
+    out: list[Finding] = []
+    seen: set[str] = set()
+    for token in argv[1:]:
+        if _is_option(token):
+            continue
+        # `of=x` · `VAR=x` 는 값 쪽이 경로다
+        keyed = re.match(r"\A[A-Za-z_][A-Za-z0-9_]*=(.+)\Z", token)
+        if keyed:
+            token = keyed.group(1)
+        for item in _expand(token, ctx.cwd):
+            target = paths.safe_resolve(item, ctx.cwd)
+            if target in seen:
+                continue
+            seen.add(target)
+            if is_secret(target, ctx):
+                out.append(
+                    Finding("secret", target=target, detail=segment[:120], writes=True)
+                )
+    return out
 
 
 def argv_to_findings(argv: list[str], ctx: Ctx) -> list[Finding]:
@@ -241,9 +300,10 @@ def argv_to_findings(argv: list[str], ctx: Ctx) -> list[Finding]:
 
     if name == "mv":
         if len(operands) >= 2:
+            # 출처는 사라진다 — output/ 밖으로 빼는 것도 삭제로 본다.
             for item in operands[:-1]:
                 out.extend(classify_path(item, ctx, deleting=True))
-            out.extend(classify_path(operands[-1], ctx))
+            out.extend(classify_path(operands[-1], ctx, overwrite=True))
         return out
 
     if name == "rsync":
@@ -256,7 +316,14 @@ def argv_to_findings(argv: list[str], ctx: Ctx) -> list[Finding]:
 
     if name in COPY_CMDS:
         if operands:
-            out.extend(classify_path(operands[-1], ctx))
+            out.extend(classify_path(operands[-1], ctx, overwrite=True))
+        return out
+
+    if name == "tee":
+        # `tee x` 는 비우고 쓴다. `tee -a x` 는 덧붙인다.
+        append = any(t in ("-a", "--append") for t in argv[1:])
+        for item in operands:
+            out.extend(classify_path(item, ctx, truncating=not append))
         return out
 
     if name in CREATE_CMDS:
@@ -266,17 +333,19 @@ def argv_to_findings(argv: list[str], ctx: Ctx) -> list[Finding]:
 
     if name == "truncate":
         for item in operands:
-            out.extend(classify_path(item, ctx))
+            out.extend(classify_path(item, ctx, truncating=True))
         return out
 
     if name == "dd":
+        # conv=notrunc 가 없으면 목적지를 자른다
+        notrunc = any("notrunc" in t for t in argv[1:] if t.startswith("conv="))
         for item in _dd_target(argv):
-            out.extend(classify_path(item, ctx))
+            out.extend(classify_path(item, ctx, truncating=not notrunc, overwrite=True))
         return out
 
     if name == "sed":
         for item in _sed_targets(argv):
-            out.extend(classify_path(item, ctx))
+            out.extend(classify_path(item, ctx, overwrite=True))
         return out
 
     if name in PKG_CMDS:
@@ -334,12 +403,19 @@ def classify(command: str, ctx: Ctx) -> list[Finding]:
             out.append(Finding("unparsed", target=segment[:200], writes=True))
             continue
 
-        for item in _redirect_targets(segment):
-            out.extend(classify_path(item, Ctx(**{**ctx.__dict__, "cwd": cwd})))
+        here = Ctx(**{**ctx.__dict__, "cwd": cwd})
+        for item, append in _redirect_targets(segment):
+            # `>>` 는 덧붙이기라 원본을 날리지 않는다 (실험이 로그를 쌓는 모양).
+            out.extend(
+                classify_path(item, here, truncating=not append, overwrite=not append)
+            )
 
         argv = strip_wrappers(argv)
         if not argv:
             continue
+
+        # 읽기든 쓰기든 비밀 파일이 대상이면 막는다 (옵션·와일드카드 포함).
+        out.extend(secret_findings(segment, argv, here))
 
         # 단순 `cd X` 는 따라간다. 조건부 cd 는 포기한다(문서화된 한계).
         if os.path.basename(argv[0]) == "cd":

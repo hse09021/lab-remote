@@ -100,8 +100,9 @@ def test_7_패키지_설치는_승인(wrapper, project_root, hook_event):
     assert decision(wrapper, hook_event("Bash", {"command": "pip install peft"}, cwd=project_root)) == "ask"
 
 
-def test_8_현재_실험_output_삭제는_승인(wrapper, project_root, hook_event):
-    event = hook_event("Bash", {"command": "rm -rf experiments/EXP-007/output"}, cwd=project_root)
+def test_8_안_돌린_실험_output_삭제는_승인(wrapper, project_root, hook_event):
+    """준비 중인 폴더는 지울 수 있어야 한다 (돌린 실험은 아래 test_15)."""
+    event = hook_event("Bash", {"command": "rm -rf experiments/EXP-009/output"}, cwd=project_root)
     assert decision(wrapper, event) == "ask"
 
 
@@ -167,3 +168,173 @@ def test_실측_우회_흐름(wrapper, project_root, hook_event, real_event):
 def test_거절_사유에_우회_금지가_들어_있다(wrapper, project_root, hook_event):
     out = run(wrapper, hook_event("Write", {"file_path": "/etc/hosts"}, cwd=project_root))
     assert "작업을 멈추고 보고해 주세요" in out["permissionDecisionReason"]
+
+
+# --- 판 2 에서 늘어난 잠금 (설치된 래퍼로) ------------------------------------
+
+
+def output_file(project_root, exp="EXP-007", rel="output/train.log"):
+    path = os.path.join(project_root, "experiments", exp, rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("원본 출력\n")
+    return path
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "rm -rf experiments/EXP-007/output",
+        ": > experiments/EXP-007/output/train.log",
+        "truncate -s 0 experiments/EXP-007/output/train.log",
+        "mv experiments/EXP-007/output/train.log /tmp/keep.log",
+    ],
+)
+def test_15_도는_실험_산출물은_차단(wrapper, project_root, hook_event, command):
+    """CLAUDE.md 의 "원본 출력을 보존해요" 를 훅이 실제로 강제한다."""
+    runstate.set_running("hook-sandbox", "EXP-007", pid=os.getpid())
+    output_file(project_root)
+    assert decision(wrapper, hook_event("Bash", {"command": command}, cwd=project_root)) == "deny"
+
+
+def test_15_산출물_덮어쓰기도_차단(wrapper, project_root, hook_event):
+    runstate.set_running("hook-sandbox", "EXP-007", pid=os.getpid())
+    path = output_file(project_root)
+    event = hook_event("Write", {"file_path": path, "content": "덮어쓰기"}, cwd=project_root)
+    assert decision(wrapper, event) == "deny"
+
+
+def test_16_버린_출력은_간섭하지_않는다(wrapper, project_root, hook_event):
+    """실측에서 `2>/dev/null` 이 "폴더 밖 쓰기" 로 막혔다."""
+    event = hook_event("Bash", {"command": "ls -la .claude 2>/dev/null"}, cwd=project_root)
+    assert decision(wrapper, event) == "defer"
+
+
+def test_17_비밀_파일_읽기는_차단(wrapper, project_root, hook_event):
+    with open(os.path.join(project_root, ".env"), "w", encoding="utf-8") as fh:
+        fh.write("WANDB_API_KEY=비밀\n")
+    event = hook_event("Read", {"file_path": f"{project_root}/.env"}, cwd=project_root)
+    assert decision(wrapper, event) == "deny"
+
+
+def test_17_예시_파일_읽기는_간섭하지_않는다(wrapper, project_root, hook_event):
+    event = hook_event("Read", {"file_path": f"{project_root}/.env.example"}, cwd=project_root)
+    assert decision(wrapper, event) == "defer"
+
+
+def test_18_서버_보호_파일은_차단(wrapper, project_root, hook_event):
+    from app import policy_defaults as D
+
+    server_dir = D.hard_protected_roots()[0]
+    event = hook_event(
+        "Edit",
+        {"file_path": f"{server_dir}/app/hooks/decide.py", "old_string": "a", "new_string": "b"},
+        cwd=project_root,
+    )
+    assert decision(wrapper, event) == "deny"
+
+
+def test_18_MCP_설정도_차단(wrapper, project_root, hook_event):
+    event = hook_event("Write", {"file_path": os.path.expanduser("~/.claude.json")}, cwd=project_root)
+    assert decision(wrapper, event) == "deny"
+
+
+def test_19_헤드리스는_사유와_함께_거절(wrapper, project_root, hook_event):
+    """실측: `claude -p` 의 ask 는 사람에게 안 가고 10초 안에 자동 거부된다."""
+    from app.hooks import pretooluse
+
+    event = hook_event("Bash", {"command": "pip install peft"}, cwd=project_root)
+    out = run(wrapper, event, env={pretooluse.HEADLESS_ENV: "1", "LAB_NOTIFY_DISABLED": "1"})
+    assert out["permissionDecision"] == "deny"
+    assert "승인 요청을 남겨 두었어요" in out["permissionDecisionReason"]
+    assert "작업을 멈추고 보고해 주세요" in out["permissionDecisionReason"]
+
+
+def test_20_권한_우회_모드여도_잠금은_그대로(wrapper, project_root, hook_event):
+    """판정은 permission_mode 를 읽지 않는다."""
+    event = hook_event(
+        "Write", {"file_path": "/tmp/x.txt"}, cwd=project_root, permission_mode="auto"
+    )
+    assert decision(wrapper, event) == "deny"
+
+
+def test_21_UserPromptSubmit_이_이전_턴을_마감한다(wrapper, project, project_root, hook_event):
+    """거부로 턴이 끊겨 Stop 이 안 돈 경우 (실측 B)."""
+    import json as jsonmod
+    import subprocess
+
+    from app import approval_log as A
+
+    ask = hook_event("Bash", {"command": "pip install peft"}, cwd=project_root,
+                     prompt_id="예전", tool_use_id="t1")
+    assert decision(wrapper, ask) == "ask"
+    assert len(A.list_pending("hook-sandbox")) == 1
+
+    result = subprocess.run(
+        ["/bin/sh", wrapper, "app.hooks.userprompt"],
+        input=jsonmod.dumps({"cwd": project_root, "session_id": "sess-테스트",
+                             "prompt_id": "새것", "prompt": "다음 할 일"}),
+        capture_output=True,
+        text=True,
+        env={
+            "PATH": "",
+            "HOME": os.environ.get("HOME", "/tmp"),
+            "LAB_DATA_DIR": os.environ["LAB_DATA_DIR"],
+            "LAB_PROJECTS_DIR": os.environ["LAB_PROJECTS_DIR"],
+            "CLAUDE_PROJECT_DIR": project_root,
+        },
+    )
+    assert result.returncode == 0 and result.stdout == ""
+    assert A.list_pending("hook-sandbox") == []
+    assert A.read_rows(A.log_path(project_root))[-1]["result"] == A.RESULT_NO_ANSWER
+
+
+def run_module(wrapper, module, event):
+    """기록용 훅(stdout 없음)을 래퍼로 띄운다."""
+    result = subprocess.run(
+        ["/bin/sh", wrapper, module],
+        input=json.dumps(event),
+        capture_output=True,
+        text=True,
+        env={
+            "PATH": "",
+            "HOME": os.environ.get("HOME", "/tmp"),
+            "LAB_DATA_DIR": os.environ["LAB_DATA_DIR"],
+            "LAB_PROJECTS_DIR": os.environ["LAB_PROJECTS_DIR"],
+            "CLAUDE_PROJECT_DIR": str(event.get("cwd") or ""),
+        },
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "", result.stdout  # 아무것도 막지 않는다
+    return result
+
+
+def test_22_서브에이전트_대기_건은_Stop_이_아니라_SubagentStop_이_닫는다(
+    wrapper, project, project_root, hook_event
+):
+    """실측 2026-11-04 02:03 사건. 설치된 래퍼로 끝까지 돌려 본다."""
+    from app import approval_log as A
+
+    agent_id = "a85e6d7a23abaefce"
+    ask = hook_event(
+        "Write",
+        {"file_path": f"{project_root}/experiments/EXP-002/c.py", "content": "print('c')\n"},
+        cwd=project_root,
+        prompt_id="p-agent",
+        tool_use_id="t-agent",
+        agent_id=agent_id,
+        agent_type="general-purpose",
+    )
+    assert decision(wrapper, ask) == "ask"
+
+    # 메인 턴이 끝난다 — 승인창은 아직 열려 있다
+    run_module(wrapper, "app.hooks.stop",
+               {"cwd": project_root, "session_id": "sess-테스트", "prompt_id": "p-agent"})
+    assert len(A.list_pending("hook-sandbox")) == 1
+    assert A.read_rows(A.log_path(project_root))[-1]["result"] == "대기 중"
+
+    # 그 에이전트가 멈출 때 닫힌다
+    run_module(wrapper, "app.hooks.subagentstop",
+               {"cwd": project_root, "session_id": "sess-테스트", "agent_id": agent_id})
+    assert A.list_pending("hook-sandbox") == []
+    assert A.read_rows(A.log_path(project_root))[-1]["result"] == A.RESULT_NO_ANSWER

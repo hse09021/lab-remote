@@ -110,10 +110,19 @@ def test_사유에_행동_이름이_한국어로_들어간다(ctx):
 # --- 헤드리스 ---------------------------------------------------------------
 
 
-def test_헤드리스_기본값은_ask_그대로(ctx):
+def test_헤드리스_기본값은_거절(ctx):
+    """실측(2026-11-04): `claude -p` 의 ask 는 사람에게 안 가고 10초 안에 자동
+    거부된다. 기다려 주지 않으니 우리가 사유를 붙여 먼저 막는다."""
     ctx.headless = True
-    assert ctx.policy.headless["onAsk"] == "ask"
-    assert kind(ctx, Finding("pkg", target="pip install peft")) == "ask"
+    assert ctx.policy.headless["onAsk"] == "deny-with-reason"
+    assert kind(ctx, Finding("pkg", target="pip install peft")) == "deny"
+
+
+def test_헤드리스_설정이_없어도_거절(ctx):
+    """정책 파일에 키가 없는 경우에도 열리면 안 된다."""
+    ctx.headless = True
+    ctx.policy.data["headless"] = {}
+    assert kind(ctx, Finding("pkg", target="pip install peft")) == "deny"
 
 
 def test_헤드리스_deny_with_reason(ctx):
@@ -122,8 +131,16 @@ def test_헤드리스_deny_with_reason(ctx):
     decision = D.decide(Finding("pkg", target="pip install peft"), ctx)
     assert decision.kind == "deny"
     assert decision.reason.startswith("[승인 필요: 패키지 설치]")
+    assert "승인 요청을 남겨 두었어요" in decision.reason
     assert M.NO_WORKAROUND in decision.reason
     assert decision.meta["headlessDeny"] is True
+
+
+def test_헤드리스_ask_로_되돌릴_수_있다(ctx):
+    """정책으로 옛 동작(앱에 맡김)을 고를 수는 있다. 자동 허용만 안 된다."""
+    ctx.headless = True
+    ctx.policy.data["headless"]["onAsk"] = "ask"
+    assert kind(ctx, Finding("pkg", target="pip install peft")) == "ask"
 
 
 def test_헤드리스여도_자동_허용으로는_안_넘어간다(ctx):
@@ -162,3 +179,57 @@ def test_순위(ctx):
     assert D.combine([ALLOW(), DEFER()]).kind == "defer"
     assert D.combine([ALLOW(), ASK()]).kind == "ask"
     assert D.combine([ASK(), DENY()]).kind == "deny"
+
+
+# --- 판 2 에서 늘어난 잠금 ---------------------------------------------------
+
+
+def test_보호_목록은_항상_차단(ctx):
+    decision = D.decide(Finding("hardProtect", target="/home/u/.claude.json"), ctx)
+    assert decision.kind == "deny"
+    assert "어떤 권한 설정에서도" in decision.reason
+    assert decision.action in D.LOCK_ACTIONS
+
+
+def test_비밀_파일은_항상_차단(ctx):
+    decision = D.decide(Finding("secret", target="/home/u/p/.env"), ctx)
+    assert decision.kind == "deny"
+    assert "환경 변수 이름만" in decision.reason
+    assert decision.action in D.LOCK_ACTIONS
+
+
+def test_산출물_보존은_항상_차단(ctx):
+    decision = D.decide(
+        Finding(
+            "outputProtect",
+            rel="experiments/EXP-002/output/train.log",
+            exp="EXP-002",
+            detail="지우거나 비우거나 덮어쓸",
+        ),
+        ctx,
+    )
+    assert decision.kind == "deny"
+    assert "EXP-002" in decision.reason
+    assert decision.action in D.LOCK_ACTIONS
+
+
+def test_새_잠금은_권한_프리셋을_안_본다(ctx):
+    """"연구 전체 자동화" 로 올려도 열리면 안 된다."""
+    ctx.policy.data["saved"] = {"mode": "full", "overrides": {}}
+    for action in ("hardProtect", "secret", "outputProtect"):
+        assert kind(ctx, Finding(action, rel="x", target="/x", exp="EXP-001")) == "deny"
+
+
+def test_새_잠금은_헤드리스에서도_차단(ctx):
+    ctx.headless = True
+    assert kind(ctx, Finding("secret", target="/home/u/p/.env")) == "deny"
+
+
+def test_기록_허용보다_산출물_보존이_이긴다(ctx):
+    """result.csv 삭제 -> journal(allow) + outputProtect(deny) -> deny."""
+    found = [
+        Finding("journal", rel="experiments/EXP-002/result.csv"),
+        Finding("outputProtect", rel="experiments/EXP-002/result.csv", exp="EXP-002",
+                detail="지우거나 옮길"),
+    ]
+    assert D.combine([D.decide(f, ctx) for f in found]).kind == "deny"

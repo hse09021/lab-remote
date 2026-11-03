@@ -1,5 +1,6 @@
 """프로젝트 생성기 시험."""
 
+import json
 import os
 import subprocess
 
@@ -244,3 +245,66 @@ def test_없는_프로젝트는_update_못_한다(spec):
 
 def test_기본은_환경을_만들지_않는다(made):
     assert made["env"]["skipped"] is True
+
+
+# --- 비밀 값은 프로젝트 밖 (판 2) --------------------------------------------
+
+
+def test_env_는_만들지_않는다(made):
+    """훅은 `cat .env` 는 막지만 `grep -r` 은 못 막는다. 위치가 1차 방어다."""
+    assert not os.path.exists(os.path.join(made["target"], ".env"))
+    assert ".env" not in made["files"]
+
+
+def test_env_example_은_남아_있고_밖을_가리킨다(made):
+    path = os.path.join(made["target"], ".env.example")
+    body = open(path, encoding="utf-8").read()
+    assert "~/.config/labremote/hook-sandbox.env" in body
+    assert "WANDB_API_KEY=" in body
+
+
+def test_doctor_가_이_프로젝트에서_비밀_파일을_못_찾는다(made):
+    from app import doctor
+
+    assert doctor.project_secrets(made["target"]) == []
+
+
+# --- 권한 기본 모드 고정 (판 2) ----------------------------------------------
+
+
+def test_claude_설정에_기본_모드가_박혀_있다(made):
+    """2.1.317 은 사용자 설정에 defaultMode 가 없으면 auto 로 뜬다."""
+    path = os.path.join(made["target"], ".claude", "settings.json")
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+    assert data["permissions"]["defaultMode"] == "default"
+
+
+def test_claude_설정도_추적한다(made):
+    from app.generator import gitops
+
+    assert ".claude/settings.json" in gitops.tracked_files(made["target"])
+
+
+def test_update_가_기본_모드를_채운다(made):
+    """이미 만든 프로젝트에도 소급 적용된다."""
+    spec = ProjectSpec(name="hook-sandbox", goal="시험")
+    target = made["target"]
+    os.remove(os.path.join(target, ".claude", "settings.json"))
+
+    result = scaffold.create_project(spec, if_exists="update")
+    assert result["settings"]["mode"] == "default"
+    assert os.path.exists(os.path.join(target, ".claude", "settings.json"))
+
+
+def test_gitignore_가_판_올림_백업을_무시한다(made):
+    """`policy migrate` 가 logs/Approval_log.csv.v1.bak 을 남겨요."""
+    from app.generator import gitops
+
+    body = open(os.path.join(made["target"], ".gitignore"), encoding="utf-8").read()
+    assert "logs/*.bak" in body
+
+    with open(os.path.join(made["target"], "logs", "Approval_log.csv.v1.bak"), "w") as fh:
+        fh.write("백업\n")
+    tracked = gitops.tracked_files(made["target"])
+    assert not any(t.endswith(".bak") for t in tracked)
