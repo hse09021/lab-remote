@@ -441,6 +441,11 @@ export interface Highlight {
   /** PDF 좌표 사각형. 한 하이라이트가 여러 줄에 걸칠 수 있어요 */
   boxes: PtRect[]
   note: string
+  /**
+   * 샘플 골격에서 칠할 블록 id. 실제 arXiv HTML 이면 글자 단위로
+   * 바꿀 수 있지만 지금은 블록 단위만 써요.
+   */
+  htmlBlock: string | null
 }
 
 export interface Reference {
@@ -477,6 +482,26 @@ export interface CiteSpot {
   box: PtRect
 }
 
+/** AI가 본문에서 뽑은 학습 설정 */
+export interface ExtractedConfig {
+  title: string
+  caption: string
+  rows: Array<{ label: string; value: string; sectionId: string; ref: string }>
+}
+
+/** 본문과 표의 수치가 어긋날 때 */
+export interface DiscrepancyNote {
+  title: string
+  text: string
+  options: Array<{ value: string; label: string }>
+}
+
+export interface InlineMemo {
+  title: string
+  meta: string
+  text: string
+}
+
 export interface PaperReaderPayload {
   paperId: string
   title: string
@@ -500,4 +525,7 @@ export interface PaperReaderPayload {
   zoomLevels: number[]
   explainZones: ExplainZone[]
   citeSpots: CiteSpot[]
+  extractedConfig: ExtractedConfig
+  discrepancy: DiscrepancyNote
+  inlineMemo: InlineMemo
 }

@@ -1,0 +1,226 @@
+/*
+ * 논문 본문 전용 스코프.
+ * 주입된 HTML(arXiv 또는 샘플 골격)에만 적용돼요.
+ */
+.paper {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 36px 40px 40px;
+  font-family: var(--font-paper);
+  color: var(--text);
+  line-height: 1.75;
+}
+
+.paper .paper-head {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.paper h1 {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.paper .authors {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.paper .affil {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.paper h2,
+.paper h3,
+.paper h4 {
+  scroll-margin-top: 16px;
+  margin: 26px 0 8px;
+  position: relative;
+}
+
+.paper h2 {
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.paper h3 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.paper h4 {
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.paper .sec-n {
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  margin-right: 6px;
+}
+
+.paper p {
+  margin: 10px 0;
+  font-size: 15.5px;
+}
+
+/* 자리표시 문단 — 실제 본문이 들어오면 안 쓰여요 */
+.paper .ph {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* ── 표 (booktabs) ───────────────────────────────────────── */
+.paper .tbl-wrap {
+  margin: 20px 0;
+  overflow-x: auto;
+}
+
+.paper .tbl-wrap figcaption {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-muted);
+  padding-bottom: 8px;
+}
+
+.paper .tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.paper .tbl thead {
+  border-top: 1.5px solid var(--text);
+  border-bottom: 1px solid var(--text);
+}
+
+.paper .tbl tbody {
+  border-bottom: 1.5px solid var(--text);
+}
+
+.paper .tbl th,
+.paper .tbl td {
+  padding: 6px 10px;
+  text-align: left;
+}
+
+/* 골격의 빈 칸은 회색 줄로 — 실제 HTML 에는 값이 들어와요 */
+.paper .cell {
+  display: block;
+  height: 9px;
+  width: 70%;
+  border-radius: 5px;
+  background: var(--track);
+}
+
+/* ── 수식 ────────────────────────────────────────────────── */
+.paper .eq-block {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 18px 0;
+  padding: 14px 16px;
+}
+
+.paper .eq {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-soft);
+  overflow-wrap: anywhere;
+}
+
+.paper .eq-num {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── 그림 ────────────────────────────────────────────────── */
+.paper .fig {
+  position: relative;
+  margin: 22px 0;
+  text-align: center;
+}
+
+.paper .fig img {
+  max-width: 100%;
+  height: auto;
+}
+
+.paper .fig figcaption {
+  margin-top: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── 본문 인용 칩 ────────────────────────────────────────── */
+.paper .cite-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  color: var(--accent-dark);
+  padding: 1px 6px;
+  cursor: pointer;
+  min-height: 24px;
+}
+
+.paper .cite-chip:hover {
+  background: var(--accent-soft);
+}
+
+/* ── 참고문헌 ────────────────────────────────────────────── */
+.paper .refs {
+  font-size: 13.5px;
+  counter-reset: ref;
+}
+
+.paper .refs li {
+  margin: 8px 0;
+  padding-left: 28px;
+  position: relative;
+}
+
+.paper .refs li::before {
+  counter-increment: ref;
+  content: '[' counter(ref) ']';
+  position: absolute;
+  left: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.paper .ref-title {
+  font-style: italic;
+}
+
+/* ── 블록 하이라이트 ─────────────────────────────────────── */
+.paper [data-hl] {
+  border-radius: 4px;
+  box-shadow: inset 3px 0 0 var(--hl-edge);
+  background: var(--hl-bg);
+  padding-left: 12px;
+}
+
+.paper [data-hl='core'] { --hl-bg: var(--hl-core-tint); --hl-edge: var(--hl-core); }
+.paper [data-hl='method'] { --hl-bg: var(--hl-method-tint); --hl-edge: var(--hl-method); }
+.paper [data-hl='result'] { --hl-bg: var(--hl-result-tint); --hl-edge: var(--hl-result); }
+.paper [data-hl='check'] { --hl-bg: var(--hl-check-tint); --hl-edge: var(--hl-check); }
+.paper [data-hl='memo'] { --hl-bg: var(--hl-memo-tint); --hl-edge: var(--hl-memo); }
+
+/* 글자 단위 (실제 arXiv HTML 일 때만) */
+.paper mark[data-hl] {
+  box-shadow: none;
+  padding: 0 1px;
+  background: var(--hl-edge);
+}

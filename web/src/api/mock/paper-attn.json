@@ -283,7 +283,8 @@
           468
         ]
       ],
-      "note": "RNN·CNN 없이 어텐션만으로 된 구조를 제안"
+      "note": "RNN·CNN 없이 어텐션만으로 된 구조를 제안",
+      "htmlBlock": "p-abs-2"
     },
     {
       "id": "h2",
@@ -304,7 +305,8 @@
           323
         ]
       ],
-      "note": "순환 없이 입력과 출력의 전역 의존성을 어텐션으로 모델링"
+      "note": "순환 없이 입력과 출력의 전역 의존성을 어텐션으로 모델링",
+      "htmlBlock": "p-s1-2"
     },
     {
       "id": "h3",
@@ -319,7 +321,8 @@
           494
         ]
       ],
-      "note": "식 (1) Scaled dot-product attention"
+      "note": "식 (1) Scaled dot-product attention",
+      "htmlBlock": "eq-1"
     },
     {
       "id": "h9",
@@ -334,7 +337,8 @@
           724
         ]
       ],
-      "note": "내 메모 · head 수를 바꾸면 d_k도 바뀌니 스케일 영향도 같이 볼 것"
+      "note": "내 메모 · head 수를 바꾸면 d_k도 바뀌니 스케일 영향도 같이 볼 것",
+      "htmlBlock": "memo-fn4"
     },
     {
       "id": "h4",
@@ -349,7 +353,8 @@
           176
         ]
       ],
-      "note": "Multi-head attention · h=8, d_k=d_v=64"
+      "note": "Multi-head attention · h=8, d_k=d_v=64",
+      "htmlBlock": "eq-mh"
     },
     {
       "id": "h5",
@@ -364,7 +369,8 @@
           368
         ]
       ],
-      "note": "사인·코사인 위치 인코딩"
+      "note": "사인·코사인 위치 인코딩",
+      "htmlBlock": "eq-pe"
     },
     {
       "id": "h6",
@@ -379,7 +385,8 @@
           246
         ]
       ],
-      "note": "표 2 · EN-DE 28.4 / EN-FR 41.8 BLEU, 학습 비용 비교"
+      "note": "표 2 · EN-DE 28.4 / EN-FR 41.8 BLEU, 학습 비용 비교",
+      "htmlBlock": "tbl-2"
     },
     {
       "id": "h8",
@@ -394,7 +401,8 @@
           500
         ]
       ],
-      "note": "본문 41.0과 표 2의 41.8이 서로 달라요"
+      "note": "본문 41.0과 표 2의 41.8이 서로 달라요",
+      "htmlBlock": "note-check"
     },
     {
       "id": "h7",
@@ -409,7 +417,8 @@
           386
         ]
       ],
-      "note": "표 3 · head 수, d_k, 모델 크기, dropout을 바꾼 실험"
+      "note": "표 3 · head 수, d_k, 모델 크기, dropout을 바꾼 실험",
+      "htmlBlock": "tbl-3"
     }
   ],
   "references": [
@@ -871,5 +880,60 @@
         570.1
       ]
     }
-  ]
+  ],
+  "extractedConfig": {
+    "title": "AI가 뽑은 학습 설정",
+    "caption": "5장 전체에서 찾았어요",
+    "rows": [
+      {
+        "label": "데이터",
+        "value": "WMT14 EN-DE 약 4.5M 쌍 · BPE 공유 어휘 약 37K",
+        "sectionId": "s5-1",
+        "ref": "§5.1"
+      },
+      {
+        "label": "배치",
+        "value": "소스·타깃 각 약 25,000 토큰",
+        "sectionId": "s5-1",
+        "ref": "§5.1"
+      },
+      {
+        "label": "하드웨어",
+        "value": "P100 × 8 · base 100K step 12시간 · big 300K step 3.5일",
+        "sectionId": "s5-2",
+        "ref": "§5.2"
+      },
+      {
+        "label": "옵티마이저",
+        "value": "Adam β1=0.9 β2=0.98 ε=1e-9 · warmup 4000",
+        "sectionId": "s5-3",
+        "ref": "§5.3"
+      },
+      {
+        "label": "정규화",
+        "value": "P_drop=0.1 · ε_ls=0.1",
+        "sectionId": "s5-4",
+        "ref": "§5.4"
+      }
+    ]
+  },
+  "discrepancy": {
+    "title": "AI 확인 필요 · 수치가 서로 달라요",
+    "text": "이 문단은 EN-FR big 모델 BLEU를 41.0으로, 표 2는 41.8로 적고 있어요. 재현 목표값을 정할 때 어느 쪽을 기준으로 할지 골라 주세요.",
+    "options": [
+      {
+        "value": "41.8",
+        "label": "41.8 · 표 2 기준"
+      },
+      {
+        "value": "41.0",
+        "label": "41.0 · 본문 기준"
+      }
+    ]
+  },
+  "inlineMemo": {
+    "title": "내 메모",
+    "meta": "각주 4 · 어제 22:14",
+    "text": "d_k=64면 √d_k=8. 표 3 (A)처럼 head 수를 바꾸면 d_k도 같이 바뀌니까 스케일 영향도 같이 볼 것"
+  }
 }

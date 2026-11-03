@@ -1,0 +1,281 @@
+<!-- 개발용 샘플 골격입니다.
+     헤딩·표·수식·그림 구조와 LaTeXML 앵커(S3.SS2.SSS1 …)만 담고,
+     문단은 자리표시예요 — 논문 원문 문장은 넣지 않아요.
+     실제 본문은 web/fixtures/attn.arxiv.html 을 두면 그걸 읽어요. -->
+<article class="paper">
+  <header class="paper-head">
+    <h1 id="paper-title">Attention Is All You Need</h1>
+    <p class="authors">Ashish Vaswani · Noam Shazeer · Niki Parmar · Jakob Uszkoreit ·
+      Llion Jones · Aidan N. Gomez · Łukasz Kaiser · Illia Polosukhin</p>
+    <p class="affil">Google Brain · Google Research · University of Toronto</p>
+  </header>
+
+<section class="sec" data-section="abs">
+<h2 id="Sabs" data-section="abs">Abstract</h2>
+<p class="ph" id="p-abs-1">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+<p class="ph" id="p-abs-2">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s1">
+<h2 id="S1" data-section="s1"><span class="sec-n">1</span> Introduction</h2>
+<p class="ph" id="p-s1-1">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+<p class="ph" id="p-s1-2">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+<p class="ph">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요. <button type="button" class="cite-chip" data-cite="18">[18]</button> <button type="button" class="cite-chip" data-cite="9">[9]</button> <button type="button" class="cite-chip" data-cite="11">[11]</button></p>
+</section>
+
+<section class="sec" data-section="s2">
+<h2 id="S2" data-section="s2"><span class="sec-n">2</span> Background</h2>
+<p class="ph" id="p-s2">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+<p class="ph">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요. <button type="button" class="cite-chip" data-cite="1">[1]</button> <button type="button" class="cite-chip" data-cite="2">[2]</button> <button type="button" class="cite-chip" data-cite="3">[3]</button></p>
+</section>
+
+<section class="sec" data-section="s3">
+<h2 id="S3" data-section="s3"><span class="sec-n">3</span> Model Architecture</h2>
+<p class="ph" id="p-s3">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+
+<figure class="fig" id="fig-1" data-explain="fig1">
+  <img src="/fixtures/paper/fig1.png" alt="Figure 1" style="max-width:290px" />
+  <figcaption>Figure 1 · 모델 구조</figcaption>
+</figure>
+</section>
+
+<section class="sec" data-section="s3-1">
+<h3 id="S3.SS1" data-section="s3-1"><span class="sec-n">3.1</span> Encoder and Decoder Stacks</h3>
+<p class="ph" id="p-s31-1">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+<p class="ph" id="p-s31-2">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s3-2">
+<h3 id="S3.SS2" data-section="s3-2"><span class="sec-n">3.2</span> Attention</h3>
+<p class="ph" id="p-s32">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+
+<figure class="fig" id="fig-2" data-explain="fig2">
+  <img src="/fixtures/paper/fig2.png" alt="Figure 2" style="max-width:560px" />
+  <figcaption>Figure 2 · 어텐션 구조</figcaption>
+</figure>
+</section>
+
+<section class="sec" data-section="s3-2-1">
+<h4 id="S3.SS2.SSS1" data-section="s3-2-1"><span class="sec-n">3.2.1</span> Scaled Dot-Product Attention</h4>
+<p class="ph" id="p-s321">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+
+<div class="eq-block" id="eq-1" data-explain="eq1">
+  <span class="eq">\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V</span>
+  <span class="eq-num">(1)</span>
+</div>
+<aside class="memo-card" id="memo-fn4"></aside>
+<p class="ph" id="p-s321b">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s3-2-2">
+<h4 id="S3.SS2.SSS2" data-section="s3-2-2"><span class="sec-n">3.2.2</span> Multi-Head Attention</h4>
+<p class="ph" id="p-s322">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+
+<div class="eq-block" id="eq-mh" data-explain="mh">
+  <span class="eq">\mathrm{MultiHead}(Q,K,V)=\mathrm{Concat}(\mathrm{head}_1,\dots,\mathrm{head}_h)W^O</span>
+  <span class="eq-num">(2)</span>
+</div>
+</section>
+
+<section class="sec" data-section="s3-2-3">
+<h4 id="S3.SS2.SSS3" data-section="s3-2-3"><span class="sec-n">3.2.3</span> Applications of Attention</h4>
+<p class="ph" id="p-s323">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s3-3">
+<h3 id="S3.SS3" data-section="s3-3"><span class="sec-n">3.3</span> Position-wise Feed-Forward</h3>
+<p class="ph" id="p-s33">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+
+<div class="eq-block" id="eq-ffn" data-explain="ffn">
+  <span class="eq">\mathrm{FFN}(x)=\max(0,xW_1+b_1)W_2+b_2</span>
+  <span class="eq-num">(3)</span>
+</div>
+</section>
+
+<section class="sec" data-section="s3-4">
+<h3 id="S3.SS4" data-section="s3-4"><span class="sec-n">3.4</span> Embeddings and Softmax</h3>
+<p class="ph" id="p-s34">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s3-5">
+<h3 id="S3.SS5" data-section="s3-5"><span class="sec-n">3.5</span> Positional Encoding</h3>
+<p class="ph" id="p-s35">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+
+<div class="eq-block" id="eq-pe" data-explain="pe">
+  <span class="eq">PE_{(pos,2i)}=\sin(pos/10000^{2i/d_{model}})</span>
+  <span class="eq-num">(4)</span>
+</div>
+</section>
+
+<section class="sec" data-section="s4">
+<h2 id="S4" data-section="s4"><span class="sec-n">4</span> Why Self-Attention</h2>
+<p class="ph" id="p-s4">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+
+<figure class="tbl-wrap" id="tbl-1">
+  <figcaption>표 1 · 연산 복잡도 비교</figcaption>
+  <table class="tbl">
+    <thead><tr><th>Layer Type</th><th>Complexity</th><th>Sequential</th><th>Path Length</th></tr></thead>
+    <tbody>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+    </tbody>
+  </table>
+</figure>
+</section>
+
+<section class="sec" data-section="s5">
+<h2 id="S5" data-section="s5"><span class="sec-n">5</span> Training</h2>
+<p class="ph" id="p-s5">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s5-1">
+<h3 id="S5.SS1" data-section="s5-1"><span class="sec-n">5.1</span> Training Data and Batching</h3>
+<p class="ph" id="p-s51">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s5-2">
+<h3 id="S5.SS2" data-section="s5-2"><span class="sec-n">5.2</span> Hardware and Schedule</h3>
+<p class="ph" id="p-s52">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s5-3">
+<h3 id="S5.SS3" data-section="s5-3"><span class="sec-n">5.3</span> Optimizer</h3>
+<p class="ph" id="p-s53">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+
+<div class="eq-block" id="eq-lr" data-explain="lr">
+  <span class="eq">lrate=d_{model}^{-0.5}\cdot\min(step^{-0.5},step\cdot warmup^{-1.5})</span>
+  <span class="eq-num">(5)</span>
+</div>
+</section>
+
+<section class="sec" data-section="s5-4">
+<h3 id="S5.SS4" data-section="s5-4"><span class="sec-n">5.4</span> Regularization</h3>
+<p class="ph" id="p-s54">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+<aside class="config-card" id="config-card"></aside>
+</section>
+
+<section class="sec" data-section="s6">
+<h2 id="S6" data-section="s6"><span class="sec-n">6</span> Results</h2>
+<p class="ph" id="p-s6">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="s6-1">
+<h3 id="S6.SS1" data-section="s6-1"><span class="sec-n">6.1</span> Machine Translation</h3>
+
+<figure class="tbl-wrap" id="tbl-2">
+  <figcaption>표 2 · 번역 품질과 학습 비용</figcaption>
+  <table class="tbl">
+    <thead><tr><th>Model</th><th>EN-DE</th><th>EN-FR</th><th>Training Cost</th></tr></thead>
+    <tbody>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+    </tbody>
+  </table>
+</figure>
+<p class="ph" id="p-s61">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요. <button type="button" class="cite-chip" data-cite="38">[38]</button></p>
+<aside class="check-note" id="note-check"></aside>
+</section>
+
+<section class="sec" data-section="s6-2">
+<h3 id="S6.SS2" data-section="s6-2"><span class="sec-n">6.2</span> Model Variations</h3>
+
+<figure class="tbl-wrap" id="tbl-3">
+  <figcaption>표 3 · 구조 변형 실험</figcaption>
+  <table class="tbl">
+    <thead><tr><th></th><th>N</th><th>d_model</th><th>h</th><th>d_k</th><th>PPL</th><th>BLEU</th></tr></thead>
+    <tbody>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+    </tbody>
+  </table>
+</figure>
+</section>
+
+<section class="sec" data-section="s6-3">
+<h3 id="S6.SS3" data-section="s6-3"><span class="sec-n">6.3</span> English Constituency Parsing</h3>
+
+<figure class="tbl-wrap" id="tbl-4">
+  <figcaption>표 4 · 구문 분석 결과</figcaption>
+  <table class="tbl">
+    <thead><tr><th>Parser</th><th>Training</th><th>WSJ 23 F1</th></tr></thead>
+    <tbody>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+    </tbody>
+  </table>
+</figure>
+</section>
+
+<section class="sec" data-section="s7">
+<h2 id="S7" data-section="s7"><span class="sec-n">7</span> Conclusion</h2>
+<p class="ph" id="p-s7-1">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+<p class="ph" id="p-s7-2">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+
+<section class="sec" data-section="refs">
+<h2 id="Srefs" data-section="refs">References</h2>
+<ol class="refs">
+  <li id="ref-1"><span class="ref-authors">Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey E. Hinton</span>. <span class="ref-title">Layer normalization</span>. <em>arXiv preprint</em>, 2016.</li>
+  <li id="ref-2"><span class="ref-authors">Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio</span>. <span class="ref-title">Neural machine translation by jointly learning to align and translate</span>. <em>CoRR</em>, 2014.</li>
+  <li id="ref-3"><span class="ref-authors">Denny Britz, Anna Goldie, Minh-Thang Luong, Quoc V. Le</span>. <span class="ref-title">Massive exploration of neural machine translation architectures</span>. <em>CoRR</em>, 2017.</li>
+  <li id="ref-7"><span class="ref-authors">Junyoung Chung, Çaglar Gülçehre, Kyunghyun Cho, Yoshua Bengio</span>. <span class="ref-title">Empirical evaluation of gated recurrent neural networks on sequence modeling</span>. <em>CoRR</em>, 2014.</li>
+  <li id="ref-8"><span class="ref-authors">Chris Dyer, Adhiguna Kuncoro, Miguel Ballesteros, Noah A. Smith</span>. <span class="ref-title">Recurrent neural network grammars</span>. <em>NAACL</em>, 2016.</li>
+  <li id="ref-9"><span class="ref-authors">Jonas Gehring, Michael Auli, David Grangier, Denis Yarats, Yann N. Dauphin</span>. <span class="ref-title">Convolutional sequence to sequence learning</span>. <em>arXiv preprint</em>, 2017.</li>
+  <li id="ref-11"><span class="ref-authors">Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun</span>. <span class="ref-title">Deep residual learning for image recognition</span>. <em>CVPR</em>, 2016.</li>
+  <li id="ref-13"><span class="ref-authors">Sepp Hochreiter, Jürgen Schmidhuber</span>. <span class="ref-title">Long short-term memory</span>. <em>Neural Computation 9(8)</em>, 1997.</li>
+  <li id="ref-16"><span class="ref-authors">Łukasz Kaiser, Samy Bengio</span>. <span class="ref-title">Can active memory replace attention?</span>. <em>NIPS</em>, 2016.</li>
+  <li id="ref-18"><span class="ref-authors">Nal Kalchbrenner, Lasse Espeholt, Karen Simonyan, Aaron van den Oord, Alex Graves, Koray Kavukcuoglu</span>. <span class="ref-title">Neural machine translation in linear time</span>. <em>arXiv preprint</em>, 2017.</li>
+  <li id="ref-20"><span class="ref-authors">Diederik Kingma, Jimmy Ba</span>. <span class="ref-title">Adam: A method for stochastic optimization</span>. <em>ICLR</em>, 2015.</li>
+  <li id="ref-32"><span class="ref-authors">Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean</span>. <span class="ref-title">Outrageously large neural networks: The sparsely-gated mixture-of-experts layer</span>. <em>arXiv preprint</em>, 2017.</li>
+  <li id="ref-33"><span class="ref-authors">Nitish Srivastava, Geoffrey E. Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov</span>. <span class="ref-title">Dropout: a simple way to prevent neural networks from overfitting</span>. <em>JMLR</em>, 2014.</li>
+  <li id="ref-36"><span class="ref-authors">Christian Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jonathon Shlens, Zbigniew Wojna</span>. <span class="ref-title">Rethinking the inception architecture for computer vision</span>. <em>CoRR</em>, 2015.</li>
+  <li id="ref-37"><span class="ref-authors">Vinyals &amp; Kaiser, Koo, Petrov, Sutskever, Hinton</span>. <span class="ref-title">Grammar as a foreign language</span>. <em>NIPS</em>, 2015.</li>
+  <li id="ref-38"><span class="ref-authors">Yonghui Wu, Mike Schuster, Zhifeng Chen, Quoc V. Le, Mohammad Norouzi, et al.</span>. <span class="ref-title">Google's neural machine translation system: Bridging the gap between human and machine translation</span>. <em>arXiv preprint</em>, 2016.</li>
+  <li id="ref-39"><span class="ref-authors">Jie Zhou, Ying Cao, Xuguang Wang, Peng Li, Wei Xu</span>. <span class="ref-title">Deep recurrent models with fast-forward connections for neural machine translation</span>. <em>CoRR</em>, 2016.</li>
+</ol>
+</section>
+
+<section class="sec" data-section="appx">
+<h2 id="Sappx" data-section="appx">Attention Visualizations</h2>
+<p class="ph" id="p-appx">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
+</section>
+</article>

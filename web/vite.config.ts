@@ -16,8 +16,19 @@ function fixturesPlugin(): Plugin {
     name: 'lab-fixtures',
     apply: 'serve',
     configureServer(server) {
-      if (!existsSync(FIXTURES)) return
-      server.middlewares.use('/fixtures', sirv(FIXTURES, { dev: true, etag: true }))
+      const serve = existsSync(FIXTURES)
+        ? sirv(FIXTURES, { dev: true, etag: true })
+        : null
+      server.middlewares.use('/fixtures', (req, res) => {
+        const done = () => {
+          // 없는 파일은 404로 끝내요. 그냥 next() 하면 SPA 폴백이
+          // index.html 을 200으로 돌려줘서 호출한 쪽이 속아요.
+          res.statusCode = 404
+          res.end('fixture not found')
+        }
+        if (!serve) return done()
+        serve(req, res, done)
+      })
     },
   }
 }
