@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>모바일 대시보드</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#0E6E5C}a:hover{color:#08493D}
+.card{background:#FFFFFF;border:1px solid #E1E5E4;border-radius:16px}
+.row{border:none;background:transparent;width:100%;text-align:left;font-family:inherit;color:#141A19;cursor:pointer}
+.row:active{background:#F6F7F7}
+.mono{font-family:'Roboto Mono',monospace}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: #F6F7F7; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+
+<header style="flex: 0 0 auto; background: #FFFFFF; border-bottom: 1px solid #E1E5E4; padding: 12px 16px; display: flex; align-items: center; gap: 10px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em">lab<span style="color: #0E6E5C">.</span>remote</span>
+<span style="font-size: 15px; font-weight: 700; color: #3D4644">{{ tabTitle }}</span>
+<span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #56605E"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>연결 정상</span>
+</header>
+
+<main style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 14px 24px; display: flex; flex-direction: column; gap: 12px">
+
+<sc-if value="{{ isExp }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<button type="button" style="min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 10px; border: 1px solid #E1E5E4; background: #FFFFFF; font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 500; color: #141A19; cursor: pointer"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>lora-rank-ablation <span aria-hidden="true" style="font-size: 10px; color: #56605E">▾</span></button>
+<button type="button" aria-haspopup="dialog" aria-label="{{ modeAria }}" onClick="{{ openMode }}" style="{{ modeBtn }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"></path></svg>{{ modeName }} <span aria-hidden="true" style="font-size: 10px">▾</span></button>
+<span style="font-size: 12px; color: #56605E">루프 7회차</span>
+</div>
+
+<sc-if value="{{ approvalOn }}" hint-placeholder-val="{{ true }}">
+<section aria-label="승인 대기" style="background: #FDF0E5; border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; font-weight: 700; color: #8A3D09">승인 대기 1</span>
+<span style="font-size: 14px; line-height: 1.6; color: #4A2205">패키지 설치를 허용할까요? 학습은 계속 돌고, AI의 다음 결정만 기다리는 중이에요.</span>
+<a href="https://claude.ai/code" target="_blank" rel="noopener" style="align-self: flex-start; min-height: 40px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 10px; background: #141A19; color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none">Claude 앱에서 답하기</a>
+</section>
+</sc-if>
+
+<section aria-label="EXP-007 진행" class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 8px">
+<span class="mono" style="font-size: 15px; font-weight: 500">EXP-007</span>
+<span style="font-size: 12px; font-weight: 700; color: #0B5A4B; background: #E3F2EE; border-radius: 999px; padding: 2px 10px">학습 중</span>
+<span class="mono" style="margin-left: auto; font-size: 12px; color: #56605E">rank 32 · lr 2e-4</span>
+</div>
+<div style="display: flex; align-items: baseline; gap: 6px"><span class="mono" style="font-size: 28px; font-weight: 500">34</span><span class="mono" style="font-size: 14px; color: #56605E">/ 50 epoch</span><span style="margin-left: auto; font-size: 13px; color: #3D4644">약 1시간 12분 남음</span></div>
+<div aria-hidden="true" style="height: 6px; border-radius: 3px; background: #E1E5E4; overflow: hidden"><div style="height: 100%; width: 68%; background: #0E6E5C"></div></div>
+<svg viewBox="0 0 330 110" width="100%" role="img" aria-label="EXP-007 train loss 0.41, val loss 0.59까지 하락" style="display: block">
+<line x1="0" y1="96" x2="330" y2="96" stroke="#C8D0CE" stroke-width="1"></line>
+<line x1="0" y1="56" x2="330" y2="56" stroke="#EEF1F0" stroke-width="1"></line>
+<line x1="0" y1="16" x2="330" y2="16" stroke="#EEF1F0" stroke-width="1"></line>
+<polyline fill="none" stroke="#B4530F" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round" points="{{ valPts }}"></polyline>
+<polyline fill="none" stroke="#0E6E5C" stroke-width="2" stroke-linejoin="round" points="{{ trainPts }}"></polyline>
+<text x="0" y="108" font-size="10" fill="#56605E" font-family="Roboto Mono, monospace">0</text>
+<text x="224" y="108" font-size="10" fill="#56605E" font-family="Roboto Mono, monospace">34</text>
+<text x="314" y="108" font-size="10" fill="#56605E" font-family="Roboto Mono, monospace">50</text>
+</svg>
+<div style="display: flex; gap: 14px; font-size: 12px; color: #3D4644"><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 2px; background: #0E6E5C"></span>train 0.412</span><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 0; border-top: 2px dashed #B4530F"></span>val 0.587</span><a href="#wandb" style="margin-left: auto">W&amp;B</a></div>
+</section>
+
+<section aria-label="요약 지표" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+<div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #56605E">Val accuracy</span><span class="mono" style="font-size: 20px; font-weight: 500">78.4%</span><span style="font-size: 11.5px; color: #56605E">이번 최고 79.1%</span></div>
+<div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #56605E">목표까지</span><span class="mono" style="font-size: 20px; font-weight: 500">2.9%p</span><span style="font-size: 11.5px; color: #56605E">목표 82.0% · 7/20회</span></div>
+<div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #56605E">남은 GPU</span><span class="mono" style="font-size: 20px; font-weight: 500">29.6h</span><span style="font-size: 11.5px; color: #56605E">18.4/48h · 마감 D-7</span></div>
+<div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #56605E">GPU</span><span class="mono" style="font-size: 20px; font-weight: 500">94%</span><span style="font-size: 11.5px; color: #56605E">VRAM 21.3/24G · 71°C</span></div>
+</section>
+
+<section aria-label="실험 큐" class="card" style="padding: 6px 0">
+<div style="display: flex; align-items: center; padding: 10px 16px 6px"><h2 style="margin: 0; font-size: 15px; font-weight: 700">큐 · 최근 결과</h2><span style="margin-left: auto; font-size: 12px; color: #56605E">GPU 1개 · 순차 실행</span></div>
+<sc-for list="{{ exps }}" as="e" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-top: 1px solid #EEF1F0">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="mono" style="font-size: 13.5px; font-weight: 500">{{ e.id }}</span><span style="font-size: 12px; color: #56605E">{{ e.vars }}</span></div>
+<span class="mono" style="font-size: 13px">{{ e.acc }}</span>
+<span style="{{ e.badge }}">{{ e.status }}</span>
+</div>
+</sc-for>
+</section>
+
+<section aria-label="결정과 이벤트" class="card" style="padding: 6px 0">
+<div style="display: flex; align-items: center; padding: 10px 16px 6px"><h2 style="margin: 0; font-size: 15px; font-weight: 700">결정·이벤트</h2><span style="margin-left: auto; font-size: 12px; color: #56605E">Decision_log.md</span></div>
+<sc-for list="{{ events }}" as="v" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px; padding: 10px 16px; border-top: 1px solid #EEF1F0">
+<span class="mono" style="flex: 0 0 40px; font-size: 12px; color: #56605E; padding-top: 1px">{{ v.time }}</span>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="{{ v.tagStyle }}">{{ v.tag }}</span><span style="font-size: 13.5px; line-height: 1.55">{{ v.text }}</span></div>
+</div>
+</sc-for>
+</section>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+<button type="button" onClick="{{ togglePause }}" style="{{ pauseBtn }}">{{ pauseLabel }}</button>
+<button type="button" onClick="{{ openStop }}" style="min-height: 48px; border-radius: 12px; border: 1px solid #E0B08A; background: #FFFFFF; color: #8A3D09; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">EXP-007 정지</button>
+</div>
+<span style="font-size: 12px; color: #56605E; text-align: center">완료·이상 감지·에러·사용량 알림은 Discord로 와요</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPaper }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<label for="m-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">라이브러리 검색</label>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 46px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #E1E5E4; background: #FFFFFF">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#56605E" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+<input id="m-search" type="search" placeholder="제목, 저자, 태그로 찾기" style="flex: 1; min-width: 0; border: none; outline: none; font-family: inherit; font-size: 15px; background: transparent">
+</div>
+<div role="group" aria-label="읽음 상태로 거르기" style="display: flex; gap: 6px; overflow-x: auto">
+<sc-for list="{{ filters }}" as="f" hint-placeholder-count="4"><button type="button" aria-pressed="{{ f.pressed }}" onClick="{{ f.pick }}" style="{{ f.style }}">{{ f.label }}</button></sc-for>
+</div>
+<sc-for list="{{ papers }}" as="p" hint-placeholder-count="5">
+<button type="button" class="row card" onClick="{{ p.open }}" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 15px; font-weight: 700; line-height: 1.45">{{ p.title }}</span>
+<span style="font-size: 12.5px; color: #56605E">{{ p.meta }}</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="{{ p.statusStyle }}">{{ p.statusLabel }}</span><span style="{{ p.sumStyle }}">{{ p.sumLabel }}</span><span style="margin-left: auto; font-size: 12px; color: #7A8482">{{ p.access }}</span></span>
+</button>
+</sc-for>
+<span style="font-size: 12px; color: #56605E; text-align: center; padding-top: 4px">논문 읽기와 하이라이트는 PC 리더에서 해요</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCode }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<section aria-label="브랜치" class="card" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3D4644" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="5" r="2.2"></circle><circle cx="6" cy="19" r="2.2"></circle><circle cx="18" cy="8" r="2.2"></circle><path d="M6 7.2v9.6M18 10.2c0 4-6 3.5-11 7"></path></svg><span class="mono" style="font-size: 14px; font-weight: 500">exp-007</span><span style="font-size: 12px; color: #56605E">main보다 1커밋 앞섬</span></div>
+<div style="border: 1px solid #E1E5E4; border-radius: 10px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #F6F7F7; border-bottom: 1px solid #E1E5E4"><span class="mono" style="font-size: 12.5px">EXP-007/config.yaml</span><span class="mono" style="margin-left: auto; font-size: 12px; font-weight: 500; color: #8A3D09">M</span></div>
+<div class="mono" style="font-size: 12.5px; line-height: 1.8">
+<div style="padding: 0 12px; color: #56605E">  lora:</div>
+<div style="padding: 0 12px; background: #FDECEC; color: #8A2B2B">-   rank: 16</div>
+<div style="padding: 0 12px; background: #E3F2EE; color: #0B5A4B">+   rank: 32</div>
+<div style="padding: 0 12px; color: #56605E">    alpha: 32</div>
+</div>
+</div>
+<span style="font-size: 12.5px; color: #3D4644; line-height: 1.6"><span style="font-weight: 700; color: #0B5A4B">AI 수정</span> · 수정 전에 자동 커밋을 남겼어요. 성공 기준을 넘으면 PR을 열어요.</span>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+<button type="button" style="min-height: 42px; border-radius: 10px; border: 1px solid #C8D0CE; background: #FFFFFF; font-family: inherit; font-size: 14px; cursor: pointer">전체 변경 보기</button>
+<button type="button" style="min-height: 42px; border-radius: 10px; border: none; background: #141A19; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">PR 열기</button>
+</div>
+</section>
+
+<section aria-label="커밋 기록" class="card" style="padding: 6px 0">
+<div style="padding: 10px 16px 6px"><h2 style="margin: 0; font-size: 15px; font-weight: 700">커밋</h2></div>
+<sc-for list="{{ commits }}" as="c" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 16px; border-top: 1px solid #EEF1F0"><span style="font-size: 13.5px">{{ c.msg }}</span><span class="mono" style="font-size: 11.5px; color: #56605E">{{ c.meta }}</span></div>
+</sc-for>
+</section>
+
+<section aria-label="Claude Code" class="card" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 8px"><h2 style="margin: 0; font-size: 15px; font-weight: 700">Claude Code</h2><span style="font-size: 12px; color: #56605E">tmux · exp-007</span></div>
+<div style="align-self: flex-end; max-width: 85%; background: #F0F2F2; border-radius: 12px 12px 4px 12px; padding: 9px 12px; font-size: 13.5px; line-height: 1.6">rank 32로 바꿔서 다음 실험에 넣어줘</div>
+<div style="font-size: 13.5px; line-height: 1.6">실험 진행 중이라 EXP-008부터 적용되게 수정했어요. 수정 전에 자동 커밋을 남겼습니다.</div>
+<sc-for list="{{ sent }}" as="m" hint-placeholder-count="0">
+<div style="align-self: flex-end; max-width: 85%; background: #F0F2F2; border-radius: 12px 12px 4px 12px; padding: 9px 12px; font-size: 13.5px; line-height: 1.6">{{ m.t }}</div>
+<div style="font-size: 13px; color: #56605E">요청을 받았어요 · PC와 같은 세션에서 처리해요</div>
+</sc-for>
+<div style="border: 1.5px solid #0E6E5C; border-radius: 12px; padding: 8px 8px 8px 12px; display: flex; flex-direction: column; gap: 8px">
+<label for="m-chat" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Claude Code에 요청하기</label>
+<input id="m-chat" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" placeholder="Claude Code에 요청하기" style="border: none; outline: none; font-family: inherit; font-size: 15px; background: transparent; min-height: 30px">
+<div style="display: flex; align-items: center; gap: 8px">
+<button type="button" aria-haspopup="dialog" aria-label="{{ modeAria }}" onClick="{{ openMode }}" style="{{ modeBtn }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"></path></svg>{{ modeName }} <span aria-hidden="true" style="font-size: 10px">▾</span></button>
+<button type="button" aria-label="보내기" onClick="{{ send }}" style="margin-left: auto; width: 38px; height: 38px; border-radius: 10px; border: none; background: #0E6E5C; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button>
+</div>
+</div>
+</section>
+<span style="font-size: 12px; color: #56605E; text-align: center">코드 편집은 PC에서 · 모바일은 확인과 요청 위주예요</span>
+</div>
+</sc-if>
+</main>
+
+<sc-if value="{{ isPaper }}" hint-placeholder-val="{{ false }}">
+<button type="button" style="position: absolute; right: 16px; bottom: 88px; z-index: 3; min-height: 50px; padding: 0 18px 0 14px; border-radius: 999px; border: none; background: #0E6E5C; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; box-shadow: 0 8px 22px rgba(14,110,92,0.35); cursor: pointer; display: flex; align-items: center; gap: 8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18l-1.5 3.5L8 20a8.5 8.5 0 10-3-2z"></path><path d="M9 11h6M9 14h4"></path></svg>라이브러리에 묻기</button>
+</sc-if>
+
+<nav aria-label="하단 메뉴" style="flex: 0 0 auto; background: #FFFFFF; border-top: 1px solid #E1E5E4; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-bottom: 14px">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+<button type="button" aria-current="{{ t.current }}" onClick="{{ t.pick }}" style="{{ t.style }}"><span style="position: relative; display: flex"><span style="{{ t.iconPaper }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"></path><path d="M4 19a2 2 0 012-2h13"></path></svg></span><span style="{{ t.iconExp }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span><span style="{{ t.iconCode }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4"></path></svg></span><span style="{{ t.badge }}">1</span></span>{{ t.label }}</button>
+</sc-for>
+</nav>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: flex-end">
+<button type="button" aria-label="닫기" onClick="{{ closeSheet }}" style="position: absolute; inset: 0; border: none; padding: 0; background: rgba(20,26,25,0.38); cursor: pointer"></button>
+<section role="dialog" aria-label="{{ sheetTitle }}" style="position: relative; max-height: 82%; overflow-y: auto; background: #FFFFFF; border-radius: 20px 20px 0 0; padding: 10px 18px 26px; display: flex; flex-direction: column; gap: 12px">
+<span aria-hidden="true" style="align-self: center; width: 40px; height: 4px; border-radius: 2px; background: #C8D0CE"></span>
+<div style="display: flex; align-items: center; gap: 8px"><h2 style="margin: 0; font-size: 17px; font-weight: 700; flex: 1; line-height: 1.4">{{ sheetTitle }}</h2><button type="button" aria-label="닫기" onClick="{{ closeSheet }}" style="width: 36px; height: 36px; border-radius: 10px; border: none; background: #F0F2F2; font-size: 18px; cursor: pointer">×</button></div>
+
+<sc-if value="{{ sheetMode }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{ modes }}" as="m" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{ m.checked }}" onClick="{{ m.pick }}" style="{{ m.style }}"><span style="{{ m.radio }}"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">{{ m.name }}</span><span style="font-size: 13px; line-height: 1.55; color: #56605E">{{ m.desc }}</span></span></button>
+</sc-for>
+<span style="font-size: 12.5px; color: #56605E; line-height: 1.6">실행 중인 EXP-007은 그대로 두고 다음 작업부터 적용해요. 잠긴 항목 3개는 어떤 프리셋이든 항상 막혀요.</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetStop }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 14.5px; line-height: 1.7">마지막 체크포인트(epoch 34)를 저장하고 학습을 멈춰요. 큐의 EXP-008, EXP-009는 그대로 남고, 루프는 일시정지돼요.</span>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+<button type="button" onClick="{{ closeSheet }}" style="min-height: 48px; border-radius: 12px; border: 1px solid #C8D0CE; background: #FFFFFF; font-family: inherit; font-size: 15px; cursor: pointer">취소</button>
+<button type="button" onClick="{{ confirmStop }}" style="min-height: 48px; border-radius: 12px; border: none; background: #8A3D09; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer">정지하기</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetPaper }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 13px; color: #56605E">{{ sp.meta }}</span>
+<div role="group" aria-label="읽음 상태" style="display: flex; gap: 2px; background: #F0F2F2; border-radius: 10px; padding: 3px">
+<sc-for list="{{ sp.statuses }}" as="s" hint-placeholder-count="3"><button type="button" aria-pressed="{{ s.pressed }}" onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.label }}</button></sc-for>
+</div>
+<sc-if value="{{ sp.hasSum }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column">
+<span style="font-size: 13px; font-weight: 700; padding-bottom: 6px">3줄 요약</span>
+<sc-for list="{{ sp.lines }}" as="l" hint-placeholder-count="3"><div style="display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #EEF1F0; font-size: 14px; line-height: 1.6"><span class="mono" style="color: #0E6E5C; font-weight: 500">{{ l.n }}</span><span>{{ l.t }} <span class="mono" style="font-size: 12px; color: #0E6E5C">{{ l.src }}</span></span></div></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ sp.noSum }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; color: #56605E; line-height: 1.6">{{ sp.noSumText }}</span></sc-if>
+<span class="mono" style="font-size: 12px; color: #56605E">{{ sp.path }}</span>
+<a href="FocusReader.dc.html" style="min-height: 46px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: #141A19; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">PC 리더에서 열기</a>
+</div>
+</sc-if>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 92px; z-index: 12; background: #141A19; color: #FFFFFF; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; box-shadow: 0 8px 22px rgba(20,26,25,0.25)">{{ toast }}</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'exp', mode: 'full', sheet: null, paper: null, filter: 'recent', statuses: {}, paused: false, stopped: false, toast: '', draft: '', sent: [] };
+  }
+  showToast(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this.tt);
+    this.tt = setTimeout(() => this.setState({ toast: '' }), 2600);
+  }
+  curve(start, end, n, upto) {
+    const pts = [];
+    for (let i = 0; i <= upto; i++) {
+      const v = end + (start - end) * Math.exp(-i / 7) + (i % 3 === 0 ? 0.015 : 0);
+      const x = i / n * 330;
+      const y = 96 - v / 2.2 * 80;
+      pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+    }
+    return pts.join(' ');
+  }
+  renderVals() {
+    const st = this.state;
+    const MODES = [
+      { id: 'manual', name: '수동제어', desc: '모든 의사결정을 내가 직접 승인해요.' },
+      { id: 'error', name: '오류 대응 자동화', desc: '실험 중 생긴 에러 수정만 AI가 처리해요.' },
+      { id: 'full', name: '연구 전체 자동화', desc: '결과 판단과 다음 실험 결정까지 AI가 하고, 종료 조건에서 멈춰요.' }
+    ];
+    const cur = MODES.find((m) => m.id === st.mode);
+    const PILL = 'font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap;';
+    const STATUS = {
+      todo: { label: '읽을 예정', style: PILL + 'background:#F0F2F2;color:#3D4644;' },
+      reading: { label: '읽는 중', style: PILL + 'background:#E3F2EE;color:#0B5A4B;' },
+      done: { label: '완료', style: PILL + 'background:#141A19;color:#FFFFFF;' }
+    };
+    const PAPERS = [
+      { id: 'attn', title: 'Attention Is All You Need', meta: 'Vaswani et al. · NeurIPS 2017 · arXiv HTML', status: 'reading', sum: 'done', access: '방금', path: 'vault/Papers/Transformer.md', lines: [['순환·합성곱 없이 어텐션만으로 된 인코더-디코더 모델 Transformer를 제안', '§3'], ['scaled dot-product attention을 여러 head로 병렬 실행하고 위치 정보는 사인·코사인 인코딩으로 넣음', '§3.2.1'], ['WMT14 EN-DE 28.4, EN-FR 41.8 BLEU로 기존 최고 성능을 더 적은 학습 비용으로 넘어섬', '§6.1']] },
+      { id: 'dora', title: 'DoRA: Weight-Decomposed Low-Rank Adaptation', meta: 'Liu et al. · ICML 2024 · arXiv HTML', status: 'reading', sum: 'done', access: '오늘 08:40', path: 'vault/Papers/DoRA.md', lines: [['LoRA와 full fine-tuning의 학습 양상을 가중치의 크기·방향 관점에서 비교', '§3'], ['방향은 LoRA로, 크기는 별도 벡터로 학습하는 DoRA 제안', '§4'], ['추론 비용 없이 여러 과제에서 LoRA보다 나은 결과 보고', '§5']] },
+      { id: 'lora', title: 'LoRA: Low-Rank Adaptation of Large Language Models', meta: 'Hu et al. · ICLR 2022 · PDF', status: 'done', sum: 'done', access: '어제', path: 'vault/Papers/LoRA.md', lines: [['사전학습 가중치는 고정하고 저랭크 행렬 B·A만 학습해 파인튜닝 비용을 줄임', 'p.[쪽]'], ['학습한 BA를 원래 가중치에 합칠 수 있어 추론 지연이 늘지 않음', 'p.[쪽]'], ['학습 파라미터를 크게 줄이면서 full fine-tuning과 비슷한 성능', 'p.[쪽]']] },
+      { id: 'qlora', title: 'QLoRA: Efficient Finetuning of Quantized LLMs', meta: 'Dettmers et al. · NeurIPS 2023 · PDF', status: 'done', sum: 'done', access: '11월 1일', path: 'vault/Papers/QLoRA.md', lines: [['4-bit NF4로 양자화한 고정 모델 위에서 LoRA를 학습', 'p.[쪽]'], ['double quantization과 paged optimizer로 메모리를 더 줄임', 'p.[쪽]'], ['65B 모델을 48GB GPU 1장에서 파인튜닝', 'p.[쪽]']] },
+      { id: 'adalora', title: 'AdaLoRA: Adaptive Budget Allocation for Parameter-Efficient Fine-Tuning', meta: 'Zhang et al. · ICLR 2023 · PDF', status: 'reading', sum: 'running', access: '10월 30일', path: 'vault/Papers/AdaLoRA.md', lines: [] },
+      { id: 'vit', title: 'An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale', meta: 'Dosovitskiy et al. · ICLR 2021 · PDF', status: 'todo', sum: 'none', access: '10월 28일', path: '아직 요약 없음', lines: [] }
+    ];
+    const statusOf = (p) => st.statuses[p.id] || p.status;
+    const FILTERS = [{ id: 'recent', label: '최근' }, { id: 'reading', label: '읽는 중' }, { id: 'todo', label: '읽을 예정' }, { id: 'done', label: '완료' }];
+    const TABS = [{ id: 'paper', label: '논문' }, { id: 'exp', label: '실험' }, { id: 'code', label: '코드' }];
+    const sel = PAPERS.find((p) => p.id === st.paper);
+    const modeBtn = 'min-height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 11px;border-radius:999px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;' + (st.mode === 'full' ? 'border:1px solid #9CCBBE;background:#E3F2EE;color:#0B5A4B;' : (st.mode === 'error' ? 'border:1px solid #C8D0CE;background:#FFFFFF;color:#141A19;' : 'border:1px solid #E0B08A;background:#FDF0E5;color:#8A3D09;'));
+    const BADGE = 'font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap;';
+    const running = !st.stopped;
+    const exps = [
+      { id: 'EXP-009', vars: 'rank 32 · lr 1e-4', acc: '—', status: '대기 2', badge: BADGE + 'background:#F0F2F2;color:#3D4644;' },
+      { id: 'EXP-008', vars: 'rank 64 · lr 2e-4 · AI 제안', acc: '—', status: '대기 1', badge: BADGE + 'background:#F0F2F2;color:#3D4644;' },
+      { id: 'EXP-007', vars: 'rank 32 · lr 2e-4', acc: '79.1%', status: running ? '실행 중 68%' : '정지됨', badge: BADGE + (running ? 'background:#E3F2EE;color:#0B5A4B;' : 'background:#FDF0E5;color:#8A3D09;') },
+      { id: 'EXP-006', vars: 'rank 16 · lr 2e-4', acc: '77.2%', status: '완료', badge: BADGE + 'background:#141A19;color:#FFFFFF;' },
+      { id: 'EXP-005', vars: 'rank 16 · lr 1e-4', acc: '76.5%', status: '완료', badge: BADGE + 'background:#141A19;color:#FFFFFF;' },
+      { id: 'EXP-003', vars: 'rank 8 · lr 5e-4', acc: '—', status: '발산', badge: BADGE + 'background:#FDF0E5;color:#8A3D09;' }
+    ];
+    const TAG = 'align-self:flex-start;font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 7px;';
+    const events = [
+      { time: '21:43', tag: '승인 요청', tagStyle: TAG + 'background:#FDF0E5;color:#8A3D09;', text: '패키지 설치 요청 · Claude 앱 푸시 전송' },
+      { time: '21:42', tag: '결정', tagStyle: TAG + 'background:#E3F2EE;color:#0B5A4B;', text: 'EXP-006 리뷰 후 다음 실험으로 rank 32 선택' },
+      { time: '21:40', tag: '완료', tagStyle: TAG + 'background:#F0F2F2;color:#3D4644;', text: 'EXP-006 완료 · 목표 미달, 브랜치 exp-006 보존' },
+      { time: '20:12', tag: '이상 감지', tagStyle: TAG + 'background:#FDF0E5;color:#8A3D09;', text: 'OOM · batch 64→32로 자동 수정 후 체크포인트에서 재개' }
+    ];
+    if (st.stopped) events.unshift({ time: '방금', tag: '정지', tagStyle: TAG + 'background:#FDF0E5;color:#8A3D09;', text: 'EXP-007 정지 · epoch 34 체크포인트 저장 · 모바일에서 요청' });
+    const send = () => {
+      const t = (st.draft || '').trim();
+      if (!t) return;
+      this.setState({ sent: st.sent.concat([{ t }]), draft: '' });
+    };
+    return {
+      tabTitle: { paper: '논문', exp: '실험', code: '코드' }[st.tab],
+      isExp: st.tab === 'exp', isPaper: st.tab === 'paper', isCode: st.tab === 'code',
+      tabs: TABS.map((t) => ({
+        label: t.label,
+        current: st.tab === t.id ? 'page' : 'false',
+        pick: () => this.setState({ tab: t.id }),
+        style: 'min-height:62px;border:none;background:transparent;font-family:inherit;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;' + (st.tab === t.id ? 'color:#0E6E5C;font-weight:700;' : 'color:#56605E;'),
+        iconPaper: t.id === 'paper' ? 'display:flex;' : 'display:none;',
+        iconExp: t.id === 'exp' ? 'display:flex;' : 'display:none;',
+        iconCode: t.id === 'code' ? 'display:flex;' : 'display:none;',
+        badge: t.id === 'exp' ? 'position:absolute;top:-4px;right:-10px;min-width:16px;height:16px;border-radius:999px;background:#B4530F;color:#FFFFFF;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;' : 'display:none;'
+      })),
+      modeName: cur.name,
+      modeAria: '권한 프리셋: ' + cur.name + ', 바꾸기',
+      modeBtn,
+      openMode: () => this.setState({ sheet: 'mode' }),
+      approvalOn: true,
+      trainPts: this.curve(2.1, 0.39, 50, 34),
+      valPts: this.curve(2.0, 0.57, 50, 34),
+      exps, events,
+      pauseLabel: st.paused ? '루프 다시 시작' : '루프 일시정지',
+      pauseBtn: 'min-height:48px;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;' + (st.paused ? 'border:none;background:#0E6E5C;color:#FFFFFF;' : 'border:1px solid #C8D0CE;background:#FFFFFF;color:#141A19;'),
+      togglePause: () => { this.setState({ paused: !st.paused }); this.showToast(st.paused ? '루프를 다시 시작했어요' : '지금 실험이 끝나면 다음 실험을 시작하지 않아요'); },
+      openStop: () => this.setState({ sheet: 'stop' }),
+      confirmStop: () => { this.setState({ sheet: null, stopped: true, paused: true }); this.showToast('EXP-007을 정지했어요 · 체크포인트 저장 완료'); },
+      filters: FILTERS.map((f) => ({
+        label: f.label,
+        pressed: st.filter === f.id ? 'true' : 'false',
+        pick: () => this.setState({ filter: f.id }),
+        style: 'flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:999px;font-family:inherit;font-size:13.5px;cursor:pointer;' + (st.filter === f.id ? 'border:none;background:#141A19;color:#FFFFFF;font-weight:700;' : 'border:1px solid #E1E5E4;background:#FFFFFF;color:#3D4644;')
+      })),
+      papers: PAPERS.filter((p) => st.filter === 'recent' || statusOf(p) === st.filter).map((p) => ({
+        title: p.title, meta: p.meta, access: p.access,
+        statusLabel: STATUS[statusOf(p)].label, statusStyle: STATUS[statusOf(p)].style,
+        sumLabel: p.sum === 'done' ? '요약 MD' : (p.sum === 'running' ? '요약 중' : ''),
+        sumStyle: p.sum === 'done' ? 'font-family:Roboto Mono,monospace;font-size:11.5px;color:#0B5A4B;' : (p.sum === 'running' ? 'font-size:11.5px;color:#8A3D09;' : 'display:none;'),
+        open: () => this.setState({ sheet: 'paper', paper: p.id })
+      })),
+      commits: [
+        { msg: 'EXP-007: LoRA rank 16→32', meta: 'AI · 9f1c2ab · exp-007' },
+        { msg: 'logs: EXP-006 결과 기록', meta: 'a3f9c1e · main' },
+        { msg: 'logs: EXP-005 결과 기록', meta: '41c07fa · main' },
+        { msg: 'EXP-004 기준선 병합', meta: '7be2d90 · main' }
+      ],
+      sent: st.sent,
+      draft: st.draft,
+      onDraft: (e) => this.setState({ draft: e.target.value }),
+      onDraftKey: (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); send(); } },
+      send,
+      sheetOpen: !!st.sheet,
+      sheetMode: st.sheet === 'mode',
+      sheetStop: st.sheet === 'stop',
+      sheetPaper: st.sheet === 'paper' && !!sel,
+      sheetTitle: st.sheet === 'mode' ? '권한 프리셋' : (st.sheet === 'stop' ? 'EXP-007을 정지할까요?' : (sel ? sel.title : '')),
+      closeSheet: () => this.setState({ sheet: null }),
+      modes: MODES.map((m) => {
+        const on = m.id === st.mode;
+        return {
+          name: m.name, desc: m.desc, checked: on ? 'true' : 'false',
+          style: 'width:100%;display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:14px;text-align:left;font-family:inherit;color:#141A19;cursor:pointer;' + (on ? 'border:1.5px solid #0E6E5C;background:#F6FBF9;' : 'border:1px solid #E1E5E4;background:#FFFFFF;'),
+          radio: 'flex:0 0 18px;width:18px;height:18px;margin-top:2px;border-radius:50%;box-sizing:border-box;' + (on ? 'border:5px solid #0E6E5C;background:#FFFFFF;' : 'border:1.5px solid #9AA3A1;background:#FFFFFF;'),
+          pick: () => { if (m.id !== st.mode) { this.setState({ mode: m.id, sheet: null }); this.showToast(cur.name + ' → ' + m.name + ' · 다음 작업부터 적용해요'); } else this.setState({ sheet: null }); }
+        };
+      }),
+      sp: sel ? {
+        meta: sel.meta,
+        statuses: ['todo', 'reading', 'done'].map((k) => ({
+          label: STATUS[k].label,
+          pressed: statusOf(sel) === k ? 'true' : 'false',
+          pick: () => this.setState({ statuses: Object.assign({}, st.statuses, { [sel.id]: k }) }),
+          style: 'flex:1;min-height:38px;border:none;border-radius:8px;font-family:inherit;font-size:13.5px;cursor:pointer;' + (statusOf(sel) === k ? 'background:#FFFFFF;color:#141A19;font-weight:700;box-shadow:0 1px 2px rgba(20,26,25,0.12);' : 'background:transparent;color:#56605E;')
+        })),
+        hasSum: sel.lines.length > 0,
+        noSum: sel.lines.length === 0,
+        noSumText: sel.sum === 'running' ? '요약을 만들고 있어요. 끝나면 Discord로 알려 드려요.' : '아직 요약이 없어요. PC 리더에서 열면 요약을 만들어요.',
+        lines: sel.lines.map((l, i) => ({ n: String(i + 1), t: l[0], src: l[1] })),
+        path: sel.path
+      } : { meta: '', statuses: [], hasSum: false, noSum: false, noSumText: '', lines: [], path: '' },
+      toastShow: !!st.toast,
+      toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

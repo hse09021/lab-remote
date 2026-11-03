@@ -1,0 +1,28 @@
+.toast {
+  position: fixed;
+  z-index: 12;
+  background: var(--primary-btn);
+  color: var(--bg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-toast);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 9px 14px;
+}
+
+/* 데스크톱: 위쪽 가운데 (리더 목업) */
+.top {
+  top: calc(var(--header-h) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* 모바일: 아래쪽 꽉 (하단 탭 위) */
+.bottom {
+  left: 16px;
+  right: 16px;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  padding: 12px 14px;
+  font-size: 13.5px;
+}

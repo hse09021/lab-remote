@@ -1,0 +1,38 @@
+# 의존성 · 빌드
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# 비밀 값 (예시 파일만 올림)
+.env
+.env.*
+!.env.example
+
+# 논문에서 나온 개발용 샘플 (저작권)
+web/fixtures/*
+!web/fixtures/.gitkeep
+docs/mockups/paper/
+*.pdf
+
+# Python (server/)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# 실행 중 생기는 데이터 (나중에 server/에서 쓸 자리)
+server/data/
+*.sqlite
+*.sqlite3
+*.db
+*.log
+config/notify.local.*
+
+# 편집기 · OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

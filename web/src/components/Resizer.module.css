@@ -1,0 +1,24 @@
+.resizer {
+  flex: 0 0 var(--resizer-w);
+  background: var(--border);
+  touch-action: none;
+  border: none;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.resizer[data-orientation='vertical'] {
+  cursor: col-resize;
+  align-self: stretch;
+}
+
+.resizer[data-orientation='horizontal'] {
+  cursor: row-resize;
+  width: 100%;
+}
+
+.resizer:hover,
+.resizer:focus-visible {
+  background: var(--accent);
+  outline: none;
+}

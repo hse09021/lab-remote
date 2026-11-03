@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>실험 대시보드</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#0E6E5C}a:hover{color:#08493D}
+.rs{transition:background .15s}.rs:hover,.rs:focus-visible{background:#0E6E5C !important;outline:none}
+.tg:hover{background:#E9ECEB !important;color:#141A19 !important}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #FFFFFF; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+
+<header style="background: #FFFFFF; border-bottom: 1px solid #E1E5E4">
+<div style="box-sizing: border-box; padding: 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="FocusLibrary.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">논문</a>
+<a href="AltFocus.dc.html" aria-current="page" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid #0E6E5C; color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none">실험</a>
+<a href="FocusCode.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">코드</a>
+</nav>
+<div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #56605E">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>모든 연결 정상</span>
+</div>
+</div>
+</header>
+
+<div style="flex: 1; display: flex; align-items: stretch">
+
+<sc-if value="{{ navClosed }}" hint-placeholder-val="{{ false }}">
+<div style="flex: 0 0 48px; box-sizing: border-box; background: #F6F7F7; border-right: 1px solid #E1E5E4; padding: 14px 0; display: flex; flex-direction: column; align-items: center"><button type="button" class="tg" aria-label="사이드바 펼치기" title="사이드바 펼치기" aria-expanded="false" onClick="{{ navToggle }}" style="width: 32px; height: 32px; flex: 0 0 32px; border-radius: 8px; border: none; background: transparent; color: #56605E; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg></button></div>
+</sc-if>
+<nav aria-label="실험 메뉴" style="{{ navStyle }}">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px 12px">
+<span style="font-size: 13px; color: #56605E">프로젝트</span>
+<div style="display: flex; gap: 4px">
+<button type="button" aria-label="새 프로젝트" style="width: 32px; height: 32px; border-radius: 8px; border: none; background: #E3F2EE; color: #0E6E5C; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<button type="button" class="tg" aria-label="사이드바 접기" title="사이드바 접기" aria-expanded="true" onClick="{{ navToggle }}" style="width: 32px; height: 32px; flex: 0 0 32px; border-radius: 8px; border: none; background: transparent; color: #56605E; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg></button>
+</div>
+</div>
+<a href="AltFocus.dc.html" aria-current="page" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(20,26,25,0.1); color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span><span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px">lora-rank-ablation</span><span style="font-size: 11px; color: #0B5A4B">실행 중</span></a>
+<a href="#vit-distill" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; color: #3D4644; font-size: 14px; text-decoration: none"><span style="width: 8px; height: 8px; border-radius: 50%; background: #B7BFBD"></span><span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px">vit-distill</span><span style="font-size: 11px; color: #56605E">대기</span></a>
+
+<span style="font-size: 13px; color: #56605E; padding: 16px 12px 2px">보기</span>
+<a href="AltFocus.dc.html" aria-current="page" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(20,26,25,0.1); color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>대시보드</a>
+<a href="FocusAuthority.dc.html" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; color: #3D4644; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"></path></svg><span style="flex: 1">권한 설정</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #8A3D09">1</span></a>
+
+<div style="margin-top: auto; border-top: 1px solid #E1E5E4; padding: 14px 12px 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #3D4644">
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #0E6E5C"></span>Claude Code · Remote Control</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #0E6E5C"></span>W&amp;B</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #0E6E5C"></span>Discord 웹훅</span>
+</div>
+</nav>
+<div class="rs" role="separator" aria-orientation="vertical" aria-label="실험 메뉴 너비 조절" tabIndex="0" onPointerDown="{{ navDrag }}" onKeyDown="{{ navKey }}" style="{{ navRs }}"></div>
+
+<main id="overview" style="flex: 1 1 0; min-width: 0; box-sizing: border-box; padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 22px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em; font-family: 'Roboto Mono', monospace">lora-rank-ablation</h1>
+<div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px">
+<span style="font-weight: 700; color: #0B5A4B; background: #E3F2EE; border-radius: 999px; padding: 3px 10px">연구 전체 자동화</span>
+<span style="color: #3D4644; background: #F0F2F2; border-radius: 999px; padding: 3px 10px">루프 7회차</span>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<button type="button" style="min-height: 42px; padding: 0 16px; border-radius: 10px; border: 1px solid #C8D0CE; background: #FFFFFF; font-family: inherit; font-size: 14px; cursor: pointer">루프 일시정지</button>
+<div style="position: relative; display: flex">
+<button type="button" style="min-height: 42px; padding: 0 16px; border-radius: 10px 0 0 10px; border: none; background: #141A19; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">새 실험</button>
+<button type="button" aria-label="새 실험 방법 더보기" aria-expanded="{{ menuOpen }}" onClick="{{ toggleMenu }}" style="width: 40px; min-height: 42px; border-radius: 0 10px 10px 0; border: none; border-left: 1px solid #3D4644; background: #141A19; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+<sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+<div role="menu" aria-label="새 실험" style="position: absolute; top: 50px; right: 0; z-index: 5; width: 300px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 14px; box-shadow: 0 8px 24px rgba(20,26,25,0.12); display: flex; flex-direction: column; overflow: hidden">
+<button type="button" role="menuitem" style="min-height: 52px; padding: 0 18px; border: none; background: transparent; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer">Claude와 토론하며 설계</button>
+<a href="FocusDesign.dc.html" role="menuitem" style="min-height: 52px; display: flex; align-items: center; padding: 0 18px; border-top: 1px solid #EEF1F0; color: #141A19; font-size: 14px; text-decoration: none">논문에서 재현 실험 만들기</a>
+<button type="button" role="menuitem" style="min-height: 52px; padding: 0 18px; border: none; border-top: 1px solid #EEF1F0; background: transparent; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer">설정만 바꿔 큐에 추가</button>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+
+<section aria-label="승인 대기" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 12px 16px; border-radius: 10px; border: 1px solid #F0C9A8; background: #FDF0E5">
+<span style="font-size: 13px; font-weight: 700; color: #8A3D09">승인 대기 1</span>
+<span style="flex: 1 1 300px; font-size: 14px; color: #4A2205">패키지 설치를 허용할까요? 학습은 계속 돌고, AI의 다음 결정만 기다리는 중이에요.</span>
+<a href="https://claude.ai/code" style="min-height: 40px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 10px; background: #B4530F; color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none">Claude 앱에서 답하기</a>
+</section>
+
+<section aria-label="요약 지표" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4">
+<div style="padding: 16px 18px 16px 0; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #56605E">EXP-007 학습 중</span>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 26px; font-weight: 500">34<span style="font-size: 15px; color: #56605E"> / 50</span></span>
+<div style="height: 6px; border-radius: 999px; background: #E9EDEC; overflow: hidden"><div style="width: 68%; height: 100%; background: #0E6E5C"></div></div>
+<span style="font-size: 12px; color: #56605E">약 1시간 12분 남음</span>
+</div>
+<div style="padding: 16px 18px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; color: #56605E">Val accuracy</span><span style="font-family: 'Roboto Mono', monospace; font-size: 26px; font-weight: 500">78.4%</span><span style="font-size: 12px; color: #56605E">loss 0.412 · val 0.587</span></div>
+<div style="padding: 16px 18px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; color: #56605E">이번 실험 최고</span><span style="font-family: 'Roboto Mono', monospace; font-size: 26px; font-weight: 500; color: #0E6E5C">79.1%</span><span style="font-size: 12px; color: #0B5A4B; font-weight: 500">EXP-006보다 +1.9%p</span></div>
+<div style="padding: 16px 18px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; color: #56605E">목표까지</span><span style="font-family: 'Roboto Mono', monospace; font-size: 26px; font-weight: 500">2.9%p</span><span style="font-size: 12px; color: #56605E">목표 82.0% · 실행 7/20회</span></div>
+<div style="padding: 16px 0 16px 18px; border-left: 1px solid #EEF1F0; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; color: #56605E">남은 GPU</span><span style="font-family: 'Roboto Mono', monospace; font-size: 26px; font-weight: 500">29.6h</span><span style="font-size: 12px; color: #56605E">18.4/48h 사용 · 마감 D-7</span></div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+<section aria-label="학습 곡선" style="flex: 2 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">학습 곡선 · EXP-007</h2>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #56605E"><svg width="20" height="6" aria-hidden="true"><line x1="0" y1="3" x2="20" y2="3" stroke="#0E6E5C" stroke-width="2"></line></svg>Train loss</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #56605E"><svg width="20" height="6" aria-hidden="true"><line x1="0" y1="3" x2="20" y2="3" stroke="#B4530F" stroke-width="2" stroke-dasharray="5 3"></line></svg>Val loss</span>
+<a href="#wandb" style="margin-left: auto; font-size: 13px">W&amp;B에서 열기</a>
+</div>
+<svg viewBox="0 0 600 186" width="100%" role="img" aria-label="EXP-007 train loss는 0.41, val loss는 0.59까지 하락" style="display: block">
+<line x1="40" y1="160" x2="590" y2="160" stroke="#C8D0CE" stroke-width="1"></line>
+<line x1="40" y1="128.2" x2="590" y2="128.2" stroke="#EEF1F0" stroke-width="1"></line>
+<line x1="40" y1="96.4" x2="590" y2="96.4" stroke="#EEF1F0" stroke-width="1"></line>
+<line x1="40" y1="64.5" x2="590" y2="64.5" stroke="#EEF1F0" stroke-width="1"></line>
+<line x1="40" y1="32.7" x2="590" y2="32.7" stroke="#EEF1F0" stroke-width="1"></line>
+<text x="32" y="164" text-anchor="end" font-size="11" fill="#56605E" font-family="Roboto Mono, monospace">0</text>
+<text x="32" y="100" text-anchor="end" font-size="11" fill="#56605E" font-family="Roboto Mono, monospace">1.0</text>
+<text x="32" y="37" text-anchor="end" font-size="11" fill="#56605E" font-family="Roboto Mono, monospace">2.0</text>
+<text x="40" y="178" text-anchor="middle" font-size="11" fill="#56605E" font-family="Roboto Mono, monospace">0</text>
+<text x="256" y="178" text-anchor="middle" font-size="11" fill="#56605E" font-family="Roboto Mono, monospace">20</text>
+<text x="472" y="178" text-anchor="middle" font-size="11" fill="#56605E" font-family="Roboto Mono, monospace">40</text>
+<text x="580" y="178" text-anchor="middle" font-size="11" fill="#56605E" font-family="Roboto Mono, monospace">epoch</text>
+<line x1="407.2" y1="24" x2="407.2" y2="160" stroke="#9AA4A2" stroke-width="1" stroke-dasharray="3 3"></line>
+<polyline fill="none" stroke="#B4530F" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round" points="50.8,32.7 72.4,59.5 94,76.6 126.4,91.3 158.8,100.8 191.2,107.8 223.6,112.9 256,116.1 288.4,118.6 320.8,120.5 353.2,121.8 374.8,122.8 407.2,122.6"></polyline>
+<polyline fill="none" stroke="#0E6E5C" stroke-width="2" stroke-linejoin="round" points="50.8,26.4 72.4,56.9 94,77.3 126.4,95.1 158.8,105.3 191.2,112.9 223.6,118.6 256,123.1 288.4,126.9 320.8,129.5 353.2,131.4 374.8,132.6 407.2,133.9"></polyline>
+</svg>
+</section>
+<section aria-label="자원" style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column">
+<h2 style="margin: 0 0 6px; font-size: 17px; font-weight: 700">자원</h2>
+<div style="display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 0 12px; font-size: 13px">
+<span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; color: #56605E">GPU</span><div style="padding: 10px 0; border-bottom: 1px solid #EEF1F0"><div style="height: 6px; background: #E9EDEC; border-radius: 999px"><div style="width: 94%; height: 100%; background: #0E6E5C; border-radius: 999px"></div></div></div><span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace">94%</span>
+<span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; color: #56605E">VRAM</span><div style="padding: 10px 0; border-bottom: 1px solid #EEF1F0"><div style="height: 6px; background: #E9EDEC; border-radius: 999px"><div style="width: 89%; height: 100%; background: #B4530F; border-radius: 999px"></div></div></div><span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; color: #8A3D09">21.3/24G</span>
+<span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; color: #56605E">온도</span><div style="padding: 10px 0; border-bottom: 1px solid #EEF1F0"><div style="height: 6px; background: #E9EDEC; border-radius: 999px"><div style="width: 71%; height: 100%; background: #7A8482; border-radius: 999px"></div></div></div><span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace">71°C</span>
+<span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; color: #56605E">CPU</span><div style="padding: 10px 0; border-bottom: 1px solid #EEF1F0"><div style="height: 6px; background: #E9EDEC; border-radius: 999px"><div style="width: 38%; height: 100%; background: #7A8482; border-radius: 999px"></div></div></div><span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace">38%</span>
+<span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; color: #56605E">RAM</span><div style="padding: 10px 0; border-bottom: 1px solid #EEF1F0"><div style="height: 6px; background: #E9EDEC; border-radius: 999px"><div style="width: 64%; height: 100%; background: #7A8482; border-radius: 999px"></div></div></div><span style="padding: 10px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace">41/64G</span>
+<span style="padding: 10px 0; color: #56605E">디스크</span><div style="padding: 10px 0"><div style="height: 6px; background: #E9EDEC; border-radius: 999px"><div style="width: 31%; height: 100%; background: #7A8482; border-radius: 999px"></div></div></div><span style="padding: 10px 0; font-family: 'Roboto Mono', monospace">612G/2T</span>
+</div>
+</section>
+</div>
+
+<section id="experiments" aria-label="실험과 큐" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">실험 · 큐</h2>
+<span style="font-size: 12px; color: #56605E">GPU 1개 · 순차 실행 · 성공 기준 충족 시에만 main 병합</span>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 760px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #56605E; font-size: 13px">
+<th style="font-weight: 500; padding: 11px 12px 11px 0; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4">실험</th>
+<th style="font-weight: 500; padding: 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">조작변인</th>
+<th style="font-weight: 500; padding: 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">상태</th>
+<th style="font-weight: 500; padding: 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0; text-align: right">Best val acc</th>
+<th style="font-weight: 500; padding: 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">브랜치 · 커밋</th>
+<th style="font-weight: 500; padding: 11px 0 11px 12px; border-top: 1px solid #E1E5E4; border-bottom: 1px solid #E1E5E4; border-left: 1px solid #EEF1F0">분석</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding: 13px 12px 13px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">EXP-009</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0">rank 32 · lr 1e-4</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0"><span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: #F0F2F2; color: #3D4644">대기 2</span></td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; text-align: right; color: #7A8482">—</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; color: #7A8482">—</td><td style="padding: 13px 0 13px 12px; border-bottom: 1px solid #EEF1F0; color: #7A8482">—</td></tr>
+<tr><td style="padding: 13px 12px 13px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">EXP-008</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0">rank 64 · lr 2e-4 <span style="font-size: 12px; color: #0B5A4B">AI 제안</span></td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0"><span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: #F0F2F2; color: #3D4644">대기 1</span></td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; text-align: right; color: #7A8482">—</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; color: #7A8482">—</td><td style="padding: 13px 0 13px 12px; border-bottom: 1px solid #EEF1F0; color: #7A8482">—</td></tr>
+<tr style="background: #F6FBF9"><td style="padding: 13px 12px 13px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">EXP-007</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0">rank 32 · lr 2e-4</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0"><span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: #E3F2EE; color: #0B5A4B">실행 중 68%</span></td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; text-align: right; font-family: 'Roboto Mono', monospace">79.1%</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px">exp-007 · 9f1c2ab</td><td style="padding: 13px 0 13px 12px; border-bottom: 1px solid #EEF1F0; color: #7A8482">—</td></tr>
+<tr><td style="padding: 13px 12px 13px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">EXP-006</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0">rank 16 · lr 2e-4</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0"><span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: #141A19; color: #FFFFFF">완료</span></td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; text-align: right; font-family: 'Roboto Mono', monospace">77.2%</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px">exp-006 · 9d2e4b1</td><td style="padding: 13px 0 13px 12px; border-bottom: 1px solid #EEF1F0"><a href="FocusCode.dc.html">analysis.md</a></td></tr>
+<tr><td style="padding: 13px 12px 13px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">EXP-005</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0">rank 16 · lr 1e-4</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0"><span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: #141A19; color: #FFFFFF">완료</span></td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; text-align: right; font-family: 'Roboto Mono', monospace">76.5%</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px">exp-005 · 41c07fa</td><td style="padding: 13px 0 13px 12px; border-bottom: 1px solid #EEF1F0"><a href="FocusCode.dc.html">analysis.md</a></td></tr>
+<tr><td style="padding: 13px 12px 13px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">EXP-004</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0">rank 8 · lr 2e-4 (기준선)</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0"><span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: #141A19; color: #FFFFFF">완료</span></td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; text-align: right; font-family: 'Roboto Mono', monospace">75.8%</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px">exp-004 · 7be2d90</td><td style="padding: 13px 0 13px 12px; border-bottom: 1px solid #EEF1F0"><a href="FocusCode.dc.html">analysis.md</a></td></tr>
+<tr><td style="padding: 13px 12px 13px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">EXP-003</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0">rank 8 · lr 5e-4</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0"><span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: #FDF0E5; color: #8A3D09">실패 · 발산</span></td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; text-align: right; color: #7A8482">—</td><td style="padding: 13px 12px; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 13px">exp-003 · c1a8e33</td><td style="padding: 13px 0 13px 12px; border-bottom: 1px solid #EEF1F0"><a href="FocusCode.dc.html">Failures.md</a></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="events" aria-label="결정과 이벤트" style="display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 8px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">결정·이벤트 기록</h2>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">Decision_log.md · Discord 알림</span>
+</div>
+<div style="display: flex; gap: 14px; font-size: 14px; padding: 11px 0; border-top: 1px solid #E1E5E4"><span style="width: 44px; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">21:43</span><span style="font-size: 12px; font-weight: 700; color: #8A3D09; width: 70px">승인 요청</span><span style="flex: 1">패키지 설치 요청 · Claude 앱 푸시 전송</span></div>
+<div style="display: flex; gap: 14px; font-size: 14px; padding: 11px 0; border-top: 1px solid #EEF1F0"><span style="width: 44px; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">21:42</span><span style="font-size: 12px; font-weight: 700; color: #0B5A4B; width: 70px">결정</span><span style="flex: 1">EXP-006 리뷰 후 다음 실험으로 rank 32 선택</span></div>
+<div style="display: flex; gap: 14px; font-size: 14px; padding: 11px 0; border-top: 1px solid #EEF1F0"><span style="width: 44px; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">21:40</span><span style="font-size: 12px; font-weight: 700; color: #3D4644; width: 70px">완료</span><span style="flex: 1">EXP-006 완료 · 목표 미달, 브랜치 exp-006 보존</span></div>
+<div style="display: flex; gap: 14px; font-size: 14px; padding: 11px 0; border-top: 1px solid #EEF1F0; border-bottom: 1px solid #EEF1F0"><span style="width: 44px; font-family: 'Roboto Mono', monospace; font-size: 13px; color: #56605E">20:12</span><span style="font-size: 12px; font-weight: 700; color: #8A3D09; width: 70px">이상 감지</span><span style="flex: 1">OOM · batch 64→32로 자동 수정 후 체크포인트에서 재개</span></div>
+</section>
+
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { menuOpen: false, navW: 250, navOpen: true };
+    this.drag = null;
+    this.panes = { nav: { key: 'navW', open: 'navOpen', min: 200, max: 400, dir: 1, base: 'min-width:0;box-sizing:border-box;background:#F6F7F7;padding:18px 14px;display:flex;flex-direction:column;gap:6px;' } };
+  }
+  componentDidMount() {
+    this.onMove = (e) => {
+      const d = this.drag;
+      if (!d) return;
+      const p = this.panes[d.kind];
+      this.setState({ [p.key]: Math.max(p.min, Math.min(p.max, d.start + p.dir * (e.clientX - d.x))) });
+    };
+    this.onUp = () => { this.drag = null; };
+    window.addEventListener('pointermove', this.onMove);
+    window.addEventListener('pointerup', this.onUp);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('pointermove', this.onMove);
+    window.removeEventListener('pointerup', this.onUp);
+  }
+  startDrag(kind, e) {
+    e.preventDefault();
+    this.drag = { kind: kind, x: e.clientX, start: this.state[this.panes[kind].key] };
+  }
+  nudge(kind, e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const p = this.panes[kind];
+    const v = this.state[p.key] + (e.key === 'ArrowRight' ? 16 : -16) * p.dir;
+    this.setState({ [p.key]: Math.max(p.min, Math.min(p.max, v)) });
+  }
+  resizeVals() {
+    const out = {};
+    Object.keys(this.panes).forEach((k) => {
+      const p = this.panes[k];
+      const open = !p.open || this.state[p.open];
+      out[k + 'Style'] = open ? p.base + 'flex:0 0 ' + this.state[p.key] + 'px;' : 'display:none;';
+      out[k + 'Rs'] = open ? 'flex:0 0 5px;background:#E1E5E4;cursor:col-resize;touch-action:none;' : 'display:none;';
+      out[k + 'Closed'] = !open;
+      out[k + 'Toggle'] = () => this.setState({ [p.open]: !this.state[p.open] });
+      out[k + 'Drag'] = (e) => this.startDrag(k, e);
+      out[k + 'Key'] = (e) => this.nudge(k, e);
+    });
+    return out;
+  }
+  renderVals() {
+    return {
+      ...this.resizeVals(),
+      menuOpen: this.state.menuOpen,
+      toggleMenu: () => this.setState({ menuOpen: !this.state.menuOpen })
+    };
+  }
+}
+</script>
+</body>
+</html>
