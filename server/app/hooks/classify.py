@@ -139,19 +139,20 @@ def target_paths(tool: str, tool_input: dict) -> list[str]:
 
 
 def previous_experiment(rel: str, ctx: Ctx) -> str | None:
-    """끝난 실험 폴더면 그 ID, 아니면 None.
+    """끝났거나 실패한 실험 폴더면 그 ID, 아니면 None.
 
-    세 가지를 다 만족해야 "이전 실험" 이다.
-      1 `experiments/<EXP-NNN>/...` 이고
-      2 지금 도는 실험이 아니고
-      3 그 폴더에 **결과 표식**(`result.csv`·`analysis.md`)이 이미 있다
+    주 근거는 **서버 쪽 runstate 의 `started` 목록**이다. 한 번이라도
+    `labremote run-state --running` 으로 시작된 실험 ID 가 쌓이고, AI 는
+    프로젝트 안에서 그 목록을 지울 수 없다.
 
-    3번이 없으면 실행 중인 실험이 없을 때 모든 실험 폴더가 "이전" 이 되어
-    다음 실험을 준비하는 것조차 막힌다. PDF 9쪽의 "기존 실험 폴더를
-    덮어쓰지 않는다" 는 **결과가 나온** 폴더를 말한다.
+    결과 파일(`result.csv`·`analysis.md`)은 **보조 근거**로만 본다.
+      - AI 가 만들거나 지울 수 있어서 그것만으로는 약하다.
+      - 중간에 죽은 실험은 result.csv 가 없다. 사양상 실패한 실험 폴더도
+        남기고 새 폴더에서 재실행해야 하므로, started 가 그 구멍을 막는다.
+      - 반대로 runstate 가 생기기 전에 만들어진 폴더는 started 에 없으니
+        결과 파일로 건진다.
 
-    한계: 실험이 끝났는데 아직 result.csv 를 안 쓴 짧은 틈에는 표식이 없어
-    덮어쓸 수 있다. 그 구간은 runstate 의 running 이 덮는다.
+    지금 도는 실험은 "이전" 이 아니다.
     """
     cfg = ctx.paths_cfg
     parts = rel.split("/")
@@ -161,13 +162,16 @@ def previous_experiment(rel: str, ctx: Ctx) -> str | None:
     if not re.match(cfg.get("experimentIdRe", "^EXP-[0-9]{3}$"), exp):
         return None
     if exp == getattr(ctx.run, "experiment_id", None):
-        return None  # 지금 도는 실험은 "이전" 이 아니다
+        return None
+
+    if exp in (getattr(ctx.run, "started", None) or []):
+        return exp  # 한 번이라도 시작된 실험 — 결과가 없어도 손대면 안 된다
 
     folder = os.path.join(ctx.root, parts[0], exp)
     markers = cfg.get("prevMarkers") or ["result.csv", "analysis.md"]
-    if not any(os.path.exists(os.path.join(folder, m)) for m in markers):
-        return None  # 아직 결과가 없는 폴더 — 준비 중이다
-    return exp
+    if any(os.path.exists(os.path.join(folder, m)) for m in markers):
+        return exp  # 보조 근거: 결과가 남아 있는 폴더
+    return None
 
 
 def classify_path(raw: str, ctx: Ctx, *, deleting: bool = False) -> list[Finding]:

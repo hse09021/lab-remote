@@ -46,3 +46,36 @@ def test_상태_파일은_프로젝트_밖에_있다(project_root):
 
     path = paths.real(registry.runstate_path("hook-sandbox"))
     assert paths.rel_or_none(project_root, path) is None
+
+
+def test_started_가_쌓인다():
+    runstate.set_running("hook-sandbox", "EXP-001")
+    runstate.set_idle("hook-sandbox")
+    runstate.set_running("hook-sandbox", "EXP-002")
+    assert runstate.load("hook-sandbox").started == ["EXP-001", "EXP-002"]
+
+
+def test_같은_실험을_다시_시작해도_한_번만():
+    runstate.set_running("hook-sandbox", "EXP-001")
+    runstate.set_running("hook-sandbox", "EXP-001")
+    assert runstate.load("hook-sandbox").started == ["EXP-001"]
+
+
+def test_mark_started_만_따로_쓸_수_있다():
+    runstate.mark_started("hook-sandbox", "EXP-003")
+    state = runstate.load("hook-sandbox")
+    assert state.started == ["EXP-003"]
+    assert state.running is False  # 시작 표시만, 실행 상태는 그대로
+
+
+def test_파일이_없으면_started_는_빈_목록():
+    assert runstate.load("hook-sandbox").started == []
+
+
+def test_started_는_프로젝트_밖에_쌓인다(project_root):
+    """AI 가 프로젝트 안에서 지울 수 없어야 근거로 쓸 수 있다."""
+    from app import paths
+
+    runstate.set_running("hook-sandbox", "EXP-001")
+    path = paths.real(registry.runstate_path("hook-sandbox"))
+    assert paths.rel_or_none(project_root, path) is None

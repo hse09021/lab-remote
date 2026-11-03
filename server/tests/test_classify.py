@@ -3,6 +3,8 @@
 필드명은 실측값이다 — `tests/fixtures/hook_events/` 의 덤프가 근거다.
 """
 
+import os
+
 import pytest
 
 from app.hooks import classify
@@ -155,7 +157,44 @@ def test_결과가_없는_실험_폴더는_이전이_아니다(ctx, project_root
     assert actions(found) == ["hparam"]  # prev 아님
 
 
+def test_시작했다가_결과_없이_죽은_실험도_이전이다(ctx, project_root):
+    """사양상 실패한 실험 폴더는 남기고 새 폴더에서 재실행해야 한다.
+    결과 파일이 없다고 덮어쓸 수 있으면 그 규칙이 무너진다."""
+    from app import runstate
+
+    runstate.set_running("hook-sandbox", "EXP-005")
+    runstate.set_idle("hook-sandbox")  # 결과 없이 끝남
+    ctx.run = runstate.load("hook-sandbox")
+
+    folder = os.path.join(project_root, "experiments", "EXP-005")
+    os.makedirs(folder, exist_ok=True)
+    assert not os.path.exists(os.path.join(folder, "result.csv"))  # 표식 없음
+
+    found = one(ctx, "Write", {"file_path": f"{folder}/config.yaml"})
+    assert "prev" in actions(found)
+
+
+def test_started_는_set_idle_로_지워지지_않는다(ctx, project_root):
+    from app import runstate
+
+    runstate.set_running("hook-sandbox", "EXP-005")
+    runstate.set_running("hook-sandbox", "EXP-006")
+    runstate.set_idle("hook-sandbox")
+    assert runstate.load("hook-sandbox").started == ["EXP-005", "EXP-006"]
+
+
+def test_지금_도는_실험은_started_에_있어도_이전이_아니다(ctx, project_root):
+    from app import runstate
+
+    runstate.set_running("hook-sandbox", "EXP-007")
+    ctx.run = runstate.load("hook-sandbox")
+    found = one(ctx, "Write", {"file_path": f"{project_root}/experiments/EXP-007/config.yaml"})
+    assert "prev" not in actions(found)
+
+
 def test_결과가_나오면_이전이_된다(ctx, project_root):
+    """보조 근거 — runstate 가 생기기 전에 만들어진 폴더를 건진다."""
+    assert ctx.run.started == [] or ctx.run.started is None
     finish(project_root, "EXP-008")
     found = one(ctx, "Write", {"file_path": f"{project_root}/experiments/EXP-008/config.yaml"})
     assert "prev" in actions(found)

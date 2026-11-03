@@ -27,6 +27,9 @@ class RunState:
     experiment_id: str | None = None
     pid: int | None = None
     started_at: str | None = None
+    #: 한 번이라도 시작된 실험 ID. "이전 실험 폴더" 판정의 **주 근거**다.
+    #: 서버 쪽에만 쌓이므로 AI 가 프로젝트 안에서 지울 수 없다.
+    started: list = None  # type: ignore[assignment]
     #: running 이라는데 pid 가 죽어 있다. 상태를 뒤집지는 않고 알리기만 한다.
     stale: bool = False
     #: 파일이 없거나 깨져서 기본값(안 돌고 있음)으로 봤다.
@@ -58,17 +61,19 @@ def load(name: str) -> RunState:
         with open(registry.runstate_path(name), encoding="utf-8") as fh:
             raw = json.load(fh)
     except (FileNotFoundError, json.JSONDecodeError, OSError, registry.InvalidName):
-        return RunState(missing=True)
+        return RunState(missing=True, started=[])
     if not isinstance(raw, dict):
-        return RunState(missing=True)
+        return RunState(missing=True, started=[])
 
     pid = raw.get("pid")
     pid = int(pid) if isinstance(pid, (int, str)) and str(pid).isdigit() else None
+    started = raw.get("started")
     state = RunState(
         running=bool(raw.get("running")),
         experiment_id=raw.get("experimentId") or None,
         pid=pid,
         started_at=raw.get("startedAt") or None,
+        started=[str(x) for x in started] if isinstance(started, list) else [],
     )
     # 좀비 상태. 훅이 알아서 running 을 뒤집으면 학습이 nohup 으로 떠서 pid 가
     # 바뀐 경우에 잠금이 조용히 풀린다. 그래서 running 은 그대로 두고 표시만 한다.
@@ -77,12 +82,43 @@ def load(name: str) -> RunState:
     return state
 
 
-def _write(name: str, data: dict) -> None:
+def _write(name: str, data: dict, *, keep_started: bool = True) -> None:
+    if keep_started:
+        data.setdefault("started", load(name).started or [])
     data["updatedAt"] = datetime.now().astimezone().isoformat(timespec="seconds")
     registry.write_json(registry.runstate_path(name), data)
 
 
+def mark_started(name: str, experiment_id: str) -> list[str]:
+    """실험 ID 를 "한 번이라도 시작됨" 목록에 넣는다 (중복 없이, 순서 유지)."""
+    state = load(name)
+    started = list(state.started or [])
+    if experiment_id and experiment_id not in started:
+        started.append(experiment_id)
+    _write(
+        name,
+        {
+            "running": state.running,
+            "experimentId": state.experiment_id,
+            "pid": state.pid,
+            "startedAt": state.started_at,
+            "started": started,
+            "source": "cli",
+        },
+        keep_started=False,
+    )
+    return started
+
+
 def set_running(name: str, experiment_id: str, pid: int | None = None) -> None:
+    """실험을 시작한다. **started 목록에 영구히 남는다.**
+
+    끝났는지 실패했는지와 상관없이, 한 번 시작된 폴더는 다시 손대면 안 된다
+    (spec: 실패한 실험 폴더도 남기고 새 폴더에서 재실행).
+    """
+    started = list(load(name).started or [])
+    if experiment_id and experiment_id not in started:
+        started.append(experiment_id)
     _write(
         name,
         {
@@ -90,10 +126,13 @@ def set_running(name: str, experiment_id: str, pid: int | None = None) -> None:
             "experimentId": experiment_id,
             "pid": pid,
             "startedAt": datetime.now().astimezone().isoformat(timespec="seconds"),
+            "started": started,
             "source": "cli",
         },
+        keep_started=False,
     )
 
 
 def set_idle(name: str) -> None:
+    """실행을 멈춘다. started 목록은 지우지 않는다."""
     _write(name, {"running": False, "experimentId": None, "pid": None, "source": "cli"})
