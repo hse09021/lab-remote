@@ -12,7 +12,13 @@
   outline: 2px solid var(--text);
 }
 
-.highlight[aria-pressed='true'] {
+/*
+ * 고른 하이라이트는 종류별 진한 색으로 테두리를 둬요.
+ * hover 와 특정도가 같으면 뒤에 오는 쪽이 이기는데, 고른 상태가 항상
+ * 이기도록 선택자를 한 단계 더 좁혔어요.
+ */
+.highlight[aria-pressed='true'],
+.highlight[aria-pressed='true']:hover {
   background: rgb(var(--hl-rgb) / 0.7);
   outline: 2px solid var(--hl-ink);
 }

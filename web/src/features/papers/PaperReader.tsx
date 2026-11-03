@@ -28,6 +28,7 @@ import type { HighlightToggles } from './reader/highlightCategories'
 import { OutlinePanel } from './reader/OutlinePanel'
 import { PdfView } from './reader/PdfView'
 import type { JumpTarget } from './reader/PdfView'
+import { HtmlView } from './reader/html/HtmlView'
 import type { SummaryView } from './PaperSummaryPane'
 import s from './PaperReader.module.css'
 
@@ -58,6 +59,8 @@ export default function PaperReader() {
   const [progress, setProgress] = useState(0)
   const [jump, setJump] = useState<{ target: JumpTarget; nonce: number } | null>(null)
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
+  // 수치 불일치에서 고른 재현 기준 (요약 MD 에도 남겨요)
+  const [target, setTarget] = useState<string | null>(null)
 
   const toast = useToast()
 
@@ -139,14 +142,22 @@ export default function PaperReader() {
           >
             arXiv에서 열기 <ExternalIcon />
           </a>
-          <SegmentedControl
-            items={sourceItems}
-            value={source}
-            onChange={setSource}
-            label="원문 형식"
+          <span
             // HTML이 없는 논문은 PDF만 써요 (docs/spec.md I-0)
-            disabled={!data.hasHtml}
-          />
+            title={data.hasHtml ? undefined : 'HTML 없음 · PDF로 읽어요'}
+          >
+            <SegmentedControl
+              items={sourceItems}
+              value={source}
+              onChange={(next) => {
+                // 읽던 섹션을 그대로 두고 형식만 바꿔요
+                setSource(next)
+                if (activeId) requestJump({ sectionId: activeId })
+              }}
+              label="원문 형식"
+              disabled={!data.hasHtml}
+            />
+          </span>
           <SplitButton
             label="실험 설계 초안"
             menuLabel="실험 설계 초안"
@@ -205,17 +216,36 @@ export default function PaperReader() {
                 }}
               />
             ) : (
-              <div className={s.placeholder}>
-                <span className={s.placeholderTitle}>HTML 보기는 다음 단계예요</span>
-                <span className={s.placeholderText}>
-                  arXiv HTML 본문은 리더 3에서 붙여요. 지금은 PDF 보기로 바꾸면 쪽
-                  이미지와 하이라이트를 볼 수 있어요.
-                </span>
-                <span className={s.placeholderMeta}>
-                  {data.pageCount}쪽 · 하이라이트 {data.highlights.length}개 · 참고문헌{' '}
-                  {data.referenceTotal}개
-                </span>
-              </div>
+              <HtmlView
+                reader={data}
+                toggles={toggles}
+                // 이동 요청의 대상을 그대로 넘겨요 (없으면 보던 섹션)
+                jump={
+                  jump?.target.sectionId
+                    ? { sectionId: jump.target.sectionId, nonce: jump.nonce }
+                    : activeId
+                      ? { sectionId: activeId, nonce: 0 }
+                      : null
+                }
+                onActiveSection={setActiveId}
+                onProgress={setProgress}
+                onExplain={() => toast.show('섹션 설명은 다음 단계에서 붙여요')}
+                onCite={(n) => toast.show(`참고문헌 ${n}번 카드는 다음 단계에서 붙여요`)}
+                onToast={toast.show}
+                target={target}
+                onTargetChange={(v) => {
+                  setTarget(v)
+                  toast.show(`재현 목표를 ${v}로 정했어요 · 요약 MD에도 남겼어요`)
+                }}
+                nudge={{
+                  show: showNudge,
+                  onMarkDone: () => {
+                    setStatus.mutate({ id, status: 'done' })
+                    setNudgeDismissed(true)
+                  },
+                  onDismiss: () => setNudgeDismissed(true),
+                }}
+              />
             )}
           </div>
 

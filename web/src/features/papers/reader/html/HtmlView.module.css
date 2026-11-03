@@ -1,0 +1,225 @@
+.view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+
+.loading,
+.failed {
+  padding: 40px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* 샘플 골격을 쓰고 있다는 알림 */
+.sampleBar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sampleMono {
+  font-family: var(--font-mono);
+}
+
+/* ── 섹션 헤딩 옆 설명 버튼 ───────────────────────────────── */
+.sparkleSlot {
+  position: absolute;
+  top: 50%;
+  margin-top: -14px;
+  margin-left: 8px;
+}
+
+/* ── 끼워 넣는 카드 ───────────────────────────────────────── */
+.card {
+  font-family: var(--font-sans);
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cardCaption {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.configList {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 0 12px;
+  font-size: 13px;
+  align-items: baseline;
+}
+
+.configCell {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.configLabel {
+  color: var(--text-muted);
+}
+
+.configList > .configCell:nth-last-child(-n + 3) {
+  border-bottom: none;
+}
+
+.ref {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.ref:hover {
+  color: var(--accent-hover);
+}
+
+/* 수치 불일치 */
+.check {
+  background: var(--attention-tint);
+  border-color: var(--attention-border);
+}
+
+.checkTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--attention-text);
+}
+
+.checkText {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--attention-deep);
+}
+
+.checkOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.checkBtn {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--attention-border-strong);
+  background: var(--bg);
+  color: var(--attention-deep);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.checkBtn[aria-pressed='true'] {
+  border: none;
+  background: var(--primary-btn);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.checkNote {
+  font-size: 12px;
+  color: var(--attention-text);
+}
+
+/* 내 메모 */
+.memo {
+  background: var(--hl-memo-tint);
+  border-color: transparent;
+  box-shadow: inset 3px 0 0 var(--hl-memo-edge);
+}
+
+.memoHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.memoTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hl-memo-ink);
+}
+
+.memoMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.memoEdit {
+  margin-left: auto;
+}
+
+.memoText {
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+/* ── 끝까지 읽음 안내 ─────────────────────────────────────── */
+/*
+ * 자리를 차지하면 스크롤 영역이 줄어들어 "읽은 위치"가 100%에
+ * 닿지 못해요. 그래서 본문 위에 떠 있게 둬요.
+ */
+.nudge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface-muted);
+  border-top: 1px solid var(--border);
+}
+
+.nudgeText {
+  flex: 1 1 200px;
+  font-size: 13.5px;
+}

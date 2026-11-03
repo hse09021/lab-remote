@@ -81,6 +81,7 @@
   --hl-memo-rgb: 214 199 241;
   --hl-memo-tint: #f3eefb;
   --hl-memo-ink: #4b2e83;
+  --hl-memo-edge: #b9a4e3;   /* 메모 카드 왼쪽 띠 */
 
   /* ── 그림자 ───────────────────────────────────────────────── */
   --shadow-raised: 0 1px 2px rgb(20 26 25 / 0.12);

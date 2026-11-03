@@ -60,6 +60,8 @@ export function PdfView({
   const [page, setPage] = useState(1)
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  /* 이동 직후에는 관찰자가 다음 섹션으로 덮어쓰지 않게 잠깐 쉬어요 */
+  const suppressUntil = useRef(0)
   const pageEls = useRef(new Map<number, HTMLElement>())
   const sectionEls = useRef(new Map<string, HTMLElement>())
   const pageRatios = useRef(new Map<number, number>())
@@ -107,6 +109,7 @@ export function PdfView({
     if (!root) return
     const io = new IntersectionObserver(
       () => {
+        if (Date.now() < suppressUntil.current) return
         const rootTop = root.getBoundingClientRect().top
         const passed = sectionTops.current
           .map(({ id }) => {
@@ -134,7 +137,9 @@ export function PdfView({
     // 쪽 이미지가 붙기 전에는 스크롤 길이가 0이에요.
     // 그때 100%로 보고하면 완료 안내가 바로 떠 버려요.
     if (max <= 4) return
-    onProgress(Math.round((el.scrollTop / max) * 100))
+    // 소수점 높이 때문에 끝에서 99% 로 멈추는 걸 막아요
+    const pct = el.scrollTop >= max - 2 ? 100 : Math.round((el.scrollTop / max) * 100)
+    onProgress(pct)
   }, [onProgress])
 
   useEffect(() => {
@@ -174,6 +179,7 @@ export function PdfView({
       if (!pageEl) return
       const y = target.y ?? sec?.y ?? 0
       const offset = (y / reader.pageSize.height) * pageEl.offsetHeight
+      suppressUntil.current = Date.now() + (smooth ? 700 : 300)
       root.scrollTo({
         top: pageEl.offsetTop + offset - 60,
         behavior: smooth ? 'smooth' : 'auto',
