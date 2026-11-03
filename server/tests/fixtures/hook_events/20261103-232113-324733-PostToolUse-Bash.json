@@ -1,0 +1,25 @@
+{
+  "session_id": "sess-06-0c554877",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-dump-scratch/d77efb1e-ffdd-4f38-87c8-887f1046763c.jsonl",
+  "cwd": "/home/사용자/projects/dump-scratch",
+  "prompt_id": "prompt-07-4c74de7c",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "ls -la",
+    "description": "List files in current directory"
+  },
+  "tool_response": {
+    "stdout": "total 20\ndrwxrwxr-x 4 사용자 사용자 4096 Nov  3 23:08 .\ndrwxrwxr-x 3 사용자 사용자 4096 Nov  3 23:08 ..\ndrwxrwxr-x 2 사용자 사용자 4096 Nov  3 23:08 docs\ndrwxrwxr-x 3 사용자 사용자 4096 Nov  3 23:08 experiments\n-rw-rw-r-- 1 사용자 사용자   86 Nov  3 23:08 README.md",
+    "stderr": "",
+    "interrupted": false,
+    "isImage": false,
+    "noOutputExpected": false
+  },
+  "tool_use_id": "toolu_0173eiwQWPURBrcBBqmvQ5Ry",
+  "duration_ms": 15
+}

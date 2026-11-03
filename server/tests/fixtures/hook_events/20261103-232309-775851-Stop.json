@@ -1,0 +1,15 @@
+{
+  "session_id": "sess-12-8628f05e",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-dump-scratch/84cd75ec-ee32-4e00-b1b3-7a6d6249c9ac.jsonl",
+  "cwd": "/home/사용자/projects/dump-scratch",
+  "prompt_id": "prompt-13-ec445113",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "README.md는 바꾸지 못했어요. 파일을 수정하려고 두 번 시도했는데(`sed` 한 번, 파일 쓰기 한 번) 둘 다 쓰기 권한이 없어서 거부됐어요. 지금 파일은 원래 그대로예요.\n\n바꿀 곳은 각각 한 군데씩, 모 …(줄임)",
+  "background_tasks": [],
+  "session_crons": []
+}

@@ -1,0 +1,16 @@
+{
+  "session_id": "sess-08-ebc0c6fe",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-dump-scratch/935981aa-3520-4f04-81f4-328295e77752.jsonl",
+  "cwd": "/home/사용자/projects/dump-scratch",
+  "prompt_id": "prompt-09-14c617c7",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Read",
+  "tool_input": {
+    "file_path": "/home/사용자/projects/dump-scratch/docs/scratch.md"
+  },
+  "tool_use_id": "toolu_01FtQH8tx8AjBPSpxAvLpWfZ"
+}

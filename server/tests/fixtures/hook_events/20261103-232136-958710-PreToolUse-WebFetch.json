@@ -1,0 +1,17 @@
+{
+  "session_id": "sess-10-a7699db5",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-dump-scratch/10955b9e-1933-4672-b533-649ea863bd8a.jsonl",
+  "cwd": "/home/사용자/projects/dump-scratch",
+  "prompt_id": "prompt-11-616da272",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "WebFetch",
+  "tool_input": {
+    "url": "https://example.com",
+    "prompt": "Summarize this page's content in one sentence."
+  },
+  "tool_use_id": "toolu_01BmSCxhkLp3tHwYiPs9KEQu"
+}

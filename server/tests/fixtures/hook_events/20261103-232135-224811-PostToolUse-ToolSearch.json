@@ -1,0 +1,25 @@
+{
+  "session_id": "sess-10-a7699db5",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-dump-scratch/10955b9e-1933-4672-b533-649ea863bd8a.jsonl",
+  "cwd": "/home/사용자/projects/dump-scratch",
+  "prompt_id": "prompt-11-616da272",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PostToolUse",
+  "tool_name": "ToolSearch",
+  "tool_input": {
+    "query": "select:WebFetch",
+    "max_results": 1
+  },
+  "tool_response": {
+    "matches": [
+      "WebFetch"
+    ],
+    "query": "select:WebFetch",
+    "total_deferred_tools": 19
+  },
+  "tool_use_id": "toolu_01YAAASAmHHvyipmFydUBdGR",
+  "duration_ms": 1
+}
