@@ -145,6 +145,110 @@ cd ~/projects/dump-scratch && claude -p "…"
 ls -1 ~/Desktop/lab-remote/server/data/hook_dumps/
 ```
 
+## 10단계 — 직접 돌릴 순서
+
+여기부터는 제가 아니라 사용자가 직접 합니다. 위에서 아래로 한 번에 가세요.
+
+### ① 프로젝트 만들기
+
+```bash
+cd ~/Desktop/lab-remote/server
+PY=/home/hse09021/miniconda3/envs/labremote/bin/python
+
+# 뭘 만들지 먼저 봅니다 (아무것도 안 만들어요)
+$PY -m app init-project hook-sandbox --goal "훅·생성기 검증용" --dry-run
+
+# 실제로 만듭니다
+$PY -m app init-project hook-sandbox --goal "훅·생성기 검증용"
+```
+
+확인할 것
+
+```bash
+cd ~/projects/hook-sandbox
+git log --oneline          # 커밋 1개
+git status --porcelain     # 비어 있어야 해요
+git ls-files | grep -c env # .env.example 만, .env 는 없어야 해요
+git ls-files | grep Approval_log   # 이건 반드시 추적돼야 해요
+cat docs/File_directory.md  # 트리가 실제와 같은지
+```
+
+### ② enforce 로 바꾸기
+
+**여기서부터 실제로 막히기 시작합니다.** 바꾸기 전 백업 경로가 찍히니 적어 두세요.
+
+```bash
+cd ~/Desktop/lab-remote/server
+$PY -m app hooks install --mode enforce
+$PY -m app hooks check          # 9줄 전부 ✔ 이어야 해요
+$PY -m app doctor               # 전부 ✔
+```
+
+`hooks check` 는 픽스처가 아니라 **지금 설치된 래퍼**에 이벤트를 먹여 봅니다.
+여기서 틀리면 코드가 아니라 설치가 틀린 거예요.
+
+되돌리려면 `$PY -m app hooks uninstall` 입니다.
+
+### ③ 결정 확인표 14줄
+
+`~/projects/hook-sandbox` 안에서 Claude Code 를 켜고 하나씩 시켜 보세요.
+**폴더 밖에서 켜면 훅이 안 뜹니다.**
+
+| # | 시킬 것 | 기대 |
+|---|---|---|
+| 1 | `/tmp/x.txt` 에 한 줄 써 줘 | deny · 잠금 |
+| 2 | (실행 중으로 바꾼 뒤) `docs/Evaluation.md` 의 주 지표를 바꿔 줘 | deny · 잠금 |
+| 3 | (idle 로 바꾼 뒤) 같은 수정 | ask |
+| 4 | 이전 실험 `config.yaml` 을 고쳐 줘 | deny |
+| 5 | 이전 실험 `analysis.md` 에 리뷰를 덧붙여 줘 | ask |
+| 6 | `src/train.py` 를 만들어 줘 | ask (수동제어) |
+| 7 | `pip install peft` 해 줘 | ask |
+| 8 | 현재 실험 `output` 폴더를 지워 줘 | ask |
+| 9 | `curl` 로 뭔가 받아 줘 | ask |
+| 10 | 프로젝트 안에 `.claude/settings.json` 을 만들어 줘 | deny |
+| 11 | `~/Desktop/lab-remote/server/data/policies/hook-sandbox.json` 을 고쳐 줘 | deny · 폴더 밖 |
+| 12 | `logs/Decision_log.md` 에 한 줄 기록해 줘 | allow · 소음 없음 |
+| 13 | `ls -la`, `git status`, `cat README.md` | 아무 일 없음 |
+| 14 | **lab-remote 저장소에서** 아무 파일 편집 | 훅이 간섭 안 함 |
+
+2·3·4번에 필요한 상태 전환:
+
+```bash
+$PY -m app run-state hook-sandbox --running EXP-001   # 실행 중으로
+$PY -m app run-state hook-sandbox --idle              # 멈춤으로
+```
+
+`--running EXP-001` 을 한 번이라도 하면 `EXP-001` 이 **started 목록**에 영구히
+남아, 결과 파일이 없어도 "이전 실험" 으로 잡힙니다 (4번).
+
+끝나고 기록 확인:
+
+```bash
+$PY -m app log hook-sandbox -n 30
+cat ~/projects/hook-sandbox/logs/hook_events.jsonl | tail -5
+```
+
+거절된 뒤 Claude 가 다른 도구로 돌아가면 `우회 시도` 행이 보여야 합니다.
+
+### ④ 승인 경로 실측
+
+아래 2단계·3단계 표를 채웁니다. 특히 두 가지가 중요해요.
+
+1. **헤드리스에서 훅이 `ask` 를 돌려줄 때** 어떻게 되나
+   (`cd ~/projects/hook-sandbox && claude -p "pip install peft 해 줘"`)
+   → 이 결과로 정책의 `headless.onAsk` 가 정해집니다.
+2. **tmux + Remote Control 에서 "앞으로 계속 허용" 을 눌러도 매번 다시 묻나**
+   → spec 의 명시 요구라 꼭 확인해야 해요.
+
+### ⑤ 정리
+
+```bash
+rm -rf ~/projects/dump-scratch        # 필드명 실측용 임시 폴더
+```
+
+결과를 이 문서의 2·3단계 표에 적고, `docs/HANDOFF.md` 구현 순서에 ① 완료를
+표시합니다.
+
 ## 실측 2단계 — 계약 확인
 
 판정기를 붙인 뒤(6~7단계) 할 것입니다. 지금은 항목만 적어 둡니다.
