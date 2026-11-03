@@ -11,6 +11,41 @@ const FIXTURES = resolve(import.meta.dirname, 'fixtures')
  * `apply: 'serve'` 이므로 프로덕션 빌드에는 들어가지 않습니다 — 배포물에
  * 샘플 논문을 넣지 않기로 했기 때문(docs/HANDOFF.md 1절).
  */
+/**
+ * pdfjs 가 쓰는 자산(표준 글꼴·CJK 문자표)을 같은 출처로 내줘요.
+ * CDN 으로 나가면 안 되니 개발·빌드 양쪽에서 /pdfjs/<이름>/ 으로 서빙해요.
+ *
+ * 둘 다 "필요할 때 그 파일만" 받아요 — pdfjs 가 쓰는 글꼴·문자표만 요청하고,
+ * 라틴 문자 PDF 는 cmaps 를 한 건도 받지 않아요.
+ */
+const PDF_ASSET_DIRS = ['standard_fonts', 'cmaps'] as const
+
+function pdfAssetsPlugin(): Plugin {
+  const dirOf = (name: string) => resolve(__dirname, `node_modules/pdfjs-dist/${name}`)
+
+  return {
+    name: 'lab-pdf-assets',
+    configureServer(server) {
+      for (const name of PDF_ASSET_DIRS) {
+        server.middlewares.use(`/pdfjs/${name}`, sirv(dirOf(name), { dev: true }))
+      }
+    },
+    async generateBundle() {
+      const { readdir, readFile } = await import('node:fs/promises')
+      for (const name of PDF_ASSET_DIRS) {
+        const dir = dirOf(name)
+        for (const file of await readdir(dir)) {
+          this.emitFile({
+            type: 'asset',
+            fileName: `pdfjs/${name}/${file}`,
+            source: await readFile(resolve(dir, file)),
+          })
+        }
+      }
+    },
+  }
+}
+
 function fixturesPlugin(): Plugin {
   return {
     name: 'lab-fixtures',
@@ -34,7 +69,7 @@ function fixturesPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), fixturesPlugin()],
+  plugins: [react(), fixturesPlugin(), pdfAssetsPlugin()],
   resolve: {
     alias: { '@': resolve(import.meta.dirname, 'src') },
   },

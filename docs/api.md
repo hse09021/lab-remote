@@ -67,6 +67,7 @@
 | `DiscrepancyNote` | `chosen` | 수치 불일치에서 고른 재현 목표. 안 골랐으면 `null` |
 | `DesignDraft` | `saved` | 설계 초안에 입력해 둔 값. 없으면 `null` |
 | `Paper` | `field`, `model` | 아직 분류 전이면 `null` (화면은 "분류 대기"로 보여 줘요) |
+| `PaperReaderPayload` | `pdfUrl` | 원문 PDF 주소. 지금은 개발용 `/fixtures/<id>.pdf`, 서버가 붙으면 실제 주소 |
 | `Dashboard` | `loopPaused` | 루프가 멈춰 있는지 |
 
 ## 모바일
@@ -88,4 +89,6 @@
 
 - `?reset-mock` (개발 모드 + 목업 모드) — 목업 저장소를 처음 상태로 돌려요.
 - 목업 저장소는 `localStorage` 의 `lab-remote.mock.v1` 하나에 담겨요.
-- `/fixtures/*` 는 Vite 개발 서버 전용이에요 (논문 쪽 이미지·arXiv HTML). 배포물에는 안 들어가요.
+- `/fixtures/*` 는 Vite 개발 서버 전용이에요 (논문 PDF·쪽 이미지·arXiv HTML). 배포물에는 안 들어가요.
+- `/pdfjs/standard_fonts/`, `/pdfjs/cmaps/` 는 PDF.js 가 쓰는 자산이에요.
+  CDN 으로 나가지 않게 `vite.config.ts` 의 `pdfAssetsPlugin` 이 같은 출처로 내줘요.

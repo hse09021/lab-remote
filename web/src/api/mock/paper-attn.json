@@ -7,6 +7,7 @@
   "hasHtml": true,
   "pageCount": 15,
   "pageImageBase": "/fixtures/paper",
+  "pdfUrl": "/fixtures/attention.pdf",
   "pageSize": {
     "width": 612,
     "height": 792

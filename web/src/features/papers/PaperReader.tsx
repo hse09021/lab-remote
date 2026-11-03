@@ -253,10 +253,10 @@ export default function PaperReader() {
         break
       }
       case 'translate':
-        overlays.openPopover('translate', sel.anchor, sel.text, sel.sectionId)
+        overlays.openPopover('translate', sel.anchor, sel.text, sel.sectionId, sel.place)
         break
       case 'note':
-        overlays.openPopover('note', sel.anchor, sel.text, sel.sectionId)
+        overlays.openPopover('note', sel.anchor, sel.text, sel.sectionId, sel.place)
         break
     }
   }
@@ -269,16 +269,8 @@ export default function PaperReader() {
 
   const myAnnotations = annotations.data ?? []
   const myHighlights = myAnnotations.filter((a) => a.kind === 'highlight')
+  const myNotes = myAnnotations.filter((a) => a.kind === 'note')
   const myHighlightFor = (text: string) => myHighlights.find((a) => a.text === text)
-
-  /** PDF 선택 흉내 핫스팟에 얹는 표식 (목업과 같은 3가지) */
-  const spotText = data.selectionSpot.text
-  const selectionMarks = {
-    active: overlays.selection?.text === spotText || overlays.popover?.text === spotText,
-    // 내 하이라이트는 MyPdfHighlights 가 그려요. 여기서는 겹쳐 칠하지 않아요
-    highlighted: false,
-    annotated: myAnnotations.some((a) => a.kind === 'note' && a.source === spotText),
-  }
 
   /** 노트 탭에서 지울 때 — 5초 안에 되돌릴 수 있어요 */
   const deleteAnnotation = (a: UserAnnotation) => {
@@ -477,11 +469,11 @@ export default function PaperReader() {
                   overlays.openSelection(anchor, text, sectionId, place)
                 }
                 myHighlights={myHighlights}
+                myNotes={myNotes}
                 onMyHighlight={(annotation, anchor) =>
                   setMyMenu({ annotation, anchor })
                 }
                 onHover={onHover}
-                selectionMarks={selectionMarks}
                 floating={floating}
                 onToast={toast.show}
                 nudge={{

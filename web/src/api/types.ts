@@ -528,6 +528,8 @@ export interface PaperReaderPayload {
   /** 실제 참고문헌 수 (모델링한 것보다 많아요) */
   referenceTotal: number
   citationsCaption: string
+  /** 원문 PDF 주소 (개발 서버의 fixtures) */
+  pdfUrl: string
   /** 100% 일 때 쪽 너비(px) */
   baseWidth: number
   zoomLevels: number[]
