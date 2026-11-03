@@ -1,0 +1,61 @@
+.chart {
+  display: block;
+  width: 100%;
+}
+
+.axis {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.grid {
+  stroke: var(--border-soft);
+  stroke-width: 1;
+}
+
+.marker {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.tick {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--text-muted);
+}
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.train {
+  stroke: var(--accent);
+}
+
+.val {
+  stroke: var(--attention);
+  stroke-dasharray: 6 4;
+}
+
+/* 범례 */
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.swatchTrain {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.swatchVal {
+  stroke: var(--attention);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}

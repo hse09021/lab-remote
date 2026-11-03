@@ -27,15 +27,20 @@
   border-radius: var(--radius-md);
 }
 
+/*
+ * 40px 버튼. AltFocus의 승인 대기 CTA가 14px이에요.
+ * FocusAuthority에는 같은 높이에 13px인 외곽선 버튼이 따로 있어서,
+ * 그 화면을 옮길 때 변형을 하나 더 만들어야 해요.
+ */
 .md {
   min-height: 40px;
   padding: 0 14px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .lg {
   min-height: 42px;
-  padding: 0 18px;
+  padding: 0 16px;
 }
 
 /* ── 변형 ─────────────────────────────────────────────────── */

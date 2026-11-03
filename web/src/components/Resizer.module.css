@@ -1,24 +1,69 @@
+/*
+ * 보이는 건 가운데 1px 선, 실제로 잡히는 영역은 8px이에요.
+ *
+ * 잡는 영역을 그냥 8px로 키우면 옆 패널이 3px씩 밀려서 화면 전체가
+ * 목업과 어긋나요. 그래서 바깥 여백을 음수로 줘 레이아웃에서 차지하는
+ * 자리는 목업과 같은 5px로 두고, 넘치는 1.5px씩만 이웃 위로 겹치게 했어요.
+ * 겹친 부분이 포인터를 먼저 받아야 하니 z-index를 올려요.
+ */
 .resizer {
-  flex: 0 0 var(--resizer-w);
-  background: var(--border);
-  touch-action: none;
+  position: relative;
+  z-index: 1;
+  flex: 0 0 var(--resizer-hit);
+  background: transparent;
   border: none;
   padding: 0;
-  transition: background 0.15s;
+  touch-action: none;
 }
 
+.resizer::before {
+  content: '';
+  position: absolute;
+  background: var(--border);
+  transition: background 0.15s, width 0.15s, height 0.15s;
+}
+
+/* 겹침 여백 = (slot - hit) / 2 = (5 - 8) / 2 = -1.5px */
 .resizer[data-orientation='vertical'] {
-  cursor: col-resize;
   align-self: stretch;
+  cursor: col-resize;
+  margin-left: calc((var(--resizer-slot) - var(--resizer-hit)) / 2);
+  margin-right: calc((var(--resizer-slot) - var(--resizer-hit)) / 2);
+}
+
+.resizer[data-orientation='vertical']::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--resizer-line);
+  transform: translateX(-50%);
 }
 
 .resizer[data-orientation='horizontal'] {
-  cursor: row-resize;
   width: 100%;
+  cursor: row-resize;
+  margin-top: calc((var(--resizer-slot) - var(--resizer-hit)) / 2);
+  margin-bottom: calc((var(--resizer-slot) - var(--resizer-hit)) / 2);
 }
 
-.resizer:hover,
-.resizer:focus-visible {
+.resizer[data-orientation='horizontal']::before {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--resizer-line);
+  transform: translateY(-50%);
+}
+
+.resizer:hover::before,
+.resizer:focus-visible::before {
   background: var(--accent);
+}
+
+/* 키보드 초점은 1px 선만으로는 잘 안 보여서 선을 굵혀 줘요 */
+.resizer:focus-visible::before {
+  --resizer-line: 3px;
+}
+
+.resizer:focus-visible {
   outline: none;
 }

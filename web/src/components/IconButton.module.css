@@ -1,0 +1,36 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.ghost:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.tint {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.tint:hover {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.outline {
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.outline:hover {
+  background: var(--surface-muted);
+}

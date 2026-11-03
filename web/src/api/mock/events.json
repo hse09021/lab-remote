@@ -1,0 +1,26 @@
+[
+  {
+    "time": "21:43",
+    "kind": "승인 요청",
+    "tone": "warn",
+    "text": "패키지 설치 요청 · Claude 앱 푸시 전송"
+  },
+  {
+    "time": "21:42",
+    "kind": "결정",
+    "tone": "success",
+    "text": "EXP-006 리뷰 후 다음 실험으로 rank 32 선택"
+  },
+  {
+    "time": "21:40",
+    "kind": "완료",
+    "tone": "neutral",
+    "text": "EXP-006 완료 · 목표 미달, 브랜치 exp-006 보존"
+  },
+  {
+    "time": "20:12",
+    "kind": "이상 감지",
+    "tone": "warn",
+    "text": "OOM · batch 64→32로 자동 수정 후 체크포인트에서 재개"
+  }
+]
