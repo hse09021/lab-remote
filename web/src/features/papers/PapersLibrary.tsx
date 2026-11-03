@@ -5,6 +5,8 @@ import {
   libraryChatQuery,
   paperSummariesQuery,
   papersQuery,
+  summaryDraftsQuery,
+  useSaveSummaryMd,
   useSetReadStatus,
 } from '@/api/papers'
 import type { Paper, ReadStatus } from '@/api/types'
@@ -39,6 +41,7 @@ const DENSITY_ITEMS: SegmentedItem<Density>[] = [
 ]
 
 export default function PapersLibrary() {
+  const saveMd = useSaveSummaryMd()
   const nav = usePaneResize({ initial: 250, min: 200, max: 400, dir: 1, collapsible: true })
   const drawer = usePaneResize({ initial: 400, min: 320, max: 720, dir: -1 })
 
@@ -48,10 +51,16 @@ export default function PapersLibrary() {
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [openSummaryId, setOpenSummaryId] = useState<string | null>('attn')
   const [summaryView, setSummaryView] = useState<SummaryView>('nice')
-  const [mdDrafts, setMdDrafts] = useState<Record<string, string>>({})
+  // 요약 MD 수정본은 저장소에 있어요 — 리더와 같은 값을 보고, 새로 고쳐도 남아요
+  const [mdEdits, setMdEdits] = useState<Record<string, string>>({})
 
-  const [papers, summaries, chat] = useQueries({
-    queries: [papersQuery(), paperSummariesQuery(), libraryChatQuery()],
+  const [papers, summaries, chat, mdDrafts] = useQueries({
+    queries: [
+      papersQuery(),
+      paperSummariesQuery(),
+      libraryChatQuery(),
+      summaryDraftsQuery(),
+    ],
   })
   const setStatus = useSetReadStatus()
 
@@ -63,8 +72,8 @@ export default function PapersLibrary() {
         !query ||
         p.title.toLowerCase().includes(query) ||
         p.authors.toLowerCase().includes(query) ||
-        p.field.toLowerCase().includes(query) ||
-        p.model.toLowerCase().includes(query),
+        (p.field ?? '').toLowerCase().includes(query) ||
+        (p.model ?? '').toLowerCase().includes(query),
     )
 
   const selectedCount = Object.values(selected).filter(Boolean).length
@@ -130,12 +139,16 @@ export default function PapersLibrary() {
       key: 'tags',
       label: '태그',
       width: 195,
-      render: (p) => (
-        <div className={s.tags}>
-          <TagChip>{p.field}</TagChip>
-          <TagChip>{p.model}</TagChip>
-        </div>
-      ),
+      render: (p) =>
+        p.field || p.model ? (
+          <div className={s.tags}>
+            {p.field && <TagChip>{p.field}</TagChip>}
+            {p.model && <TagChip>{p.model}</TagChip>}
+          </div>
+        ) : (
+          // 보관만 해 둔 논문 — 아직 태그가 없어요
+          <span className={s.pendingTag}>분류 대기</span>
+        ),
     },
     {
       key: 'summary',
@@ -272,17 +285,22 @@ export default function PapersLibrary() {
                 summary={openSummary}
                 view={summaryView}
                 onViewChange={setSummaryView}
-                draft={mdDrafts[openSummaryId] ?? null}
+                draft={mdEdits[openSummaryId] ?? mdDrafts.data?.[openSummaryId] ?? null}
+                saved={mdDrafts.data?.[openSummaryId] ?? null}
                 onDraftChange={(text) =>
-                  setMdDrafts((prev) => ({ ...prev, [openSummaryId]: text }))
+                  setMdEdits((prev) => ({ ...prev, [openSummaryId]: text }))
                 }
-                onSave={() =>
-                  setMdDrafts((prev) => {
+                onSave={() => {
+                  const markdown = mdEdits[openSummaryId] ?? mdDrafts.data?.[openSummaryId]
+                  if (markdown !== undefined) {
+                    saveMd.mutate({ id: openSummaryId, markdown })
+                  }
+                  setMdEdits((prev) => {
                     const next = { ...prev }
                     delete next[openSummaryId]
                     return next
                   })
-                }
+                }}
                 textareaId="library-md"
                 leadAction={
                   <Button variant="primary" size="md" padWide href={`/papers/${openSummaryId}`}>

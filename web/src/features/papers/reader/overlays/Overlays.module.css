@@ -309,3 +309,21 @@
   background: var(--anno-edge);
   z-index: 1;
 }
+
+/* 내가 칠한 하이라이트 — 목업의 분홍 */
+.myHighlight {
+  position: absolute;
+  z-index: 3;
+  border: none;
+  padding: 0;
+  border-radius: 2px;
+  background: rgb(var(--user-hl-rgb) / 0.75);
+  mix-blend-mode: multiply;
+  cursor: pointer;
+}
+
+.myHighlight:hover,
+.myHighlight:focus-visible {
+  background: rgb(var(--user-hl-rgb) / 0.95);
+  outline: 1px solid var(--anno-edge);
+}

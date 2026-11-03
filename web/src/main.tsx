@@ -7,6 +7,10 @@ import './styles/tokens.css'
 import './styles/reset.css'
 
 import { App } from './App'
+import { resetMockFromUrl } from './api/client'
+
+// 주소에 ?reset-mock 이 있으면 목업 저장소를 비우고 시작해요 (개발 모드)
+resetMockFromUrl()
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -39,8 +39,8 @@ export const libraryChatQuery = () =>
 
 /**
  * 읽음 상태 바꾸기.
- * 캐시를 바로 고쳐서 라이브러리와 리더가 같은 값을 보게 해요.
- * (리더도 같은 ['papers'] 캐시를 쓸 거예요)
+ * 목업 모드에서도 저장소(api/mockStore)를 고친 뒤 쿼리를 무효화해요 —
+ * 캐시가 비워져도, 새로 고쳐도 바꾼 값이 남아요.
  */
 export function useSetReadStatus() {
   const qc = useQueryClient()
@@ -48,23 +48,36 @@ export function useSetReadStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: ReadStatus }) =>
       send<{ id: string; status: ReadStatus }>('PATCH', `/papers/${id}`, { id, status }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers'] }),
+  })
+}
 
-    onMutate: async ({ id, status }) => {
-      await qc.cancelQueries({ queryKey: ['papers'] })
-      const previous = qc.getQueryData<Paper[]>(['papers'])
-      qc.setQueryData<Paper[]>(['papers'], (list) =>
-        list?.map((p) => (p.id === id ? { ...p, status } : p)),
-      )
-      return { previous }
-    },
+/** 요약 MD 수정본 저장 (null 이면 수정 취소) */
+export function useSaveSummaryMd() {
+  const qc = useQueryClient()
 
-    // 실패하면 되돌려요
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) qc.setQueryData(['papers'], ctx.previous)
-    },
+  return useMutation({
+    mutationFn: ({ id, markdown }: { id: string; markdown: string | null }) =>
+      send<unknown>('PUT', `/papers/${id}/summary-md`, { markdown }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers', 'summary-md'] }),
+  })
+}
 
-    // TODO(FastAPI): 서버가 붙으면 여기서 invalidate 해 서버 값으로 맞춰요.
-    // mock 단계에서는 되돌아올 서버 값이 없어 낙관적 갱신만 남겨요.
+/** 요약 MD 수정본 — 라이브러리와 리더가 같은 값을 봐요 */
+export const summaryDraftsQuery = () =>
+  queryOptions({
+    queryKey: ['papers', 'summary-md'],
+    queryFn: () => get<Record<string, string>>('/papers/summary-md'),
+  })
+
+/** 수치 불일치에서 고른 재현 목표 */
+export function useChooseDiscrepancy(paperId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (target: string) =>
+      send<unknown>('PUT', `/papers/${paperId}/discrepancy`, { target }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers', paperId, 'reader'] }),
   })
 }
 
@@ -82,41 +95,27 @@ export function useSaveReference() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ reference, save }: { reference: Reference; save: boolean }) =>
-      save
-        ? send<{ id: string }>('POST', '/papers', { id: refPaperId(reference) })
-        : send<{ id: string }>('DELETE', `/papers/${refPaperId(reference)}`),
-
-    onMutate: async ({ reference, save }) => {
-      await qc.cancelQueries({ queryKey: ['papers'] })
-      const previous = qc.getQueryData<Paper[]>(['papers'])
+    mutationFn: ({ reference, save }: { reference: Reference; save: boolean }) => {
       const id = refPaperId(reference)
+      if (!save) return send<unknown>('DELETE', `/papers/${id}`)
 
-      qc.setQueryData<Paper[]>(['papers'], (list) => {
-        const rest = (list ?? []).filter((p) => p.id !== id)
-        if (!save) return rest
-        const added: Paper = {
-          id,
-          title: reference.title,
-          // short 가 이미 연도를 품고 있어요 ("Hochreiter & Schmidhuber, 1997")
-          authors: reference.short,
-          venue: `${reference.venue} ${reference.year}`,
-          field: '[분야 미분류]',
-          model: '[모델 미확인]',
-          status: 'todo',
-          source: reference.arxiv ? 'arxiv-html' : 'pdf',
-          summaryState: 'running',
-          access: '방금',
-          path: null,
-        }
-        return [added, ...rest]
-      })
-
-      return { previous }
+      const added: Paper = {
+        id,
+        title: reference.title,
+        // short 가 이미 연도를 품고 있어요 ("Hochreiter & Schmidhuber, 1997")
+        authors: reference.short,
+        venue: `${reference.venue} ${reference.year}`,
+        // 아직 분류 전이에요 — 표에서는 "분류 대기" 칩 하나로 보여요
+        field: null,
+        model: null,
+        status: 'todo',
+        source: reference.arxiv ? 'arxiv-html' : 'pdf',
+        summaryState: 'running',
+        access: '방금',
+        path: null,
+      }
+      return send<unknown>('POST', '/papers', added)
     },
-
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) qc.setQueryData(['papers'], ctx.previous)
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers'] }),
   })
 }

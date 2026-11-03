@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { UserAnnotation } from '@/api/annotations'
 import type { ExplainZone, Highlight, PaperReaderPayload } from '@/api/types'
 import type { ReactNode } from 'react'
 import { Button, IconButton } from '@/components'
@@ -6,10 +7,12 @@ import { copyText } from '@/lib/clipboard'
 import type { HighlightToggles } from './highlightCategories'
 import { anchorFrom } from './floating/useReaderOverlays'
 import type { SelectionAnchor as Anchor } from './floating/SelectionMenu'
+import type { SelectionPlace } from './selectionPlace'
 import { ImagePdfRenderer } from './pdf/ImagePdfRenderer'
 import type { PdfSource } from './pdf/types'
 import {
   CiteHotspots,
+  MyPdfHighlights,
   ExplainZones,
   HighlightMemo,
   HighlightOverlays,
@@ -45,7 +48,10 @@ interface Props {
   /** 인용 번호 핫스팟 */
   onCite: (n: number, anchor: Anchor) => void
   /** 본문 선택 (지금은 2쪽 핫스팟으로 흉내) */
-  onSelect: (anchor: Anchor, text: string, sectionId: string) => void
+  onSelect: (anchor: Anchor, text: string, sectionId: string, place: SelectionPlace) => void
+  /** 내가 칠한 하이라이트 (pt 좌표로 다시 그려요) */
+  myHighlights: UserAnnotation[]
+  onMyHighlight: (annotation: UserAnnotation, anchor: Anchor) => void
   /** 선택 흉내 핫스팟에 얹을 표식 — 선택 중 / 내 하이라이트 / 주석 저장됨 */
   selectionMarks?: { active: boolean; highlighted: boolean; annotated: boolean }
   /** 마우스가 올라간 설명 대상 — E 키로 열 때 써요 */
@@ -68,6 +74,8 @@ export function PdfView({
   onExplain,
   onCite,
   onSelect,
+  myHighlights,
+  onMyHighlight,
   selectionMarks,
   onHover,
   floating,
@@ -355,6 +363,14 @@ export function PdfView({
                     if (a) onCite(n, a)
                   }}
                 />
+                <MyPdfHighlights
+                  ctx={ctx}
+                  annotations={myHighlights}
+                  onPick={(annotation, el) => {
+                    const a = anchorAt(el)
+                    if (a) onMyHighlight(annotation, a)
+                  }}
+                />
                 <SelectionHotspot
                   ctx={ctx}
                   spot={reader.selectionSpot}
@@ -363,7 +379,13 @@ export function PdfView({
                   annotated={selectionMarks?.annotated}
                   onPick={(el: HTMLElement) => {
                     const a = anchorAt(el)
-                    if (a) onSelect(a, reader.selectionSpot.text, 's1')
+                    if (a) {
+                      onSelect(a, reader.selectionSpot.text, 's1', {
+                        page: reader.selectionSpot.page,
+                        anchor: null,
+                        boxes: [reader.selectionSpot.box],
+                      })
+                    }
                   }}
                 />
                 <SectionSparkles

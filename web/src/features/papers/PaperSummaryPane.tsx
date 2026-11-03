@@ -16,8 +16,10 @@ interface Props {
   summary: PaperSummary
   view: SummaryView
   onViewChange: (v: SummaryView) => void
-  /** 사용자가 고친 MD. 없으면 요약에서 만들어 써요 */
+  /** 지금 보여 줄 MD (저장된 값이나 수정 중인 글). 없으면 요약에서 만들어 써요 */
   draft: string | null
+  /** 이미 저장된 MD. 이것과 다를 때만 "수정됨"이에요 */
+  saved?: string | null
   onDraftChange: (text: string) => void
   onSave: () => void
   /** 근거 링크를 눌렀을 때. 리더에서는 해당 위치로 이동해요 */
@@ -37,6 +39,7 @@ export function PaperSummaryPane({
   view,
   onViewChange,
   draft,
+  saved = null,
   onDraftChange,
   onSave,
   onJump,
@@ -45,7 +48,9 @@ export function PaperSummaryPane({
 }: Props) {
   const generated = buildSummaryMarkdown(summary)
   const text = draft ?? generated
-  const dirty = draft !== null && draft !== generated
+  // 저장해 둔 값(없으면 요약에서 만든 값)과 다를 때만 저장할 게 있어요
+  const base = saved ?? generated
+  const dirty = draft !== null && draft !== base
 
   const Ref = ({ refText }: { refText: string }) =>
     onJump ? (
