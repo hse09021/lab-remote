@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { UserAnnotation } from '@/api/annotations'
+import type { PtRect } from '@/api/types'
 import type { ExplainZone, Highlight, PaperReaderPayload } from '@/api/types'
 import type { ReactNode } from 'react'
 import { Button, IconButton } from '@/components'
@@ -9,16 +10,20 @@ import { anchorFrom } from './floating/useReaderOverlays'
 import type { SelectionAnchor as Anchor } from './floating/SelectionMenu'
 import type { SelectionPlace } from './selectionPlace'
 import { ImagePdfRenderer } from './pdf/ImagePdfRenderer'
-import type { PdfSource } from './pdf/types'
+// PDF.js 는 무거워요 — PDF 보기를 열 때만 받아요 (모바일은 이 화면을 안 그려요)
+const PdfJsRenderer = lazy(() =>
+  import('./pdf/PdfJsRenderer').then((m) => ({ default: m.PdfJsRenderer })),
+)
+import type { PdfPageContext, PdfSource } from './pdf/types'
 import {
   CiteHotspots,
   MyPdfHighlights,
+  MyPdfNotes,
   ExplainZones,
   HighlightMemo,
   HighlightOverlays,
   SectionMarkers,
   SectionSparkles,
-  SelectionHotspot,
 } from './overlays'
 import s from './PdfView.module.css'
 
@@ -51,9 +56,9 @@ interface Props {
   onSelect: (anchor: Anchor, text: string, sectionId: string, place: SelectionPlace) => void
   /** 내가 칠한 하이라이트 (pt 좌표로 다시 그려요) */
   myHighlights: UserAnnotation[]
+  /** 내가 단 주석 — 밑줄로 표시해요 */
+  myNotes: UserAnnotation[]
   onMyHighlight: (annotation: UserAnnotation, anchor: Anchor) => void
-  /** 선택 흉내 핫스팟에 얹을 표식 — 선택 중 / 내 하이라이트 / 주석 저장됨 */
-  selectionMarks?: { active: boolean; highlighted: boolean; annotated: boolean }
   /** 마우스가 올라간 설명 대상 — E 키로 열 때 써요 */
   onHover: (key: string | null, anchor: Anchor | null) => void
   /** 본문 위에 뜨는 것들 */
@@ -75,8 +80,8 @@ export function PdfView({
   onCite,
   onSelect,
   myHighlights,
+  myNotes,
   onMyHighlight,
-  selectionMarks,
   onHover,
   floating,
   onToast,
@@ -277,6 +282,90 @@ export function PdfView({
   const visible = (h: Highlight) => toggles[h.category]
   const selected = reader.highlights.find((h) => h.id === selectedId) ?? null
 
+  /* 두 렌더러가 같이 쓰는 오버레이 */
+  const renderOverlays = (ctx: PdfPageContext) => {
+          const pageHighlights = reader.highlights.filter(
+            (h) => h.page === ctx.page && visible(h),
+          )
+          const pageSections = reader.sections.filter((x) => x.page === ctx.page)
+          return (
+            <>
+              <SectionMarkers
+                sections={pageSections}
+                pageHeight={reader.pageSize.height}
+                onMarker={(id, el) => {
+                  if (el) {
+                    sectionEls.current.set(id, el)
+                    sectionTops.current = reader.sections.map((x) => ({ id: x.id, top: 0 }))
+                  } else sectionEls.current.delete(id)
+                }}
+              />
+              <HighlightOverlays
+                ctx={ctx}
+                highlights={pageHighlights}
+                selectedId={selectedId}
+                onSelect={(h) => {
+                  setSelectedId((prev) => (prev === h.id ? null : h.id))
+                  onActiveSection(h.section)
+                }}
+              />
+              <ExplainZones
+                ctx={ctx}
+                zones={reader.explainZones.filter((z) => z.page === ctx.page)}
+                onExplain={(key, el) => openAt(key, el)}
+                onCopy={copyZone}
+                onHover={(key, el) =>
+                  onHover(key, key && el ? anchorAt(el) : null)
+                }
+              />
+              <CiteHotspots
+                ctx={ctx}
+                spots={reader.citeSpots.filter((c) => c.page === ctx.page)}
+                onPick={(n, el) => {
+                  const a = anchorAt(el)
+                  if (a) onCite(n, a)
+                }}
+              />
+              <MyPdfHighlights
+                ctx={ctx}
+                annotations={myHighlights}
+                onPick={(annotation, el) => {
+                  const a = anchorAt(el)
+                  if (a) onMyHighlight(annotation, a)
+                }}
+              />
+              <MyPdfNotes
+                ctx={ctx}
+                annotations={myNotes}
+                onPick={(annotation, el) => {
+                  const a = anchorAt(el)
+                  if (a) onMyHighlight(annotation, a)
+                }}
+              />
+              <SectionSparkles
+                ctx={ctx}
+                sections={pageSections}
+                titleSpot={ctx.page === 1 ? TITLE_SPOT : null}
+                onExplain={(key, el) => openAt(key, el)}
+                onHover={(key, el) =>
+                  onHover(key, key && el ? anchorAt(el) : null)
+                }
+              />
+              {selected && selected.page === ctx.page && (
+                <HighlightMemo
+                  ctx={ctx}
+                  highlight={selected}
+                  pageWidth={reader.pageSize.width}
+                  pageHeight={reader.pageSize.height}
+                  onAsk={() => onAskChat(selected.section, selected.page)}
+                  onOpenHtml={() => onOpenHtml(selected.section)}
+                  onClose={() => setSelectedId(null)}
+                />
+              )}
+            </>
+          )
+  }
+
   return (
     <div className={s.view}>
       <div className={s.scroll} ref={scrollRef}>
@@ -311,7 +400,19 @@ export function PdfView({
           </span>
         </div>
 
-        <ImagePdfRenderer
+        <Suspense
+          fallback={
+            <ImagePdfRenderer
+              source={source}
+              baseWidth={reader.baseWidth}
+              zoom={zoom}
+            >
+              {renderOverlays}
+            </ImagePdfRenderer>
+          }
+        >
+        <PdfJsRenderer
+          url={reader.pdfUrl}
           source={source}
           baseWidth={reader.baseWidth}
           zoom={zoom}
@@ -319,99 +420,48 @@ export function PdfView({
             if (el) pageEls.current.set(p, el)
             else pageEls.current.delete(p)
           }}
-        >
-          {(ctx) => {
-            const pageHighlights = reader.highlights.filter(
-              (h) => h.page === ctx.page && visible(h),
+          onSelect={(rects, text, page) => {
+            const scroller = scrollRef.current
+            const el = pageEls.current.get(page)
+            if (!scroller || !el || !rects.length) return
+            // 선택 덩어리 전체를 감싸는 사각형 아래에 메뉴를 띄워요
+            const [x0, , x1, y1] = rects.reduce<PtRect>(
+              (box, r) => [
+                Math.min(box[0], r[0]),
+                Math.min(box[1], r[1]),
+                Math.max(box[2], r[2]),
+                Math.max(box[3], r[3]),
+              ],
+              [Infinity, Infinity, -Infinity, -Infinity],
             )
-            const pageSections = reader.sections.filter((x) => x.page === ctx.page)
-            return (
-              <>
-                <SectionMarkers
-                  sections={pageSections}
-                  pageHeight={reader.pageSize.height}
-                  onMarker={(id, el) => {
-                    if (el) {
-                      sectionEls.current.set(id, el)
-                      sectionTops.current = reader.sections.map((x) => ({ id: x.id, top: 0 }))
-                    } else sectionEls.current.delete(id)
-                  }}
-                />
-                <HighlightOverlays
-                  ctx={ctx}
-                  highlights={pageHighlights}
-                  selectedId={selectedId}
-                  onSelect={(h) => {
-                    setSelectedId((prev) => (prev === h.id ? null : h.id))
-                    onActiveSection(h.section)
-                  }}
-                />
-                <ExplainZones
-                  ctx={ctx}
-                  zones={reader.explainZones.filter((z) => z.page === ctx.page)}
-                  onExplain={(key, el) => openAt(key, el)}
-                  onCopy={copyZone}
-                  onHover={(key, el) =>
-                    onHover(key, key && el ? anchorAt(el) : null)
-                  }
-                />
-                <CiteHotspots
-                  ctx={ctx}
-                  spots={reader.citeSpots.filter((c) => c.page === ctx.page)}
-                  onPick={(n, el) => {
-                    const a = anchorAt(el)
-                    if (a) onCite(n, a)
-                  }}
-                />
-                <MyPdfHighlights
-                  ctx={ctx}
-                  annotations={myHighlights}
-                  onPick={(annotation, el) => {
-                    const a = anchorAt(el)
-                    if (a) onMyHighlight(annotation, a)
-                  }}
-                />
-                <SelectionHotspot
-                  ctx={ctx}
-                  spot={reader.selectionSpot}
-                  active={selectionMarks?.active}
-                  highlighted={selectionMarks?.highlighted}
-                  annotated={selectionMarks?.annotated}
-                  onPick={(el: HTMLElement) => {
-                    const a = anchorAt(el)
-                    if (a) {
-                      onSelect(a, reader.selectionSpot.text, 's1', {
-                        page: reader.selectionSpot.page,
-                        anchor: null,
-                        boxes: [reader.selectionSpot.box],
-                      })
-                    }
-                  }}
-                />
-                <SectionSparkles
-                  ctx={ctx}
-                  sections={pageSections}
-                  titleSpot={ctx.page === 1 ? TITLE_SPOT : null}
-                  onExplain={(key, el) => openAt(key, el)}
-                  onHover={(key, el) =>
-                    onHover(key, key && el ? anchorAt(el) : null)
-                  }
-                />
-                {selected && selected.page === ctx.page && (
-                  <HighlightMemo
-                    ctx={ctx}
-                    highlight={selected}
-                    pageWidth={reader.pageSize.width}
-                    pageHeight={reader.pageSize.height}
-                    onAsk={() => onAskChat(selected.section, selected.page)}
-                    onOpenHtml={() => onOpenHtml(selected.section)}
-                    onClose={() => setSelectedId(null)}
-                  />
-                )}
-              </>
-            )
+            const rect = el.getBoundingClientRect()
+            const toPx = (pt: number) => (pt / reader.pageSize.width) * rect.width
+            const anchor = {
+              x: rect.left + toPx(x0) - scroller.getBoundingClientRect().left + scroller.scrollLeft,
+              y: rect.top + toPx(y1) - scroller.getBoundingClientRect().top + scroller.scrollTop,
+              width: toPx(x1 - x0),
+            }
+            const sectionId =
+              [...reader.sections].reverse().find((x) => x.page <= page)?.id ?? 's1'
+            onSelect(anchor, text, sectionId, { page, anchor: null, boxes: rects })
           }}
-        </ImagePdfRenderer>
+          fallback={
+            <ImagePdfRenderer
+              source={source}
+              baseWidth={reader.baseWidth}
+              zoom={zoom}
+              onPageElement={(p, el) => {
+                if (el) pageEls.current.set(p, el)
+                else pageEls.current.delete(p)
+              }}
+            >
+              {renderOverlays}
+            </ImagePdfRenderer>
+          }
+        >
+          {renderOverlays}
+        </PdfJsRenderer>
+        </Suspense>
 
         {floating}
       </div>

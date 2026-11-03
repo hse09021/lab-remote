@@ -380,3 +380,40 @@ export function MyPdfHighlights({
     </>
   )
 }
+
+/* ── 내가 단 주석 자리 (PDF) ──────────────────────────────── */
+
+export function MyPdfNotes({
+  ctx,
+  annotations,
+  onPick,
+}: {
+  ctx: PdfPageContext
+  annotations: UserAnnotation[]
+  onPick: (annotation: UserAnnotation, el: HTMLElement) => void
+}) {
+  return (
+    <>
+      {annotations.map((a) =>
+        (a.boxes ?? [])
+          .filter(() => a.page === ctx.page)
+          .map((box, i) => (
+            <button
+              key={`${a.id}-${i}`}
+              type="button"
+              aria-label={`내 주석 · ${a.text.slice(0, 24)}`}
+              title={a.text}
+              /* 밑변에 붙는 2px 줄 — 높이 0 사각형에 얹어요 */
+              style={{
+                ...ctx.rectToStyle([box[0], box[3], box[2], box[3]]),
+                height: 2,
+                marginTop: 1,
+              }}
+              onClick={(e) => onPick(a, e.currentTarget)}
+              className={s.myNote}
+            />
+          )),
+      )}
+    </>
+  )
+}

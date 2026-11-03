@@ -327,3 +327,19 @@
   background: rgb(var(--user-hl-rgb) / 0.95);
   outline: 1px solid var(--anno-edge);
 }
+
+/* 내가 단 주석 — 보라 밑줄 */
+.myNote {
+  position: absolute;
+  z-index: 3;
+  border: none;
+  padding: 0;
+  background: var(--anno-edge);
+  cursor: pointer;
+}
+
+.myNote:hover,
+.myNote:focus-visible {
+  height: 3px !important;
+  outline: none;
+}

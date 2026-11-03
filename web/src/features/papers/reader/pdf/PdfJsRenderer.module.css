@@ -1,0 +1,52 @@
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  width: max-content;
+  margin: 0 auto;
+}
+
+.page {
+  position: relative;
+  flex: 0 0 auto;
+  background: var(--bg);
+  box-shadow: 0 1px 3px rgb(20 26 25 / 0.18);
+}
+
+.canvas {
+  display: block;
+}
+
+/*
+ * 투명 글자 층 — pdfjs 가 만든 span 을 담아요.
+ * 모양은 pdfjs 의 pdf_viewer.css 가 잡고, 여기서는 자리만 줘요.
+ */
+.textLayerBox {
+  /* 자리만 잡아요 — span 배치는 pdfjs 의 전역 .textLayer 규칙이 해요 */
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* 아직 안 그린 쪽 */
+.placeholder {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-sunken);
+}
+
+/*
+ * 하이라이트·인용·그림/수식은 글자 층보다 위에 올라가야 눌려요.
+ * 층 자체는 클릭을 통과시키고, 안의 요소만 받아요 (드래그 선택을 막지 않게).
+ */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
