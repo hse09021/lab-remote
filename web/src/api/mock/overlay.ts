@@ -1,6 +1,15 @@
-import type { DesignDraft, Paper, PermissionsPayload } from '../types'
+import type {
+  Dashboard,
+  DesignDraft,
+  EventEntry,
+  Experiment,
+  Paper,
+  PermissionsPayload,
+} from '../types'
 import {
   overlayPapers,
+  readLoopPaused,
+  readStopped,
   readDesignValues,
   readDiscrepancy,
   readPermissions,
@@ -14,6 +23,33 @@ import {
 export function applyOverlay<T>(path: string, data: T): T {
   if (path === '/papers') {
     return overlayPapers(data as Paper[]) as T
+  }
+
+  if (path === '/experiments') {
+    const stopped = readStopped()
+    if (!stopped.length) return data
+    return (data as Experiment[]).map((e) =>
+      stopped.includes(e.id)
+        ? { ...e, state: 'stopped' as const, stateNote: '모바일에서 정지', progress: null }
+        : e,
+    ) as T
+  }
+
+  if (path === '/experiments/events') {
+    const stopped = readStopped()
+    if (!stopped.length) return data
+    // 정지한 실험을 기록 맨 위에 올려요 (목업과 같게)
+    const added: EventEntry[] = stopped.map((id) => ({
+      time: '방금',
+      kind: '정지',
+      tone: 'warn',
+      text: `${id} 정지 · 체크포인트 저장 · 모바일에서 요청`,
+    }))
+    return [...added, ...(data as EventEntry[])] as T
+  }
+
+  if (path === '/experiments/dashboard') {
+    return { ...(data as Dashboard), loopPaused: readLoopPaused() } as T
   }
 
   if (path === '/experiments/permissions') {

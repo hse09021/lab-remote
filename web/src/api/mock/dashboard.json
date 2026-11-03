@@ -57,22 +57,95 @@
   ],
   "learningCurve": {
     "title": "학습 곡선 · EXP-007",
-    "epochs": [1, 3, 5, 8, 11, 14, 17, 20, 23, 26, 29, 31, 34],
-    "train": [2.099, 1.62, 1.299, 1.02, 0.859, 0.74, 0.65, 0.58, 0.52, 0.479, 0.449, 0.431, 0.412],
-    "val": [2.0, 1.579, 1.31, 1.079, 0.93, 0.82, 0.74, 0.69, 0.65, 0.621, 0.6, 0.584, 0.587],
+    "epochs": [
+      1,
+      3,
+      5,
+      8,
+      11,
+      14,
+      17,
+      20,
+      23,
+      26,
+      29,
+      31,
+      34
+    ],
+    "train": [
+      2.099,
+      1.62,
+      1.299,
+      1.02,
+      0.859,
+      0.74,
+      0.65,
+      0.58,
+      0.52,
+      0.479,
+      0.449,
+      0.431,
+      0.412
+    ],
+    "val": [
+      2.0,
+      1.579,
+      1.31,
+      1.079,
+      0.93,
+      0.82,
+      0.74,
+      0.69,
+      0.65,
+      0.621,
+      0.6,
+      0.584,
+      0.587
+    ],
     "totalEpochs": 50,
     "currentEpoch": 34,
     "yMax": 2.0,
     "wandbHref": "#wandb"
   },
   "resources": [
-    { "label": "GPU", "pct": 94, "value": "94%", "tone": "accent" },
-    { "label": "VRAM", "pct": 89, "value": "21.3/24G", "tone": "attention" },
-    { "label": "온도", "pct": 71, "value": "71°C", "tone": "neutral" },
-    { "label": "CPU", "pct": 38, "value": "38%", "tone": "neutral" },
-    { "label": "RAM", "pct": 64, "value": "41/64G", "tone": "neutral" },
-    { "label": "디스크", "pct": 31, "value": "612G/2T", "tone": "neutral" }
+    {
+      "label": "GPU",
+      "pct": 94,
+      "value": "94%",
+      "tone": "accent"
+    },
+    {
+      "label": "VRAM",
+      "pct": 89,
+      "value": "21.3/24G",
+      "tone": "attention"
+    },
+    {
+      "label": "온도",
+      "pct": 71,
+      "value": "71°C",
+      "tone": "neutral"
+    },
+    {
+      "label": "CPU",
+      "pct": 38,
+      "value": "38%",
+      "tone": "neutral"
+    },
+    {
+      "label": "RAM",
+      "pct": 64,
+      "value": "41/64G",
+      "tone": "neutral"
+    },
+    {
+      "label": "디스크",
+      "pct": 31,
+      "value": "612G/2T",
+      "tone": "neutral"
+    }
   ],
   "queueCaption": "GPU 1개 · 순차 실행 · 성공 기준 충족 시에만 main 병합",
-  "eventsCaption": "Decision_log.md · Discord 알림"
+  "eventsCaption": "Decision_log.md · Discord 알림",
+  "loopPaused": false
 }

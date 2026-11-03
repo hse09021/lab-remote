@@ -1,0 +1,118 @@
+.shell {
+  /* 목업의 844px 고정 프레임 대신 실제 기기 높이를 써요 */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  border-bottom: 1px solid var(--border);
+}
+
+.wordmark {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.dot {
+  color: var(--accent);
+}
+
+.tabName {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.conn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.connDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabs {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab {
+  /* 손가락으로 누르기 좋게 */
+  min-height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.tabOn {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.iconWrap {
+  position: relative;
+  display: flex;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--attention);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

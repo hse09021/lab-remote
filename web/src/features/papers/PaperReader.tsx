@@ -49,8 +49,13 @@ import type { JumpTarget } from './reader/PdfView'
 import { HtmlView } from './reader/html/HtmlView'
 import type { SummaryView } from './PaperSummaryPane'
 import s from './PaperReader.module.css'
+import { useIsMobile } from '@/lib/useMediaQuery'
+import { MobilePapers } from '../mobile/MobilePapers'
 
 export default function PaperReader() {
+  const isMobile = useIsMobile()
+  if (isMobile) return <MobilePapers />
+
   const { id = 'attn' } = useParams<{ id: string }>()
   // 설계 초안의 근거 링크로 들어오면 그 섹션부터 보여 줘요
   const [search] = useSearchParams()

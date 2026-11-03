@@ -199,6 +199,8 @@ export interface Dashboard {
   learningCurve: LearningCurve
   resources: ResourceMeter[]
   queueCaption: string
+  /** 루프가 멈춰 있는지 (모바일에서 정지하면 true) */
+  loopPaused: boolean
   eventsCaption: string
 }
 

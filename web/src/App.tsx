@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import NotFound from './features/NotFound'
+import { useIsMobile } from './lib/useMediaQuery'
+import { MobileCode } from './features/mobile/MobileCode'
 
 import PapersLibrary from './features/papers/PapersLibrary'
 import PaperReader from './features/papers/PaperReader'
@@ -26,19 +28,23 @@ const router = createBrowserRouter([
       { path: 'experiments/permissions', element: <PermissionSettings /> },
       { path: 'experiments/new/from-paper', element: <ExperimentDesignDraft /> },
 
-      {
-        path: 'code',
-        element: (
-          <Suspense fallback={<ScreenLoading />}>
-            <CodeEditorPage />
-          </Suspense>
-        ),
-      },
+      // 모바일은 Monaco 청크를 아예 받지 않게 라우트에서 갈라요
+      { path: 'code', element: <CodeRoute /> },
 
       { path: '*', element: <NotFound /> },
     ],
   },
 ])
+
+function CodeRoute() {
+  const isMobile = useIsMobile()
+  if (isMobile) return <MobileCode />
+  return (
+    <Suspense fallback={<ScreenLoading />}>
+      <CodeEditorPage />
+    </Suspense>
+  )
+}
 
 function ScreenLoading() {
   return (

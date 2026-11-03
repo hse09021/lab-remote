@@ -32,11 +32,16 @@ import { ProjectSidebar } from './ProjectSidebar'
 import { ResourceMeterList } from './ResourceMeterList'
 import { experimentStatus } from './experimentStatus'
 import s from './ExperimentDashboard.module.css'
+import { useIsMobile } from '@/lib/useMediaQuery'
+import { MobileExperiments } from '../mobile/MobileExperiments'
 
 /** 비어 있는 칸은 목업처럼 em 대시로 */
 const BLANK = '—'
 
 export default function ExperimentDashboard() {
+  const isMobile = useIsMobile()
+  if (isMobile) return <MobileExperiments />
+
   const nav = usePaneResize({
     initial: 250,
     min: 200,

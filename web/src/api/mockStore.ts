@@ -44,6 +44,10 @@ export interface MockState {
   discrepancy: Record<string, string>
   /** 실험 설계 초안에 직접 넣은 값 (논문별 · 항목 key 별) */
   designValues: Record<string, Record<string, string>>
+  /** 모바일에서 정지한 실험 id */
+  stoppedExperiments: string[]
+  /** 루프 일시정지 */
+  loopPaused: boolean
 }
 
 const VERSION = 1
@@ -58,6 +62,8 @@ const empty = (): MockState => ({
   permissions: null,
   discrepancy: {},
   designValues: {},
+  stoppedExperiments: [],
+  loopPaused: false,
 })
 
 /* ── localStorage ─────────────────────────────────────────── */
@@ -217,6 +223,24 @@ export function setPermissions(value: MockState['permissions']) {
 export function setDiscrepancy(paperId: string, target: string) {
   update((prev) => ({ ...prev, discrepancy: { ...prev.discrepancy, [paperId]: target } }))
 }
+
+export function stopExperiment(id: string) {
+  update((prev) => ({
+    ...prev,
+    stoppedExperiments: prev.stoppedExperiments.includes(id)
+      ? prev.stoppedExperiments
+      : [...prev.stoppedExperiments, id],
+    // 목업처럼 실험을 멈추면 루프도 같이 일시정지돼요
+    loopPaused: true,
+  }))
+}
+
+export function setLoopPaused(paused: boolean) {
+  update((prev) => ({ ...prev, loopPaused: paused }))
+}
+
+export const readStopped = () => state.stoppedExperiments
+export const readLoopPaused = () => state.loopPaused
 
 export function setDesignValues(paperId: string, values: Record<string, string>) {
   update((prev) => ({
