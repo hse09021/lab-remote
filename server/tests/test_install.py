@@ -38,10 +38,29 @@ def test_덤프_모드_설치(fake_settings):
     assert info["mode"] == "dump"
 
 
-def test_enforce_는_판정_모듈이_없으면_거절():
-    """pretooluse.py 가 생기기 전에 잘못 걸어 두지 못하게."""
-    if os.path.exists(os.path.join(install.server_dir(), "app", "hooks", "pretooluse.py")):
-        pytest.skip("판정 모듈이 이미 있어요")
+def test_enforce_설치(fake_settings):
+    info = install.install(mode="enforce")
+    data = read(fake_settings)
+
+    assert data["effortLevel"] == "high"
+    assert set(data["hooks"]) == {"PreToolUse", "PostToolUse", "Stop", "SessionEnd"}
+    pre = data["hooks"]["PreToolUse"][0]
+    # 판정 훅이 깨지면 조용히 문이 열리면 안 된다
+    assert pre["hooks"][0]["onFailure"] == "block"
+    assert "app.hooks.pretooluse" in pre["hooks"][0]["command"]
+    assert "MultiEdit" in pre["matcher"]  # 실측 안 됐어도 빼지 않는다
+    assert "ToolSearch" not in pre["matcher"]  # 읽기 전용
+    # 기록용 훅은 아무것도 막지 않는다
+    for event in ("PostToolUse", "Stop", "SessionEnd"):
+        assert data["hooks"][event][0]["hooks"][0]["onFailure"] == "continue"
+    assert info["mode"] == "enforce"
+
+
+def test_enforce_는_판정_모듈이_없으면_거절(fake_settings, monkeypatch, tmp_path):
+    """pretooluse.py 가 생기기 전에 잘못 걸어 두지 못하게 하는 안전장치."""
+    empty = tmp_path / "빈서버"
+    (empty / "app" / "hooks").mkdir(parents=True)
+    monkeypatch.setattr(install, "server_dir", lambda: str(empty))
     with pytest.raises(RuntimeError) as err:
         install.install(mode="enforce")
     assert "pretooluse" in str(err.value)
