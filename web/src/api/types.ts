@@ -528,4 +528,52 @@ export interface PaperReaderPayload {
   extractedConfig: ExtractedConfig
   discrepancy: DiscrepancyNote
   inlineMemo: InlineMemo
+  /** 섹션·그림·수식별 미리 써 둔 설명 */
+  topics: Record<string, Topic>
+  /** [[용어]] 에 붙는 뜻풀이 */
+  terms: Record<string, string>
+  selectionSpot: SelectionSpot
 }
+
+/* ── 떠 있는 대화창 (리더 4) ────────────────────────────────── */
+
+/** 설명 본문을 이루는 조각들 */
+export type TopicBlock =
+  | { p: string }
+  | { li: string; p: string }
+  | { h: string }
+  | { rel: string; note: string }
+  | { src: string; go: string }
+  | { info: true }
+
+export interface TopicQuestion {
+  q: string
+  a: string
+  /** 답의 근거 섹션 */
+  go: string
+  src: string
+}
+
+export interface Topic {
+  title: string
+  /** 설명을 요청한 원문 한 줄 */
+  quote?: string
+  blocks: TopicBlock[]
+  qs: TopicQuestion[]
+}
+
+/** 본문에서 선택했다고 가정하는 자리 (PDF 는 텍스트 레이어가 없어서) */
+export interface SelectionSpot {
+  page: number
+  box: PtRect
+  text: string
+  /** 이 구절의 번역 (목업에 미리 써 둔 것) */
+  translation: string
+  translationNote: string
+}
+
+/** 대화창에 쌓이는 줄 */
+export type ChatEntry =
+  | { kind: 'user'; text: string }
+  | { kind: 'loading' }
+  | { kind: 'answer'; text: string; go?: string; src?: string }

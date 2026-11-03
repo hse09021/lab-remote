@@ -267,3 +267,45 @@
   height: 1px;
   pointer-events: none;
 }
+
+/* 본문 선택 흉내 — PDF.js 로 바꾸면 실제 선택으로 대체돼요 */
+.selSpot {
+  position: absolute;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: text;
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.selSpot:hover,
+.selSpot:focus-visible {
+  background: rgb(var(--cite-rgb) / 0.1);
+  outline: none;
+}
+
+/* 본문 선택 흉내 — 목업 FocusReader 의 3가지 표식 */
+.selTint,
+.selMine {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 2px;
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+.selTint {
+  background: rgb(var(--sel-tint-rgb) / 0.35);
+}
+
+.selMine {
+  background: rgb(var(--user-hl-rgb) / 0.75);
+}
+
+.selAnno {
+  position: absolute;
+  pointer-events: none;
+  background: var(--anno-edge);
+  z-index: 1;
+}

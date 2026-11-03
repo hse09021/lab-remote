@@ -1,0 +1,120 @@
+import type { RefObject } from 'react'
+import type { PaperReaderPayload } from '@/api/types'
+import { CiteCard } from './CiteCard'
+import { FloatingChat } from './FloatingChat'
+import { NotePopover, SelectionMenu, TranslatePopover } from './SelectionMenu'
+import type { SelectionAction } from './SelectionMenu'
+import type { useFloatingChat } from './useFloatingChat'
+import type { useReaderOverlays } from './useReaderOverlays'
+
+export interface FloatingHandlers {
+  /** 대화창 본체를 띄울 곳 — 스크롤하지 않는 가운데 열 */
+  chatHost: RefObject<HTMLElement | null>
+  chat: ReturnType<typeof useFloatingChat>
+  overlays: ReturnType<typeof useReaderOverlays>
+  reader: PaperReaderPayload
+  onSelectionAct: (a: SelectionAction) => void
+  onJump: (sectionId: string) => void
+  onOpenPaper: (title: string) => void
+  onSaveRef: (n: number) => void
+  /** 라이브러리에 들어 있는지 — papers 캐시에서 봐요 */
+  isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
+  /** 주석 팝오버 저장 — 위치 라벨 계산이 필요해서 화면이 맡아요 */
+  onSaveNote: (body: string) => void
+  onWorth: (n: number) => void
+  onToast: (msg: string) => void
+}
+
+/**
+ * 본문 위에 뜨는 것들 — 대화창 · 인용 카드 · 선택 메뉴 · 팝오버.
+ * 스크롤 컨테이너 안에 넣어서 본문과 함께 움직여요.
+ * 대화창 본체만 예외로 `chatHost`(가운데 열)에 포털해서 모서리에 고정돼요.
+ */
+export function FloatingLayer({
+  chatHost,
+  chat,
+  overlays,
+  reader,
+  onSelectionAct,
+  onJump,
+  onOpenPaper,
+  onSaveRef,
+  isRefSaved,
+  onSaveNote,
+  onWorth,
+  onToast,
+}: FloatingHandlers) {
+  const citeRef = overlays.cite
+    ? reader.references.find((r) => r.n === overlays.cite!.n)
+    : undefined
+
+  const highlighted =
+    !!overlays.selection &&
+    overlays.userNotes.some(
+      (n) => n.kind === 'highlight' && n.text === overlays.selection!.text,
+    )
+
+  return (
+    <>
+      {overlays.selection && (
+        <SelectionMenu
+          anchor={overlays.selection.anchor}
+          highlighted={highlighted}
+          onAct={onSelectionAct}
+        />
+      )}
+
+      {overlays.popover?.kind === 'translate' && (
+        <TranslatePopover
+          anchor={overlays.popover.anchor}
+          source={overlays.popover.text}
+          translation={
+            overlays.popover.text === reader.selectionSpot.text
+              ? reader.selectionSpot.translation
+              : null
+          }
+          note={
+            overlays.popover.text === reader.selectionSpot.text
+              ? reader.selectionSpot.translationNote
+              : null
+          }
+          onClose={() => overlays.setPopover(null)}
+        />
+      )}
+
+      {overlays.popover?.kind === 'note' && (
+        <NotePopover
+          anchor={overlays.popover.anchor}
+          onSave={onSaveNote}
+          onClose={() => overlays.setPopover(null)}
+        />
+      )}
+
+      {citeRef && overlays.cite && (
+        <CiteCard
+          reference={citeRef}
+          anchor={overlays.cite.anchor}
+          saved={isRefSaved(citeRef)}
+          onSave={() => onSaveRef(citeRef.n)}
+          onClose={() => overlays.closeAll()}
+          onWorth={() => onWorth(citeRef.n)}
+          onToast={onToast}
+        />
+      )}
+
+      <FloatingChat
+        host={chatHost}
+        state={chat.state}
+        topic={chat.topic}
+        terms={reader.terms}
+        onClose={chat.close}
+        onClear={chat.clearLog}
+        onMinimize={chat.minimize}
+        onRestore={chat.restore}
+        onAsk={chat.ask}
+        onJump={onJump}
+        onOpenPaper={onOpenPaper}
+      />
+    </>
+  )
+}

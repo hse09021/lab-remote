@@ -1,4 +1,7 @@
+import { ApiError, apiBase, isMockMode } from '@/api/client'
 import { sanitizePaperHtml } from '@/lib/sanitize'
+
+const API_BASE = apiBase()
 
 export interface LoadedPaperHtml {
   html: string
@@ -31,6 +34,14 @@ export async function loadPaperHtml(paperId: string): Promise<LoadedPaperHtml> {
     }
   }
 
-  const sample = await import('@/api/mock/attn.sample.html?raw')
-  return { html: sanitizePaperHtml(sample.default), isReal: false }
+  if (isMockMode()) {
+    // mock 으로 돌 때만 골격을 가져와요. 실제 서버를 볼 땐 번들에 안 들어가요
+    const sample = await import('@/api/mock/attn.sample.html?raw')
+    return { html: sanitizePaperHtml(sample.default), isReal: false }
+  }
+
+  // FastAPI 가 붙으면 본문을 여기서 받아요
+  const res = await fetch(`${API_BASE}/papers/${paperId}/html`)
+  if (!res.ok) throw new ApiError(res.status, `/papers/${paperId}/html`)
+  return { html: sanitizePaperHtml(await res.text()), isReal: true }
 }

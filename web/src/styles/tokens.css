@@ -81,7 +81,13 @@
   --hl-memo-rgb: 214 199 241;
   --hl-memo-tint: #f3eefb;
   --hl-memo-ink: #4b2e83;
-  --hl-memo-edge: #b9a4e3;   /* 메모 카드 왼쪽 띠 */
+  --hl-memo-edge: #b9a4e3;
+
+  /* 리더 — 내가 직접 친 하이라이트·주석·용어 (목업 FocusReader) */
+  --user-hl: #e9c9f5;
+  --user-hl-rgb: 233 201 245;
+  --anno-edge: #8e7cc3;
+  --sel-tint-rgb: 120 150 255;   /* 메모 카드 왼쪽 띠 */
 
   /* ── 그림자 ───────────────────────────────────────────────── */
   --shadow-raised: 0 1px 2px rgb(20 26 25 / 0.12);

@@ -60,7 +60,7 @@
 <p class="ph" id="p-s321">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
 
 <div class="eq-block" id="eq-1" data-explain="eq1">
-  <span class="eq">\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V</span>
+  <math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Attention</mtext><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><mi>K</mi><mo>,</mo><mi>V</mi></mrow><mo>)</mo></mrow><mo>=</mo><mtext>softmax</mtext><mrow><mo>(</mo><mfrac><mrow><mi>Q</mi><msup><mi>K</mi><mi>T</mi></msup></mrow><msqrt><msub><mi>d</mi><mi>k</mi></msub></msqrt></mfrac><mo>)</mo></mrow><mi>V</mi></mrow></math>
   <span class="eq-num">(1)</span>
 </div>
 <aside class="memo-card" id="memo-fn4"></aside>
@@ -72,8 +72,7 @@
 <p class="ph" id="p-s322">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
 
 <div class="eq-block" id="eq-mh" data-explain="mh">
-  <span class="eq">\mathrm{MultiHead}(Q,K,V)=\mathrm{Concat}(\mathrm{head}_1,\dots,\mathrm{head}_h)W^O</span>
-  <span class="eq-num">(2)</span>
+  <math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>MultiHead</mtext><mrow><mo>(</mo><mrow><mi>Q</mi><mo>,</mo><mi>K</mi><mo>,</mo><mi>V</mi></mrow><mo>)</mo></mrow><mo>=</mo><mtext>Concat</mtext><mrow><mo>(</mo><mrow><msub><mtext>head</mtext><mn>1</mn></msub><mo>…</mo><msub><mtext>head</mtext><mi>h</mi></msub></mrow><mo>)</mo></mrow><msup><mi>W</mi><mi>O</mi></msup></mrow></math>
 </div>
 </section>
 
@@ -87,8 +86,8 @@
 <p class="ph" id="p-s33">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
 
 <div class="eq-block" id="eq-ffn" data-explain="ffn">
-  <span class="eq">\mathrm{FFN}(x)=\max(0,xW_1+b_1)W_2+b_2</span>
-  <span class="eq-num">(3)</span>
+  <math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>FFN</mtext><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow><mo>=</mo><mtext>max</mtext><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mi>x</mi><msub><mi>W</mi><mn>1</mn></msub><mo>+</mo><msub><mi>b</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow><msub><mi>W</mi><mn>2</mn></msub><mo>+</mo><msub><mi>b</mi><mn>2</mn></msub></mrow></math>
+  <span class="eq-num">(2)</span>
 </div>
 </section>
 
@@ -102,8 +101,7 @@
 <p class="ph" id="p-s35">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
 
 <div class="eq-block" id="eq-pe" data-explain="pe">
-  <span class="eq">PE_{(pos,2i)}=\sin(pos/10000^{2i/d_{model}})</span>
-  <span class="eq-num">(4)</span>
+  <math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mtable columnalign="right left"><mtr><mtd><mrow><msub><mtext>PE</mtext><mrow><mi>pos</mi><mo>,</mo><mn>2</mn><mi>i</mi></mrow></msub></mrow></mtd><mtd><mrow><mo>=</mo><mtext>sin</mtext><mrow><mo>(</mo><mfrac><mi>pos</mi><msup><mn>10000</mn><mfrac><mrow><mn>2</mn><mi>i</mi></mrow><msub><mi>d</mi><mtext>model</mtext></msub></mfrac></msup></mfrac><mo>)</mo></mrow></mrow></mtd></mtr><mtr><mtd><mrow><msub><mtext>PE</mtext><mrow><mi>pos</mi><mo>,</mo><mn>2</mn><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow></mtd><mtd><mrow><mo>=</mo><mtext>cos</mtext><mrow><mo>(</mo><mfrac><mi>pos</mi><msup><mn>10000</mn><mfrac><mrow><mn>2</mn><mi>i</mi></mrow><msub><mi>d</mi><mtext>model</mtext></msub></mfrac></msup></mfrac><mo>)</mo></mrow></mrow></mtd></mtr></mtable></math>
 </div>
 </section>
 
@@ -112,16 +110,17 @@
 <p class="ph" id="p-s4">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
 
 <figure class="tbl-wrap" id="tbl-1">
-  <figcaption>표 1 · 연산 복잡도 비교</figcaption>
+  <figcaption>Table 1 · Maximum path lengths, per-layer complexity and minimum number of sequential operations</figcaption>
   <table class="tbl">
-    <thead><tr><th>Layer Type</th><th>Complexity</th><th>Sequential</th><th>Path Length</th></tr></thead>
+    <thead><tr><th>Layer Type</th><th>Complexity per Layer</th><th>Sequential Operations</th><th>Maximum Path Length</th></tr></thead>
     <tbody>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td>Self-Attention</td><td>O(n²·d)</td><td>O(1)</td><td>O(1)</td></tr>
+      <tr><td>Recurrent</td><td>O(n·d²)</td><td>O(n)</td><td>O(n)</td></tr>
+      <tr><td>Convolutional</td><td>O(k·n·d²)</td><td>O(1)</td><td>O(log_k(n))</td></tr>
+      <tr><td>Self-Attention (restricted)</td><td>O(r·n·d)</td><td>O(1)</td><td>O(n/r)</td></tr>
     </tbody>
   </table>
+  <p class="tbl-source">출처: Vaswani et al., “Attention Is All You Need”, NeurIPS 2017 · 학술 목적 재사용</p>
 </figure>
 </section>
 
@@ -145,8 +144,8 @@
 <p class="ph" id="p-s53">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요.</p>
 
 <div class="eq-block" id="eq-lr" data-explain="lr">
-  <span class="eq">lrate=d_{model}^{-0.5}\cdot\min(step^{-0.5},step\cdot warmup^{-1.5})</span>
-  <span class="eq-num">(5)</span>
+  <math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>lrate</mtext><mo>=</mo><msup><msub><mi>d</mi><mtext>model</mtext></msub><mrow><mo>−</mo><mn>0.5</mn></mrow></msup><mo>·</mo><mtext>min</mtext><mrow><mo>(</mo><mrow><msup><mtext>step</mtext><mrow><mo>−</mo><mn>0.5</mn></mrow></msup><mo>,</mo><mtext>step</mtext><mo>·</mo><msup><mtext>warmup</mtext><mrow><mo>−</mo><mn>1.5</mn></mrow></msup></mrow><mo>)</mo></mrow></mrow></math>
+  <span class="eq-num">(3)</span>
 </div>
 </section>
 
@@ -165,22 +164,23 @@
 <h3 id="S6.SS1" data-section="s6-1"><span class="sec-n">6.1</span> Machine Translation</h3>
 
 <figure class="tbl-wrap" id="tbl-2">
-  <figcaption>표 2 · 번역 품질과 학습 비용</figcaption>
+  <figcaption>Table 2 · BLEU scores and training costs on WMT 2014 English-to-German and English-to-French</figcaption>
   <table class="tbl">
-    <thead><tr><th>Model</th><th>EN-DE</th><th>EN-FR</th><th>Training Cost</th></tr></thead>
+    <thead><tr><th>Model</th><th>EN-DE BLEU</th><th>EN-FR BLEU</th><th>EN-DE FLOPs</th><th>EN-FR FLOPs</th></tr></thead>
     <tbody>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td>ByteNet</td><td>23.75</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Deep-Att + PosUnk</td><td>—</td><td>39.2</td><td>—</td><td>1.0·10²⁰</td></tr>
+      <tr><td>GNMT + RL</td><td>24.6</td><td>39.92</td><td>2.3·10¹⁹</td><td>1.4·10²⁰</td></tr>
+      <tr><td>ConvS2S</td><td>25.16</td><td>40.46</td><td>9.6·10¹⁸</td><td>1.5·10²⁰</td></tr>
+      <tr><td>MoE</td><td>26.03</td><td>40.56</td><td>2.0·10¹⁹</td><td>1.2·10²⁰</td></tr>
+      <tr><td>Deep-Att + PosUnk (ensemble)</td><td>—</td><td>40.4</td><td>—</td><td>8.0·10²⁰</td></tr>
+      <tr><td>GNMT + RL (ensemble)</td><td>26.30</td><td>41.16</td><td>1.8·10²⁰</td><td>1.1·10²¹</td></tr>
+      <tr><td>ConvS2S (ensemble)</td><td>26.36</td><td>41.29</td><td>7.7·10¹⁹</td><td>1.2·10²¹</td></tr>
+      <tr><td>Transformer (base)</td><td>27.3</td><td>38.1</td><td>3.3·10¹⁸</td><td>3.3·10¹⁸</td></tr>
+      <tr><td>Transformer (big)</td><td>28.4</td><td>41.8</td><td>2.3·10¹⁹</td><td>2.3·10¹⁹</td></tr>
     </tbody>
   </table>
+  <p class="tbl-source">출처: Vaswani et al., “Attention Is All You Need”, NeurIPS 2017 · 학술 목적 재사용</p>
 </figure>
 <p class="ph" id="p-s61">본문 문단 자리 · 실제로는 arXiv HTML 본문이 들어와요. <button type="button" class="cite-chip" data-cite="38">[38]</button></p>
 <aside class="check-note" id="note-check"></aside>
@@ -190,33 +190,33 @@
 <h3 id="S6.SS2" data-section="s6-2"><span class="sec-n">6.2</span> Model Variations</h3>
 
 <figure class="tbl-wrap" id="tbl-3">
-  <figcaption>표 3 · 구조 변형 실험</figcaption>
+  <figcaption>Table 3 · Variations on the Transformer architecture (English-to-German, newstest2013)</figcaption>
   <table class="tbl">
-    <thead><tr><th></th><th>N</th><th>d_model</th><th>h</th><th>d_k</th><th>PPL</th><th>BLEU</th></tr></thead>
+    <thead><tr><th></th><th>N</th><th>d_model</th><th>d_ff</th><th>h</th><th>d_k</th><th>d_v</th><th>P_drop</th><th>ε_ls</th><th>steps</th><th>PPL</th><th>BLEU</th><th>params</th></tr></thead>
     <tbody>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td>base</td><td>6</td><td>512</td><td>2048</td><td>8</td><td>64</td><td>64</td><td>0.1</td><td>0.1</td><td>100K</td><td>4.92</td><td>25.8</td><td>65M</td></tr>
+      <tr><td>(A)</td><td></td><td></td><td></td><td>1</td><td>512</td><td>512</td><td></td><td></td><td></td><td>5.29</td><td>24.9</td><td></td></tr>
+      <tr><td>(A)</td><td></td><td></td><td></td><td>4</td><td>128</td><td>128</td><td></td><td></td><td></td><td>5.00</td><td>25.5</td><td></td></tr>
+      <tr><td>(A)</td><td></td><td></td><td></td><td>16</td><td>32</td><td>32</td><td></td><td></td><td></td><td>4.91</td><td>25.8</td><td></td></tr>
+      <tr><td>(A)</td><td></td><td></td><td></td><td>32</td><td>16</td><td>16</td><td></td><td></td><td></td><td>5.01</td><td>25.4</td><td></td></tr>
+      <tr><td>(B)</td><td></td><td></td><td></td><td></td><td>16</td><td></td><td></td><td></td><td></td><td>5.16</td><td>25.1</td><td>58M</td></tr>
+      <tr><td>(B)</td><td></td><td></td><td></td><td></td><td>32</td><td></td><td></td><td></td><td></td><td>5.01</td><td>25.4</td><td>60M</td></tr>
+      <tr><td>(C)</td><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>6.11</td><td>23.7</td><td>36M</td></tr>
+      <tr><td>(C)</td><td>4</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>5.19</td><td>25.3</td><td>50M</td></tr>
+      <tr><td>(C)</td><td>8</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>4.88</td><td>25.5</td><td>80M</td></tr>
+      <tr><td>(C)</td><td></td><td>256</td><td></td><td></td><td>32</td><td>32</td><td></td><td></td><td></td><td>5.75</td><td>24.5</td><td>28M</td></tr>
+      <tr><td>(C)</td><td></td><td>1024</td><td></td><td></td><td>128</td><td>128</td><td></td><td></td><td></td><td>4.66</td><td>26.0</td><td>168M</td></tr>
+      <tr><td>(C)</td><td></td><td></td><td>1024</td><td></td><td></td><td></td><td></td><td></td><td></td><td>5.12</td><td>25.4</td><td>53M</td></tr>
+      <tr><td>(C)</td><td></td><td></td><td>4096</td><td></td><td></td><td></td><td></td><td></td><td></td><td>4.75</td><td>26.2</td><td>90M</td></tr>
+      <tr><td>(D)</td><td></td><td></td><td></td><td></td><td></td><td></td><td>0.0</td><td></td><td></td><td>5.77</td><td>24.6</td><td></td></tr>
+      <tr><td>(D)</td><td></td><td></td><td></td><td></td><td></td><td></td><td>0.2</td><td></td><td></td><td>4.95</td><td>25.5</td><td></td></tr>
+      <tr><td>(D)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>0.0</td><td></td><td>4.67</td><td>25.3</td><td></td></tr>
+      <tr><td>(D)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>0.2</td><td></td><td>5.47</td><td>25.7</td><td></td></tr>
+      <tr><td>(E)</td><td>positional embedding instead of sinusoids</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>4.92</td><td>25.7</td><td></td></tr>
+      <tr><td>big</td><td>6</td><td>1024</td><td>4096</td><td>16</td><td></td><td></td><td>0.3</td><td></td><td>300K</td><td>4.33</td><td>26.4</td><td>213M</td></tr>
     </tbody>
   </table>
+  <p class="tbl-source">출처: Vaswani et al., “Attention Is All You Need”, NeurIPS 2017 · 학술 목적 재사용</p>
 </figure>
 </section>
 
@@ -224,24 +224,25 @@
 <h3 id="S6.SS3" data-section="s6-3"><span class="sec-n">6.3</span> English Constituency Parsing</h3>
 
 <figure class="tbl-wrap" id="tbl-4">
-  <figcaption>표 4 · 구문 분석 결과</figcaption>
+  <figcaption>Table 4 · English constituency parsing results (WSJ Section 23, F1)</figcaption>
   <table class="tbl">
     <thead><tr><th>Parser</th><th>Training</th><th>WSJ 23 F1</th></tr></thead>
     <tbody>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
-      <tr><td><span class="cell"></span></td><td><span class="cell"></span></td><td><span class="cell"></span></td></tr>
+      <tr><td>Vinyals &amp; Kaiser et al. (2014)</td><td>WSJ only, discriminative</td><td>88.3</td></tr>
+      <tr><td>Petrov et al. (2006)</td><td>WSJ only, discriminative</td><td>90.4</td></tr>
+      <tr><td>Zhu et al. (2013)</td><td>WSJ only, discriminative</td><td>90.4</td></tr>
+      <tr><td>Dyer et al. (2016)</td><td>WSJ only, discriminative</td><td>91.7</td></tr>
+      <tr><td>Transformer (4 layers)</td><td>WSJ only, discriminative</td><td>91.3</td></tr>
+      <tr><td>Zhu et al. (2013)</td><td>semi-supervised</td><td>91.3</td></tr>
+      <tr><td>Huang &amp; Harper (2009)</td><td>semi-supervised</td><td>91.3</td></tr>
+      <tr><td>McClosky et al. (2006)</td><td>semi-supervised</td><td>92.1</td></tr>
+      <tr><td>Vinyals &amp; Kaiser et al. (2014)</td><td>semi-supervised</td><td>92.1</td></tr>
+      <tr><td>Transformer (4 layers)</td><td>semi-supervised</td><td>92.7</td></tr>
+      <tr><td>Luong et al. (2015)</td><td>multi-task</td><td>93.0</td></tr>
+      <tr><td>Dyer et al. (2016)</td><td>generative</td><td>93.3</td></tr>
     </tbody>
   </table>
+  <p class="tbl-source">출처: Vaswani et al., “Attention Is All You Need”, NeurIPS 2017 · 학술 목적 재사용</p>
 </figure>
 </section>
 

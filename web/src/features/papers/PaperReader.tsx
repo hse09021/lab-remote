@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import {
   paperReaderQuery,
   paperSummariesQuery,
   papersQuery,
+  refPaperId,
+  useSaveReference,
   useSetReadStatus,
 } from '@/api/papers'
 import type { PaperSource, ReadStatus } from '@/api/types'
@@ -25,6 +27,11 @@ import { AiPanel } from './reader/AiPanel'
 import type { AiTab } from './reader/AiPanel'
 import { ALL_HIGHLIGHTS_ON } from './reader/highlightCategories'
 import type { HighlightToggles } from './reader/highlightCategories'
+import { FloatingLayer } from './reader/floating/FloatingLayer'
+import type { SelectionAction, SelectionAnchor } from './reader/floating/SelectionMenu'
+import { SELECTION_KEYS } from './reader/floating/SelectionMenu'
+import { useFloatingChat, topicKeyFor } from './reader/floating/useFloatingChat'
+import { useReaderOverlays } from './reader/floating/useReaderOverlays'
 import { OutlinePanel } from './reader/OutlinePanel'
 import { PdfView } from './reader/PdfView'
 import type { JumpTarget } from './reader/PdfView'
@@ -61,8 +68,15 @@ export default function PaperReader() {
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
   // 수치 불일치에서 고른 재현 기준 (요약 MD 에도 남겨요)
   const [target, setTarget] = useState<string | null>(null)
+  /** 채팅 탭에 붙는 맥락 칩 */
+  const [chatContext, setChatContext] = useState<string | null>(null)
 
   const toast = useToast()
+  const overlays = useReaderOverlays()
+  /** 마우스가 올라간 설명 대상 — E 키로 열어요 */
+  const hovered = useRef<{ key: string; anchor: SelectionAnchor } | null>(null)
+  /** 대화창 본체는 스크롤과 무관하게 가운데 열 모서리에 붙어요 */
+  const centerRef = useRef<HTMLDivElement | null>(null)
 
   const requestJump = (target: JumpTarget) =>
     setJump((prev) => ({ target, nonce: (prev?.nonce ?? 0) + 1 }))
@@ -71,6 +85,44 @@ export default function PaperReader() {
     queries: [papersQuery(), paperReaderQuery(id), paperSummariesQuery()],
   })
   const setStatus = useSetReadStatus()
+  const saveRef = useSaveReference()
+  const chat = useFloatingChat(reader.data?.topics ?? {}, reader.data?.sections ?? [])
+
+  /*
+   * 단축키는 훅이라 조기 반환보다 앞에 있어야 해요.
+   * 핸들러는 렌더마다 바뀌니 ref 로 최신 것을 읽어요.
+   */
+  const actions = useRef<{
+    selection: (a: SelectionAction) => void
+    explain: (key: string, anchor: SelectionAnchor) => void
+  } | null>(null)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null
+      if (el && /^(INPUT|TEXTAREA)$/.test(el.tagName)) return
+
+      if (e.key === 'Escape') {
+        overlays.closeAll()
+        return
+      }
+      if (overlays.selection) {
+        const act = SELECTION_KEYS[e.key.toLowerCase()]
+        if (act) {
+          e.preventDefault()
+          actions.current?.selection(act)
+        }
+        return
+      }
+      // 설명 버튼·그림·수식에 마우스를 올린 상태에서 E
+      if (e.key.toLowerCase() === 'e' && hovered.current) {
+        e.preventDefault()
+        actions.current?.explain(hovered.current.key, hovered.current.anchor)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [overlays])
 
   const paper = papers.data?.find((p) => p.id === id)
   const summary = summaries.data?.[id]
@@ -101,6 +153,105 @@ export default function PaperReader() {
   }
 
   const data = reader.data
+
+  /* ── 떠 있는 것들 공통 핸들러 ─────────────────────────── */
+  const openChat = (key: string, anchor: SelectionAnchor, context: string | null = null) => {
+    overlays.closeAll()
+    chat.open(topicKeyFor(key, data.topics), anchor, context)
+  }
+  const openCite = (n: number, anchor: SelectionAnchor) => overlays.openCite(n, anchor)
+  const onHover = (key: string | null, anchor: SelectionAnchor | null) => {
+    hovered.current = key && anchor ? { key, anchor } : null
+  }
+
+  const sectionLabel = (sectionId: string) => {
+    const sec = data.sections.find((x) => x.id === sectionId)
+    return sec ? `§${sec.n || sec.title} · p.${sec.page}` : sectionId
+  }
+
+  const onSelectionAct = (a: SelectionAction) => {
+    const sel = overlays.selection
+    if (!sel) return
+    switch (a) {
+      case 'explain':
+        openChat('lstm', sel.anchor)
+        break
+      case 'info':
+        openChat('info', sel.anchor)
+        break
+      case 'ask':
+        openChat('ask', sel.anchor)
+        break
+      case 'highlight': {
+        const added = overlays.toggleUserHighlight(sel.text, sectionLabel(sel.sectionId), sel.sectionId)
+        overlays.closeAll()
+        toast.show(added ? '하이라이트했어요 · 노트에 모아 둘게요' : '하이라이트를 지웠어요')
+        break
+      }
+      case 'translate':
+        overlays.openPopover('translate', sel.anchor, sel.text, sel.sectionId)
+        break
+      case 'note':
+        overlays.openPopover('note', sel.anchor, sel.text, sel.sectionId)
+        break
+    }
+  }
+
+  actions.current = { selection: onSelectionAct, explain: openChat }
+
+  /** 보관 여부는 라이브러리 캐시가 단일 출처예요 — /papers 목록과 늘 같아요 */
+  const isRefSaved = (r: { n: number; arxiv: string | null }) =>
+    (papers.data ?? []).some((p) => p.id === refPaperId(r))
+
+  /** PDF 선택 흉내 핫스팟에 얹는 표식 (목업과 같은 3가지) */
+  const spotText = data.selectionSpot.text
+  const selectionMarks = {
+    active: overlays.selection?.text === spotText || overlays.popover?.text === spotText,
+    highlighted: overlays.userNotes.some(
+      (n) => n.kind === 'highlight' && n.text === spotText,
+    ),
+    annotated: overlays.userNotes.some((n) => n.kind === 'note' && n.source === spotText),
+  }
+
+  const floating = (
+    <FloatingLayer
+      chatHost={centerRef}
+      chat={chat}
+      overlays={overlays}
+      reader={data}
+      onSelectionAct={onSelectionAct}
+      onJump={(sectionId) => {
+        setActiveId(sectionId)
+        requestJump({ sectionId })
+      }}
+      onOpenPaper={(title) => toast.show(`${title} — 라이브러리에서 열어요`)}
+      onSaveNote={(body) => {
+        const pop = overlays.popover
+        const src = pop?.text ?? data.selectionSpot.text
+        const sid = pop?.sectionId ?? activeId ?? data.sections[0].id
+        overlays.addUserNote(body, src, sectionLabel(sid), sid)
+        overlays.setPopover(null)
+        toast.show('주석을 남겼어요 · 노트 탭에서 볼 수 있어요')
+      }}
+      isRefSaved={isRefSaved}
+      onSaveRef={(n) => {
+        const reference = data.references.find((r) => r.n === n)
+        if (!reference) return
+        const save = !isRefSaved(reference)
+        saveRef.mutate({ reference, save })
+        toast.show(save ? '라이브러리에 보관했어요 · 요약 대기열에 넣었어요' : '보관을 취소했어요')
+      }}
+      onWorth={(n) => {
+        const anchor = overlays.cite?.anchor
+        if (anchor) {
+          overlays.closeAll()
+          chat.open('ask', anchor, `참고문헌 ${n}번`)
+        }
+      }}
+      onToast={toast.show}
+    />
+  )
+
   // 끝까지 읽었고 아직 완료가 아니면 물어봐요 (docs/HANDOFF.md 공통 동작)
   const showNudge = !nudgeDismissed && progress >= 97 && paper?.status !== 'done'
 
@@ -188,7 +339,7 @@ export default function PaperReader() {
           />
           <Resizer handle={outline.resizerProps} label="아웃라인 너비 조절" />
 
-          <div className={s.center}>
+          <div ref={centerRef} className={s.center}>
             {source === 'pdf' ? (
               <PdfView
                 reader={data}
@@ -196,15 +347,26 @@ export default function PaperReader() {
                 jump={jump}
                 onActiveSection={setActiveId}
                 onProgress={setProgress}
-                onAskChat={() => {
+                onAskChat={(sectionId, page) => {
                   setTab('chat')
                   ai.setOpen(true)
+                  toast.show(`${sectionLabel(sectionId)} 를 맥락으로 채팅 탭을 열었어요`)
+                  setChatContext(`§${
+                    data.sections.find((x) => x.id === sectionId)?.n || sectionId
+                  } · p.${page}`)
                 }}
                 onOpenHtml={(sectionId) => {
                   setSource('arxiv-html')
                   setActiveId(sectionId)
                 }}
-                onExplain={() => toast.show('섹션 설명은 다음 단계에서 붙여요')}
+                onExplain={openChat}
+                onCite={openCite}
+                onSelect={(anchor, text, sectionId) =>
+                  overlays.openSelection(anchor, text, sectionId)
+                }
+                onHover={onHover}
+                selectionMarks={selectionMarks}
+                floating={floating}
                 onToast={toast.show}
                 nudge={{
                   show: showNudge,
@@ -229,8 +391,13 @@ export default function PaperReader() {
                 }
                 onActiveSection={setActiveId}
                 onProgress={setProgress}
-                onExplain={() => toast.show('섹션 설명은 다음 단계에서 붙여요')}
-                onCite={(n) => toast.show(`참고문헌 ${n}번 카드는 다음 단계에서 붙여요`)}
+                onExplain={openChat}
+                onCite={openCite}
+                onSelect={(anchor, text, sectionId) =>
+                  overlays.openSelection(anchor, text, sectionId)
+                }
+                onHover={onHover}
+                floating={floating}
                 onToast={toast.show}
                 target={target}
                 onTargetChange={(v) => {
@@ -255,6 +422,7 @@ export default function PaperReader() {
             onCollapse={ai.toggle}
             tab={tab}
             onTabChange={setTab}
+            isRefSaved={isRefSaved}
             reader={data}
             summary={summary}
             summaryView={summaryView}
@@ -263,6 +431,8 @@ export default function PaperReader() {
             onMdDraftChange={setMdDraft}
             onMdSave={() => setMdDraft(null)}
             toggles={toggles}
+            chatContext={chatContext}
+            userNotes={overlays.userNotes}
             onJumpSection={(sectionId) => {
               setActiveId(sectionId)
               requestJump({ sectionId })

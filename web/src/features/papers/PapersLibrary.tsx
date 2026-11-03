@@ -243,7 +243,10 @@ export default function PapersLibrary() {
           </div>
         )}
 
-        <AskLibrary chat={chat.data} />
+        <AskLibrary
+          chat={chat.data}
+          offsetRight={openSummary && openSummaryId ? drawer.size + 12 : 0}
+        />
       </main>
 
       {openSummary && openSummaryId && (
