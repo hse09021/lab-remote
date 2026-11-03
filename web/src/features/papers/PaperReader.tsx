@@ -16,14 +16,18 @@ import {
   SegmentedControl,
   SplitButton,
   StatusPill,
+  Toast,
 } from '@/components'
 import type { SegmentedItem } from '@/components'
 import { usePaneResize } from '@/lib/usePaneResize'
+import { useToast } from '@/lib/useToast'
 import { AiPanel } from './reader/AiPanel'
 import type { AiTab } from './reader/AiPanel'
 import { ALL_HIGHLIGHTS_ON } from './reader/highlightCategories'
 import type { HighlightToggles } from './reader/highlightCategories'
 import { OutlinePanel } from './reader/OutlinePanel'
+import { PdfView } from './reader/PdfView'
+import type { JumpTarget } from './reader/PdfView'
 import type { SummaryView } from './PaperSummaryPane'
 import s from './PaperReader.module.css'
 
@@ -51,6 +55,14 @@ export default function PaperReader() {
   const [summaryView, setSummaryView] = useState<SummaryView>('nice')
   const [mdDraft, setMdDraft] = useState<string | null>(null)
   const [toggles, setToggles] = useState<HighlightToggles>(ALL_HIGHLIGHTS_ON)
+  const [progress, setProgress] = useState(0)
+  const [jump, setJump] = useState<{ target: JumpTarget; nonce: number } | null>(null)
+  const [nudgeDismissed, setNudgeDismissed] = useState(false)
+
+  const toast = useToast()
+
+  const requestJump = (target: JumpTarget) =>
+    setJump((prev) => ({ target, nonce: (prev?.nonce ?? 0) + 1 }))
 
   const [papers, reader, summaries] = useQueries({
     queries: [papersQuery(), paperReaderQuery(id), paperSummariesQuery()],
@@ -59,9 +71,6 @@ export default function PaperReader() {
 
   const paper = papers.data?.find((p) => p.id === id)
   const summary = summaries.data?.[id]
-
-  // 본문을 아직 안 붙여서 읽은 위치는 0이에요 (다음 단계에서 스크롤에 연결)
-  const progress = 0
 
   const sourceItems: SegmentedItem<PaperSource>[] = [
     { value: 'arxiv-html', label: 'arXiv HTML' },
@@ -89,6 +98,8 @@ export default function PaperReader() {
   }
 
   const data = reader.data
+  // 끝까지 읽었고 아직 완료가 아니면 물어봐요 (docs/HANDOFF.md 공통 동작)
+  const showNudge = !nudgeDismissed && progress >= 97 && paper?.status !== 'done'
 
   return (
     <div className={s.page}>
@@ -155,7 +166,10 @@ export default function PaperReader() {
             sections={data.sections}
             highlights={data.highlights}
             activeId={activeId}
-            onJump={setActiveId}
+            onJump={(sectionId) => {
+              setActiveId(sectionId)
+              requestJump({ sectionId })
+            }}
             progress={progress}
             showPages={source === 'pdf'}
             toggles={toggles}
@@ -164,19 +178,45 @@ export default function PaperReader() {
           <Resizer handle={outline.resizerProps} label="아웃라인 너비 조절" />
 
           <div className={s.center}>
-            <div className={s.placeholder}>
-              <span className={s.placeholderTitle}>
-                {source === 'pdf' ? 'PDF 보기는 다음 단계예요' : 'HTML 보기는 다음 단계예요'}
-              </span>
-              <span className={s.placeholderText}>
-                지금은 화면 틀만 있어요. 아웃라인에서 섹션을 고르면 오른쪽 위에 현재
-                섹션이 바뀌고, 하이라이트를 켜고 끄면 점과 노트 탭이 함께 움직여요.
-              </span>
-              <span className={s.placeholderMeta}>
-                {data.pageCount}쪽 · 하이라이트 {data.highlights.length}개 · 참고문헌{' '}
-                {data.referenceTotal}개
-              </span>
-            </div>
+            {source === 'pdf' ? (
+              <PdfView
+                reader={data}
+                toggles={toggles}
+                jump={jump}
+                onActiveSection={setActiveId}
+                onProgress={setProgress}
+                onAskChat={() => {
+                  setTab('chat')
+                  ai.setOpen(true)
+                }}
+                onOpenHtml={(sectionId) => {
+                  setSource('arxiv-html')
+                  setActiveId(sectionId)
+                }}
+                onExplain={() => toast.show('섹션 설명은 다음 단계에서 붙여요')}
+                onToast={toast.show}
+                nudge={{
+                  show: showNudge,
+                  onMarkDone: () => {
+                    setStatus.mutate({ id, status: 'done' })
+                    setNudgeDismissed(true)
+                  },
+                  onDismiss: () => setNudgeDismissed(true),
+                }}
+              />
+            ) : (
+              <div className={s.placeholder}>
+                <span className={s.placeholderTitle}>HTML 보기는 다음 단계예요</span>
+                <span className={s.placeholderText}>
+                  arXiv HTML 본문은 리더 3에서 붙여요. 지금은 PDF 보기로 바꾸면 쪽
+                  이미지와 하이라이트를 볼 수 있어요.
+                </span>
+                <span className={s.placeholderMeta}>
+                  {data.pageCount}쪽 · 하이라이트 {data.highlights.length}개 · 참고문헌{' '}
+                  {data.referenceTotal}개
+                </span>
+              </div>
+            )}
           </div>
 
           <Resizer handle={ai.resizerProps} label="AI 패널 너비 조절" />
@@ -193,13 +233,18 @@ export default function PaperReader() {
             onMdDraftChange={setMdDraft}
             onMdSave={() => setMdDraft(null)}
             toggles={toggles}
-            onJumpSection={setActiveId}
+            onJumpSection={(sectionId) => {
+              setActiveId(sectionId)
+              requestJump({ sectionId })
+            }}
           />
           {ai.closed && (
             <CollapsedRail side="right" label="AI 패널 펼치기" onExpand={ai.toggle} />
           )}
         </div>
       </div>
+
+      <Toast message={toast.message} />
     </div>
   )
 }

@@ -458,6 +458,25 @@ export interface Reference {
   why: string
 }
 
+/** 그림·수식처럼 "풀어서 설명받기"를 붙이는 영역 */
+export interface ExplainZone {
+  key: string
+  kind: 'fig' | 'eq'
+  page: number
+  box: PtRect
+  /** 액션 바를 영역 아래에 둘지 가운데 둘지 */
+  barPlacement: 'bottom' | 'mid'
+  /** 수식이면 복사할 LaTeX */
+  latex: string | null
+}
+
+/** 본문에 찍힌 인용 번호 자리 */
+export interface CiteSpot {
+  n: number
+  page: number
+  box: PtRect
+}
+
 export interface PaperReaderPayload {
   paperId: string
   title: string
@@ -476,4 +495,9 @@ export interface PaperReaderPayload {
   /** 실제 참고문헌 수 (모델링한 것보다 많아요) */
   referenceTotal: number
   citationsCaption: string
+  /** 100% 일 때 쪽 너비(px) */
+  baseWidth: number
+  zoomLevels: number[]
+  explainZones: ExplainZone[]
+  citeSpots: CiteSpot[]
 }

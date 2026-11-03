@@ -373,9 +373,9 @@
       "page": 8,
       "boxes": [
         [
-          128,
+          108,
           66,
-          486,
+          504,
           246
         ]
       ],
@@ -619,5 +619,257 @@
     }
   ],
   "referenceTotal": 40,
-  "citationsCaption": "참고문헌 40개 · 본문에서 많이 인용된 순서예요. 누르면 본문 옆에 미리보기가 떠요."
+  "citationsCaption": "참고문헌 40개 · 본문에서 많이 인용된 순서예요. 누르면 본문 옆에 미리보기가 떠요.",
+  "zoomLevels": [
+    0.75,
+    1,
+    1.25,
+    1.5
+  ],
+  "baseWidth": 700,
+  "explainZones": [
+    {
+      "key": "fig1",
+      "kind": "fig",
+      "page": 3,
+      "box": [
+        190,
+        66,
+        422,
+        398
+      ],
+      "barPlacement": "bottom",
+      "latex": null
+    },
+    {
+      "key": "fig2",
+      "kind": "fig",
+      "page": 4,
+      "box": [
+        140,
+        66,
+        500,
+        272
+      ],
+      "barPlacement": "bottom",
+      "latex": null
+    },
+    {
+      "key": "eq1",
+      "kind": "eq",
+      "page": 4,
+      "box": [
+        214,
+        458,
+        404,
+        494
+      ],
+      "barPlacement": "mid",
+      "latex": "\\mathrm{Attention}(Q,K,V)=\\mathrm{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V"
+    },
+    {
+      "key": "mh",
+      "kind": "eq",
+      "page": 5,
+      "box": [
+        180,
+        143,
+        432,
+        178
+      ],
+      "barPlacement": "mid",
+      "latex": "\\mathrm{MultiHead}(Q,K,V)=\\mathrm{Concat}(\\mathrm{head}_1,\\dots,\\mathrm{head}_h)W^O"
+    },
+    {
+      "key": "ffn",
+      "kind": "eq",
+      "page": 5,
+      "box": [
+        222,
+        563,
+        392,
+        583
+      ],
+      "barPlacement": "mid",
+      "latex": "\\mathrm{FFN}(x)=\\max(0,xW_1+b_1)W_2+b_2"
+    },
+    {
+      "key": "pe",
+      "kind": "eq",
+      "page": 6,
+      "box": [
+        218,
+        333,
+        402,
+        369
+      ],
+      "barPlacement": "mid",
+      "latex": "PE_{(pos,2i)}=\\sin(pos/10000^{2i/d_{model}})"
+    },
+    {
+      "key": "lr",
+      "kind": "eq",
+      "page": 7,
+      "box": [
+        158,
+        612,
+        452,
+        636
+      ],
+      "barPlacement": "mid",
+      "latex": "lrate=d_{model}^{-0.5}\\cdot\\min(step^{-0.5},step\\cdot warmup^{-1.5})"
+    }
+  ],
+  "citeSpots": [
+    {
+      "n": 13,
+      "page": 2,
+      "box": [
+        323.6,
+        99,
+        340.3,
+        109.1
+      ]
+    },
+    {
+      "n": 7,
+      "page": 2,
+      "box": [
+        424.3,
+        99,
+        436.1,
+        109.1
+      ]
+    },
+    {
+      "n": 16,
+      "page": 2,
+      "box": [
+        108,
+        400.4,
+        124.5,
+        410.3
+      ]
+    },
+    {
+      "n": 18,
+      "page": 2,
+      "box": [
+        164.1,
+        400.4,
+        180.6,
+        410.3
+      ]
+    },
+    {
+      "n": 9,
+      "page": 2,
+      "box": [
+        238.2,
+        400.4,
+        249.7,
+        410.3
+      ]
+    },
+    {
+      "n": 11,
+      "page": 3,
+      "box": [
+        422.2,
+        524.8,
+        438.1,
+        534.9
+      ]
+    },
+    {
+      "n": 1,
+      "page": 3,
+      "box": [
+        324.7,
+        535.7,
+        336.4,
+        545.8
+      ]
+    },
+    {
+      "n": 2,
+      "page": 4,
+      "box": [
+        395.1,
+        499.5,
+        406.7,
+        509.5
+      ]
+    },
+    {
+      "n": 3,
+      "page": 4,
+      "box": [
+        349,
+        583.6,
+        360.6,
+        593.6
+      ]
+    },
+    {
+      "n": 20,
+      "page": 7,
+      "box": [
+        227.6,
+        578.1,
+        244.4,
+        588.2
+      ]
+    },
+    {
+      "n": 38,
+      "page": 8,
+      "box": [
+        191.8,
+        147.9,
+        208.4,
+        157.9
+      ]
+    },
+    {
+      "n": 9,
+      "page": 8,
+      "box": [
+        175,
+        159.5,
+        186,
+        169.5
+      ]
+    },
+    {
+      "n": 33,
+      "page": 8,
+      "box": [
+        266.2,
+        273.3,
+        282.7,
+        283.3
+      ]
+    },
+    {
+      "n": 36,
+      "page": 8,
+      "box": [
+        462.8,
+        331.3,
+        479.5,
+        341.4
+      ]
+    },
+    {
+      "n": 38,
+      "page": 8,
+      "box": [
+        386.4,
+        560,
+        403.2,
+        570.1
+      ]
+    }
+  ]
 }
