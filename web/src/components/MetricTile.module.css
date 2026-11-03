@@ -1,30 +1,44 @@
 .row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+}
+
+/* 지표 칸 최소 너비는 화면마다 달라요 (대시보드 180 / 종료 조건 170) */
+.lg {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.md {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .tile {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   padding: 16px 18px;
   border-left: 1px solid var(--border-soft);
 }
 
+.lg .tile {
+  gap: 6px;
+}
+
+.md .tile {
+  gap: 4px;
+}
+
 /*
- * 목업은 첫/마지막 칸의 안쪽 여백을 지워 본문 좌우 기준선에 맞췄어요.
- * auto-fit으로 줄바꿈되면 :first-child 규칙만으로는 어긋나는데, 목업도
- * 같은 한계가 있어서 그대로 뒀어요.
+ * 목업은 첫/마지막 칸의 바깥 여백을 지워 본문 좌우 기준선에 맞췄어요.
+ * auto-fit으로 줄바꿈되면 어긋나는데, 목업도 같은 한계가 있어 그대로 뒀어요.
  */
 .tile:first-child {
-  padding: 16px 18px 16px 0;
+  padding-left: 0;
   border-left: none;
 }
 
 .tile:last-child {
-  padding: 16px 0 16px 18px;
+  padding-right: 0;
 }
 
 .label {
@@ -34,17 +48,33 @@
 
 .value {
   font-family: var(--font-mono);
-  font-size: 26px;
   font-weight: 500;
+}
+
+.lg .value {
+  font-size: 26px;
+}
+
+.md .value {
+  font-size: 22px;
 }
 
 .value[data-tone='accent'] {
   color: var(--accent);
 }
 
+/* 숫자가 아니라 문장인 값 ("대기 후 재개") */
+.value[data-variant='text'] {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  padding-top: 4px;
+}
+
 .suffix {
   font-size: 15px;
   color: var(--text-muted);
+  font-weight: 400;
 }
 
 .sub {

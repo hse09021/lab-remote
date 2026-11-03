@@ -1,0 +1,27 @@
+/*
+ * 좌우로 나뉜 두 칸. 가운데에만 가는 세로선이 있고, 바깥쪽 여백은 지워
+ * 본문 좌우 기준선에 맞춰요 (MetricTileRow와 같은 규칙).
+ */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.cell {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+  border-left: 1px solid var(--border-soft);
+}
+
+.cell:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.cell:last-child {
+  padding-right: 0;
+}

@@ -1,0 +1,87 @@
+.option {
+  display: flex;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.option:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 권한 단계 카드 — 세로로 쌓고 설명은 라디오 폭만큼 들여써요 */
+.card {
+  flex: 1 1 260px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.card[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-row);
+}
+
+/* 설계 토론 선택지 — 한 줄 */
+.row {
+  width: 100%;
+  min-height: 52px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+}
+
+.row[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-row);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 라디오 점은 테두리 두께로 표현해요 (안쪽 원 없이) */
+.dot {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--dot-idle);
+}
+
+.option[aria-pressed='true'] .dot {
+  border: 5px solid var(--accent);
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.row .name {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* 카드형은 설명을 라디오 뒤로 맞춰 들여써요 */
+.card .desc {
+  padding-left: 28px;
+}

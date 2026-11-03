@@ -23,6 +23,14 @@ export { ProgressBar } from './ProgressBar'
 
 export { MetricTile, MetricTileRow } from './MetricTile'
 
+export { RadioOption, RadioOptionGroup } from './RadioOption'
+
+export { KeyValueRow } from './KeyValueRow'
+
+export { TagChip } from './TagChip'
+
+export { DividedCell, DividedRow } from './DividedRow'
+
 export { DataTable } from './DataTable'
 export type { Column } from './DataTable'
 

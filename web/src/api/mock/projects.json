@@ -1,15 +1,50 @@
 {
   "projects": [
-    { "id": "lora-rank-ablation", "name": "lora-rank-ablation", "running": true, "stateLabel": "실행 중" },
-    { "id": "vit-distill", "name": "vit-distill", "running": false, "stateLabel": "대기" }
+    {
+      "id": "lora-rank-ablation",
+      "name": "lora-rank-ablation",
+      "running": true,
+      "stateLabel": "실행 중"
+    },
+    {
+      "id": "vit-distill",
+      "name": "vit-distill",
+      "running": false,
+      "stateLabel": "대기"
+    }
   ],
   "views": [
-    { "id": "dashboard", "label": "대시보드", "to": "/experiments", "icon": "grid", "badge": null },
-    { "id": "permissions", "label": "권한 설정", "to": "/experiments/permissions", "icon": "shield", "badge": "1" }
+    {
+      "id": "dashboard",
+      "label": "대시보드",
+      "to": "/experiments",
+      "icon": "grid",
+      "badge": null
+    },
+    {
+      "id": "permissions",
+      "label": "권한 설정",
+      "to": "/experiments/permissions",
+      "icon": "shield",
+      "badge": "1"
+    }
   ],
   "integrations": [
-    { "label": "Claude Code · Remote Control", "ok": true },
-    { "label": "W&B", "ok": true },
-    { "label": "Discord 웹훅", "ok": true }
+    {
+      "label": "Claude Code · Remote Control",
+      "ok": true
+    },
+    {
+      "label": "Hooks 활성",
+      "ok": true
+    },
+    {
+      "label": "W&B",
+      "ok": true
+    },
+    {
+      "label": "Discord 웹훅",
+      "ok": true
+    }
   ]
 }

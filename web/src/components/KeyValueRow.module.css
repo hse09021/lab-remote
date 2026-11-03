@@ -1,0 +1,16 @@
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.value[data-tone='accent'] {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.value[data-tone='muted'] {
+  color: var(--text-muted);
+}
