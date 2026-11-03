@@ -32,6 +32,8 @@ import type { LibraryView } from './LibrarySidebar'
 import { PaperSummaryPane } from './PaperSummaryPane'
 import type { SummaryView } from './PaperSummaryPane'
 import s from './PapersLibrary.module.css'
+import { useIsMobile } from '@/lib/useMediaQuery'
+import { MobilePapers } from '../mobile/MobilePapers'
 
 type Density = 'list' | 'compact'
 
@@ -41,6 +43,9 @@ const DENSITY_ITEMS: SegmentedItem<Density>[] = [
 ]
 
 export default function PapersLibrary() {
+  const isMobile = useIsMobile()
+  if (isMobile) return <MobilePapers />
+
   const saveMd = useSaveSummaryMd()
   const nav = usePaneResize({ initial: 250, min: 200, max: 400, dir: 1, collapsible: true })
   const drawer = usePaneResize({ initial: 400, min: 320, max: 720, dir: -1 })

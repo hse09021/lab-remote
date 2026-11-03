@@ -24,9 +24,11 @@ const round = (n: number) => Math.round(n * 10) / 10
 
 interface Props {
   curve: LearningCurve
+  /** 모바일은 더 낮게 그려요 (목업 FocusMobile 은 330×110) */
+  size?: 'desktop' | 'mobile'
 }
 
-export function LearningCurveChart({ curve }: Props) {
+export function LearningCurveChart({ curve, size = 'desktop' }: Props) {
   const x = (epoch: number) => round(LEFT + (epoch / curve.totalEpochs) * (RIGHT - LEFT))
   const y = (loss: number) => round(AXIS_Y - loss * Y_UNIT)
 
@@ -47,6 +49,7 @@ export function LearningCurveChart({ curve }: Props) {
       width="100%"
       role="img"
       aria-label={`train loss는 ${lastTrain.toFixed(2)}, val loss는 ${lastVal.toFixed(2)}까지 하락`}
+      data-size={size}
       className={s.chart}
     >
       <line x1={LEFT} y1={AXIS_Y} x2={AXIS_RIGHT} y2={AXIS_Y} className={s.axis} />

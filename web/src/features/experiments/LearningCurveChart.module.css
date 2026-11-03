@@ -59,3 +59,8 @@
   stroke-width: 2;
   stroke-dasharray: 5 3;
 }
+
+/* 모바일은 더 낮게 (목업 FocusMobile 은 330×110 비율) */
+.chart[data-size='mobile'] {
+  aspect-ratio: 600 / 120;
+}

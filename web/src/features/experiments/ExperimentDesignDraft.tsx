@@ -8,6 +8,8 @@ import { Button, Resizer, Skeleton, Toast, VisuallyHidden } from '@/components'
 import { usePaneResize } from '@/lib/usePaneResize'
 import { useToast } from '@/lib/useToast'
 import s from './ExperimentDesignDraft.module.css'
+import { useIsMobile } from '@/lib/useMediaQuery'
+import { MobileDesignDraft } from '../mobile/MobileDesignDraft'
 
 /** 값이 어디서 왔는지 */
 type ValueSource = 'paper' | 'reader' | 'typed'
@@ -16,6 +18,9 @@ type ValueSource = 'paper' | 'reader' | 'typed'
 const DEFAULT_PAPER = 'attn'
 
 export default function ExperimentDesignDraft() {
+  const isMobile = useIsMobile()
+  if (isMobile) return <MobileDesignDraft />
+
   const [params] = useSearchParams()
   const paperId = params.get('paper') ?? DEFAULT_PAPER
 

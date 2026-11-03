@@ -34,10 +34,15 @@ import {
 import { usePaneResize } from '@/lib/usePaneResize'
 import { ProjectSidebar } from './ProjectSidebar'
 import s from './PermissionSettings.module.css'
+import { useIsMobile } from '@/lib/useMediaQuery'
+import { MobilePermissions } from '../mobile/MobilePermissions'
 
 const PERMISSION_ORDER: Permission[] = ['allow', 'ask', 'block']
 
 export default function PermissionSettings() {
+  const isMobile = useIsMobile()
+  if (isMobile) return <MobilePermissions />
+
   const nav = usePaneResize({
     initial: 250,
     min: 200,

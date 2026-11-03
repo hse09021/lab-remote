@@ -51,6 +51,8 @@
 | DELETE | `/papers/{id}/annotations/{annotationId}` | — | 〃 | `/papers/:id` 삭제 |
 | PUT | `/experiments/permissions` | `{ mode: PermissionMode, overrides: Record<string, Permission> }` | `['experiments','permissions']` | `/experiments/permissions` |
 | PUT | `/papers/{id}/design` | `{ values: Record<string, string> }` | `['papers',id,'design']` | `/experiments/new/from-paper` |
+| POST | `/experiments/{id}/stop` | — | `['experiments']` | 모바일 `/experiments` 정지 확인 시트 |
+| PUT | `/experiments/loop` | `{ paused: boolean }` | `['experiments']` | 모바일 `/experiments` 루프 일시정지 |
 
 ² `null` 이면 수정본을 지우고 요약에서 만든 값으로 돌아가요.
 ³ `id` 가 들어 있으면 **되돌리기**예요 — 지웠던 것을 `id`·`createdAt` 그대로 되살려요.
@@ -65,6 +67,15 @@
 | `DiscrepancyNote` | `chosen` | 수치 불일치에서 고른 재현 목표. 안 골랐으면 `null` |
 | `DesignDraft` | `saved` | 설계 초안에 입력해 둔 값. 없으면 `null` |
 | `Paper` | `field`, `model` | 아직 분류 전이면 `null` (화면은 "분류 대기"로 보여 줘요) |
+| `Dashboard` | `loopPaused` | 루프가 멈춰 있는지 |
+
+## 모바일
+
+768px 이하에서는 같은 경로를 **같은 `api/` 로** 읽고 써요 (`useIsMobile()` 로 레이아웃만 갈아끼워요).
+그래서 모바일에서 바꾼 값(실험 정지, 읽음 상태, 권한 프리셋)이 데스크톱에도 그대로 보여요.
+
+모바일에서 읽기만 하는 화면 — `/experiments/permissions`(프리셋만 바꿀 수 있어요),
+`/experiments/new/from-paper`(값 확인만).
 
 ## 아직 없는 것
 

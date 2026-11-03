@@ -1,5 +1,5 @@
-import { queryOptions } from '@tanstack/react-query'
-import { get } from './client'
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { get, send } from './client'
 import type {
   Dashboard,
   EventEntry,
@@ -43,3 +43,26 @@ export const permissionsQuery = () =>
     queryKey: ['experiments', 'permissions'],
     queryFn: () => get<PermissionsPayload>('/experiments/permissions'),
   })
+
+/**
+ * 실험 정지 (모바일 확인 시트).
+ * 큐의 상태와 결정·이벤트 기록이 같이 바뀌어요.
+ */
+export function useStopExperiment() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => send<unknown>('POST', `/experiments/${id}/stop`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['experiments'] }),
+  })
+}
+
+/** 루프 일시정지 / 다시 시작 */
+export function usePauseLoop() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (paused: boolean) => send<unknown>('PUT', '/experiments/loop', { paused }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['experiments'] }),
+  })
+}
