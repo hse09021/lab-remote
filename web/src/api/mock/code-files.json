@@ -1,0 +1,48 @@
+[
+  {
+    "id": "config",
+    "path": "experiments/EXP-007/config.yaml",
+    "label": "config.yaml",
+    "crumb": "experiments › EXP-007 › config.yaml",
+    "readOnly": false,
+    "content": "experiment: EXP-007\nparent: EXP-006\nmodel:\n  backbone: vit_base_patch16_224\nlora:\n  rank: 32\n  alpha: 32\n  dropout: 0.05\ntrain:\n  lr: 2.0e-4\n  batch_size: 32\n  epochs: 50\n  seed: 42\noutput_dir: experiments/EXP-007/output\n# W&B 키는 환경변수 WANDB_API_KEY로 주입 (.env, gitignore)\n",
+    "original": "experiment: EXP-007\nparent: EXP-006\nmodel:\n  backbone: vit_base_patch16_224\nlora:\n  rank: 16\n  alpha: 32\n  dropout: 0.05\ntrain:\n  lr: 2.0e-4\n  batch_size: 32\n  epochs: 50\n  seed: 42\noutput_dir: experiments/EXP-007/output\n# W&B 키는 환경변수 WANDB_API_KEY로 주입 (.env, gitignore)\n",
+    "banner": {
+      "tone": "info",
+      "title": "AI가 21:42에 수정",
+      "text": "근거 · Decision_log.md · 커밋 9f1c2ab",
+      "actions": [
+        "변경 전 보기",
+        "되돌리기"
+      ]
+    },
+    "diffNote": "← AI 변경"
+  },
+  {
+    "id": "train",
+    "path": "experiments/EXP-007/train.py",
+    "label": "train.py",
+    "crumb": "experiments › EXP-007 › train.py",
+    "readOnly": false,
+    "content": "import yaml\nfrom peft import LoraConfig, get_peft_model\nfrom src.model import build_backbone\nfrom src.ckpt import load_resume, save_resume\n\ndef main(cfg_path):\n    cfg = yaml.safe_load(open(cfg_path))\n    model = build_backbone(cfg[\"model\"])\n    lora = LoraConfig(r=cfg[\"lora\"][\"rank\"],\n                      lora_alpha=cfg[\"lora\"][\"alpha\"])\n    model = get_peft_model(model, lora)\n    start = load_resume(cfg[\"output_dir\"])  # 재개용 체크포인트\n    for epoch in range(start, cfg[\"train\"][\"epochs\"]):\n        train_one_epoch(model, epoch)\n        save_resume(model, epoch, cfg[\"output_dir\"])\n",
+    "original": null,
+    "banner": null,
+    "diffNote": null
+  },
+  {
+    "id": "eval",
+    "path": "docs/Evaluation.md",
+    "label": "Evaluation.md",
+    "crumb": "docs › Evaluation.md",
+    "readOnly": true,
+    "content": "# Evaluation\n\n- 주 지표: val_accuracy (CIFAR-100 validation)\n- 성공 기준: val_accuracy ≥ 82.0%\n- 비교 기준선: EXP-004\n- 결과 확인 후 기준 변경 금지\n",
+    "original": null,
+    "banner": {
+      "tone": "warn",
+      "title": "잠긴 파일",
+      "text": "실험이 도는 동안에는 평가 기준을 바꿀 수 없어요 (Hooks로 차단)",
+      "actions": []
+    },
+    "diffNote": null
+  }
+]

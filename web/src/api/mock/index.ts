@@ -11,6 +11,12 @@ const MOCKS: Record<string, () => Promise<{ default: unknown }>> = {
   '/experiments/dashboard': () => import('./dashboard.json'),
   '/experiments/events': () => import('./events.json'),
   '/experiments/permissions': () => import('./permissions.json'),
+  '/code/files': () => import('./code-files.json'),
+  '/code/tree': () => import('./file-tree.json'),
+  '/code/terminal': () => import('./terminal.json'),
+  '/code/commits': () => import('./commits.json'),
+  '/code/chat': () => import('./code-chat.json'),
+  '/code/run': () => import('./code-run.json'),
 }
 
 export async function loadMock<T>(path: string): Promise<T> {
