@@ -583,3 +583,63 @@ export type ChatEntry =
   | { kind: 'user'; text: string }
   | { kind: 'loading' }
   | { kind: 'answer'; text: string; go?: string; src?: string }
+
+/* ── 실험 설계 초안 (FocusDesign) ───────────────────────────── */
+
+/** 값 하나의 출처 */
+export type DesignValueKind =
+  /** 논문에서 그대로 확인한 값 */
+  | 'confirmed'
+  /** 리더의 수치 불일치에서 고른 값을 가져와요 */
+  | 'fromReader'
+  /** 논문에 없어서 내가 정해야 하는 값 */
+  | 'estimate'
+
+export interface DesignValue {
+  key: string
+  item: string
+  /** confirmed 만 처음부터 값이 있어요 */
+  value: string | null
+  /** 근거 — 리더의 해당 섹션으로 이동해요 */
+  evidence: { sectionId: string; label: string } | null
+  kind: DesignValueKind
+  /** 입력칸 안내 */
+  hint: string | null
+}
+
+export interface DesignChoiceBlock {
+  kind: 'choices'
+  title: string
+  /** startOptions / envOptions 중 어느 목록인지 */
+  options: 'startOptions' | 'envOptions'
+}
+
+export type DesignChatBlock =
+  | { kind: 'assistant'; text: string }
+  | { kind: 'user'; text: string }
+  | DesignChoiceBlock
+
+export interface DesignOption {
+  id: string
+  label: string
+  desc: string
+}
+
+export interface DesignDraft {
+  paperId: string
+  paperTitle: string
+  spec: Array<{ label: string; value: string }>
+  files: string[]
+  filesNote: string
+  values: DesignValue[]
+  startOptions: DesignOption[]
+  envOptions: DesignOption[]
+  envLabels: Record<string, string>
+  chat: DesignChatBlock[]
+  /** 설계 토론 패널의 첨부 칩 */
+  attachment: string
+  /** 내가 넣어 둔 값. 없으면 null */
+  saved: Record<string, string> | null
+}
+
+export type DesignDraftMap = Record<string, DesignDraft>

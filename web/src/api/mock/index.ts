@@ -1,5 +1,6 @@
 import { ApiError } from '../client'
 import { readAnnotations, readMockState } from '../mockStore'
+import type { DesignDraftMap } from '../types'
 import { applyOverlay } from './overlay'
 
 /**
@@ -23,6 +24,7 @@ const MOCKS: Record<string, () => Promise<{ default: unknown }>> = {
   '/papers/summaries': () => import('./paper-summaries.json'),
   '/papers/chat': () => import('./library-chat.json'),
   '/papers/attn/reader': () => import('./paper-attn.json'),
+  '/papers/design': () => import('./design-drafts.json'),
 }
 
 /**
@@ -42,6 +44,16 @@ export async function loadMock<T>(path: string): Promise<T> {
   const stored = loadFromStore<T>(path)
   if (stored !== undefined) return stored
 
+  // 설계 초안은 논문별로 한 묶음에서 꺼내요
+  const design = path.match(/^\/papers\/([^/]+)\/design$/)
+  if (design) {
+    const mod = await MOCKS['/papers/design']()
+    const map = structuredClone(mod.default) as DesignDraftMap
+    const draft = map[design[1]]
+    if (!draft) throw new ApiError(404, path, `설계 초안이 없는 논문이에요: ${design[1]}`)
+    return applyOverlay(path, draft) as T
+  }
+
   const load = MOCKS[path]
   if (!load) {
     throw new ApiError(404, path, `등록된 mock이 없어요: ${path}`)
@@ -52,4 +64,6 @@ export async function loadMock<T>(path: string): Promise<T> {
 }
 
 export const hasMock = (path: string) =>
-  path in MOCKS || loadFromStore(path) !== undefined
+  path in MOCKS ||
+  loadFromStore(path) !== undefined ||
+  /^\/papers\/[^/]+\/design$/.test(path)

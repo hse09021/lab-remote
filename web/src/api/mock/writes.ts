@@ -4,6 +4,7 @@ import {
   removeAnnotation,
   removeSavedPaper,
   restoreAnnotation,
+  setDesignValues,
   setDiscrepancy,
   setPermissions,
   setReadStatus,
@@ -50,6 +51,14 @@ export function applyMockWrite(method: string, path: string, body: unknown): unk
   if (disc && method === 'PUT') {
     const { target } = body as { target: string }
     setDiscrepancy(disc[1], target)
+    return body
+  }
+
+  /* 실험 설계 초안에 직접 넣은 값 */
+  const design = path.match(/^\/papers\/([^/]+)\/design$/)
+  if (design && method === 'PUT') {
+    const { values } = body as { values: Record<string, string> }
+    setDesignValues(design[1], values)
     return body
   }
 

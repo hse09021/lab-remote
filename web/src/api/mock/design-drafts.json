@@ -1,0 +1,219 @@
+{
+  "attn": {
+    "paperId": "attn",
+    "paperTitle": "Attention Is All You Need",
+    "spec": [
+      {
+        "label": "목적",
+        "value": "논문 base 모델 설정으로 EN-DE BLEU를 먼저 재현해요"
+      },
+      {
+        "label": "첫 실험",
+        "value": "EXP-001 · 논문 설정 그대로 (base)"
+      },
+      {
+        "label": "조작변인",
+        "value": "없음 (재현)"
+      },
+      {
+        "label": "고정 변인",
+        "value": "데이터, 구조, 옵티마이저, 정규화, 학습 길이, 평가 방법"
+      },
+      {
+        "label": "성공 기준",
+        "value": "표 2의 EN-DE BLEU 대비 ±0.5 이내"
+      },
+      {
+        "label": "종료 조건",
+        "value": "GPU 24시간 · 최대 10회 · [마감일 정하기]"
+      }
+    ],
+    "files": [
+      "CLAUDE.md",
+      "docs/Experiment_design.md",
+      "docs/Evaluation.md",
+      "docs/Stop_and_recovery.md",
+      "specifications/Config.yaml",
+      "specifications/environment.yml",
+      "experiments/EXP-001/config.yaml",
+      ".gitignore · .env"
+    ],
+    "filesNote": "Loop Engineering 폴더 구조 · 새 GitHub 레포 1개",
+    "values": [
+      {
+        "key": "data",
+        "item": "데이터",
+        "value": "WMT14 EN-DE · 약 450만 문장쌍",
+        "evidence": {
+          "sectionId": "s5-1",
+          "label": "§5.1 학습 데이터"
+        },
+        "kind": "confirmed",
+        "hint": null
+      },
+      {
+        "key": "batch",
+        "item": "배치",
+        "value": "문장쌍 묶음당 약 25,000 source + 25,000 target 토큰",
+        "evidence": {
+          "sectionId": "s5-1",
+          "label": "§5.1 학습 데이터"
+        },
+        "kind": "confirmed",
+        "hint": null
+      },
+      {
+        "key": "arch",
+        "item": "구조",
+        "value": "N=6 · d_model=512 · d_ff=2048 · h=8",
+        "evidence": {
+          "sectionId": "s6-2",
+          "label": "표 3"
+        },
+        "kind": "confirmed",
+        "hint": null
+      },
+      {
+        "key": "optim",
+        "item": "옵티마이저",
+        "value": "Adam β₁=0.9 β₂=0.98 ε=1e-9 · warmup 4000",
+        "evidence": {
+          "sectionId": "s5-3",
+          "label": "§5.3 옵티마이저"
+        },
+        "kind": "confirmed",
+        "hint": null
+      },
+      {
+        "key": "reg",
+        "item": "정규화",
+        "value": "P_drop=0.1 · ε_ls=0.1",
+        "evidence": {
+          "sectionId": "s5-4",
+          "label": "§5.4 정규화"
+        },
+        "kind": "confirmed",
+        "hint": null
+      },
+      {
+        "key": "steps",
+        "item": "학습 길이",
+        "value": "100,000 step (base)",
+        "evidence": {
+          "sectionId": "s5-2",
+          "label": "§5.2 하드웨어·일정"
+        },
+        "kind": "confirmed",
+        "hint": null
+      },
+      {
+        "key": "eval",
+        "item": "평가",
+        "value": "BLEU · newstest2014 · beam 4 · α=0.6 · 체크포인트 5개 평균",
+        "evidence": {
+          "sectionId": "s6-1",
+          "label": "§6.1 기계 번역"
+        },
+        "kind": "confirmed",
+        "hint": null
+      },
+      {
+        "key": "code",
+        "item": "공식 코드",
+        "value": "tensor2tensor",
+        "evidence": {
+          "sectionId": "s7",
+          "label": "§7 결론"
+        },
+        "kind": "confirmed",
+        "hint": null
+      },
+      {
+        "key": "target",
+        "item": "재현 목표",
+        "value": null,
+        "evidence": {
+          "sectionId": "s6-1",
+          "label": "§6.1 · 표 2"
+        },
+        "kind": "fromReader",
+        "hint": "리더에서 수치를 고르면 채워져요"
+      },
+      {
+        "key": "accum",
+        "item": "gradient accumulation",
+        "value": null,
+        "evidence": null,
+        "kind": "estimate",
+        "hint": "GPU 1장 기준 횟수 · 논문은 8장 기준이에요"
+      },
+      {
+        "key": "hours",
+        "item": "예상 학습 시간",
+        "value": null,
+        "evidence": null,
+        "kind": "estimate",
+        "hint": "GPU 1장 기준 · 논문은 8×P100 12시간이에요"
+      }
+    ],
+    "startOptions": [
+      {
+        "id": "repro",
+        "label": "논문 설정 그대로 재현 (추천)",
+        "desc": "재현이 되는지 먼저 확인하고 변형으로 넘어가요"
+      },
+      {
+        "id": "apply",
+        "label": "우리 데이터로 바로 적용",
+        "desc": "재현을 건너뛰고 목표 과제에 맞춰 시작해요"
+      },
+      {
+        "id": "sweep",
+        "label": "head 수만 바꿔 비교",
+        "desc": "논문 설정에서 h 여러 개를 큐에 넣어요"
+      }
+    ],
+    "envOptions": [
+      {
+        "id": "reuse",
+        "label": "lora-env (추천)",
+        "desc": "기존 환경에 맞는 버전만 맞추면 돼요"
+      },
+      {
+        "id": "new",
+        "label": "새 환경 attn-env",
+        "desc": "공식 코드(tensor2tensor)의 요구 버전으로 새로 만들어요"
+      }
+    ],
+    "envLabels": {
+      "reuse": "lora-env · 버전 갱신",
+      "new": "attn-env · 새로 생성"
+    },
+    "chat": [
+      {
+        "kind": "assistant",
+        "text": "본문과 표 3에서 값을 뽑았어요. GPU 1장이라 논문의 8장 배치를 맞추려면 gradient accumulation 횟수를 정해야 하고, 학습 시간도 그에 따라 달라져요."
+      },
+      {
+        "kind": "choices",
+        "title": "첫 실험을 어떻게 시작할까요?",
+        "options": "startOptions"
+      },
+      {
+        "kind": "user",
+        "text": "재현부터 하고, 종료 조건은 GPU 24시간으로 잡아줘"
+      },
+      {
+        "kind": "assistant",
+        "text": "EXP-001을 논문 base 설정 그대로 돌리고, 성공 기준은 표 2 BLEU ±0.5로 둘게요. 종료 조건은 GPU 24시간, 최대 10회로 Config.yaml에 넣을게요."
+      },
+      {
+        "kind": "choices",
+        "title": "실험 환경",
+        "options": "envOptions"
+      }
+    ],
+    "attachment": "Attention.md",
+    "saved": null
+  }
+}

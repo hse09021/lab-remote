@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   paperReaderQuery,
   paperSummariesQuery,
@@ -52,6 +52,9 @@ import s from './PaperReader.module.css'
 
 export default function PaperReader() {
   const { id = 'attn' } = useParams<{ id: string }>()
+  // 설계 초안의 근거 링크로 들어오면 그 섹션부터 보여 줘요
+  const [search] = useSearchParams()
+  const wantSection = search.get('section')
 
   const outline = usePaneResize({
     initial: 270,
@@ -95,6 +98,18 @@ export default function PaperReader() {
 
   const requestJump = (target: JumpTarget) =>
     setJump((prev) => ({ target, nonce: (prev?.nonce ?? 0) + 1 }))
+
+  /* ?section= 으로 들어왔으면 본문이 준비된 뒤 한 번만 이동해요 */
+  const jumpedTo = useRef<string | null>(null)
+  useEffect(() => {
+    if (!wantSection || jumpedTo.current === wantSection) return
+    jumpedTo.current = wantSection
+    setActiveId(wantSection)
+    setJump((prev) => ({
+      target: { sectionId: wantSection },
+      nonce: (prev?.nonce ?? 0) + 1,
+    }))
+  }, [wantSection])
 
   const [papers, reader, summaries, mdDrafts, annotations] = useQueries({
     queries: [
@@ -399,7 +414,12 @@ export default function PaperReader() {
           <SplitButton
             label="실험 설계 초안"
             menuLabel="실험 설계 초안"
-            items={[{ label: '논문에서 재현 실험 만들기', to: '/experiments/new/from-paper' }]}
+            items={[
+              {
+                label: '논문에서 재현 실험 만들기',
+                to: `/experiments/new/from-paper?paper=${id}`,
+              },
+            ]}
           />
         </div>
       </div>
