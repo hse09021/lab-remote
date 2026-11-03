@@ -172,6 +172,22 @@ export default function PaperReader() {
     return () => window.removeEventListener('keydown', onKey)
   }, [overlays])
 
+  /*
+   * 바깥을 누르면 떠 있는 것들을 닫아요.
+   * 메뉴 항목을 누를 때는 닫히면 안 되니, 떠 있는 것 안쪽은 지나쳐요.
+   * (누르는 순간 닫고 click 으로 동작하면 핸들러가 안 돌아요)
+   */
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const el = e.target as HTMLElement | null
+      if (el?.closest('[data-reader-overlay]')) return
+      overlays.closeAll()
+      setMyMenu(null)
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [overlays])
+
   const paper = papers.data?.find((p) => p.id === id)
   const summary = summaries.data?.[id]
 

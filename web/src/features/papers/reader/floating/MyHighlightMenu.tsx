@@ -24,6 +24,7 @@ export function MyHighlightMenu({ annotation, anchor, onAnnotate, onDelete, onCl
       role="menu"
       aria-label="내 하이라이트"
       style={style}
+      data-reader-overlay=""
       className={s.menu}
     >
       <span className={s.quote}>{annotation.text}</span>
