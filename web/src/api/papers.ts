@@ -3,6 +3,7 @@ import { get, send } from './client'
 import type {
   LibraryChat,
   Paper,
+  PaperReaderPayload,
   PaperSummaryMap,
   ReadStatus,
 } from './types'
@@ -17,6 +18,16 @@ export const paperSummariesQuery = () =>
   queryOptions({
     queryKey: ['papers', 'summaries'],
     queryFn: () => get<PaperSummaryMap>('/papers/summaries'),
+  })
+
+/**
+ * 리더 한 편의 구조·좌표. 섹션·하이라이트·참고문헌이 들어 있어요.
+ * 본문(PDF·HTML)은 다음 단계에서 따로 불러와요.
+ */
+export const paperReaderQuery = (paperId: string) =>
+  queryOptions({
+    queryKey: ['papers', paperId, 'reader'],
+    queryFn: () => get<PaperReaderPayload>(`/papers/${paperId}/reader`),
   })
 
 export const libraryChatQuery = () =>

@@ -413,3 +413,67 @@ export interface PermissionsPayload {
   logPath: string
   approvalLog: ApprovalLogEntry[]
 }
+
+/* ── 논문 리더 ──────────────────────────────────────────────── */
+
+export interface PaperSection {
+  id: string
+  /** 섹션 번호. Abstract·References는 빈 문자열 */
+  n: string
+  title: string
+  /** 0 = 대제목, 1·2 = 하위 */
+  level: 0 | 1 | 2
+  page: number
+  /** PDF 좌표(612×792 pt) — 제목 기준선 y */
+  y: number
+  /** 제목 글자가 끝나는 x. 설명 버튼을 놓을 자리 */
+  xEnd: number
+  /** arXiv/LaTeXML 식 앵커. "S3.SS2.SSS1" */
+  htmlAnchor: string | null
+}
+
+export interface Highlight {
+  id: string
+  category: HighlightCategory
+  /** 어느 섹션에 속하는지 */
+  section: string
+  page: number
+  /** PDF 좌표 사각형. 한 하이라이트가 여러 줄에 걸칠 수 있어요 */
+  boxes: PtRect[]
+  note: string
+}
+
+export interface Reference {
+  n: number
+  authors: string
+  short: string
+  title: string
+  venue: string
+  arxiv: string | null
+  year: number
+  /** 본문에서 인용된 횟수 */
+  citedCount: number
+  inLibrary: boolean
+  /** 왜 인용했는지 */
+  why: string
+}
+
+export interface PaperReaderPayload {
+  paperId: string
+  title: string
+  meta: string
+  arxivId: string
+  arxivUrl: string
+  /** arXiv HTML이 없으면 PDF만 보여 줘요 */
+  hasHtml: boolean
+  pageCount: number
+  /** 쪽 이미지 경로 앞부분. 개발용 fixtures */
+  pageImageBase: string
+  pageSize: { width: number; height: number }
+  sections: PaperSection[]
+  highlights: Highlight[]
+  references: Reference[]
+  /** 실제 참고문헌 수 (모델링한 것보다 많아요) */
+  referenceTotal: number
+  citationsCaption: string
+}

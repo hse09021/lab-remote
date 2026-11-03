@@ -3,6 +3,11 @@
   border-radius: var(--radius-pill);
 }
 
+/* 리더의 읽은 위치 막대는 트랙이 한 단계 진해요 */
+.trackBorder {
+  background: var(--border);
+}
+
 /* 지표 타일: 트랙만 둥글게 잘라내고 채움은 각지게 (목업과 같아요) */
 .clip {
   overflow: hidden;

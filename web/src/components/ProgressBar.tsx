@@ -8,6 +8,8 @@ interface Props {
   height?: number
   /** 채움도 둥글게. 자원 막대가 이 모양이에요 */
   rounded?: boolean
+  /** 트랙을 한 단계 진하게 (리더의 읽은 위치) */
+  darkTrack?: boolean
   label?: string
 }
 
@@ -16,6 +18,7 @@ export function ProgressBar({
   tone = 'accent',
   height = 6,
   rounded = false,
+  darkTrack = false,
   label,
 }: Props) {
   const pct = Math.max(0, Math.min(100, value))
@@ -27,7 +30,7 @@ export function ProgressBar({
       aria-valuemin={label ? 0 : undefined}
       aria-valuemax={label ? 100 : undefined}
       style={{ height }}
-      className={clsx(s.track, rounded ? s.round : s.clip)}
+      className={clsx(s.track, darkTrack && s.trackBorder, rounded ? s.round : s.clip)}
     >
       <div style={{ width: `${pct}%` }} className={clsx(s.fill, s[tone])} />
     </div>
