@@ -34,6 +34,13 @@ class PlannedFile:
     role: str = ""  # docs/File_directory.md 의 설명
 
 
+#: 실제 비밀 값을 두는 곳. **프로젝트 폴더 밖**이다.
+#  훅은 "대상이 그 파일인 호출" 만 막는다 — `grep -r` 처럼 폴더를 훑는 재귀
+#  읽기는 못 막으므로, 프로젝트 안에 두지 않는 게 1차 방어다. 그래서 생성기는
+#  `.env` 를 **만들지 않고** `.env.example`(이름만)만 만든다.
+SECRET_ENV_HINT = "~/.config/labremote/$project_name.env"
+
+
 def build_plan(spec: ProjectSpec) -> list[PlannedFile]:
     LY = L.LOOP_LAYOUT
     EX = L.EXPERIMENT_FILES
@@ -41,8 +48,17 @@ def build_plan(spec: ProjectSpec) -> list[PlannedFile]:
         PlannedFile(LY["claude_md"], "user", "CLAUDE.md.tmpl", role="고정 지침. 잠긴 항목과 기록 의무"),
         PlannedFile(LY["readme"], "ai", "README.md.tmpl", role="실험 개요와 결과 요약"),
         PlannedFile(".gitignore", "gen", "gitignore.tmpl", role="용량·비밀 값 제외 규칙"),
+        # 변수 **이름**만 적는다. 실제 값은 프로젝트 밖에 둔다 — 아래 주석 참고.
         PlannedFile(".env.example", "gen", "env.example.tmpl", role="필요한 환경 변수 이름"),
-        PlannedFile(".env", "user", "env.example.tmpl", tracked=False, role="실제 비밀 값 (커밋 안 함)"),
+        # 권한 기본 모드 고정. 2.1.317 은 사용자 설정에 defaultMode 가 없으면
+        # auto 로 뜨고, 프로젝트 설정이 사용자 설정보다 우선한다.
+        # `.claude/**` 는 훅의 selfProtect 라 AI 가 되돌릴 수 없다.
+        PlannedFile(
+            ".claude/settings.json",
+            "hook",
+            "claude/settings.json.tmpl",
+            role="권한 기본 모드 고정 (훅 소유)",
+        ),
         # docs/
         PlannedFile(LY["background"], "ai", "docs/Background.md.tmpl", role="배경 지식"),
         PlannedFile(LY["process"], "user", "docs/Process.md.tmpl", role="구조화된 실험 절차"),

@@ -27,6 +27,7 @@ __all__ = [
     "rel_or_none",
     "match_glob",
     "match_globs",
+    "match_abs_globs",
 ]
 
 
@@ -136,3 +137,24 @@ def match_glob(rel: str, pattern: str) -> bool:
 
 def match_globs(rel: str, patterns: list[str] | tuple[str, ...]) -> bool:
     return any(match_glob(rel, p) for p in patterns)
+
+
+def match_abs_globs(target: str, patterns: list[str] | tuple[str, ...]) -> bool:
+    """**절대 경로**를 절대 경로 glob 과 맞춘다 (보호 목록·비밀 파일용).
+
+    `match_glob` 은 프로젝트 루트 기준 상대 경로만 보므로, 프로젝트 밖
+    (`~/.claude/**`, `**/.env`)을 지키려면 이쪽이 필요하다.
+
+    패턴의 `~` 는 펼치고, 양쪽에서 맨 앞 `/` 를 떼고 같은 번역기에 넣는다.
+    그래서 `**/.env` 가 `/home/u/p/.env` 에 걸린다.
+    """
+    if not target:
+        return False
+    stripped = target.lstrip("/")
+    for pattern in patterns or ():
+        if not pattern:
+            continue
+        expanded = os.path.expanduser(pattern).lstrip("/")
+        if match_glob(stripped, expanded):
+            return True
+    return False

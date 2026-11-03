@@ -397,6 +397,12 @@ export interface ApprovalLogEntry {
   /** 아직 처리되지 않은 건만 알약으로 보여 줘요 */
   resultPending: boolean
   handledBy: string
+  /**
+   * 한 호출을 묶는 키. 한 호출이 "대기 중" → "허용"(또는 "거부 또는 미응답")
+   * 으로 두 줄 이상 남아요. 화면은 같은 toolUseId 의 **마지막 줄**을 보여 주면
+   * 돼요. 훅이 모르는 옛 기록은 빈 문자열이에요.
+   */
+  toolUseId: string
 }
 
 export interface PermissionsPayload {

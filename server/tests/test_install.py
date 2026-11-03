@@ -29,7 +29,7 @@ def test_덤프_모드_설치(fake_settings):
     data = read(fake_settings)
 
     assert data["effortLevel"] == "high"  # 남의 설정은 그대로
-    assert set(data["hooks"]) == {"PreToolUse", "PostToolUse", "Stop", "SessionEnd"}
+    assert set(data["hooks"]) == install.expected_events("dump")
     for entries in data["hooks"].values():
         cmd = entries[0]["hooks"][0]["command"]
         assert install.MARKER in cmd and "app.hooks.debug" in cmd
@@ -43,7 +43,12 @@ def test_enforce_설치(fake_settings):
     data = read(fake_settings)
 
     assert data["effortLevel"] == "high"
-    assert set(data["hooks"]) == {"PreToolUse", "PostToolUse", "Stop", "SessionEnd"}
+    assert set(data["hooks"]) == install.expected_events("enforce")
+    # 거부로 턴이 끊기면 Stop 이 안 돈다 — 이 훅이 빠지면 대기 건이 남는다
+    assert "UserPromptSubmit" in data["hooks"]
+    assert "app.hooks.userprompt" in data["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+    # 비밀 파일만 보려고 읽기 도구도 matcher 에 들어 있다
+    assert "Read" in install.TOOL_MATCHER and "Grep" in install.TOOL_MATCHER
     pre = data["hooks"]["PreToolUse"][0]
     # 판정 훅이 깨지면 조용히 문이 열리면 안 된다
     assert pre["hooks"][0]["onFailure"] == "block"
@@ -84,7 +89,7 @@ def test_두_번_설치해도_중복되지_않는다(fake_settings):
     install.install(mode="dump")
     info = install.install(mode="dump")
     data = read(fake_settings)
-    assert info["replaced"] == 4
+    assert info["replaced"] == len(install.DUMP_EVENTS)
     for entries in data["hooks"].values():
         assert len(entries) == 1
 
@@ -110,7 +115,7 @@ def test_uninstall_이_원래대로_되돌린다(fake_settings):
     install.install(mode="dump")
     info = install.uninstall()
 
-    assert info["removed"] == 4
+    assert info["removed"] == len(install.DUMP_EVENTS)
     assert read(fake_settings) == before  # hooks 키까지 깨끗하게 사라짐
     assert info["previousBackup"] and os.path.exists(info["previousBackup"])
 
@@ -134,7 +139,7 @@ def test_status_가_설치_상태를_읽는다(fake_settings):
     assert install.status()["installed"] == {}
     install.install(mode="dump")
     st = install.status()
-    assert set(st["installed"]) == {"PreToolUse", "PostToolUse", "Stop", "SessionEnd"}
+    assert set(st["installed"]) == install.expected_events("dump")
     assert st["state"]["mode"] == "dump"
     install.uninstall()
     assert install.status()["installed"] == {}
@@ -157,3 +162,20 @@ def test_설치_기록이_남는다(fake_settings):
     info = install.install(mode="dump")
     with open(install.state_path(), encoding="utf-8") as fh:
         assert json.load(fh) == info
+
+
+def test_SubagentStop_도_등록된다(fake_settings):
+    """서브에이전트 대기 건을 닫는 훅. 빠지면 승인창이 열린 채 기록이 어긋난다."""
+    install.install(mode="enforce")
+    data = read(fake_settings)
+    assert "SubagentStop" in data["hooks"]
+    cmd = data["hooks"]["SubagentStop"][0]["hooks"][0]["command"]
+    assert "app.hooks.subagentstop" in cmd
+    # 아무것도 막지 않는 기록용 훅이다
+    assert data["hooks"]["SubagentStop"][0]["hooks"][0]["onFailure"] == "continue"
+
+
+def test_덤프_모드도_SubagentStop_을_받아_적는다(fake_settings):
+    """이 이벤트의 입력은 아직 실측 전이다."""
+    install.install(mode="dump")
+    assert "SubagentStop" in read(fake_settings)["hooks"]

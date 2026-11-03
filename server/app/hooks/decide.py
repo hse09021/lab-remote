@@ -15,7 +15,15 @@ from .emit import ALLOW, ASK, DEFER, DENY, Decision
 __all__ = ["decide", "combine"]
 
 #: 잠긴 항목에서 온 결정인지 (승인 로그 handledBy 에 쓴다)
-LOCK_ACTIONS = {"outside", "prev", "stop", "selfProtect"}
+LOCK_ACTIONS = {
+    "outside",
+    "prev",
+    "stop",
+    "selfProtect",
+    "hardProtect",
+    "secret",
+    "outputProtect",
+}
 
 
 def _name(ctx: Ctx, key: str) -> str:
@@ -43,6 +51,25 @@ def decide(finding: Finding, ctx: Ctx) -> Decision:
     # --- 잠긴 항목 ---------------------------------------------------------
     if action == "selfProtect":
         return DENY(M.with_guard(M.self_protect(str(finding.rel))), **base)
+
+    # 정책으로도 못 연다. extraWritableRoots 예외보다 앞에서 판정됐다.
+    if action == "hardProtect":
+        return DENY(M.with_guard(M.hard_protect(str(finding.target))), **base)
+
+    # 읽기까지 막는 유일한 분류
+    if action == "secret":
+        return DENY(M.with_guard(M.secret(str(finding.target))), **base)
+
+    # 원본 출력 보존. 돌고 있는 실험도 대상이다.
+    if action == "outputProtect":
+        return DENY(
+            M.with_guard(
+                M.output_protect(
+                    str(finding.rel), str(finding.exp), finding.detail or "바꿀"
+                )
+            ),
+            **base,
+        )
 
     if action == "outside":
         return DENY(M.with_guard(M.outside(str(finding.target))), **base)
@@ -94,13 +121,16 @@ def decide(finding: Finding, ctx: Ctx) -> Decision:
 def _maybe_headless(decision: Decision, ctx: Ctx, label: str) -> Decision:
     """헤드리스에서 승인창을 띄울 수 없을 때.
 
-    **자동 허용으로는 절대 안 넘어간다.** 정책 `headless.onAsk` 가
-    "deny-with-reason" 이면 사유를 붙여 거절하고, 호출부가 Discord 로
-    "승인 대기" 를 알린다. 기본값은 "ask" 다 (①단계).
+    **자동 허용으로는 절대 안 넘어간다.** 기본값은 `deny-with-reason` 이다 —
+    실측(2026-11-04)에서 `claude -p` 의 ask 는 사람에게 가지 않고 10초 안에
+    자동 거부됐다. 기다려 주지 않으므로 우리가 사유를 붙여 먼저 막고,
+    호출부가 승인 요청을 `data/requests/` 에 남기고 Discord 로 알린다.
     """
     if decision.kind != "ask" or not ctx.headless:
         return decision
-    mode = (getattr(ctx.policy, "headless", {}) or {}).get("onAsk", "ask")
+    mode = (getattr(ctx.policy, "headless", {}) or {}).get(
+        "onAsk", "deny-with-reason"
+    )
     if mode != "deny-with-reason":
         return decision
     return DENY(

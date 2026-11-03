@@ -109,12 +109,30 @@ def test_Stop_이_안_돌아간_대기_건을_마감(project, project_root, hook
     assert rows(project_root)[-1]["result"] == stop.RESULT
 
 
-def test_Stop_은_그_응답의_대기_건만_건드린다(project, project_root, hook_event):
+def two_pendings():
+    """서로 다른 응답에서 열린 대기 건 두 개.
+
+    `run_pre` 를 두 번 부르지 않는 이유: PreToolUse 안전망이 새 응답을 보면
+    이전 응답 대기 건을 닫아 버린다(그게 B 버그 수정이다). Stop 의 응답 단위
+    묶기만 보려면 상태를 직접 만들어야 한다.
+    """
+    for prompt_id, tool_use_id in (("p1", "t1"), ("p2", "t2")):
+        A.open_pending(
+            "hook-sandbox",
+            tool_use_id,
+            {
+                "promptId": prompt_id,
+                "sessionId": "sess-테스트",
+                "tool": "Bash",
+                "action": "패키지 설치",
+                "request": f"pip install {tool_use_id}",
+            },
+        )
+
+
+def test_Stop_은_그_응답의_대기_건만_건드린다(project, project_root):
     """prompt_id 로 묶는다. 세션으로 묶으면 다른 응답 것까지 끌려 닫힌다."""
-    a = hook_event("Bash", {"command": "pip install a"}, cwd=project_root, prompt_id="p1", tool_use_id="t1")
-    b = hook_event("Bash", {"command": "pip install b"}, cwd=project_root, prompt_id="p2", tool_use_id="t2")
-    run_pre(a)
-    run_pre(b)
+    two_pendings()
     assert len(A.list_pending("hook-sandbox")) == 2
 
     stop.handle({"cwd": project_root, "prompt_id": "p1", "session_id": "sess-테스트"})
@@ -140,12 +158,9 @@ def test_PostToolUse_가_닫은_건은_Stop_이_두_번_기록_안_한다(projec
     assert len(rows(project_root)) == before
 
 
-def test_SessionEnd_가_잔여분을_정리(project, project_root, hook_event):
+def test_SessionEnd_가_잔여분을_정리(project, project_root):
     """Stop 이 못 돈 경우(크래시·강제 종료)."""
-    a = hook_event("Bash", {"command": "pip install a"}, cwd=project_root, prompt_id="p1", tool_use_id="t1")
-    b = hook_event("Bash", {"command": "pip install b"}, cwd=project_root, prompt_id="p2", tool_use_id="t2")
-    run_pre(a)
-    run_pre(b)
+    two_pendings()
     closed = sessionend.handle(
         {"cwd": project_root, "session_id": "sess-테스트", "prompt_id": "p2", "reason": "other"}
     )
@@ -219,3 +234,57 @@ def test_시각은_ISO_8601(project, project_root, hook_event):
     stamp = rows(project_root)[-1]["time"]
     parsed = datetime.fromisoformat(stamp)
     assert parsed.tzinfo is not None  # 오프셋이 붙어 있다
+
+
+# --- 서브에이전트 거르개 (판 2 · 2026-11-04) ---------------------------------
+
+
+def with_agent(tool_use_id, agent_id):
+    A.open_pending(
+        "hook-sandbox",
+        tool_use_id,
+        {
+            "promptId": "p1",
+            "sessionId": "sess-테스트",
+            "tool": "Write",
+            "action": "코드 수정",
+            "request": "experiments/EXP-002/c.py",
+            "agentId": agent_id,
+            "agentType": "general-purpose" if agent_id else "",
+        },
+    )
+
+
+def test_main_only_는_서브에이전트_건을_뺀다(project):
+    with_agent("t-main", "")
+    with_agent("t-agent", "a85e6d7a23abaefce")
+    assert [i["toolUseId"] for i in A.list_pending("hook-sandbox", main_only=True)] == ["t-main"]
+    assert len(A.list_pending("hook-sandbox")) == 2
+
+
+def test_agent_id_로_그_에이전트만(project):
+    with_agent("t-a", "aaaa1111")
+    with_agent("t-b", "bbbb2222")
+    got = A.list_pending("hook-sandbox", agent_id="bbbb2222")
+    assert [i["toolUseId"] for i in got] == ["t-b"]
+
+
+def test_거르개를_안_주면_전부(project):
+    with_agent("t-main", "")
+    with_agent("t-agent", "aaaa1111")
+    assert len(A.list_pending("hook-sandbox")) == 2
+
+
+def test_close_stale_이_거르개를_따른다(project, project_root):
+    with_agent("t-main", "")
+    with_agent("t-agent", "aaaa1111")
+    closed = A.close_stale("hook-sandbox", project_root, project, main_only=True)
+    assert [c["toolUseId"] for c in closed] == ["t-main"]
+    assert [i["toolUseId"] for i in A.list_pending("hook-sandbox")] == ["t-agent"]
+
+
+def test_sweep_기록에_거르개가_남는다(project, project_root):
+    with_agent("t-agent", "aaaa1111")
+    A.close_stale("hook-sandbox", project_root, project, agent_id="aaaa1111", by="SubagentStop")
+    last = [e for e in events(project_root) if e.get("event") == "sweep"][-1]
+    assert last["agentId"] == "aaaa1111" and last["mainOnly"] is False

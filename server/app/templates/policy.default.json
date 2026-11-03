@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "project": {
     "name": "",
     "root": ""
@@ -132,6 +132,9 @@
   "internalActions": {
     "journal": "allow",
     "selfProtect": "block",
+    "hardProtect": "block",
+    "secret": "block",
+    "outputProtect": "block",
     "unknown": "defer"
   },
   "paths": {
@@ -166,7 +169,16 @@
       "result.csv",
       "analysis.md"
     ],
+    "outputDirs": [
+      "output",
+      "checkpoints"
+    ],
+    "outputDeleteOnly": [
+      "result.csv",
+      "*.log"
+    ],
     "allowOutsideRead": true,
+    "secretFilesExtra": [],
     "extraWritableRoots": []
   },
   "bash": {
@@ -179,7 +191,7 @@
     "gitRemoteAsNet": false
   },
   "headless": {
-    "onAsk": "ask",
+    "onAsk": "deny-with-reason",
     "notifyDiscord": true
   },
   "logPath": "logs/Approval_log.csv",

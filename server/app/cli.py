@@ -90,7 +90,8 @@ def cmd_hooks(args) -> int:
         if "rows" not in report:
             print(f"✘ {report['reason']}")
             return 1
-        print(f"프로젝트  {report['project']} ({report['root']})\n")
+        print(f"프로젝트  {report['project']} ({report['root']})")
+        print("기록      남기지 않아요 (임시 폴더에서 돌렸어요)\n")
         for row in report["rows"]:
             mark = "✔" if row["ok"] else "✘"
             print(f"{mark} {row['label']:<18} 기대 {row['expected']:<6} 실제 {row['got']}")
@@ -116,6 +117,29 @@ def _install_flags(args) -> list[str]:
 def cmd_policy(args) -> int:
     if args.policy_cmd == "sync-template":
         print(policy.write_template())
+        return 0
+
+    if args.policy_cmd == "migrate":
+        info = policy.migrate(args.project)
+        if args.json:
+            print(json.dumps(info, ensure_ascii=False, indent=2))
+            return 0
+        print(f"정책       {info['path']}")
+        print(f"판         {info['from']} → {info['to']}")
+        print(f"프리셋     {info['mode']} (그대로 옮겼어요)")
+        print(f"예외       {info['overrides'] or '없음'}")
+        settings = info["settings"]
+        print(
+            f"권한 모드  {settings['path']} · defaultMode={settings['mode']}"
+            + ("" if settings["changed"] else " (이미 있었어요)")
+        )
+        log = info["log"]
+        if log.get("changed"):
+            print(f"승인 로그  {', '.join(log['added'])} 열 추가 · 백업 {log['backup']}")
+        else:
+            print(f"승인 로그  그대로 ({log.get('reason')})")
+        if info["conflicts"]:
+            print(f"⚠ 보호 경로와 겹치는 extraWritableRoots: {info['conflicts']}")
         return 0
 
     pol = policy.load(args.project)
@@ -194,12 +218,35 @@ def cmd_run_state(args) -> int:
 # --- log --------------------------------------------------------------------
 
 
+#: `labremote log` 의 요청 칸 너비
+REQUEST_WIDTH = 60
+
+
+def _shorten(text: str, width: int = REQUEST_WIDTH) -> str:
+    """너비에 맞게 줄인다. **경로는 앞을 줄이고** 명령은 뒤를 줄인다.
+
+    실측에서 `…/policies/hook-` 처럼 파일 이름이 잘려 무엇이 막혔는지 알 수
+    없었다. 경로는 뒤쪽(파일 이름)이 중요하고, 명령은 앞쪽(명령 이름)이
+    중요하다.
+    """
+    text = str(text or "")
+    if len(text) <= width:
+        return text
+    looks_like_path = "/" in text and " " not in text.strip()
+    if looks_like_path:
+        return "…" + text[-(width - 1) :]
+    return text[: width - 1] + "…"
+
+
 def cmd_log(args) -> int:
     root = registry.root_of(args.project)
     if not root:
         print(f"등록되지 않은 프로젝트예요: {args.project}")
         return 1
     rows = approval_log.read_rows(approval_log.log_path(root))
+    if not args.raw:
+        # 한 호출은 한 줄. 늦게 붙은 "허용" 이 "거부 또는 미응답" 을 이긴다.
+        rows = approval_log.group_rows(rows)
     tail = rows[-args.number :] if args.number else rows
     if args.json:
         print(json.dumps(tail, ensure_ascii=False, indent=2))
@@ -209,7 +256,100 @@ def cmd_log(args) -> int:
         return 0
     for row in tail:
         pending = " (대기)" if row.get("resultPending") == "true" else ""
-        print(f"{row['time']}  {row['action']:<22} {row['result']}{pending}  {row['request'][:60]}")
+        print(
+            f"{row['time']}  {row['action']:<22} {row['result']}{pending}  "
+            f"{_shorten(row['request'])}"
+        )
+    return 0
+
+
+# --- pending ----------------------------------------------------------------
+
+
+def cmd_pending(args) -> int:
+    root = registry.root_of(args.project)
+    if not root:
+        print(f"등록되지 않은 프로젝트예요: {args.project}")
+        return 1
+
+    if args.pending_cmd == "list":
+        items = approval_log.list_pending(args.project)
+        if args.json:
+            print(json.dumps(items, ensure_ascii=False, indent=2))
+            return 0
+        if not items:
+            print("열려 있는 승인 대기 건이 없어요")
+            return 0
+        for item in items:
+            print(
+                f"{item.get('openedAt')}  {item.get('action'):<22} "
+                f"{_shorten(str(item.get('request') or ''))}"
+            )
+            print(f"{'':<22}  응답 {item.get('promptId')} · 세션 {item.get('sessionId')}")
+            # 서브에이전트 건은 그 에이전트가 멈출 때 닫혀요. 열려 있는 이유가
+            # 보이게 한 줄 더 찍어요.
+            if item.get("agentId"):
+                agent = str(item.get("agentType") or "서브에이전트")
+                print(f"{'':<22}  에이전트 {agent} · {str(item['agentId'])[:8]}")
+        return 0
+
+    pol = policy.load(args.project)
+    closed = approval_log.close_stale(
+        args.project, root, pol, session_id=args.session or "", by="cli"
+    )
+    if args.json:
+        print(json.dumps(closed, ensure_ascii=False, indent=2))
+        return 0
+    if not closed:
+        print("닫을 대기 건이 없어요")
+        return 0
+    for item in closed:
+        print(f"닫았어요  {item.get('action')} · {item.get('result')}")
+    print(f"\n{len(closed)}건을 마감했어요. 기록에 마감 행을 덧붙였어요.")
+    return 0
+
+
+# --- requests (헤드리스 승인 요청) -------------------------------------------
+
+
+def cmd_requests(args) -> int:
+    root = registry.root_of(args.project)
+    if not root:
+        print(f"등록되지 않은 프로젝트예요: {args.project}")
+        return 1
+
+    items = approval_log.list_requests(args.project)
+    if args.requests_cmd == "list":
+        if args.json:
+            print(json.dumps(items, ensure_ascii=False, indent=2))
+            return 0
+        if not items:
+            print("남아 있는 승인 요청이 없어요")
+            return 0
+        for item in items:
+            print(f"{item.get('openedAt')}  {item.get('requestId')}")
+            print(f"  {item.get('action')} · {_shorten(str(item.get('request') or ''))}")
+        print("\n②의 승인 대기열이 이 목록을 읽어 가요.")
+        return 0
+
+    targets = [args.id] if args.id else [str(i.get("requestId") or "") for i in items]
+    pol = policy.load(args.project)
+    gone = []
+    for request_id in targets:
+        if approval_log.clear_request(args.project, request_id):
+            gone.append(request_id)
+            approval_log.append_row(
+                approval_log.log_path(root, pol),
+                action="승인 요청 정리",
+                request=request_id,
+                result="정리됨",
+                handled_by="시스템",
+                tool_use_id=request_id,
+            )
+    if args.json:
+        print(json.dumps({"cleared": gone}, ensure_ascii=False, indent=2))
+        return 0
+    print(f"{len(gone)}건을 정리했어요" if gone else "정리할 요청이 없어요")
     return 0
 
 
@@ -266,7 +406,27 @@ def build_parser() -> argparse.ArgumentParser:
     pt.add_argument("--mode", choices=list(D.MODE_IDS))
     pt.add_argument("--override", action="append", metavar="행동=권한")
     psub.add_parser("sync-template", help="커밋되는 정책 템플릿을 코드에서 다시 만들어요")
+    pm = psub.add_parser("migrate", help="정책 파일을 지금 판으로 올려요 (프리셋·예외는 보존)")
+    pm.add_argument("project")
     p.set_defaults(func=cmd_policy)
+
+    p = sub.add_parser("pending", help="승인 대기 건 보기·마감")
+    gsub = p.add_subparsers(dest="pending_cmd", required=True)
+    gl = gsub.add_parser("list", help="열려 있는 대기 건")
+    gl.add_argument("project")
+    gs = gsub.add_parser("sweep", help="열려 있는 대기 건을 '거부 또는 미응답' 으로 마감")
+    gs.add_argument("project")
+    gs.add_argument("--session", help="이 세션 것만")
+    p.set_defaults(func=cmd_pending)
+
+    p = sub.add_parser("requests", help="헤드리스에서 막은 승인 요청 (②의 대기열용)")
+    rsub = p.add_subparsers(dest="requests_cmd", required=True)
+    rl = rsub.add_parser("list")
+    rl.add_argument("project")
+    rc = rsub.add_parser("clear")
+    rc.add_argument("project")
+    rc.add_argument("--id", help="이 요청만")
+    p.set_defaults(func=cmd_requests)
 
     p = sub.add_parser("run-state", help="실험 실행 상태를 바꿔요")
     p.add_argument("project")
@@ -278,6 +438,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("log", help="승인 기록 보기")
     p.add_argument("project")
     p.add_argument("-n", "--number", type=int, default=20)
+    p.add_argument(
+        "--raw",
+        action="store_true",
+        help="묶지 않고 남은 행 그대로 (append-only 원본)",
+    )
     p.set_defaults(func=cmd_log)
 
     p = sub.add_parser("doctor", help="설치와 설정 점검")

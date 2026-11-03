@@ -222,3 +222,84 @@ def test_래퍼를_벗긴다(ctx):
         "install",
         "x",
     ]
+
+
+# --- 장치 파일 (실측 오판) ---------------------------------------------------
+# `ls -la .claude 2>/dev/null` 이 "폴더 밖 쓰기" 로 막혔다. 읽기 명령에
+# 승인창이 뜨면 쓸 수 없는 도구가 된다.
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "ls -la .claude 2>/dev/null",
+        "cat README.md > /dev/null",
+        "ls -la 2>&1 >/dev/null",
+        "tee /dev/stdout",
+        "echo x > /dev/stderr",
+        "echo x > /dev/fd/2",
+    ],
+)
+def test_버리는_출력은_판정하지_않는다(ctx, command):
+    assert bashparse.classify(command, ctx) == []
+
+
+@pytest.mark.parametrize("target", ["/dev/shm/x", "/dev/sda", "/dev/null.txt", "/dev/fd/x"])
+def test_장치_이름이_비슷한_건_그대로_막는다(ctx, target):
+    """접두사로 매칭하면 /dev/shm 처럼 진짜 쓸 수 있는 곳이 열린다."""
+    assert actions(ctx, f"echo x > {target}") == ["outside"]
+
+
+# --- 비밀 파일 -------------------------------------------------------------
+
+
+def secret_file(project_root, rel=".env"):
+    path = os.path.join(project_root, rel)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("WANDB_API_KEY=비밀\n")
+    return path
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cat .env",
+        "head -5 .env",
+        "grep KEY .env",
+        "cp .env ./copied.txt",
+        "tar -cf out.tar .env",
+        "python -c x .env",
+    ],
+)
+def test_비밀_파일은_읽기도_막는다(ctx, project_root, command):
+    secret_file(project_root)
+    assert "secret" in actions(ctx, command)
+
+
+def test_예시_파일은_읽을_수_있다(ctx, project_root):
+    secret_file(project_root, ".env.example")
+    assert bashparse.classify("cat .env.example", ctx) == []
+
+
+# `*.env` 는 셸도 숨김 파일에 안 맞으니 목록에 없다 (glob 과 같은 동작).
+@pytest.mark.parametrize("pattern", [".en*", ".e?v", ".env*"])
+def test_와일드카드로_가려도_펼쳐서_막는다(ctx, project_root, pattern):
+    """`.en*` 로 이름을 가린 채 읽는 걸 막는다."""
+    secret_file(project_root)
+    assert "secret" in actions(ctx, f"cat {pattern}")
+
+
+def test_예시_파일만_걸리는_와일드카드는_통과(ctx, project_root):
+    secret_file(project_root, ".env.example")
+    assert bashparse.classify("cat .env.ex*", ctx) == []
+
+
+def test_없는_와일드카드는_그냥_넘어간다(ctx):
+    assert bashparse.classify("cat *.없는확장자", ctx) == []
+
+
+def test_정책으로_비밀_목록을_더할_수_있다(ctx, project_root):
+    ctx.policy.data["paths"]["secretFilesExtra"] = ["**/secrets.yaml"]
+    with open(os.path.join(project_root, "secrets.yaml"), "w", encoding="utf-8") as fh:
+        fh.write("key: 비밀\n")
+    assert "secret" in actions(ctx, "cat secrets.yaml")

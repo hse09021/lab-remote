@@ -196,7 +196,8 @@
       "request": "peft 패키지 설치",
       "result": "대기 중",
       "resultPending": true,
-      "handledBy": "Claude 앱"
+      "handledBy": "Claude 앱",
+      "toolUseId": "toolu_mock_pkg"
     },
     {
       "time": "11-02 21:42",
@@ -204,7 +205,8 @@
       "request": "다음 실험 rank 32 vs lr 1e-4",
       "result": "rank 32 선택",
       "resultPending": false,
-      "handledBy": "AI · 권한 단계"
+      "handledBy": "AI · 권한 단계",
+      "toolUseId": "toolu_mock_decision"
     },
     {
       "time": "11-02 18:30",
@@ -212,7 +214,8 @@
       "request": "EXP-005 재개용 체크포인트 정리",
       "result": "허용",
       "resultPending": false,
-      "handledBy": "Claude 앱"
+      "handledBy": "Claude 앱",
+      "toolUseId": "toolu_mock_del"
     },
     {
       "time": "11-02 15:02",
@@ -220,7 +223,8 @@
       "request": "huggingface.co 가중치 다운로드",
       "result": "허용",
       "resultPending": false,
-      "handledBy": "Claude 앱"
+      "handledBy": "Claude 앱",
+      "toolUseId": "toolu_mock_net"
     },
     {
       "time": "11-01 23:10",
@@ -228,7 +232,8 @@
       "request": "데이터 로더 수정",
       "result": "거부 후 다른 방법 지시",
       "resultPending": false,
-      "handledBy": "Claude 앱"
+      "handledBy": "Claude 앱",
+      "toolUseId": "toolu_mock_code"
     }
   ],
   "saved": null

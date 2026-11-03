@@ -1,0 +1,10 @@
+{
+  "session_id": "sess-10-fabe9dd2",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-hook-sandbox/sess-10-fabe9dd2.jsonl",
+  "cwd": "/home/사용자/projects/hook-sandbox",
+  "scratchpad_dir": "/tmp/claude-1000/-home-사용자-projects-hook-sandbox/sess-10-fabe9dd2/scratchpad",
+  "prompt_id": "prompt-13-notify",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<task-notification>\n<task-id>a85e6d7a23abaefce</task-id>\n<tool-use-id>toolu_01M8WFK8hYvvsU9sVZTV5Xhj</tool-use-id>\n<output-file>/tmp/claude-1000/-home-사용자-projects-hook-sandbox/sess-10-fabe9dd2/tasks/a85e6d7a23abaefce.output</output-file>\n<status>completed</status>\n<summary>Agent \"Write c.py in EXP-002\" finished</summary>\n<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>\n<result>I wrote the file. `/home/사용자/projects/hook-sandbox/experiments/EXP-002/c.py` now contains `print('c')`, and there was no refusal or block.</result>\n<usage><subagent_tokens>31009</subagent_tokens><tool_uses>1</tool_uses><duration_ms>232243</duration_ms></usage>\n</task-notification>"
+}
