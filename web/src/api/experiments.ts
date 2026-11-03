@@ -1,6 +1,12 @@
 import { queryOptions } from '@tanstack/react-query'
 import { get } from './client'
-import type { Dashboard, EventEntry, Experiment, ProjectsPayload } from './types'
+import type {
+  Dashboard,
+  EventEntry,
+  Experiment,
+  PermissionsPayload,
+  ProjectsPayload,
+} from './types'
 
 /**
  * 실험 화면이 쓰는 쿼리들.
@@ -30,4 +36,10 @@ export const eventsQuery = () =>
   queryOptions({
     queryKey: ['experiments', 'events'],
     queryFn: () => get<EventEntry[]>('/experiments/events'),
+  })
+
+export const permissionsQuery = () =>
+  queryOptions({
+    queryKey: ['experiments', 'permissions'],
+    queryFn: () => get<PermissionsPayload>('/experiments/permissions'),
   })

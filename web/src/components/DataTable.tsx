@@ -12,6 +12,12 @@ export interface Column<R> {
    * 셀 기본 크기(14px)로 잡혀서 글자가 몇 px 내려가요.
    */
   cellClassName?: string
+  /**
+   * 열 너비 힌트. <th>에 걸어요 — <td>에 주면 표 자동 배치가 다르게 계산해요.
+   * box-sizing:border-box 기준이라 패딩·테두리를 포함한 값이에요.
+   * (목업은 box-sizing 리셋이 없어서 같은 숫자가 내용 너비였어요)
+   */
+  width?: number | string
   render: (row: R) => ReactNode
 }
 
@@ -50,6 +56,7 @@ export function DataTable<R>({
               <th
                 key={c.key}
                 scope="col"
+                style={c.width === undefined ? undefined : { width: c.width }}
                 className={clsx(s.th, c.align === 'right' && s.right)}
               >
                 {c.label}

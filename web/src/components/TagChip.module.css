@@ -1,0 +1,16 @@
+/* Pill(radius 999)과 달리 모서리가 작은 네모 칩이에요 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  background: var(--surface-sunken);
+  white-space: nowrap;
+}
+
+.outline {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+}

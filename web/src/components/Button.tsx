@@ -17,6 +17,8 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 interface Common {
   variant?: ButtonVariant
   size?: ButtonSize
+  /** 상자 크기는 그대로 두고 글자만 한 단계 작게 */
+  compact?: boolean
   fullWidth?: boolean
   children?: ReactNode
   className?: string
@@ -39,13 +41,21 @@ export function Button(props: ButtonProps) {
   const {
     variant = 'outline',
     size = 'lg',
+    compact = false,
     fullWidth = false,
     className,
     children,
     ...rest
   } = props
 
-  const cls = clsx(s.base, s[size], s[variant], fullWidth && s.full, className)
+  const cls = clsx(
+    s.base,
+    s[size],
+    s[variant],
+    compact && s.compact,
+    fullWidth && s.full,
+    className,
+  )
 
   if ('href' in rest && rest.href !== undefined) {
     return (

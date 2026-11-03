@@ -122,12 +122,14 @@ export interface MetricTileData {
   label: string
   value: string
   /** 값 뒤에 작게 붙는 글자. "34" + " / 50" */
-  valueSuffix: string | null
-  valueTone: 'default' | 'accent'
+  valueSuffix?: string | null
+  valueTone?: 'default' | 'accent'
+  /** numeric = mono 큰 숫자, text = 본문 글꼴 문장 ("대기 후 재개") */
+  valueVariant?: 'numeric' | 'text'
   sub: string
-  subTone: 'muted' | 'accent'
+  subTone?: 'muted' | 'accent'
   /** 0–100. 있으면 값 아래 진행바가 생겨요 */
-  progress: number | null
+  progress?: number | null
 }
 
 export interface ResourceMeter {
@@ -233,4 +235,57 @@ export interface FileNode {
   lock?: string
   /** 눌렀을 때 열 CodeFile.id */
   fileId?: string
+}
+
+/* ── 권한 설정 화면 ─────────────────────────────────────────── */
+
+export interface NotificationTagList {
+  title: string
+  caption: string
+  tags: string[]
+  /** 가려 둔 웹훅 주소. 실제 URL은 서버에만 둬요 */
+  webhookMasked: string
+  testLabel: string
+}
+
+export interface KeyValue {
+  label: string
+  value: string
+  /** accent = 연결됨·켜짐 같은 정상 상태 */
+  tone: 'accent' | 'muted'
+}
+
+export interface ClaudePushCard {
+  title: string
+  caption: string
+  rows: KeyValue[]
+}
+
+export interface ApprovalLogEntry {
+  time: string
+  action: string
+  request: string
+  result: string
+  /** 아직 처리되지 않은 건만 알약으로 보여 줘요 */
+  resultPending: boolean
+  handledBy: string
+}
+
+export interface PermissionsPayload {
+  modes: PermissionModeOption[]
+  actions: PermissionAction[]
+  /** allow / ask / block 의 화면 글자 */
+  labels: Record<Permission, string>
+  actionsCaption: string
+  /** 종료 조건은 '연구 전체 자동화'에서만 써요 */
+  configPath: string
+  stopLockNotice: string
+  stopLockButton: string
+  stopConditions: MetricTileData[]
+  /** 다른 단계일 때 보여 줄 안내 */
+  stopDisabledNotice: string
+  discord: NotificationTagList
+  claudePush: ClaudePushCard
+  logPath: string
+  approvalLog: ApprovalLogEntry[]
 }
