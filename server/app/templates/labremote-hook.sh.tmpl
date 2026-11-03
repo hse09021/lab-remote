@@ -1,0 +1,43 @@
+#!/bin/sh
+# labremote 훅 래퍼 — `labremote hooks install` 이 만든 파일이에요. 직접 고치지 마세요.
+#
+# 하는 일은 하나입니다. "여기가 실험 프로젝트 폴더 안인가" 를 보고
+#   - 밖이면  아무 출력 없이 exit 0  (Claude Code 는 평소대로 진행)
+#   - 안이면  파이썬 판정기를 띄움
+#
+# 프로젝트 루트는 **설치할 때 realpath 로 해소해 박아 넣습니다.** 런타임
+# 환경 변수를 읽지 않는 이유는, LAB_PROJECTS_DIR 이 없는 환경에서 Claude Code
+# 가 뜨면 잠금이 조용히 꺼져 버리기 때문이에요. 바꾸려면 hooks install 을 다시.
+#
+# ⚠ 한계: cwd(또는 CLAUDE_PROJECT_DIR)로만 판정합니다. 프로젝트 폴더 **밖에서**
+# Claude Code 를 켜고 안쪽 파일을 건드리면 이 래퍼가 그냥 통과시켜요.
+# 그래서 Claude Code 는 **항상 프로젝트 폴더 안에서** 켜야 합니다.
+
+set -u
+
+MOD="${1:-}"
+PY='__PY__'
+SERVER_DIR='__SERVER_DIR__'
+ROOTS='__ROOTS__'
+
+# cwd 를 실제 경로로. 심볼릭 링크를 타고 들어왔어도 같은 값이 나와야 한다.
+dir="${CLAUDE_PROJECT_DIR:-$PWD}"
+real=$(cd "$dir" 2>/dev/null && pwd -P) || real="$dir"
+[ -n "$real" ] || real="$dir"
+
+case "$real" in
+  "$ROOTS"|"$ROOTS"/*) ;;   # 안쪽 -> 계속
+  *) exit 0 ;;              # 밖 -> 간섭 안 함
+esac
+
+# 안쪽인데 인터프리터가 없으면 닫는 쪽으로. 안전장치가 없을 때 문이 열리면 안 된다.
+if [ ! -x "$PY" ]; then
+  if [ "${MOD##*.}" = "pretooluse" ]; then
+    printf '%s' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"훅을 실행할 파이썬을 찾지 못했어요. 작업을 멈추고 labremote doctor 를 돌려 주세요."}}'
+  fi
+  exit 0
+fi
+
+PYTHONPATH="$SERVER_DIR${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH
+exec "$PY" -m "$MOD"
