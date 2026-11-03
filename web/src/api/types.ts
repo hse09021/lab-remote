@@ -50,6 +50,8 @@ export interface PaperSummary {
   file: string
   /** arXiv HTML 기반이면 true (위키링크 앵커 형식이 달라져요) */
   html: boolean
+  authors: string
+  venue: string
   title: string
   meta: string
   lines: SummaryLine[]
@@ -57,6 +59,28 @@ export interface PaperSummary {
   method: string
   result: string
   limitation: string
+}
+
+/** 요약이 있는 논문만 담겨요 */
+export type PaperSummaryMap = Record<string, PaperSummary>
+
+/* ── 라이브러리에 묻기 ──────────────────────────────────────── */
+
+export interface ChatSource {
+  label: string
+  paperId: string
+}
+
+export interface LibraryChatMessage {
+  role: 'user' | 'assistant'
+  text: string
+  sources: ChatSource[]
+}
+
+export interface LibraryChat {
+  title: string
+  caption: string
+  messages: LibraryChatMessage[]
 }
 
 export type HighlightCategory = 'core' | 'method' | 'result' | 'check' | 'memo'

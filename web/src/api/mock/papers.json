@@ -1,0 +1,80 @@
+[
+  {
+    "id": "attn",
+    "title": "Attention Is All You Need",
+    "authors": "Vaswani et al. · 2017",
+    "venue": "NeurIPS 2017",
+    "field": "NLP",
+    "model": "Transformer",
+    "status": "reading",
+    "source": "arxiv-html",
+    "summaryState": "done",
+    "access": "방금",
+    "path": "vault/Papers/Transformer.md"
+  },
+  {
+    "id": "dora",
+    "title": "DoRA: Weight-Decomposed Low-Rank Adaptation",
+    "authors": "Liu et al. · 2024",
+    "venue": "ICML 2024",
+    "field": "PEFT",
+    "model": "LLaMA",
+    "status": "reading",
+    "source": "arxiv-html",
+    "summaryState": "done",
+    "access": "오늘 08:40",
+    "path": "vault/Papers/DoRA.md"
+  },
+  {
+    "id": "lora",
+    "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+    "authors": "Hu et al. · 2021",
+    "venue": "ICLR 2022",
+    "field": "PEFT",
+    "model": "GPT-3",
+    "status": "done",
+    "source": "pdf",
+    "summaryState": "done",
+    "access": "어제",
+    "path": "vault/Papers/LoRA.md"
+  },
+  {
+    "id": "qlora",
+    "title": "QLoRA: Efficient Finetuning of Quantized LLMs",
+    "authors": "Dettmers et al. · 2023",
+    "venue": "NeurIPS 2023",
+    "field": "PEFT",
+    "model": "LLaMA",
+    "status": "done",
+    "source": "pdf",
+    "summaryState": "done",
+    "access": "11월 1일",
+    "path": "vault/Papers/QLoRA.md"
+  },
+  {
+    "id": "adalora",
+    "title": "AdaLoRA: Adaptive Budget Allocation for Parameter-Efficient Fine-Tuning",
+    "authors": "Zhang et al. · 2023",
+    "venue": "ICLR 2023",
+    "field": "PEFT",
+    "model": "DeBERTaV3",
+    "status": "reading",
+    "source": "pdf",
+    "summaryState": "running",
+    "access": "10월 30일",
+    "path": null
+  },
+  {
+    "id": "vit",
+    "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+    "authors": "Dosovitskiy et al. · 2020",
+    "venue": "ICLR 2021",
+    "field": "Vision",
+    "model": "ViT",
+    "status": "todo",
+    "source": "pdf",
+    "summaryState": "none",
+    "access": "10월 28일",
+    "path": null
+  }
+]

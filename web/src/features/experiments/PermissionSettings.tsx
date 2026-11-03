@@ -191,7 +191,7 @@ function PermissionBody({ data }: { data: PermissionsPayload }) {
           columns={columns}
           rows={data.actions}
           rowKey={(a) => a.key}
-          density="compact"
+          cellY={10}
           minWidth={720}
         />
       </section>
@@ -253,7 +253,7 @@ function PermissionBody({ data }: { data: PermissionsPayload }) {
           columns={LOG_COLUMNS}
           rows={data.approvalLog}
           rowKey={(e) => `${e.time}-${e.action}`}
-          density="roomy"
+          cellY={12}
           minWidth={720}
         />
       </section>

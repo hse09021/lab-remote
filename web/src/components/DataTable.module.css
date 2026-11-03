@@ -16,52 +16,40 @@
 
 .th {
   font-weight: 500;
-  padding: 11px 12px;
+  padding: var(--head-y) var(--head-x);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   border-left: 1px solid var(--border-soft);
 }
 
 .th:first-child {
-  padding: 11px 12px 11px 0;
   border-left: none;
 }
 
-.th:last-child {
-  padding: 11px 0 11px 12px;
-}
-
 /*
- * 본문 셀 여백은 표마다 달라서 변수로 받아요.
- * `.cozy .td` 처럼 자손 선택자로 쓰면 `.td:first-child` 와 특정도가 같아져
- * 뒤에 오는 쪽이 이겨 버려요 — 첫/마지막 열의 바깥 여백 제거가 무효가 돼요.
+ * 본문 좌우 기준선에 맞추려고 양 끝 열의 바깥 여백을 지워요.
+ * 라이브러리 표처럼 그렇게 하지 않는 목업도 있어서 끌 수 있게 했어요.
  */
-.td {
-  padding: var(--cell-y) var(--cell-x);
-  border-bottom: 1px solid var(--border-soft);
-}
-
-.td:first-child {
+.flush .th:first-child {
   padding-left: 0;
 }
 
-.td:last-child {
+.flush .th:last-child {
   padding-right: 0;
 }
 
-.cozy {
-  --cell-y: 13px;
-  --cell-x: 12px;
+.td {
+  padding: var(--cell-y) var(--cell-x);
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
 }
 
-.roomy {
-  --cell-y: 12px;
-  --cell-x: 12px;
+.flush .td:first-child {
+  padding-left: 0;
 }
 
-.compact {
-  --cell-y: 10px;
-  --cell-x: 12px;
+.flush .td:last-child {
+  padding-right: 0;
 }
 
 .right {
@@ -70,4 +58,10 @@
 
 .tinted {
   background: var(--accent-row);
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
 }

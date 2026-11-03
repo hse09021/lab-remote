@@ -29,10 +29,11 @@
   white-space: nowrap;
 }
 
+/* 요약 보기 전환(FocusLibrary·FocusReader)이 이 크기예요 */
 .sm {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 12px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
 }
 
 .md {

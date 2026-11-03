@@ -136,3 +136,12 @@
 .full {
   width: 100%;
 }
+
+/*
+ * 좌우 여백 덮어쓰기. 같은 40px 버튼인데 목업마다 14px / 16px로 달라요
+ * (FocusAuthority 14 · FocusLibrary "리더에서 열기" 16).
+ */
+.padWide {
+  padding-left: 16px;
+  padding-right: 16px;
+}

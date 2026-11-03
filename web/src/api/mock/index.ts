@@ -17,6 +17,9 @@ const MOCKS: Record<string, () => Promise<{ default: unknown }>> = {
   '/code/commits': () => import('./commits.json'),
   '/code/chat': () => import('./code-chat.json'),
   '/code/run': () => import('./code-run.json'),
+  '/papers': () => import('./papers.json'),
+  '/papers/summaries': () => import('./paper-summaries.json'),
+  '/papers/chat': () => import('./library-chat.json'),
 }
 
 export async function loadMock<T>(path: string): Promise<T> {
