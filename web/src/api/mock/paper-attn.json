@@ -1,0 +1,623 @@
+{
+  "paperId": "attn",
+  "title": "Attention Is All You Need",
+  "meta": "Vaswani et al. · NeurIPS 2017",
+  "arxivId": "arXiv:1706.03762v7",
+  "arxivUrl": "https://arxiv.org/abs/1706.03762",
+  "hasHtml": true,
+  "pageCount": 15,
+  "pageImageBase": "/fixtures/paper",
+  "pageSize": {
+    "width": 612,
+    "height": 792
+  },
+  "sections": [
+    {
+      "id": "abs",
+      "n": "",
+      "title": "Abstract",
+      "level": 0,
+      "page": 1,
+      "y": 386,
+      "xEnd": 328,
+      "htmlAnchor": "Sabs"
+    },
+    {
+      "id": "s1",
+      "n": "1",
+      "title": "Introduction",
+      "level": 0,
+      "page": 2,
+      "y": 73,
+      "xEnd": 191,
+      "htmlAnchor": "S1"
+    },
+    {
+      "id": "s2",
+      "n": "2",
+      "title": "Background",
+      "level": 0,
+      "page": 2,
+      "y": 363,
+      "xEnd": 189,
+      "htmlAnchor": "S2"
+    },
+    {
+      "id": "s3",
+      "n": "3",
+      "title": "Model Architecture",
+      "level": 0,
+      "page": 2,
+      "y": 643,
+      "xEnd": 226,
+      "htmlAnchor": "S3"
+    },
+    {
+      "id": "s3-1",
+      "n": "3.1",
+      "title": "Encoder and Decoder Stacks",
+      "level": 1,
+      "page": 3,
+      "y": 483,
+      "xEnd": 253,
+      "htmlAnchor": "S3.SS1"
+    },
+    {
+      "id": "s3-2",
+      "n": "3.2",
+      "title": "Attention",
+      "level": 1,
+      "page": 3,
+      "y": 681,
+      "xEnd": 171,
+      "htmlAnchor": "S3.SS2"
+    },
+    {
+      "id": "s3-2-1",
+      "n": "3.2.1",
+      "title": "Scaled Dot-Product Attention",
+      "level": 2,
+      "page": 4,
+      "y": 351,
+      "xEnd": 264,
+      "htmlAnchor": "S3.SS2.SSS1"
+    },
+    {
+      "id": "s3-2-2",
+      "n": "3.2.2",
+      "title": "Multi-Head Attention",
+      "level": 2,
+      "page": 4,
+      "y": 631,
+      "xEnd": 231,
+      "htmlAnchor": "S3.SS2.SSS2"
+    },
+    {
+      "id": "s3-2-3",
+      "n": "3.2.3",
+      "title": "Applications of Attention",
+      "level": 2,
+      "page": 5,
+      "y": 280,
+      "xEnd": 303,
+      "htmlAnchor": "S3.SS2.SSS3"
+    },
+    {
+      "id": "s3-3",
+      "n": "3.3",
+      "title": "Position-wise Feed-Forward",
+      "level": 1,
+      "page": 5,
+      "y": 497,
+      "xEnd": 293,
+      "htmlAnchor": "S3.SS3"
+    },
+    {
+      "id": "s3-4",
+      "n": "3.4",
+      "title": "Embeddings and Softmax",
+      "level": 1,
+      "page": 5,
+      "y": 648,
+      "xEnd": 240,
+      "htmlAnchor": "S3.SS4"
+    },
+    {
+      "id": "s3-5",
+      "n": "3.5",
+      "title": "Positional Encoding",
+      "level": 1,
+      "page": 6,
+      "y": 214,
+      "xEnd": 215,
+      "htmlAnchor": "S3.SS5"
+    },
+    {
+      "id": "s4",
+      "n": "4",
+      "title": "Why Self-Attention",
+      "level": 0,
+      "page": 6,
+      "y": 497,
+      "xEnd": 225,
+      "htmlAnchor": "S4"
+    },
+    {
+      "id": "s5",
+      "n": "5",
+      "title": "Training",
+      "level": 0,
+      "page": 7,
+      "y": 300,
+      "xEnd": 170,
+      "htmlAnchor": "S5"
+    },
+    {
+      "id": "s5-1",
+      "n": "5.1",
+      "title": "Training Data and Batching",
+      "level": 1,
+      "page": 7,
+      "y": 353,
+      "xEnd": 250,
+      "htmlAnchor": "S5.SS1"
+    },
+    {
+      "id": "s5-2",
+      "n": "5.2",
+      "title": "Hardware and Schedule",
+      "level": 1,
+      "page": 7,
+      "y": 466,
+      "xEnd": 233,
+      "htmlAnchor": "S5.SS2"
+    },
+    {
+      "id": "s5-3",
+      "n": "5.3",
+      "title": "Optimizer",
+      "level": 1,
+      "page": 7,
+      "y": 557,
+      "xEnd": 174,
+      "htmlAnchor": "S5.SS3"
+    },
+    {
+      "id": "s5-4",
+      "n": "5.4",
+      "title": "Regularization",
+      "level": 1,
+      "page": 7,
+      "y": 691,
+      "xEnd": 194,
+      "htmlAnchor": "S5.SS4"
+    },
+    {
+      "id": "s6",
+      "n": "6",
+      "title": "Results",
+      "level": 0,
+      "page": 8,
+      "y": 371,
+      "xEnd": 163,
+      "htmlAnchor": "S6"
+    },
+    {
+      "id": "s6-1",
+      "n": "6.1",
+      "title": "Machine Translation",
+      "level": 1,
+      "page": 8,
+      "y": 397,
+      "xEnd": 219,
+      "htmlAnchor": "S6.SS1"
+    },
+    {
+      "id": "s6-2",
+      "n": "6.2",
+      "title": "Model Variations",
+      "level": 1,
+      "page": 8,
+      "y": 658,
+      "xEnd": 204,
+      "htmlAnchor": "S6.SS2"
+    },
+    {
+      "id": "s6-3",
+      "n": "6.3",
+      "title": "English Constituency Parsing",
+      "level": 1,
+      "page": 9,
+      "y": 560,
+      "xEnd": 256,
+      "htmlAnchor": "S6.SS3"
+    },
+    {
+      "id": "s7",
+      "n": "7",
+      "title": "Conclusion",
+      "level": 0,
+      "page": 10,
+      "y": 365,
+      "xEnd": 183,
+      "htmlAnchor": "S7"
+    },
+    {
+      "id": "refs",
+      "n": "",
+      "title": "References",
+      "level": 0,
+      "page": 10,
+      "y": 596,
+      "xEnd": 164,
+      "htmlAnchor": "Srefs"
+    },
+    {
+      "id": "appx",
+      "n": "",
+      "title": "Attention Visualizations",
+      "level": 0,
+      "page": 13,
+      "y": 73,
+      "xEnd": 231,
+      "htmlAnchor": "Sappx"
+    }
+  ],
+  "highlights": [
+    {
+      "id": "h1",
+      "category": "core",
+      "section": "abs",
+      "page": 1,
+      "boxes": [
+        [
+          199,
+          445,
+          470,
+          457
+        ],
+        [
+          144,
+          456,
+          290,
+          468
+        ]
+      ],
+      "note": "RNN·CNN 없이 어텐션만으로 된 구조를 제안"
+    },
+    {
+      "id": "h2",
+      "category": "core",
+      "section": "s1",
+      "page": 2,
+      "boxes": [
+        [
+          108,
+          300,
+          504,
+          312
+        ],
+        [
+          108,
+          311,
+          281,
+          323
+        ]
+      ],
+      "note": "순환 없이 입력과 출력의 전역 의존성을 어텐션으로 모델링"
+    },
+    {
+      "id": "h3",
+      "category": "method",
+      "section": "s3-2-1",
+      "page": 4,
+      "boxes": [
+        [
+          214,
+          458,
+          400,
+          494
+        ]
+      ],
+      "note": "식 (1) Scaled dot-product attention"
+    },
+    {
+      "id": "h9",
+      "category": "memo",
+      "section": "s3-2-1",
+      "page": 4,
+      "boxes": [
+        [
+          108,
+          698,
+          506,
+          724
+        ]
+      ],
+      "note": "내 메모 · head 수를 바꾸면 d_k도 바뀌니 스케일 영향도 같이 볼 것"
+    },
+    {
+      "id": "h4",
+      "category": "method",
+      "section": "s3-2-2",
+      "page": 5,
+      "boxes": [
+        [
+          182,
+          142,
+          446,
+          176
+        ]
+      ],
+      "note": "Multi-head attention · h=8, d_k=d_v=64"
+    },
+    {
+      "id": "h5",
+      "category": "method",
+      "section": "s3-5",
+      "page": 6,
+      "boxes": [
+        [
+          220,
+          334,
+          400,
+          368
+        ]
+      ],
+      "note": "사인·코사인 위치 인코딩"
+    },
+    {
+      "id": "h6",
+      "category": "result",
+      "section": "s6-1",
+      "page": 8,
+      "boxes": [
+        [
+          128,
+          66,
+          486,
+          246
+        ]
+      ],
+      "note": "표 2 · EN-DE 28.4 / EN-FR 41.8 BLEU, 학습 비용 비교"
+    },
+    {
+      "id": "h8",
+      "category": "check",
+      "section": "s6-1",
+      "page": 8,
+      "boxes": [
+        [
+          421,
+          487,
+          505,
+          500
+        ]
+      ],
+      "note": "본문 41.0과 표 2의 41.8이 서로 달라요"
+    },
+    {
+      "id": "h7",
+      "category": "result",
+      "section": "s6-2",
+      "page": 9,
+      "boxes": [
+        [
+          108,
+          66,
+          506,
+          386
+        ]
+      ],
+      "note": "표 3 · head 수, d_k, 모델 크기, dropout을 바꾼 실험"
+    }
+  ],
+  "references": [
+    {
+      "n": 1,
+      "authors": "Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey E. Hinton",
+      "short": "Ba et al., 2016",
+      "title": "Layer normalization",
+      "venue": "arXiv preprint",
+      "arxiv": "1607.06450",
+      "year": 2016,
+      "citedCount": 1,
+      "inLibrary": false,
+      "why": "각 sub-layer 출력에 쓰는 정규화 방법"
+    },
+    {
+      "n": 2,
+      "authors": "Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio",
+      "short": "Bahdanau et al., 2014",
+      "title": "Neural machine translation by jointly learning to align and translate",
+      "venue": "CoRR",
+      "arxiv": "1409.0473",
+      "year": 2014,
+      "citedCount": 5,
+      "inLibrary": true,
+      "why": "번역에 어텐션을 처음 쓴 연구 · additive attention의 출처"
+    },
+    {
+      "n": 3,
+      "authors": "Denny Britz, Anna Goldie, Minh-Thang Luong, Quoc V. Le",
+      "short": "Britz et al., 2017",
+      "title": "Massive exploration of neural machine translation architectures",
+      "venue": "CoRR",
+      "arxiv": "1703.03906",
+      "year": 2017,
+      "citedCount": 2,
+      "inLibrary": false,
+      "why": "d_k가 클 때 스케일 없는 내적이 불리하다는 근거, BPE 설정"
+    },
+    {
+      "n": 7,
+      "authors": "Junyoung Chung, Çaglar Gülçehre, Kyunghyun Cho, Yoshua Bengio",
+      "short": "Chung et al., 2014",
+      "title": "Empirical evaluation of gated recurrent neural networks on sequence modeling",
+      "venue": "CoRR",
+      "arxiv": "1412.3555",
+      "year": 2014,
+      "citedCount": 1,
+      "inLibrary": false,
+      "why": "GRU 등 게이트 순환 신경망의 예"
+    },
+    {
+      "n": 8,
+      "authors": "Chris Dyer, Adhiguna Kuncoro, Miguel Ballesteros, Noah A. Smith",
+      "short": "Dyer et al., 2016",
+      "title": "Recurrent neural network grammars",
+      "venue": "NAACL",
+      "arxiv": null,
+      "year": 2016,
+      "citedCount": 3,
+      "inLibrary": false,
+      "why": "구문 분석 비교 대상 · 표 4 최고 성능"
+    },
+    {
+      "n": 9,
+      "authors": "Jonas Gehring, Michael Auli, David Grangier, Denis Yarats, Yann N. Dauphin",
+      "short": "Gehring et al., 2017",
+      "title": "Convolutional sequence to sequence learning",
+      "venue": "arXiv preprint",
+      "arxiv": "1705.03122",
+      "year": 2017,
+      "citedCount": 8,
+      "inLibrary": false,
+      "why": "합성곱 기반 비교 대상 · 학습된 위치 임베딩 비교(표 3 E)"
+    },
+    {
+      "n": 11,
+      "authors": "Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun",
+      "short": "He et al., 2016",
+      "title": "Deep residual learning for image recognition",
+      "venue": "CVPR",
+      "arxiv": null,
+      "year": 2016,
+      "citedCount": 1,
+      "inLibrary": true,
+      "why": "sub-layer마다 쓰는 residual 연결의 출처"
+    },
+    {
+      "n": 13,
+      "authors": "Sepp Hochreiter, Jürgen Schmidhuber",
+      "short": "Hochreiter & Schmidhuber, 1997",
+      "title": "Long short-term memory",
+      "venue": "Neural Computation 9(8)",
+      "arxiv": null,
+      "year": 1997,
+      "citedCount": 1,
+      "inLibrary": false,
+      "why": "대체하려는 순환 모델의 대표"
+    },
+    {
+      "n": 16,
+      "authors": "Łukasz Kaiser, Samy Bengio",
+      "short": "Kaiser & Bengio, 2016",
+      "title": "Can active memory replace attention?",
+      "venue": "NIPS",
+      "arxiv": null,
+      "year": 2016,
+      "citedCount": 1,
+      "inLibrary": false,
+      "why": "합성곱 기반 Extended Neural GPU · 병렬 계산 비교 대상"
+    },
+    {
+      "n": 18,
+      "authors": "Nal Kalchbrenner, Lasse Espeholt, Karen Simonyan, Aaron van den Oord, Alex Graves, Koray Kavukcuoglu",
+      "short": "Kalchbrenner et al., 2017",
+      "title": "Neural machine translation in linear time",
+      "venue": "arXiv preprint",
+      "arxiv": "1610.10099",
+      "year": 2017,
+      "citedCount": 4,
+      "inLibrary": false,
+      "why": "합성곱 번역 모델 ByteNet · 경로 길이 비교 대상"
+    },
+    {
+      "n": 20,
+      "authors": "Diederik Kingma, Jimmy Ba",
+      "short": "Kingma & Ba, 2015",
+      "title": "Adam: A method for stochastic optimization",
+      "venue": "ICLR",
+      "arxiv": null,
+      "year": 2015,
+      "citedCount": 1,
+      "inLibrary": true,
+      "why": "학습에 쓴 옵티마이저"
+    },
+    {
+      "n": 32,
+      "authors": "Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean",
+      "short": "Shazeer et al., 2017",
+      "title": "Outrageously large neural networks: The sparsely-gated mixture-of-experts layer",
+      "venue": "arXiv preprint",
+      "arxiv": "1701.06538",
+      "year": 2017,
+      "citedCount": 2,
+      "inLibrary": false,
+      "why": "표 2의 MoE 비교 대상"
+    },
+    {
+      "n": 33,
+      "authors": "Nitish Srivastava, Geoffrey E. Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov",
+      "short": "Srivastava et al., 2014",
+      "title": "Dropout: a simple way to prevent neural networks from overfitting",
+      "venue": "JMLR",
+      "arxiv": null,
+      "year": 2014,
+      "citedCount": 1,
+      "inLibrary": false,
+      "why": "residual dropout의 출처"
+    },
+    {
+      "n": 36,
+      "authors": "Christian Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jonathon Shlens, Zbigniew Wojna",
+      "short": "Szegedy et al., 2015",
+      "title": "Rethinking the inception architecture for computer vision",
+      "venue": "CoRR",
+      "arxiv": "1512.00567",
+      "year": 2015,
+      "citedCount": 1,
+      "inLibrary": false,
+      "why": "label smoothing의 출처"
+    },
+    {
+      "n": 37,
+      "authors": "Vinyals & Kaiser, Koo, Petrov, Sutskever, Hinton",
+      "short": "Vinyals et al., 2015",
+      "title": "Grammar as a foreign language",
+      "venue": "NIPS",
+      "arxiv": null,
+      "year": 2015,
+      "citedCount": 5,
+      "inLibrary": false,
+      "why": "구문 분석 실험 설정과 비교 대상"
+    },
+    {
+      "n": 38,
+      "authors": "Yonghui Wu, Mike Schuster, Zhifeng Chen, Quoc V. Le, Mohammad Norouzi, et al.",
+      "short": "Wu et al., 2016",
+      "title": "Google's neural machine translation system: Bridging the gap between human and machine translation",
+      "venue": "arXiv preprint",
+      "arxiv": "1609.08144",
+      "year": 2016,
+      "citedCount": 8,
+      "inLibrary": false,
+      "why": "RNN 번역 비교 대상 · 빔 서치 설정과 word-piece 어휘를 따름"
+    },
+    {
+      "n": 39,
+      "authors": "Jie Zhou, Ying Cao, Xuguang Wang, Peng Li, Wei Xu",
+      "short": "Zhou et al., 2016",
+      "title": "Deep recurrent models with fast-forward connections for neural machine translation",
+      "venue": "CoRR",
+      "arxiv": "1606.04199",
+      "year": 2016,
+      "citedCount": 2,
+      "inLibrary": false,
+      "why": "표 2의 Deep-Att + PosUnk 비교 대상"
+    }
+  ],
+  "referenceTotal": 40,
+  "citationsCaption": "참고문헌 40개 · 본문에서 많이 인용된 순서예요. 누르면 본문 옆에 미리보기가 떠요."
+}
