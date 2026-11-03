@@ -1,0 +1,28 @@
+# 데이터셋 (용량)
+data/
+
+# 실험 산출물 (용량) — config.yaml·result.csv·analysis.md 는 반드시 추적해요
+experiments/*/output/
+experiments/*/checkpoints/
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.npz
+
+# 실행 로그 — logs/ 를 통째로 무시하면 Approval_log.csv 가 안 올라가요
+wandb/
+logs/runs/
+logs/hook_events.jsonl
+*.log
+
+# 비밀 값
+.env
+.env.*
+!.env.example
+
+# 파이썬
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/

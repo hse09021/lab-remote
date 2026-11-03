@@ -1,0 +1,19 @@
+# 종료 조건과 실행 환경
+#
+# ⚠ 이 파일은 잠겨 있어요. 실험이 도는 중에는 바꿀 수 없어요.
+
+goal:
+  metric: "[주 지표]"
+  threshold: "[임계값]"
+
+limits:
+  max_runs: "[최대 실행 횟수]"
+  gpu_hours: "[GPU 시간]"
+  deadline: "[마감]"
+
+# 사용량 한도에 걸리면 기다려요. 자동으로 더 사지 않아요.
+usage_limit: wait
+
+env:
+  conda: $env_name
+  python: "$python_version"
