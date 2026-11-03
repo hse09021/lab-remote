@@ -59,3 +59,11 @@
   font-size: 13px;
   color: var(--text-muted);
 }
+
+/*
+ * Monaco 는 포커스가 없어도 편집기 둘레에 외곽선을 그려요.
+ * 키보드로 들어왔을 때만 보이게 해요 (색은 테마의 focusBorder).
+ */
+.editor :global(.monaco-editor:not(.focused)) {
+  outline: none;
+}

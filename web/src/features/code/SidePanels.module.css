@@ -12,10 +12,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 14px 6px;
+  padding: 10px 10px 6px 14px;
 }
 
 .title {
+  flex: 0 0 auto;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 700;
 }
@@ -226,4 +228,17 @@
 .failed {
   color: var(--attention-text);
   font-weight: 700;
+}
+
+/* 소스 제어 — 변경 내용은 남는 높이를, 그래프는 끌어서 조절 */
+.changeList {
+  flex: 1;
+  min-height: 60px;
+  overflow-y: auto;
+}
+
+.graphList {
+  box-sizing: border-box;
+  min-height: 0;
+  overflow-y: auto;
 }

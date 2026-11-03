@@ -4,6 +4,9 @@ import {
   removeAnnotation,
   removeSavedPaper,
   restoreAnnotation,
+  createNode,
+  deleteNode,
+  renameNode,
   setDesignValues,
   setLoopPaused,
   stopExperiment,
@@ -97,6 +100,25 @@ export function applyMockWrite(method: string, path: string, body: unknown): unk
     const { paused } = body as { paused: boolean }
     setLoopPaused(paused)
     return body
+  }
+
+  /* 탐색기 파일 작업 */
+  if (path === '/code/tree') {
+    if (method === 'POST') {
+      const { path: at, kind } = body as { path: string; kind: 'file' | 'dir' }
+      createNode(at, kind)
+      return body
+    }
+    if (method === 'PATCH') {
+      const { path: at, name } = body as { path: string; name: string }
+      renameNode(at, name)
+      return body
+    }
+    if (method === 'DELETE') {
+      const { path: at } = body as { path: string }
+      deleteNode(at)
+      return body
+    }
   }
 
   /* 권한 설정 저장 */

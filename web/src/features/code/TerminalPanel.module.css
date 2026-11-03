@@ -1,0 +1,347 @@
+.wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* ── 터미널 내용 ──────────────────────────────────────────── */
+
+.panes {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.panes[data-split='true'] .pane[data-active='true'] {
+  background: var(--surface-muted);
+}
+
+.lines {
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.user {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.path {
+  color: var(--info);
+}
+
+.empty {
+  flex: 1;
+  margin: 0;
+  padding: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── 터미널 목록 (VS Code 오른쪽 목록) ────────────────────── */
+
+.list {
+  /* 너비는 usePaneResize 가 flex-basis 로 줘요 */
+  min-height: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--surface-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-md);
+  /* 활성 표시용 왼쪽 띠 자리를 늘 비워 둬요 */
+  border-left: 2px solid transparent;
+}
+
+.row:hover {
+  background: var(--hover);
+}
+
+.row[data-active='true'] {
+  background: var(--bg);
+  border-left-color: var(--accent);
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 6px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  text-align: left;
+  cursor: pointer;
+}
+
+.row[data-active='true'] .rowMain {
+  color: var(--text);
+}
+
+/* 분할된 묶음을 잇는 글자 */
+.connector {
+  flex: 0 0 auto;
+  width: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.rowName {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.rowDetail {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 행 위에 마우스를 올리거나 고른 행에서만 보여요 */
+.rowActions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 1px;
+  padding-right: 3px;
+  opacity: 0;
+}
+
+.row:hover .rowActions,
+.row[data-active='true'] .rowActions,
+.row:focus-within .rowActions {
+  opacity: 1;
+}
+
+.rowAction {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rowAction:hover,
+.rowAction:focus-visible {
+  background: var(--surface-sunken);
+  color: var(--text);
+  outline: none;
+}
+
+/* ── 패널 툴바 ────────────────────────────────────────────── */
+
+.toolbar {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.newWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toolBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.toolBtn:hover,
+.toolBtn:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+  outline: none;
+}
+
+.toolBtn[aria-pressed='true'] {
+  background: var(--accent-tint);
+  color: var(--accent-dark);
+}
+
+.caret {
+  width: 18px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* flex 안에서 svg 가 눌리지 않게 */
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.caret svg {
+  flex: 0 0 auto;
+}
+
+.caret:hover,
+.caret:focus-visible {
+  color: var(--text);
+  outline: none;
+}
+
+/* ── 분할 칸 사이 손잡이 ──────────────────────────────────── */
+
+.paneSplit {
+  flex: 0 0 var(--resizer-hit);
+  margin: 0 calc(var(--resizer-hit) / -2 + var(--resizer-line) / 2);
+  position: relative;
+  z-index: 1;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+/* 보이는 선은 1px, 잡는 영역은 8px */
+.paneSplit::before {
+  content: '';
+  position: absolute;
+  inset: 0 calc(50% - var(--resizer-line) / 2);
+  background: var(--border);
+  transition: background 0.15s;
+}
+
+.paneSplit:hover::before,
+.paneSplit:focus-visible::before {
+  background: var(--accent);
+}
+
+.paneSplit:focus-visible {
+  outline: none;
+}
+
+/* ── 드롭다운 메뉴 ────────────────────────────────────────── */
+
+.menu {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  z-index: 8;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.menuItem {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.menuItem:hover:not(:disabled),
+.menuItem:focus-visible:not(:disabled) {
+  background: var(--surface-muted);
+  outline: none;
+}
+
+.menuItem:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.menuMono {
+  font-family: var(--font-mono);
+}
+
+.menuHint {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.menuSep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border-soft);
+}
+
+/* 터미널이 하나일 때 툴바에 나오는 현재 터미널 */
+.current {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 8px;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.current svg {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.toolSep {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--border);
+}

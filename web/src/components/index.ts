@@ -8,7 +8,7 @@ export { StatusPill, READ_STATUS_LABEL } from './StatusPill'
 
 export { Resizer } from './Resizer'
 
-export { CollapsibleSidebar, CollapsedRail } from './CollapsibleSidebar'
+export { CollapsibleSidebar, CollapsedRail, PanelIcon } from './CollapsibleSidebar'
 
 export { Sheet } from './Sheet'
 

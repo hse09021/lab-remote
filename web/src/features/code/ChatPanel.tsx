@@ -6,7 +6,7 @@ import type {
   PermissionMode,
   PermissionModeOption,
 } from '@/api/types'
-import { IconButton, LoadingState, TagChip, VisuallyHidden } from '@/components'
+import { IconButton, LoadingState, PanelIcon, TagChip, VisuallyHidden } from '@/components'
 import { useOutsideClick } from '@/lib/useOutsideClick'
 import s from './ChatPanel.module.css'
 
@@ -16,9 +16,21 @@ interface Props {
   modes: PermissionModeOption[] | undefined
   /** 입력창에 맥락으로 붙는 현재 파일 */
   fileLabel: string
+  /** 탐색기에서 "채팅에 추가" 한 것 */
+  attachment: string | null
+  onRemoveAttachment: () => void
+  onCollapse: () => void
 }
 
-export function ChatPanel({ style, chat, modes, fileLabel }: Props) {
+export function ChatPanel({
+  style,
+  chat,
+  modes,
+  fileLabel,
+  attachment,
+  onRemoveAttachment,
+  onCollapse,
+}: Props) {
   const [mode, setMode] = useState<PermissionMode>('full')
   const [prevMode, setPrevMode] = useState<PermissionMode | null>(null)
   const [draft, setDraft] = useState('')
@@ -31,7 +43,16 @@ export function ChatPanel({ style, chat, modes, fileLabel }: Props) {
       <div className={s.head}>
         <span className={s.name}>Claude Code</span>
         <TagChip>● 연결됨</TagChip>
-        <IconButton label="세션 기록" size={34} className={s.right}>
+        <IconButton
+          label="Claude Code 패널 접기"
+          aria-expanded
+          size={34}
+          className={s.right}
+          onClick={onCollapse}
+        >
+          <PanelIcon side="right" />
+        </IconButton>
+        <IconButton label="세션 기록" size={34}>
           <HistoryIcon />
         </IconButton>
         <IconButton label="새 세션" size={34}>
@@ -81,6 +102,19 @@ export function ChatPanel({ style, chat, modes, fileLabel }: Props) {
               <span className={s.fileChipName}>{fileLabel}</span>
               <span aria-hidden="true">×</span>
             </span>
+            {attachment && (
+              <span className={s.fileChip}>
+                <span className={s.fileChipName}>{attachment}</span>
+                <button
+                  type="button"
+                  aria-label={`${attachment} 첨부 빼기`}
+                  onClick={onRemoveAttachment}
+                  className={s.fileChipRemove}
+                >
+                  ×
+                </button>
+              </span>
+            )}
             <div className={s.right}>
               <PresetButton
                 modes={modes}

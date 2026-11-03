@@ -1,5 +1,5 @@
-import { queryOptions } from '@tanstack/react-query'
-import { get } from './client'
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { get, send } from './client'
 import type {
   CodeChatPayload,
   CodeFile,
@@ -56,3 +56,30 @@ export const permissionModesQuery = () =>
     queryFn: () => get<PermissionsPayload>('/experiments/permissions'),
     select: (d: PermissionsPayload) => d.modes,
   })
+
+/* ── 탐색기 파일 작업 ──────────────────────────────────────── */
+
+/** 트리를 고친 뒤 다시 읽게 해요 */
+function useTreeMutation<V>(run: (vars: V) => Promise<unknown>) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: run,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['code', 'tree'] }),
+  })
+}
+
+export function useCreateNode() {
+  return useTreeMutation(({ path, kind }: { path: string; kind: 'file' | 'dir' }) =>
+    send<unknown>('POST', '/code/tree', { path, kind }),
+  )
+}
+
+export function useRenameNode() {
+  return useTreeMutation(({ path, name }: { path: string; name: string }) =>
+    send<unknown>('PATCH', '/code/tree', { path, name }),
+  )
+}
+
+export function useDeleteNode() {
+  return useTreeMutation((path: string) => send<unknown>('DELETE', '/code/tree', { path }))
+}

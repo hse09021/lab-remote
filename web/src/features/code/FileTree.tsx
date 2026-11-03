@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import type { KeyboardEvent } from 'react'
 import type { FileNode } from '@/api/types'
 import { VisuallyHidden } from '@/components'
+import type { TreeTarget } from './TreeContextMenu'
 import s from './FileTree.module.css'
 
 /** 들여쓰기: 목업의 22 / 38 / 54px 와 같아요 */
@@ -28,32 +29,34 @@ interface Props {
   created: Array<{ name: string; kind: 'file' | 'folder' }>
   /** 모두 접기를 누를 때마다 올라가요 */
   collapseSignal: number
+  /** 오른쪽 클릭 — 누른 자리와 대상을 넘겨요 */
+  onContextMenu: (target: TreeTarget, at: { x: number; y: number }) => void
+  /** 이름을 바꾸는 중인 전체 경로 */
+  renaming: string | null
+  onRename: (path: string, name: string) => void
+  onCancelRename: () => void
+  /** 인라인 생성이 일어날 폴더의 전체 경로 */
+  createAt: string | null
+  /** 행에 포커스를 두고 누르는 단축키 (F2 · Del · Ctrl+X/C/V) */
+  onShortcut: (action: 'rename' | 'delete' | 'cut' | 'copy' | 'paste', target: TreeTarget) => void
 }
 
-export function FileTree({
-  root,
-  activeFileId,
-  onOpenFile,
-  creating,
-  onCreate,
-  onCancelCreate,
-  created,
-  collapseSignal,
-}: Props) {
+export function FileTree(props: Props) {
+  const { root, onContextMenu } = props
   return (
-    <ul className={s.list}>
-      <TreeNode
-        node={root}
-        depth={0}
-        activeFileId={activeFileId}
-        onOpenFile={onOpenFile}
-        creating={creating}
-        onCreate={onCreate}
-        onCancelCreate={onCancelCreate}
-        created={created}
-        collapseSignal={collapseSignal}
-        isRoot
-      />
+    <ul
+      className={s.list}
+      onContextMenu={(e) => {
+        // 행이 아닌 빈 곳을 눌렀을 때예요
+        if ((e.target as HTMLElement).closest(`.${s.row}`)) return
+        e.preventDefault()
+        onContextMenu(
+          { kind: 'empty', path: root.name, name: root.name },
+          { x: e.clientX, y: e.clientY },
+        )
+      }}
+    >
+      <TreeNode {...props} node={root} depth={0} path={root.name} isRoot />
     </ul>
   )
 }
@@ -61,12 +64,15 @@ export function FileTree({
 interface NodeProps extends Omit<Props, 'root'> {
   node: FileNode
   depth: number
+  /** 루트부터 이어 붙인 전체 경로 */
+  path: string
   isRoot?: boolean
 }
 
 function TreeNode({
   node,
   depth,
+  path,
   activeFileId,
   onOpenFile,
   creating,
@@ -74,6 +80,12 @@ function TreeNode({
   onCancelCreate,
   created,
   collapseSignal,
+  onContextMenu,
+  renaming,
+  onRename,
+  onCancelRename,
+  createAt,
+  onShortcut,
   isRoot = false,
 }: NodeProps) {
   const [open, setOpen] = useState(node.open ?? false)
@@ -89,6 +101,27 @@ function TreeNode({
   const isDir = node.kind === 'dir'
   const active = node.fileId != null && node.fileId === activeFileId
 
+  const target: TreeTarget = {
+    kind: isDir ? 'dir' : 'file',
+    path,
+    name: node.name,
+    fileId: node.fileId,
+  }
+
+  if (renaming === path) {
+    return (
+      <li>
+        <NameRow
+          indent={indent}
+          initial={node.name}
+          isDir={isDir}
+          onCommit={(name) => onRename(path, name)}
+          onCancel={onCancelRename}
+        />
+      </li>
+    )
+  }
+
   return (
     <li>
       <button
@@ -97,6 +130,25 @@ function TreeNode({
         aria-current={active ? 'true' : undefined}
         style={{ paddingLeft: indent }}
         className={clsx(s.row, isDir && s.dir, node.muted && s.muted)}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          if (isDir && !open) setOpen(true)
+          onContextMenu(target, { x: e.clientX, y: e.clientY })
+        }}
+        onKeyDown={(e) => {
+          const key = e.key
+          if (key === 'F2') {
+            e.preventDefault()
+            onShortcut('rename', target)
+          } else if (key === 'Delete') {
+            e.preventDefault()
+            onShortcut('delete', target)
+          } else if (e.ctrlKey && (key === 'x' || key === 'c' || key === 'v')) {
+            e.preventDefault()
+            onShortcut(key === 'x' ? 'cut' : key === 'c' ? 'copy' : 'paste', target)
+          }
+        }}
         onClick={() => {
           if (isDir) setOpen((v) => !v)
           else if (node.fileId) onOpenFile(node.fileId)
@@ -122,7 +174,7 @@ function TreeNode({
 
       {isDir && open && (
         <ul>
-          {isRoot && creating && (
+          {creating && createAt === path && (
             <CreateRow
               kind={creating}
               indent={INDENT_BASE + (depth + 1) * INDENT_STEP}
@@ -157,6 +209,7 @@ function TreeNode({
               key={child.name}
               node={child}
               depth={depth + 1}
+              path={`${path}/${child.name}`}
               activeFileId={activeFileId}
               onOpenFile={onOpenFile}
               creating={creating}
@@ -164,6 +217,12 @@ function TreeNode({
               onCancelCreate={onCancelCreate}
               created={created}
               collapseSignal={collapseSignal}
+              onContextMenu={onContextMenu}
+              renaming={renaming}
+              onRename={onRename}
+              onCancelRename={onCancelRename}
+              createAt={createAt}
+              onShortcut={onShortcut}
             />
           ))}
         </ul>
@@ -222,5 +281,54 @@ function CreateRow({
         />
       </div>
     </li>
+  )
+}
+
+/** 이름 바꾸기 — 지금 이름이 들어간 채로 시작해요 */
+function NameRow({
+  indent,
+  initial,
+  isDir,
+  onCommit,
+  onCancel,
+}: {
+  indent: number
+  initial: string
+  isDir: boolean
+  onCommit: (name: string) => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(initial)
+
+  return (
+    <div style={{ paddingLeft: indent }} className={s.createRow}>
+      {isDir && (
+        <span aria-hidden="true" className={s.caret}>
+          ▸
+        </span>
+      )}
+      <VisuallyHidden>
+        <label htmlFor="tree-rename">이름 바꾸기</label>
+      </VisuallyHidden>
+      <input
+        id="tree-rename"
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            e.preventDefault()
+            const trimmed = name.trim().replace(/\/+$/, '')
+            if (trimmed && trimmed !== initial) onCommit(trimmed)
+            else onCancel()
+          } else if (e.key === 'Escape') {
+            e.preventDefault()
+            onCancel()
+          }
+        }}
+        onBlur={onCancel}
+        className={s.createInput}
+      />
+    </div>
   )
 }
