@@ -1,0 +1,263 @@
+/* ── AI 하이라이트 ────────────────────────────────────────── */
+.highlight {
+  border: none;
+  padding: 0;
+  border-radius: 2px;
+  cursor: pointer;
+  mix-blend-mode: multiply;
+  background: rgb(var(--hl-rgb) / 0.5);
+}
+
+.highlight:hover {
+  outline: 2px solid var(--text);
+}
+
+.highlight[aria-pressed='true'] {
+  background: rgb(var(--hl-rgb) / 0.7);
+  outline: 2px solid var(--hl-ink);
+}
+
+/* ── 메모 카드 ────────────────────────────────────────────── */
+.memo {
+  position: absolute;
+  z-index: 5;
+  width: 320px;
+  box-sizing: border-box;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 10px 28px rgb(20 26 25 / 0.18);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memoPill {
+  align-self: flex-start;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  background: var(--hl-tint);
+  color: var(--hl-ink);
+}
+
+.memoNote {
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.memoActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.memoBtn {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.memoPrimary {
+  background: var(--primary-btn);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.memoOutline {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+}
+
+.memoClose {
+  margin-left: auto;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.memoClose:hover {
+  background: var(--surface-sunken);
+}
+
+/* ── 섹션 설명 버튼 ───────────────────────────────────────── */
+.sparkle {
+  position: absolute;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  border-radius: 7px;
+  border: 1px solid var(--border-faint);
+  background: var(--bg);
+  color: var(--text-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(20 26 25 / 0.08);
+}
+
+.sparkle:hover,
+.sparkle:focus-visible {
+  background: var(--accent-row);
+  color: var(--accent);
+  border-color: var(--accent-soft);
+  outline: none;
+}
+
+.tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--bg);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-md);
+  padding: 5px 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  box-shadow: 0 4px 12px rgb(20 26 25 / 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  z-index: 4;
+}
+
+.sparkle:hover .tip,
+.sparkle:focus-visible .tip {
+  opacity: 1;
+}
+
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+/* ── 그림·수식 영역 ───────────────────────────────────────── */
+.zone {
+  position: absolute;
+  z-index: 2;
+  outline: 1.5px dashed transparent;
+  outline-offset: 3px;
+  border-radius: 4px;
+  transition: outline-color 0.12s;
+}
+
+.zone:hover,
+.zone:focus-within {
+  outline-color: var(--outline-dash);
+}
+
+.zoneBar {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 6px 18px rgb(20 26 25 / 0.16);
+  padding: 4px;
+  z-index: 3;
+  white-space: nowrap;
+}
+
+.zoneBar[data-placement='mid'] {
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+}
+
+.zone:hover .zoneBar,
+.zone:focus-within .zoneBar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.zoneBtn {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 9px;
+  background: var(--surface-sunken);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.zoneBtn:hover {
+  background: var(--accent-tint);
+}
+
+.zoneIcon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.zoneIcon:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+/* ── 인용 핫스팟 ──────────────────────────────────────────── */
+.cite {
+  position: absolute;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.cite:hover,
+.cite:focus-visible {
+  background: rgb(var(--cite-rgb) / 0.16);
+  outline: none;
+}
+
+/* ── 섹션 위치 표식 (IntersectionObserver 용) ───────────────── */
+.marker {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
