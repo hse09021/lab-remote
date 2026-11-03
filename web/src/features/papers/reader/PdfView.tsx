@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ExplainZone, Highlight, PaperReaderPayload } from '@/api/types'
+import type { ReactNode } from 'react'
 import { Button, IconButton } from '@/components'
 import { copyText } from '@/lib/clipboard'
 import type { HighlightToggles } from './highlightCategories'
+import { anchorFrom } from './floating/useReaderOverlays'
+import type { SelectionAnchor as Anchor } from './floating/SelectionMenu'
 import { ImagePdfRenderer } from './pdf/ImagePdfRenderer'
 import type { PdfSource } from './pdf/types'
 import {
@@ -12,6 +15,7 @@ import {
   HighlightOverlays,
   SectionMarkers,
   SectionSparkles,
+  SelectionHotspot,
 } from './overlays'
 import s from './PdfView.module.css'
 
@@ -32,12 +36,22 @@ interface Props {
   jump: { target: JumpTarget; nonce: number } | null
   onActiveSection: (id: string) => void
   onProgress: (pct: number) => void
-  /** 메모 카드의 "채팅에 묻기" */
-  onAskChat: () => void
+  /** 메모 카드의 "채팅에 묻기" — 그 위치를 맥락으로 넘겨요 */
+  onAskChat: (sectionId: string, page: number) => void
   /** 메모 카드의 "HTML에서 보기" */
   onOpenHtml: (sectionId: string) => void
-  /** 설명 버튼·그림/수식 — 리더 4에서 대화창에 연결해요 */
-  onExplain: (key: string) => void
+  /** 설명 버튼·그림/수식 — 누른 자리를 함께 넘겨요 */
+  onExplain: (key: string, anchor: Anchor) => void
+  /** 인용 번호 핫스팟 */
+  onCite: (n: number, anchor: Anchor) => void
+  /** 본문 선택 (지금은 2쪽 핫스팟으로 흉내) */
+  onSelect: (anchor: Anchor, text: string, sectionId: string) => void
+  /** 선택 흉내 핫스팟에 얹을 표식 — 선택 중 / 내 하이라이트 / 주석 저장됨 */
+  selectionMarks?: { active: boolean; highlighted: boolean; annotated: boolean }
+  /** 마우스가 올라간 설명 대상 — E 키로 열 때 써요 */
+  onHover: (key: string | null, anchor: Anchor | null) => void
+  /** 본문 위에 뜨는 것들 */
+  floating: ReactNode
   onToast: (msg: string) => void
   /** 끝까지 읽었을 때 */
   nudge: { show: boolean; onMarkDone: () => void; onDismiss: () => void }
@@ -52,6 +66,11 @@ export function PdfView({
   onAskChat,
   onOpenHtml,
   onExplain,
+  onCite,
+  onSelect,
+  selectionMarks,
+  onHover,
+  floating,
   onToast,
   nudge,
 }: Props) {
@@ -238,6 +257,15 @@ export function PdfView({
     }
   }
 
+  const anchorAt = (el: HTMLElement | null): Anchor | null => {
+    const root = scrollRef.current
+    return el && root ? anchorFrom(el, root) : null
+  }
+  const openAt = (key: string, el: HTMLElement | null) => {
+    const a = anchorAt(el)
+    if (a) onExplain(key, a)
+  }
+
   const visible = (h: Highlight) => toggles[h.category]
   const selected = reader.highlights.find((h) => h.id === selectedId) ?? null
 
@@ -313,18 +341,39 @@ export function PdfView({
                 <ExplainZones
                   ctx={ctx}
                   zones={reader.explainZones.filter((z) => z.page === ctx.page)}
-                  onExplain={onExplain}
+                  onExplain={(key, el) => openAt(key, el)}
                   onCopy={copyZone}
+                  onHover={(key, el) =>
+                    onHover(key, key && el ? anchorAt(el) : null)
+                  }
                 />
                 <CiteHotspots
                   ctx={ctx}
                   spots={reader.citeSpots.filter((c) => c.page === ctx.page)}
+                  onPick={(n, el) => {
+                    const a = anchorAt(el)
+                    if (a) onCite(n, a)
+                  }}
+                />
+                <SelectionHotspot
+                  ctx={ctx}
+                  spot={reader.selectionSpot}
+                  active={selectionMarks?.active}
+                  highlighted={selectionMarks?.highlighted}
+                  annotated={selectionMarks?.annotated}
+                  onPick={(el: HTMLElement) => {
+                    const a = anchorAt(el)
+                    if (a) onSelect(a, reader.selectionSpot.text, 's1')
+                  }}
                 />
                 <SectionSparkles
                   ctx={ctx}
                   sections={pageSections}
                   titleSpot={ctx.page === 1 ? TITLE_SPOT : null}
-                  onExplain={onExplain}
+                  onExplain={(key, el) => openAt(key, el)}
+                  onHover={(key, el) =>
+                    onHover(key, key && el ? anchorAt(el) : null)
+                  }
                 />
                 {selected && selected.page === ctx.page && (
                   <HighlightMemo
@@ -332,7 +381,7 @@ export function PdfView({
                     highlight={selected}
                     pageWidth={reader.pageSize.width}
                     pageHeight={reader.pageSize.height}
-                    onAsk={onAskChat}
+                    onAsk={() => onAskChat(selected.section, selected.page)}
                     onOpenHtml={() => onOpenHtml(selected.section)}
                     onClose={() => setSelectedId(null)}
                   />
@@ -341,6 +390,8 @@ export function PdfView({
             )
           }}
         </ImagePdfRenderer>
+
+        {floating}
       </div>
 
       {nudge.show && (

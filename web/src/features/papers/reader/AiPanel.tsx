@@ -36,6 +36,12 @@ interface Props {
   /** 하이라이트 켜고 끈 상태 — 노트 탭도 같이 걸러져요 */
   toggles: HighlightToggles
   onJumpSection: (sectionId: string) => void
+  /** 채팅 탭 위에 붙는 맥락 칩 */
+  chatContext: string | null
+  /** 사용자가 직접 친 하이라이트·주석 */
+  userNotes: Array<{ id: string; kind: 'highlight' | 'note'; text: string; where: string; sectionId: string }>
+  /** 인용 카드로 보관한 참고문헌인지 — 라이브러리 캐시에서 봐요 */
+  isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
 }
 
 export function AiPanel({
@@ -52,6 +58,9 @@ export function AiPanel({
   onMdSave,
   toggles,
   onJumpSection,
+  chatContext,
+  userNotes,
+  isRefSaved,
 }: Props) {
   return (
     <aside aria-label="AI 패널" style={style} className={s.panel}>
@@ -90,14 +99,16 @@ export function AiPanel({
           ))}
 
         {tab === 'chat' && (
-          <p className={s.todo}>
-            섹션 설명과 대화는 다음 단계에서 붙여요.
-            <br />
-            지금은 화면 틀만 있어요.
-          </p>
+          <div className={s.pad}>
+            {chatContext && <span className={s.contextChip}>{chatContext}</span>}
+            <p className={s.todo}>
+              섹션 설명은 본문의 AI 버튼을 누르면 떠 있는 대화창으로 열려요.
+              <br />이 탭의 대화는 서버가 붙으면 이어져요.
+            </p>
+          </div>
         )}
 
-        {tab === 'cite' && <CitationsTab reader={reader} />}
+        {tab === 'cite' && <CitationsTab reader={reader} isRefSaved={isRefSaved} />}
 
         {tab === 'notes' && (
           <NotesTab
@@ -105,6 +116,7 @@ export function AiPanel({
             sections={reader.sections}
             toggles={toggles}
             onJump={onJumpSection}
+            userNotes={userNotes}
           />
         )}
       </div>
@@ -114,7 +126,13 @@ export function AiPanel({
 
 /* ── 인용 ─────────────────────────────────────────────────── */
 
-function CitationsTab({ reader }: { reader: PaperReaderPayload }) {
+function CitationsTab({
+  reader,
+  isRefSaved,
+}: {
+  reader: PaperReaderPayload
+  isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
+}) {
   // 본문에서 많이 인용된 순서, 같으면 번호 순
   const ranked = [...reader.references].sort(
     (a, b) => b.citedCount - a.citedCount || a.n - b.n,
@@ -124,16 +142,18 @@ function CitationsTab({ reader }: { reader: PaperReaderPayload }) {
     <div className={s.pad}>
       <span className={s.caption}>{reader.citationsCaption}</span>
       {ranked.map((r) => (
-        <RefRow key={r.n} r={r} />
+        <RefRow key={r.n} r={r} added={isRefSaved(r)} />
       ))}
     </div>
   )
 }
 
-function RefRow({ r }: { r: Reference }) {
-  const badge: { kind: 'in' | 'none'; label: string } = r.inLibrary
-    ? { kind: 'in', label: '라이브러리' }
-    : { kind: 'none', label: r.arxiv ? 'arXiv' : '없음' }
+function RefRow({ r, added }: { r: Reference; added: boolean }) {
+  const badge: { kind: 'in' | 'none'; label: string } = added
+    ? { kind: 'in', label: '추가됨' }
+    : r.inLibrary
+      ? { kind: 'in', label: '라이브러리' }
+      : { kind: 'none', label: r.arxiv ? 'arXiv' : '없음' }
 
   return (
     <div className={s.refRow}>
@@ -160,11 +180,13 @@ function NotesTab({
   sections,
   toggles,
   onJump,
+  userNotes,
 }: {
   highlights: Highlight[]
   sections: PaperReaderPayload['sections']
   toggles: HighlightToggles
   onJump: (id: string) => void
+  userNotes: Array<{ id: string; kind: 'highlight' | 'note'; text: string; where: string; sectionId: string }>
 }) {
   const label = (cat: Highlight['category']) =>
     HIGHLIGHT_CATEGORIES.find((c) => c.id === cat)?.label ?? cat
@@ -177,7 +199,20 @@ function NotesTab({
       <span className={s.caption}>
         하이라이트와 주석을 모아 둬요. 아웃라인에서 종류를 끄면 여기서도 숨겨져요.
       </span>
-      {rows.length === 0 && <p className={s.todo}>켜 둔 종류의 하이라이트가 없어요.</p>}
+      {userNotes.map((n) => (
+        <div key={n.id} className={s.noteRow}>
+          <span data-cat="memo" className={s.notePill}>
+            {n.kind === 'highlight' ? '내 하이라이트' : '주석'}
+          </span>
+          <span className={s.noteText}>{n.text}</span>
+          <button type="button" onClick={() => onJump(n.sectionId)} className={s.noteWhere}>
+            {n.where}
+          </button>
+        </div>
+      ))}
+      {rows.length === 0 && userNotes.length === 0 && (
+        <p className={s.todo}>켜 둔 종류의 하이라이트가 없어요.</p>
+      )}
       {rows.map((h) => {
         const sec = sectionOf(h.section)
         return (

@@ -62,3 +62,4 @@ export async function send<T>(
 }
 
 export const isMockMode = () => USE_MOCK
+export const apiBase = () => BASE

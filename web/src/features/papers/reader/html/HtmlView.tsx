@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { PaperReaderPayload } from '@/api/types'
 import { Button } from '@/components'
 import { copyText } from '@/lib/clipboard'
 import type { HighlightToggles } from '../highlightCategories'
+import { anchorFrom, anchorFromRect } from '../floating/useReaderOverlays'
+import type { SelectionAnchor as Anchor } from '../floating/SelectionMenu'
 import { loadPaperHtml } from './loadPaperHtml'
 import { CheckNote, ConfigCard, MemoCard } from './blocks'
 import { Sparkle } from './Sparkle'
@@ -21,10 +24,14 @@ interface Props {
   jump: HtmlJump | null
   onActiveSection: (id: string) => void
   onProgress: (pct: number) => void
-  /** 설명 버튼·그림·수식 — PDF 보기와 같은 자리 (리더 4) */
-  onExplain: (key: string) => void
-  /** 본문 인용 칩 — 인용 카드는 리더 4 */
-  onCite: (n: number) => void
+  /** 설명 버튼·그림·수식 — 누른 자리를 함께 넘겨요 */
+  onExplain: (key: string, anchor: Anchor) => void
+  /** 본문 인용 칩 */
+  onCite: (n: number, anchor: Anchor) => void
+  /** 실제 드래그 선택 */
+  onSelect: (anchor: Anchor, text: string, sectionId: string) => void
+  onHover: (key: string | null, anchor: Anchor | null) => void
+  floating: ReactNode
   onToast: (msg: string) => void
   /** 수치 불일치에서 고른 재현 기준 */
   target: string | null
@@ -40,6 +47,9 @@ export function HtmlView({
   onProgress,
   onExplain,
   onCite,
+  onSelect,
+  onHover,
+  floating,
   onToast,
   target,
   onTargetChange,
@@ -133,16 +143,47 @@ export function HtmlView({
     const onClick = (e: Event) => {
       const t = (e.target as HTMLElement).closest<HTMLElement>('[data-cite],[data-explain]')
       if (!t) return
+      const scroller = scrollRef.current
+      if (!scroller) return
+      const anchor = anchorFrom(t, scroller)
       const cite = t.dataset.cite
       if (cite) {
-        onCite(Number(cite))
+        onCite(Number(cite), anchor)
         return
       }
-      if (t.dataset.explain) onExplain(t.dataset.explain)
+      if (t.dataset.explain) onExplain(t.dataset.explain, anchor)
     }
+    const onMouseUp = () => {
+      const scroller = scrollRef.current
+      const sel = window.getSelection()
+      if (!scroller || !sel || sel.isCollapsed) return
+      const text = sel.toString().trim()
+      if (text.length < 2) return
+      const node = sel.anchorNode as HTMLElement | null
+      if (!node || !root.contains(node)) return
+      const sectionEl = (node.nodeType === 1 ? node : node.parentElement)?.closest<HTMLElement>(
+        '[data-section]',
+      )
+      const rect = sel.getRangeAt(0).getBoundingClientRect()
+      onSelect(anchorFromRect(rect, scroller), text, sectionEl?.dataset.section ?? 'abs')
+    }
+
+    const onOver = (e: Event) => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>('[data-explain]')
+      const scroller = scrollRef.current
+      if (!scroller) return
+      onHover(t?.dataset.explain ?? null, t ? anchorFrom(t, scroller) : null)
+    }
+
     root.addEventListener('click', onClick)
-    return () => root.removeEventListener('click', onClick)
-  }, [html, onCite, onExplain])
+    root.addEventListener('mouseup', onMouseUp)
+    root.addEventListener('mouseover', onOver)
+    return () => {
+      root.removeEventListener('click', onClick)
+      root.removeEventListener('mouseup', onMouseUp)
+      root.removeEventListener('mouseover', onOver)
+    }
+  }, [html, onCite, onExplain, onSelect, onHover])
 
   /* ── 스크롤 추적 ─────────────────────────────────────────── */
   useEffect(() => {
@@ -263,7 +304,17 @@ export function HtmlView({
         {/* 주입된 HTML 안에 React 조각을 끼워 넣어요 */}
         {slots.sparkles.map((x) =>
           createPortal(
-            <Sparkle label={x.label} onClick={() => onExplain(x.key)} />,
+            <Sparkle
+              label={x.label}
+              onClick={(el) => {
+                const scroller = scrollRef.current
+                if (scroller) onExplain(x.key, anchorFrom(el, scroller))
+              }}
+              onHover={(el) => {
+                const scroller = scrollRef.current
+                onHover(el && scroller ? x.key : null, el && scroller ? anchorFrom(el, scroller) : null)
+              }}
+            />,
             x.el,
           ),
         )}
@@ -292,6 +343,8 @@ export function HtmlView({
             />,
             slots.memo,
           )}
+
+        {floating}
       </div>
 
       {nudge.show && (

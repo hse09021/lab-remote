@@ -123,6 +123,8 @@
 .center {
   flex: 1;
   min-width: 0;
+  /* 떠 있는 대화창의 기준 블록 (목업과 같게 가운데 열 기준) */
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--surface-muted);

@@ -4,12 +4,24 @@ import o from '../overlays/Overlays.module.css'
  * 섹션 헤딩 옆 AI 설명 버튼.
  * PDF 보기의 것과 같은 모양·같은 핸들러 자리를 써요 (동작은 리더 4).
  */
-export function Sparkle({ label, onClick }: { label: string; onClick: () => void }) {
+export function Sparkle({
+  label,
+  onClick,
+  onHover,
+}: {
+  label: string
+  onClick: (el: HTMLElement) => void
+  onHover?: (el: HTMLElement | null) => void
+}) {
   return (
     <button
       type="button"
       aria-label={label}
-      onClick={onClick}
+      onClick={(e) => onClick(e.currentTarget)}
+      onMouseEnter={(e) => onHover?.(e.currentTarget)}
+      onMouseLeave={() => onHover?.(null)}
+      onFocus={(e) => onHover?.(e.currentTarget)}
+      onBlur={() => onHover?.(null)}
       style={{ position: 'static', marginTop: 0 }}
       className={o.sparkle}
     >

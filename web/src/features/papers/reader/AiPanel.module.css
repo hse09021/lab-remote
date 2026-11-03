@@ -151,3 +151,15 @@
   color: var(--text-muted);
   line-height: 1.7;
 }
+
+/* 채팅 탭 맥락 칩 */
+.contextChip {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--accent-dark);
+  background: var(--accent-tint);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  margin-bottom: 8px;
+}

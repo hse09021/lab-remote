@@ -116,19 +116,25 @@ export function SectionSparkles({
   sections,
   titleSpot,
   onExplain,
+  onHover,
 }: {
   ctx: PdfPageContext
   sections: PaperSection[]
   /** 1쪽 제목 옆 버튼 */
   titleSpot: { x: number; y: number } | null
-  onExplain: (key: string) => void
+  onExplain: (key: string, el: HTMLElement | null) => void
+  onHover?: (key: string | null, el: HTMLElement | null) => void
 }) {
   const spark = (key: string, label: string, x: number, y: number) => (
     <button
       key={key}
       type="button"
       aria-label={label}
-      onClick={() => onExplain(key)}
+      onClick={(e) => onExplain(key, e.currentTarget)}
+      onMouseEnter={(e) => onHover?.(key, e.currentTarget)}
+      onMouseLeave={() => onHover?.(null, null)}
+      onFocus={(e) => onHover?.(key, e.currentTarget)}
+      onBlur={() => onHover?.(null, null)}
       style={ctx.pointToStyle(x, y)}
       className={s.sparkle}
     >
@@ -161,18 +167,30 @@ export function ExplainZones({
   zones,
   onExplain,
   onCopy,
+  onHover,
 }: {
   ctx: PdfPageContext
   zones: ExplainZone[]
-  onExplain: (key: string) => void
+  onExplain: (key: string, el: HTMLElement | null) => void
   onCopy: (zone: ExplainZone) => void
+  onHover?: (key: string | null, el: HTMLElement | null) => void
 }) {
   return (
     <>
       {zones.map((z) => (
-        <div key={z.key} style={ctx.rectToStyle(z.box)} className={s.zone}>
+        <div
+          key={z.key}
+          style={ctx.rectToStyle(z.box)}
+          className={s.zone}
+          onMouseEnter={(e) => onHover?.(z.key, e.currentTarget)}
+          onMouseLeave={() => onHover?.(null, null)}
+        >
           <div data-placement={z.barPlacement} className={s.zoneBar}>
-            <button type="button" onClick={() => onExplain(z.key)} className={s.zoneBtn}>
+            <button
+              type="button"
+              onClick={(e) => onExplain(z.key, e.currentTarget.closest('div'))}
+              className={s.zoneBtn}
+            >
               {z.kind === 'fig'
                 ? '이 그림(figure) 풀어서 설명받기'
                 : '이 수식 풀어서 설명받기'}
@@ -198,9 +216,11 @@ export function ExplainZones({
 export function CiteHotspots({
   ctx,
   spots,
+  onPick,
 }: {
   ctx: PdfPageContext
   spots: Array<{ n: number; box: PtRect }>
+  onPick: (n: number, el: HTMLElement) => void
 }) {
   return (
     <>
@@ -208,13 +228,60 @@ export function CiteHotspots({
         <button
           key={`${spot.n}-${i}`}
           type="button"
-          // 인용 카드는 리더 4에서 붙여요. 지금은 올리면 강조만 해요
           aria-label={`참고문헌 ${spot.n}번`}
           title={`참고문헌 ${spot.n}번`}
+          onClick={(e) => onPick(spot.n, e.currentTarget)}
           style={ctx.rectToStyle(spot.box)}
           className={s.cite}
         />
       ))}
+    </>
+  )
+}
+
+/* ── 본문 선택 흉내 (PDF 는 텍스트 레이어가 없어요) ────────── */
+
+export function SelectionHotspot({
+  ctx,
+  spot,
+  onPick,
+  /** 선택 메뉴·팝오버가 열려 있으면 파란 선택 틴트를 깔아요 */
+  active = false,
+  /** 하이라이트 H 로 칠한 상태 */
+  highlighted = false,
+  /** 주석 C 를 저장한 상태 — 보라 밑줄 */
+  annotated = false,
+}: {
+  ctx: PdfPageContext
+  spot: { page: number; box: PtRect; text: string }
+  onPick: (el: HTMLElement) => void
+  active?: boolean
+  highlighted?: boolean
+  annotated?: boolean
+}) {
+  if (spot.page !== ctx.page) return null
+  const [x0, y0, x1, y1] = spot.box
+  const pad: PtRect = [x0, y0 - 1, x1, y1 + 1]
+  return (
+    <>
+      {active && <span aria-hidden style={ctx.rectToStyle(pad)} className={s.selTint} />}
+      {highlighted && <span aria-hidden style={ctx.rectToStyle(pad)} className={s.selMine} />}
+      {annotated && (
+        /* 밑변에 붙는 2px 줄 — 쪽 높이를 몰라도 되게 높이 0 사각형에 얹어요 */
+        <span
+          aria-hidden
+          style={{ ...ctx.rectToStyle([x0, y1, x1, y1]), height: 2, marginTop: 1 }}
+          className={s.selAnno}
+        />
+      )}
+      <button
+        type="button"
+        aria-label={`"${spot.text}" 선택`}
+        title={`"${spot.text}" 선택`}
+        onClick={(e) => onPick(e.currentTarget)}
+        style={ctx.rectToStyle(spot.box)}
+        className={s.selSpot}
+      />
     </>
   )
 }

@@ -6,20 +6,24 @@ import s from './AskLibrary.module.css'
 
 interface Props {
   chat: LibraryChat | undefined
+  /** 요약 패널이 열려 있으면 그 폭만큼 왼쪽으로 비켜요 */
+  offsetRight?: number
 }
 
 /**
  * 오른쪽 아래 떠 있는 "라이브러리에 묻기".
  * 답변의 인용마다 근거 링크를 붙여요 (docs/spec.md II-1).
  */
-export function AskLibrary({ chat }: Props) {
+export function AskLibrary({ chat, offsetRight = 0 }: Props) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
+  // 28px(기본 여백) + 패널 폭
+  const shift = { right: 28 + offsetRight }
 
   return (
     <>
       {open && chat && (
-        <section aria-label={chat.title} className={s.panel}>
+        <section aria-label={chat.title} style={shift} className={s.panel}>
           <div className={s.head}>
             <span className={s.title}>{chat.title}</span>
             <span className={s.caption}>{chat.caption}</span>
@@ -62,6 +66,7 @@ export function AskLibrary({ chat }: Props) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
+        style={shift}
         className={s.fab}
       >
         <svg
