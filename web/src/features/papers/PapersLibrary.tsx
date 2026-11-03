@@ -76,7 +76,10 @@ export default function PapersLibrary() {
         (p.model ?? '').toLowerCase().includes(query),
     )
 
-  const selectedCount = Object.values(selected).filter(Boolean).length
+  const selectedIds = Object.entries(selected)
+    .filter(([, on]) => on)
+    .map(([id]) => id)
+  const selectedCount = selectedIds.length
 
   // 요약이 있는 논문만 이전/다음으로 돌아요
   const order = (papers.data ?? []).filter((p) => summaries.data?.[p.id]).map((p) => p.id)
@@ -247,7 +250,11 @@ export default function PapersLibrary() {
         {selectedCount > 0 && (
           <div className={s.selectionBar}>
             <span className={s.selectionCount}>{selectedCount}편 선택됨</span>
-            <Link to="/experiments/new/from-paper" className={s.onDark}>
+            {/* 고른 논문 중 첫 편 기준으로 열어요 */}
+            <Link
+              to={`/experiments/new/from-paper?paper=${selectedIds[0]}`}
+              className={s.onDark}
+            >
               실험 설계 초안
             </Link>
             <button type="button" className={s.onDark}>

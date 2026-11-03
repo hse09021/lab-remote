@@ -1,5 +1,10 @@
-import type { Paper, PermissionsPayload } from '../types'
-import { overlayPapers, readDiscrepancy, readPermissions } from '../mockStore'
+import type { DesignDraft, Paper, PermissionsPayload } from '../types'
+import {
+  overlayPapers,
+  readDesignValues,
+  readDiscrepancy,
+  readPermissions,
+} from '../mockStore'
 
 /**
  * mock JSON(처음 상태) 위에 저장소의 내 값을 덮어요.
@@ -13,6 +18,11 @@ export function applyOverlay<T>(path: string, data: T): T {
 
   if (path === '/experiments/permissions') {
     return { ...(data as PermissionsPayload), saved: readPermissions() } as T
+  }
+
+  const design = path.match(/^\/papers\/([^/]+)\/design$/)
+  if (design) {
+    return { ...(data as DesignDraft), saved: readDesignValues(design[1]) } as T
   }
 
   const reader = path.match(/^\/papers\/([^/]+)\/reader$/)

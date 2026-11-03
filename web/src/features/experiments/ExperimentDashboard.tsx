@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { useQueries } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   dashboardQuery,
   eventsQuery,
@@ -22,8 +23,10 @@ import {
   SectionHeader,
   Skeleton,
   SplitButton,
+  Toast,
 } from '@/components'
 import { usePaneResize } from '@/lib/usePaneResize'
+import { useToast } from '@/lib/useToast'
 import { CurveLegend, LearningCurveChart } from './LearningCurveChart'
 import { ProjectSidebar } from './ProjectSidebar'
 import { ResourceMeterList } from './ResourceMeterList'
@@ -45,6 +48,14 @@ export default function ExperimentDashboard() {
   const [projects, dashboard, experiments, events] = useQueries({
     queries: [projectsQuery(), dashboardQuery(), experimentsQuery(), eventsQuery()],
   })
+
+  /* 설계 초안에서 "프로젝트 생성"으로 넘어오면 안내를 띄워요 */
+  const toast = useToast()
+  const { state } = useLocation() as { state?: { toast?: string } }
+  useEffect(() => {
+    if (state?.toast) toast.show(state.toast)
+    // 한 번만 띄워요
+  }, [state?.toast, toast])
 
   return (
     <>
@@ -86,6 +97,7 @@ export default function ExperimentDashboard() {
           onRetry={() => void events.refetch()}
         />
       </main>
+      <Toast message={toast.message} />
     </>
   )
 }
@@ -131,6 +143,7 @@ function DashboardHeader({
           items={[
             { label: 'Claude와 토론하며 설계' },
             {
+              // 논문을 안 고르고 들어오면 설계 초안이 기본 논문으로 열려요
               label: '논문에서 재현 실험 만들기',
               to: '/experiments/new/from-paper',
             },

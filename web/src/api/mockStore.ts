@@ -42,6 +42,8 @@ export interface MockState {
   permissions: { mode: PermissionMode; overrides: Record<string, Permission> } | null
   /** 수치 불일치에서 고른 재현 목표 */
   discrepancy: Record<string, string>
+  /** 실험 설계 초안에 직접 넣은 값 (논문별 · 항목 key 별) */
+  designValues: Record<string, Record<string, string>>
 }
 
 const VERSION = 1
@@ -55,6 +57,7 @@ const empty = (): MockState => ({
   summaryMd: {},
   permissions: null,
   discrepancy: {},
+  designValues: {},
 })
 
 /* ── localStorage ─────────────────────────────────────────── */
@@ -120,6 +123,8 @@ export const readAnnotations = (paperId: string): UserAnnotation[] =>
 export const readPermissions = () => state.permissions
 
 export const readDiscrepancy = (paperId: string) => state.discrepancy[paperId] ?? null
+
+export const readDesignValues = (paperId: string) => state.designValues[paperId] ?? null
 
 /* ── 쓰기 ─────────────────────────────────────────────────── */
 
@@ -211,4 +216,11 @@ export function setPermissions(value: MockState['permissions']) {
 
 export function setDiscrepancy(paperId: string, target: string) {
   update((prev) => ({ ...prev, discrepancy: { ...prev.discrepancy, [paperId]: target } }))
+}
+
+export function setDesignValues(paperId: string, values: Record<string, string>) {
+  update((prev) => ({
+    ...prev,
+    designValues: { ...prev.designValues, [paperId]: values },
+  }))
 }
