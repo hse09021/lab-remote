@@ -30,6 +30,7 @@ LABELS = {
     "outputProtect": "실험 산출물 보존",
     "suspicious": "확인이 필요한 명령",
     "unparsed": "해석 못 한 명령",
+    "unclassified": "분류 못 한 명령",
     "schema-unknown": "훅이 못 읽은 입력",
     "denied-command": "금지된 명령",
 }
@@ -188,6 +189,19 @@ def suspicious(cmd: str) -> str:
 
 def unparsed(cmd: str) -> str:
     return f"명령을 해석하지 못했어요(따옴표가 안 맞는 것 같아요): {cmd}"
+
+
+def unclassified(cmd: str) -> str:
+    """명령 꼴은 읽었지만 무엇을 건드리는지 모를 때.
+
+    래퍼(`conda run`·`xargs`…)나 처음 보는 명령이 여기로 온다. 모르는 것을
+    자동으로 열지 않는 게 목적이다.
+    """
+    return (
+        f"훅이 이 명령이 무엇을 건드리는지 알지 못해요: {cmd} · "
+        "모르는 명령은 자동으로 허용하지 않아요. 무엇을 하려는지 알려 주거나 "
+        "아는 명령으로 풀어서 써 주세요."
+    )
 
 
 def headless_ask(name: str, inner: str) -> str:

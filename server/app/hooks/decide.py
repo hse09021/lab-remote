@@ -108,6 +108,22 @@ def decide(finding: Finding, ctx: Ctx) -> Decision:
             ASK(M.with_guard(M.unparsed(str(finding.target))), **base), ctx, label
         )
 
+    # --- 분류 못 한 세그먼트 (①의 경계 버그) -------------------------------
+    # 미분류 세그먼트는 findings 에 아무것도 보태지 않아서
+    #   echo x > src/t.txt && conda run -n base rm -rf <프로젝트 밖>
+    # 이 앞 조각(code) 하나만으로 **allow** 가 됐다 — 사람에게 묻지도 않고.
+    # 이제 미분류 자체가 Finding 으로 올라오고, 여기서 allow 보다 센 판정을 준다.
+    if action == "unclassified":
+        if not ctx.headless:
+            # 대화형: Claude Code 기본 승인 흐름으로 넘긴다 — 사람이 보고 고른다.
+            # 훅이 함부로 allow 를 주지 않는다는 이 모듈의 원칙 그대로다.
+            return DEFER(**base)
+        # 헤드리스: defer 는 통과가 아니라 **정지**다 (실측 — `ls -1` 조차
+        # tool_deferred 로 끝나고 기록도 안 남는다). 승인 경로로 올린다.
+        return _maybe_headless(
+            ASK(M.with_guard(M.unclassified(str(finding.target))), **base), ctx, label
+        )
+
     # --- 정책이 정하는 것 ---------------------------------------------------
     permission = ctx.policy.resolve(action)
     what = finding.rel or finding.target or ""
@@ -147,11 +163,15 @@ def combine(decisions: list[Decision]) -> Decision:
 
     예: EXP-007 이 도는 중 experiments/EXP-006/config.yaml 수정
         -> {prev(deny), hparam(ask)} -> prev 의 deny.
+
+    **미분류 조각이 하나라도 있으면 결과가 allow 일 수 없다.** 순위표만으로도
+    그렇게 되지만(defer·ask 가 allow 보다 세다) 불변식을 여기 한 줄로 못박는다 —
+    ①에서 이 경계가 조용히 뚫렸던 자리라서, 순위표가 바뀌어도 안 열리게 둔다.
     """
     if not decisions:
         return DEFER()
     winner = max(decisions, key=lambda d: d.rank)
-    if winner.kind == "allow":
-        # 모두 allow 여도, 우리가 확실히 아는 것만 allow 로 돌려준다.
-        return winner
+    if winner.kind == "allow" and any(d.action == "unclassified" for d in decisions):
+        # 여기 오면 unclassified 판정이 allow 로 나왔다는 뜻이다. 열지 않는다.
+        return DEFER(label=winner.label, action="unclassified")
     return winner

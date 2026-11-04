@@ -338,3 +338,65 @@ def test_22_서브에이전트_대기_건은_Stop_이_아니라_SubagentStop_이
                {"cwd": project_root, "session_id": "sess-테스트", "agent_id": agent_id})
     assert A.list_pending("hook-sandbox") == []
     assert A.read_rows(A.log_path(project_root))[-1]["result"] == A.RESULT_NO_ANSWER
+
+
+# --- ①의 경계 버그: 복합 명령의 미분류 조각 ----------------------------------
+# 실측에서 설치된 훅이 아래 명령에 **allow** 를 줬다. 앞 조각만 `code` 로
+# 분류돼서, 사람에게 묻지도 않고 `conda run … rm -rf <프로젝트 밖>` 이
+# 실행될 수 있었다. 샌드박스가 실제로 막아 준 덕에 피해는 없었다(실측 14).
+
+COMPOSITE_BYPASS = (
+    "echo probe > src/sbx_t.txt && conda run -n base rm -rf /home/사용자/sbx-victim"
+)
+
+
+def with_full_preset(project):
+    """`code` 가 allow 인 프리셋 — 실측에서 allow 가 나온 조건 그대로."""
+    from app import policy
+
+    project.set_saved("full")
+    policy.save(project)
+
+
+def test_24_복합_명령의_미분류_조각은_대화형에서도_안_열린다(
+    wrapper, project, project_root, hook_event
+):
+    with_full_preset(project)
+    event = hook_event("Bash", {"command": COMPOSITE_BYPASS}, cwd=project_root)
+    # allow 가 아니다 — Claude Code 승인 흐름으로 가서 사람이 본다.
+    assert decision(wrapper, event) == "defer"
+
+
+def test_24_같은_명령이_헤드리스에서는_승인_대기열로(
+    wrapper, project, project_root, hook_event
+):
+    from app import approval_log as A
+    from app.hooks import pretooluse
+
+    with_full_preset(project)
+    event = hook_event("Bash", {"command": COMPOSITE_BYPASS}, cwd=project_root)
+    out = run(
+        wrapper,
+        event,
+        env={pretooluse.HEADLESS_ENV: "1", "LAB_NOTIFY_DISABLED": "1"},
+    )
+    assert out["permissionDecision"] == "deny"
+    assert "승인 요청을 남겨 두었어요" in out["permissionDecisionReason"]
+    assert len(A.list_requests("hook-sandbox")) == 1
+
+
+def test_24_미분류_호출도_기록이_남는다(wrapper, project, project_root, hook_event):
+    """`_record` 가 안 불려 승인 로그에 흔적이 없던 것도 같이 고쳤다."""
+    from app import approval_log as A
+
+    with_full_preset(project)
+    event = hook_event("Bash", {"command": COMPOSITE_BYPASS}, cwd=project_root)
+    assert decision(wrapper, event) == "defer"
+
+    # 승인 로그 CSV 는 defer 를 적지 않는다 — 판정 기록은 JSONL 쪽을 본다.
+    path = A.event_path(project_root)
+    with open(path, encoding="utf-8") as fh:
+        rows = [json.loads(line) for line in fh if line.strip()]
+    found = [r for r in rows if r.get("event") == "PreToolUse"]
+    assert found, "미분류 호출이 hook_events.jsonl 에 남아야 해요"
+    assert "unclassified" in [f["action"] for f in found[-1]["findings"]]
