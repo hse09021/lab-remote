@@ -1,0 +1,19 @@
+{
+  "session_id": "sess-4d3596b1",
+  "transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-hook-sandbox/sess-4d3596b1.jsonl",
+  "cwd": "/home/사용자/projects/hook-sandbox",
+  "scratchpad_dir": "/tmp/claude-1000/-home-사용자-projects-hook-sandbox/sess-4d3596b1/scratchpad",
+  "prompt_id": "prompt-dee4f5ba",
+  "permission_mode": "default",
+  "agent_id": "afbdfab71ba9cbf43",
+  "agent_type": "",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "SubagentStop",
+  "stop_hook_active": false,
+  "agent_transcript_path": "/home/사용자/.claude/projects/-home-사용자-projects-hook-sandbox/sess-4d3596b1/subagents/agent-afbdfab71ba9cbf43.jsonl",
+  "last_assistant_message": "Approval_log.csv 마지막 줄 확인해 줘 …(줄임)",
+  "background_tasks": [],
+  "session_crons": []
+}

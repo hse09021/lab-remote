@@ -295,3 +295,91 @@ def test_헤드리스_요청에도_에이전트가_남는다(project, project_ro
     pretooluse.handle(agent_event(hook_event, project_root))
     request = A.list_requests("hook-sandbox")[0]
     assert request["agentId"] == AGENT
+
+
+# --- 실측 픽스처 (2026-11-04 09:27~09:33) ------------------------------------
+# 1회차(거부) 09:27:37 d.py 대기 -> 09:27:38 Stop 건너뜀 -> 09:30:51 SubagentStop 닫음
+# 2회차(승인) 09:33:12 e.py 대기 -> 09:33:41 PostToolUse "허용"
+# 두 회차 모두에서 SubagentStop 이 한 턴에 두 번 왔다. 아래 시험이 그 모양을 고정한다.
+
+FIX_SUBAGENT_REAL = "20261104-093051-360919-SubagentStop"
+FIX_SUBAGENT_EMPTY = "20261104-093058-395017-SubagentStop"
+FIX_TASK_NOTIFY = "20261104-093051-420967-UserPromptSubmit"
+
+
+def test_실측_SubagentStop_에_agent_id_가_온다(real_event):
+    """설계가 이 필드 하나에 걸려 있다. 안 오면 세션 전체 쓸기로 떨어진다."""
+    event = real_event(FIX_SUBAGENT_REAL)
+    assert event["hook_event_name"] == "SubagentStop"
+    assert event["agent_id"] == "af3199313de4e46ff"
+    assert event["agent_type"] == "general-purpose"
+    # 메인 스레드 Stop 과 구분되는 필드
+    assert "agent_transcript_path" in event
+    assert event["stop_hook_active"] is False
+
+
+def test_실측_SubagentStop_은_자기를_실행_중으로_들고_온다(real_event):
+    """SubagentStop 시점에도 background_tasks 의 status 는 아직 running 이다.
+    그래서 "작업이 끝났나" 를 background_tasks 로 판단하면 안 된다."""
+    event = real_event(FIX_SUBAGENT_REAL)
+    tasks = event["background_tasks"]
+    assert [t["id"] for t in tasks] == [event["agent_id"]]
+    assert tasks[0]["status"] == "running"
+
+
+def test_실측_한_턴에_SubagentStop_이_두_번_오고_agent_id_가_다르다(real_event):
+    """같은 이벤트가 두 번 온 게 아니라 **다른 에이전트**가 둘 멈춘 것이다.
+
+    둘째는 agent_type 이 빈 문자열이고, PreToolUse 를 한 번도 낸 적이 없는
+    agent_id 다. prompt_id 로 묶었다면 둘째가 첫째의 대기 건을 가로채
+    거짓 "거부" 를 남겼을 것이다. agent_id 로 묶는 이유가 이것이다.
+    """
+    first = real_event(FIX_SUBAGENT_REAL)
+    second = real_event(FIX_SUBAGENT_EMPTY)
+
+    assert first["agent_id"] != second["agent_id"]
+    assert first["prompt_id"] != second["prompt_id"]
+    assert second["agent_type"] == ""
+    assert second["background_tasks"] == []
+
+
+def test_실측_작업_알림의_task_id_가_에이전트_것과_같다(real_event):
+    """3차 닫개(작업 알림)가 같은 건을 가리키는지. 둘째 SubagentStop 과
+    prompt_id 를 공유한다 — 알림이 새 프롬프트를 만들고 그 턴이 끝난 것이다."""
+    notify = real_event(FIX_TASK_NOTIFY)
+    agent = real_event(FIX_SUBAGENT_REAL)
+    second = real_event(FIX_SUBAGENT_EMPTY)
+
+    assert f"<task-id>{agent['agent_id']}</task-id>" in notify["prompt"]
+    assert notify["prompt_id"] == second["prompt_id"]
+
+
+def test_실측_빈_agent_type_쪽은_아무것도_안_닫는다(project, project_root, hook_event, real_event):
+    """2회차 09:33:15 에 같은 모양이 **승인 26초 전에** 왔다. 이게 대기 건을
+    닫았다면 기록이 거짓 "거부 또는 미응답" 이 됐을 것이다."""
+    pretooluse.handle(agent_event(hook_event, project_root))
+    assert len(A.list_pending("hook-sandbox")) == 1
+
+    stray = dict(real_event(FIX_SUBAGENT_EMPTY))
+    stray["cwd"] = project_root
+    stray["session_id"] = "sess-테스트"
+    assert subagentstop.handle(stray) == []
+
+    assert len(A.list_pending("hook-sandbox")) == 1  # 그대로 열려 있다
+    assert not [row for row in rows(project_root) if row["result"] == "거부 또는 미응답"]
+
+
+def test_실측_모양_그대로_주면_그_건이_닫힌다(project, project_root, hook_event, real_event):
+    """1회차 09:30:51 — 실제로 닫은 쪽."""
+    pretooluse.handle(agent_event(hook_event, project_root, agent_id="af3199313de4e46ff"))
+
+    event = dict(real_event(FIX_SUBAGENT_REAL))
+    event["cwd"] = project_root
+    event["session_id"] = "sess-테스트"
+    closed = subagentstop.handle(event)
+
+    assert len(closed) == 1
+    assert A.list_pending("hook-sandbox") == []
+    assert rows(project_root)[-1]["result"] == "거부 또는 미응답"
+    sweeps = [e for e in events(project_root) if e.get("event") == "sweep"]
+    assert sweeps[-1]["by"] == "SubagentStop"
