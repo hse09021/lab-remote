@@ -66,6 +66,7 @@ __all__ = [
     "covers",
     "issue",
     "consume",
+    "drop_for_session",
     "list_grants",
     "revoke",
 ]
@@ -87,8 +88,15 @@ LOCKED_ACTIONS = frozenset(
     }
 )
 
-#: 기본 만료. 정책의 `headless.grantTtlSec` 가 있으면 그게 이긴다.
-DEFAULT_TTL_SEC = 1800
+#: 기본 만료 **10분**. 전에는 30분이었다.
+#:
+#: S3 에서 허가가 **읽기 전용**이 되면서 "파일이 사라짐" 으로 1회용을 보장하지
+#: 못하게 됐다. 그 대가로 창을 좁혔다 — 오케스트레이터는 승인을 보면 곧바로
+#: 재개하므로 10분이면 넉넉하다.
+#:
+#: `labremote approvals approve --ttl 10m` 으로 덮어쓸 수 있다.
+#: (정책 파일의 `headless.grantTtlSec` 는 **아직 없다** — 7단계에서 붙인다.)
+DEFAULT_TTL_SEC = 600
 
 #: `looseMatch` 를 허용하지 않는 도구. 명령 전체가 의미라서 경로만으로
 #: "같은 요청" 이라고 볼 수 없다.
@@ -172,20 +180,34 @@ def sign(grant: dict, key: bytes) -> str:
 
 
 def verify(grant: dict, key: bytes | None) -> bool:
-    """서명이 맞는가. **키가 없으면 거짓이다.**"""
+    """서명이 맞는가. **키가 없으면 거짓이다.**
+
+    ⚠ `hmac.compare_digest` 는 비ASCII 문자가 든 **문자열**을 받으면
+    `TypeError` 를 던진다("comparing strings with non-ASCII characters is not
+    supported"). 손으로 만든 가짜 허가의 `sig` 가 그럴 수 있다 — 그러면
+    `consume` 의 바깥 `except` 가 `grantError` 로 삼켜서 **왜 거절됐는지
+    기록이 쓸모없어진다.** (막히긴 했다 — fail-closed 다.)
+
+    그래서 **바이트로 비교**한다. 인코딩할 수 없는 값은 서명이 아니다.
+    """
     if not key or not isinstance(grant, dict):
         return False
     got = grant.get("sig")
     if not isinstance(got, str) or not got:
         return False
-    return hmac.compare_digest(got, sign(grant, key))
+    try:
+        left = got.encode("utf-8")
+        right = sign(grant, key).encode("utf-8")
+    except (UnicodeError, TypeError, ValueError):
+        return False
+    return hmac.compare_digest(left, right)
 
 
 def _file_name(fp: str) -> str:
     return fp.split(":", 1)[-1] + ".json"
 
 
-def _consumed_dir(project: str) -> str:
+def _consumed_dir(project: str) -> str:  # 쓰지 않는다 (S3: 아무것도 보관하지 않음)
     return os.path.join(registry.grants_dir(project), ".consumed")
 
 
@@ -226,6 +248,15 @@ def issue(
         raise GrantError(
             f"{name!r} 는 승인으로 열 수 없는 잠긴 항목이에요. "
             "권한 단계와 상관없이 항상 막혀요."
+        )
+    # 🔑 세션을 모르는 허가는 **만들지 않는다.** S3 에서 허가가 읽기 전용이
+    # 되면서 1회용 보장이 "파일이 사라짐" 에서 "세션 + TTL + 오케스트레이터가
+    # 지움" 으로 바뀌었다. 세션이 없으면 그 중 하나가 빠진 채로 아무 세션에서나
+    # 먹는 허가가 된다 — 쓸 수 없는 허가를 만들 이유가 없다.
+    if not str(session_id or "").strip():
+        raise GrantError(
+            "세션 ID 없이는 허가를 만들지 않아요 — 허가가 읽기 전용이라 "
+            "'그 세션 안에서만' 이 1회용 보장의 한 겹이에요."
         )
     if loose and tool in NO_LOOSE_TOOLS:
         raise GrantError(
@@ -290,40 +321,21 @@ def _expired(grant: dict, now: datetime) -> bool:
         return True  # 읽을 수 없는 만료 시각은 만료로 본다
 
 
-def _archive(claim: str, grant: dict | None, reason: str) -> None:
-    """소비·무효 기록을 남긴다. CLI 가 "언제 누가 왜" 를 보여 준다."""
-    try:
-        target = os.path.join(
-            _consumed_dir(str((grant or {}).get("project") or "unknown")),
-            f"{int(time.time())}-{os.path.basename(claim).split('.')[0]}-{reason}.json",
-        )
-        os.makedirs(os.path.dirname(target), exist_ok=True)
-        os.replace(claim, target)
-    except OSError:
-        try:
-            os.unlink(claim)
-        except OSError:
-            pass
-
-
-def _claim(path: str) -> str | None:
-    """`os.rename` 한 줄이 상호배제다. 진 쪽은 FileNotFoundError 를 받는다."""
-    claim = f"{path}.claim.{os.getpid()}.{time.time_ns()}"
-    try:
-        os.rename(path, claim)
-    except OSError:
-        return None
-    return claim
-
-
-#: 허가 자체가 죽은 것. 되돌려 두면 매 호출마다 다시 검사하고 가짜 파일이 쌓인다.
+#: 허가 **자체가 죽은** 것. 사람이 알아야 하므로 기록한다.
+#: (S3 전에는 "되돌려 두지 않고 치운다" 는 뜻이었다 — 이제 아무것도 안 치운다.)
 _DISCARD = frozenset(
-    {"grantBadSignature", "grantWrongProject", "grantExpired", "grantLockedAction"}
+    {
+        "grantBadSignature",
+        "grantWrongProject",
+        "grantExpired",
+        "grantLockedAction",
+        "grantNoSession",
+    }
 )
 
-#: 허가는 멀쩡한데 **이 호출의 것이 아닌** 경우. 제자리에 돌려 둔다 —
-#: 남의 허가를 소비해 버리면 사람이 한 승인이 조용히 사라진다. 특히 복합
-#: 명령은 한 호출에서 findings 가 여러 개라 action 이 여럿으로 들어온다.
+#: 허가는 멀쩡한데 **이 호출의 것이 아닌** 경우. 기록하지 않는다 — 허가가
+#: 여러 개면 매 호출마다 로그가 쌓인다. 특히 복합 명령은 한 호출에서
+#: findings 가 여러 개라 action 이 여럿으로 들어온다.
 _PUT_BACK = frozenset(
     {
         "grantActionMismatch",
@@ -332,6 +344,7 @@ _PUT_BACK = frozenset(
         "grantLooseNotAllowed",
         "grantRunningNow",
         "grantPrevLocked",
+        "grantWrongSession",
     }
 )
 
@@ -355,6 +368,7 @@ def _usable(
     appendable: list,
     key: bytes | None,
     now: datetime,
+    session: str = "",
 ) -> str:
     """쓸 수 있으면 빈 문자열, 아니면 거절 사유를 돌려준다.
 
@@ -370,6 +384,19 @@ def _usable(
         return "grantWrongProject"
     if _expired(grant, now):
         return "grantExpired"
+    # 🔑 **같은 세션에서만** 쓴다. 허가는 읽기 전용이 되면서 "파일이 사라지는
+    # 것" 으로 1회용을 보장하지 못한다(S3). 그 대가를 세션으로 좁힌다 —
+    # 오케스트레이터는 `--resume <같은 UUID>` 로 이어 가므로 세션 ID 가
+    # 그대로다(`--fork-session` 은 쓰지 않는다).
+    want = str(grant.get("sessionId") or "")
+    if not want:
+        # 세션을 모르는 허가는 쓰지 않는다 (fail-closed). CLI 가 발급할 때
+        # `approvals` 행의 세션 ID 를 넣는다.
+        return "grantNoSession"
+    # 이벤트 쪽 세션도 **있어야** 한다. 비어 있으면 아무 허가나 쓸 수 있는
+    # 틈이 된다 (`session_id` 는 Claude Code 가 넣는 값이고 AI 가 못 고친다).
+    if want != session:
+        return "grantWrongSession"
     # 허가 자신이 잠긴 행동을 들고 있으면 영원히 못 쓴다.
     if covers(grant) & LOCKED_ACTIONS:
         return "grantLockedAction"
@@ -457,6 +484,26 @@ def _candidates(project: str, fp: str) -> list[str]:
 
 
 def _consume(project, *, event, needs, running, appendable, log, now):
+    """🔑 **파일을 한 바이트도 건드리지 않는다** (S3).
+
+    전에는 `os.rename` 으로 claim 한 뒤 `.consumed/` 로 옮겼다. 그게 1회용
+    보장이었다. 하지만 훅이 `grants/` 에 쓸 수 있으면 **AI 가 쓴 코드도 쓸 수
+    있다** — 샌드박스 안에서 `server/data` 쓰기가 실패하는 것(M1b)이 허가를
+    믿는 **유일한 근거**이므로, 그 폴더는 통째로 읽기 전용이어야 한다.
+
+    1회용은 이제 **세 겹**이다.
+
+    | | 어디 |
+    |---|---|
+    | 세션이 같아야 한다 | `_usable` 의 `grantWrongSession` |
+    | TTL 10분 | `_usable` 의 `grantExpired` |
+    | 오케스트레이터가 **재개한 세션이 끝난 뒤 파일을 지운다** | `grants.drop_for_session` |
+
+    > ⚠ 약해지는 것: 같은 세션·같은 입력·TTL 안에서는 허가가 **여러 번**
+    > 먹을 수 있다. 훅이 아무것도 안 쓰는 대가다. `approvals` 가
+    > `tool_use_id`(= `request_id`)로 같은 denial 을 두 번 승인하지 않게 막고,
+    > `attempts` 상한이 반복을 끊는다.
+    """
     registry.valid_name(project)
     if not needs:
         return None
@@ -466,14 +513,11 @@ def _consume(project, *, event, needs, running, appendable, log, now):
     tool = str(event.get("tool_name") or "")
     fp = fingerprint(tool, event.get("tool_input"))
     key = config.grant_key()
+    session = str(event.get("session_id") or "")
 
     for path in _candidates(project, fp):
-        claim = _claim(path)
-        if claim is None:
-            continue  # 남이 먼저 가져갔다
-        grant = _read(claim)
+        grant = _read(path)
         if grant is None:
-            _archive(claim, None, "unreadable")
             if log:
                 log({"event": "grantUnreadable", "file": os.path.basename(path)})
             continue
@@ -487,27 +531,24 @@ def _consume(project, *, event, needs, running, appendable, log, now):
             appendable=appendable,
             key=key,
             now=now,
+            session=session,
         )
         if why:
-            if why in _PUT_BACK:
-                try:
-                    os.rename(claim, path)
-                except OSError:  # pragma: no cover - 되돌릴 수 없으면 치운다
-                    _archive(claim, grant, why)
-                continue
-            _archive(claim, grant, why)
-            if log:
+            # `_PUT_BACK` 류는 "이 호출의 허가가 아니다" 이므로 기록하지
+            # 않는다 — 허가가 여러 개면 매 호출마다 로그가 쌓인다.
+            # `_DISCARD` 류(허가 자체가 죽음)는 사람이 알아야 한다.
+            if log and why not in _PUT_BACK:
                 log(
                     {
                         "event": why,
                         "grantId": grant.get("grantId"),
                         "grantActions": sorted(covers(grant)),
                         "needed": sorted({a for a, _ in needs}),
+                        "file": os.path.basename(path),
                     }
                 )
             continue
 
-        _archive(claim, grant, "consumed")
         if log:
             log(
                 {
@@ -516,11 +557,47 @@ def _consume(project, *, event, needs, running, appendable, log, now):
                     "actions": sorted({a for a, _ in needs}),
                     "rels": sorted({r for _, r in needs if r}),
                     "loose": grant.get("fingerprint") != fp,
+                    # 파일은 그대로 있다 — 오케스트레이터가 세션이 끝난 뒤 지운다
+                    "readOnly": True,
                 }
             )
         grant["looseUsed"] = grant.get("fingerprint") != fp
         return grant
     return None
+
+
+def drop_for_session(project: str, session_id: str) -> list[str]:
+    """그 세션의 허가 파일을 **지운다.** 오케스트레이터만 부른다.
+
+    **재개한 세션이 끝난 뒤**에 부른다. 재개 직후에 지우면 훅이 못 찾는다 —
+    훅은 세션이 도는 동안 그 파일을 읽어야 한다.
+
+    훅은 이 함수를 부르지 않는다(쓰기다). 샌드박스 안에서 `server/data` 쓰기가
+    실패하므로(M1b) AI 가 쓴 코드도 못 부른다.
+    """
+    registry.valid_name(project)
+    want = str(session_id or "")
+    if not want:
+        return []
+    dropped = []
+    folder = registry.grants_dir(project)
+    try:
+        names = sorted(os.listdir(folder))
+    except OSError:
+        return dropped
+    for name in names:
+        if not name.endswith(".json") or name.startswith("."):
+            continue
+        path = os.path.join(folder, name)
+        grant = _read(path)
+        if not grant or str(grant.get("sessionId") or "") != want:
+            continue
+        try:
+            os.unlink(path)
+        except OSError:
+            continue
+        dropped.append(str(grant.get("grantId") or name))
+    return dropped
 
 
 def list_grants(project: str) -> list[dict]:
@@ -558,9 +635,11 @@ def revoke(project: str, grant_id: str) -> bool:
         path = os.path.join(folder, name)
         grant = _read(path)
         if grant and grant.get("grantId") == grant_id:
-            claim = _claim(path)
-            if claim is None:
+            # 사람이 부르는 길이다 (`labremote approvals revoke`). 오케스트레이터
+            # 쪽 쓰기이므로 그대로 지운다 — 훅은 이 함수를 부르지 않는다.
+            try:
+                os.unlink(path)
+            except OSError:
                 return False
-            _archive(claim, grant, "revoked")
             return True
     return False
