@@ -134,34 +134,25 @@ def test_더_넓게_승인해도_된다(ctx_headless):
     assert resolve(ctx_headless, TWO_ASKS).kind == "allow"
 
 
-def test_세션_뒤에_지우면_다시_막힌다(ctx_headless):
-    """⚠ S3 에서 1회용의 근거가 바뀌었다.
+def test_두_번째_호출은_다시_막힌다(ctx_headless):
+    """1회용이다. 호출 전체를 열지만 한 번만 연다.
 
-    전에는 **파일이 사라지는 것**이 1회용이었다. 지금은 읽기 전용이라 같은
-    세션·TTL 안에서는 또 먹는다 — 오케스트레이터가 **재개한 세션이 끝난 뒤**
-    지우면 막힌다.
+    `os.rename` 상호배제를 되살렸다 — 훅은 샌드박스 **밖**이고(M1)
+    AI 코드는 `server/data` 에 못 쓴다(M1b).
     """
-    from app import grants
-
     approve(ctx_headless, TWO_ASKS, actions=["net", "pkg"])
     assert resolve(ctx_headless, TWO_ASKS).kind == "allow"
-    # 같은 세션 안에서는 또 먹는다 (약해진 점)
-    assert resolve(ctx_headless, TWO_ASKS).kind == "allow"
-
-    grants.drop_for_session(ctx_headless.name, SESSION)
     assert resolve(ctx_headless, TWO_ASKS).kind == "deny"
 
 
-def test_호출당_한_번만_소비한다(ctx_headless):
-    """행동마다 소비하면 로그가 두 줄이 된다 — 호출당 한 줄이어야 한다."""
+def test_허가를_호출당_한_번만_소비한다(ctx_headless):
+    """행동마다 소비하면 두 번 태운다. `.consumed/` 에 한 건만 남아야 한다."""
     approve(ctx_headless, TWO_ASKS, actions=["net", "pkg"])
     decision = resolve(ctx_headless, TWO_ASKS)
     consumed = [e for e in decision.meta["grantLog"] if e["event"] == "grantConsumed"]
     assert len(consumed) == 1, decision.meta["grantLog"]
-    # 파일은 그대로다
-    folder = registry.grants_dir(ctx_headless.name)
-    assert [n for n in os.listdir(folder) if n.endswith(".json")]
-    assert not os.path.exists(os.path.join(folder, ".consumed"))
+    kept = os.listdir(os.path.join(registry.grants_dir(ctx_headless.name), ".consumed"))
+    assert len([k for k in kept if "consumed" in k]) == 1, kept
 
 
 def test_소비_기록에_행동이_다_남는다(ctx_headless):

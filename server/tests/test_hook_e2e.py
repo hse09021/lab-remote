@@ -480,9 +480,12 @@ def test_25_승인_1회로_호출_전체가_통과한다(wrapper, project, proje
     assert A.list_requests("hook-sandbox") == []
 
 
-def test_25_세션이_끝난_뒤_지우면_다시_막힌다(wrapper, project, project_root, hook_event, grant_key):
-    """⚠ S3 에서 1회용의 근거가 바뀌었다 — **파일이 사라짐** → **세션 + TTL +
-    오케스트레이터가 지움**. 훅은 `grants/` 에 한 바이트도 쓰지 않는다."""
+def test_25_같은_허가를_두_번_쓸_수_없다(wrapper, project, project_root, hook_event, grant_key):
+    """**진짜 1회용** — 실제 훅 프로세스로 끝까지 확인한다.
+
+    훅은 샌드박스 **밖**이라(M1) `grants/` 에 쓸 수 있고, AI 가 쓴 코드는
+    `server/data` 에 못 쓴다(M1b). 그래서 `os.rename` 상호배제가 안전하다.
+    """
     event = hook_event("Bash", {"command": TWO_ASKS}, cwd=project_root)
     _issue(
         "hook-sandbox",
@@ -492,10 +495,6 @@ def test_25_세션이_끝난_뒤_지우면_다시_막힌다(wrapper, project, pr
         actions=["net", "pkg"],
     )
     assert headless(wrapper, event)["permissionDecision"] == "allow"
-    # 같은 세션 안에서는 또 먹는다 (약해진 점)
-    assert headless(wrapper, event)["permissionDecision"] == "allow"
-
-    grants.drop_for_session("hook-sandbox", SESSION)
     assert headless(wrapper, event)["permissionDecision"] == "deny"
 
 

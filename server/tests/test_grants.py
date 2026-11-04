@@ -156,46 +156,35 @@ def test_발급한_허가를_소비한다(project, grant_key):
     assert used and used["grantId"] == issued["grantId"]
 
 
-def test_소비가_파일을_한_바이트도_안_바꾼다(project, grant_key):
-    """🔑 S3 의 핵심.
+def test_두_번째는_안_먹힌다(project, grant_key):
+    """🔑 **진짜 1회용.** `os.rename` 한 줄이 보장한다.
 
-    전에는 `os.rename` 으로 claim 한 뒤 `.consumed/` 로 옮겼다 — 그게 1회용
-    보장이었다. 하지만 훅이 `grants/` 에 쓸 수 있으면 **AI 가 쓴 코드도 쓸 수
-    있다.** 샌드박스 안에서 `server/data` 쓰기가 실패하는 것(M1b)이 허가를
-    믿는 **유일한 근거**이므로 그 폴더는 통째로 읽기 전용이어야 한다.
-    """
-    issued = _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    path = grant_file(project, issued["fingerprint"])
-    folder = registry.grants_dir(project)
-    before = {n: open(os.path.join(folder, n), "rb").read() for n in sorted(os.listdir(folder))}
+    훅이 `grants/` 에 써도 되는 이유 (M1·M1b 실측):
 
-    assert grants.consume(project, event=event(), needs=[("pkg", None)])
+    | | 샌드박스 | `server/data/grants/` 쓰기 |
+    |---|---|---|
+    | 훅 | **밖** | 된다 (`allowWrite` 에 아무것도 안 열어도) |
+    | AI 가 쓴 코드 | 안 | **안 된다** |
 
-    after = {n: open(os.path.join(folder, n), "rb").read() for n in sorted(os.listdir(folder))}
-    assert after == before, "소비가 파일을 바꿨어요"
-    assert os.path.exists(path)
-    # `.consumed/` 를 더 이상 만들지 않는다
-    assert not os.path.exists(os.path.join(folder, ".consumed"))
-
-
-def test_같은_세션_안에서는_또_먹는다(project, grant_key):
-    """⚠ **약해진 점.** 훅이 아무것도 안 쓰는 대가다.
-
-    1회용은 세 겹으로 옮겼다 — 세션 일치 · TTL 10분 ·
-    **오케스트레이터가 재개한 세션이 끝난 뒤 파일을 지움**.
-    `docs/operations.md` 에 한계로 적었다.
+    원래 계획의 원칙 (다)는 "훅이 샌드박스 안" 이라는 가정에서 나왔고
+    M1 이 그 가정을 뒤집었다.
     """
     _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
     assert grants.consume(project, event=event(), needs=[("pkg", None)])
-    assert grants.consume(project, event=event(), needs=[("pkg", None)])
+    assert grants.consume(project, event=event(), needs=[("pkg", None)]) is None
 
 
-def test_오케스트레이터가_세션_뒤에_지우면_안_먹힌다(project, grant_key):
+def test_소비_기록이_남는다(project, grant_key):
+    _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
+    grants.consume(project, event=event(), needs=[("pkg", None)])
+    kept = os.listdir(os.path.join(registry.grants_dir(project), ".consumed"))
+    assert any("consumed" in name for name in kept), kept
+
+
+def test_안_쓰인_허가는_오케스트레이터가_청소한다(project, grant_key):
+    """사람이 승인했는데 Claude 가 그 호출을 다시 시도하지 않은 경우다."""
     issued = _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    assert grants.consume(project, event=event(), needs=[("pkg", None)])
-
     dropped = grants.drop_for_session(project, SESSION)
-
     assert dropped == [issued["grantId"]]
     assert not os.path.exists(grant_file(project, issued["fingerprint"]))
     assert grants.consume(project, event=event(), needs=[("pkg", None)]) is None
@@ -217,12 +206,8 @@ def test_만료되면_안_먹힌다(project, grant_key):
     assert grants.consume(project, event=event(), needs=[("pkg", None)], now=later) is None
 
 
-def test_만료된_허가도_치우지_않는다(project, grant_key):
-    """읽기 전용이라 아무것도 치우지 않는다. 쓸 수 없는 건 `_usable` 이 막는다.
-
-    쌓인 파일은 오케스트레이터가 세션 뒤에 지우고(`drop_for_session`),
-    사람은 `labremote approvals revoke` 로 지운다.
-    """
+def test_만료된_허가는_치워진다(project, grant_key):
+    """안 치우면 매 호출마다 다시 검사하고 가짜 파일이 쌓인다."""
     issued = _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg", ttl_sec=1)
     from datetime import datetime, timedelta
 
@@ -231,7 +216,7 @@ def test_만료된_허가도_치우지_않는다(project, grant_key):
     assert grants.consume(
         project, event=event(), needs=[("pkg", None)], now=later, log=seen.append
     ) is None
-    assert os.path.exists(grant_file(project, issued["fingerprint"]))
+    assert not os.path.exists(grant_file(project, issued["fingerprint"]))
     # 사람이 알아야 하므로 기록은 남는다
     assert [e["event"] for e in seen] == ["grantExpired"]
 
@@ -327,7 +312,7 @@ def test_서명_없는_가짜_허가는_잠기지_않은_ask_에도_안_먹힌�
     assert [e["event"] for e in seen] == ["grantBadSignature"]
 
 
-def test_서명이_틀린_허가는_안_먹힌다(project, grant_key):
+def test_서명이_틀린_허가는_치워진다(project, grant_key):
     fingerprint = grants.fingerprint("Bash", TOOL_INPUT)
     registry.write_json(
         grant_file(project, fingerprint),
@@ -337,8 +322,7 @@ def test_서명이_틀린_허가는_안_먹힌다(project, grant_key):
     assert grants.consume(
         project, event=event(), needs=[("pkg", None)], log=seen.append
     ) is None
-    # 파일은 그대로 둔다 (읽기 전용) — 사람이 보고 지운다
-    assert os.path.exists(grant_file(project, fingerprint))
+    assert not os.path.exists(grant_file(project, fingerprint))
     assert [e["event"] for e in seen] == ["grantBadSignature"]
 
 
@@ -396,10 +380,12 @@ def test_느슨한_일치도_경로가_다르면_안_먹힌다(project, grant_ke
 # --- 원자적 소비 -------------------------------------------------------------
 
 
-def test_두_프로세스가_같이_소비하면_둘_다_먹는다(project, grant_key, tmp_path):
-    """⚠ 전에는 `os.rename` 한 줄이 상호배제였다. 읽기 전용이 되면서 그
-    보장이 사라졌다 — **의도된 거래**다. 쓰기를 없애는 대가로 "같은 세션·
-    같은 입력·TTL 안에서는 여러 번" 을 받아들였다."""
+def test_두_프로세스가_같이_소비하면_한_쪽만_이긴다(project, grant_key, tmp_path):
+    """`os.rename` 한 줄이 상호배제다.
+
+    🔑 **검증을 통과한 뒤** claim 하므로 둘 다 검증을 통과할 수 있다 — 그래도
+    `rename` 은 한 쪽만 이기고, 진 쪽은 다음 후보로 넘어가 아무것도 못 찾는다.
+    """
     _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
     code = (
         "import json, os, sys\n"
@@ -421,10 +407,10 @@ def test_두_프로세스가_같이_소비하면_둘_다_먹는다(project, gran
         for _ in range(2)
     ]
     outs = [json.loads(p.communicate()[0].strip()) for p in procs]
-    assert outs == [True, True], outs
+    assert sorted(outs) == [False, True], outs
 
 
-def test_읽을_수_없는_허가_파일은_건너뛴다(project, grant_key):
+def test_읽을_수_없는_허가_파일은_치운다(project, grant_key):
     fingerprint = grants.fingerprint("Bash", TOOL_INPUT)
     path = grant_file(project, fingerprint)
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -432,8 +418,7 @@ def test_읽을_수_없는_허가_파일은_건너뛴다(project, grant_key):
         fh.write("{반쯤 쓰인 JSON")
     seen = []
     assert grants.consume(project, event=event(), needs=[("pkg", None)], log=seen.append) is None
-    # 치우지 않는다 (읽기 전용)
-    assert os.path.exists(path)
+    assert not os.path.exists(path)
     assert [e["event"] for e in seen] == ["grantUnreadable"]
 
 
@@ -520,36 +505,57 @@ def test_세션_칸이_빈_허가는_안_먹힌다(project, grant_key):
 # --- 🔑 훅은 `grants/` 에 한 바이트도 안 쓴다 (S3) ---------------------------
 
 
-def test_훅_경로에_grants_쓰기가_없다():
-    """소스에서 고정한다 — `_claim`·`_archive` 가 다시 생기면 잡힌다.
+def test_남의_허가는_claim_조차_안_한다(project, grant_key):
+    """🔑 **검증한 뒤에** claim 한다.
 
-    훅이 `grants/` 에 쓸 수 있으면 **AI 가 쓴 코드도 쓸 수 있다.** 샌드박스
-    안에서 `server/data` 쓰기가 실패하는 것(M1b)이 허가를 믿는 유일한 근거다.
+    전에는 claim 먼저 하고 검증했다. 그래서 "이 호출의 허가가 아님" 일 때
+    되돌려 놓는 길이 필요했고, 되돌리기가 실패하면 남의 승인이 조용히
+    사라졌다 — 복합 명령은 한 호출에 findings 가 여러 개라 흔한 경우였다.
     """
-    import pathlib
+    issued = _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
+    path = grant_file(project, issued["fingerprint"])
+    before = open(path, "rb").read()
+    mtime = os.stat(path).st_mtime_ns
 
-    body = pathlib.Path(grants.__file__).read_text(encoding="utf-8")
-    # 소비 경로에서 파일을 옮기거나 지우는 함수가 없어야 한다
-    assert "def _claim(" not in body
-    assert "def _archive(" not in body
-    # 쓰기는 **발급**과 **삭제** 두 군데뿐이다
-    writers = [
-        line.strip()
-        for line in body.splitlines()
-        if ("os.rename(" in line or "os.replace(" in line or "os.unlink(" in line
-            or "write_json(" in line)
-        and not line.strip().startswith("#")
-    ]
-    assert len(writers) == 3, writers  # issue 의 write_json · drop/revoke 의 unlink 둘
+    # 다른 호출 — 지문이 안 맞는다
+    assert grants.consume(
+        project, event=event(tool_input={"command": "다른 명령"}), needs=[("pkg", None)]
+    ) is None
+
+    assert open(path, "rb").read() == before
+    assert os.stat(path).st_mtime_ns == mtime, "건드리지 말아야 해요"
+    # 원래 호출엔 여전히 먹힌다
+    assert grants.consume(project, event=event(), needs=[("pkg", None)])
 
 
-def test_소비는_폴더를_안_만든다(project, grant_key):
-    """`.consumed/` 를 만들면 그 자체가 `grants/` 쓰기다."""
-    _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    folder = registry.grants_dir(project)
-    before = sorted(os.listdir(folder))
-    grants.consume(project, event=event(), needs=[("pkg", None)])
-    assert sorted(os.listdir(folder)) == before
+def test_세션이_다른_허가도_claim_하지_않는다(project, grant_key):
+    issued = _issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
+    path = grant_file(project, issued["fingerprint"])
+    assert grants.consume(
+        project, event={**event(), "session_id": "남의세션"}, needs=[("pkg", None)]
+    ) is None
+    assert os.path.exists(path), "다른 세션이 남의 허가를 태우면 안 돼요"
+
+
+def test_archive_경로를_허가_파일이_정하지_못한다(project, grant_key):
+    """`project` 칸은 **서명 검증 전에도 읽히는 값**이다. 그걸로 경로를 비틀 수
+    있으면 `server/data` 밖에 파일을 쓸 수 있다."""
+    fingerprint = grants.fingerprint("Bash", TOOL_INPUT)
+    registry.write_json(
+        grant_file(project, fingerprint),
+        {
+            "project": "../../../../tmp/탈출",
+            "fingerprint": fingerprint,
+            "actionKey": "pkg",
+            "sessionId": SESSION,
+            "sig": "hmac-sha256:aaaa",
+        },
+    )
+    assert grants.consume(project, event=event(), needs=[("pkg", None)]) is None
+    # 우리 프로젝트의 `.consumed/` 로만 간다
+    kept = os.listdir(os.path.join(registry.grants_dir(project), ".consumed"))
+    assert kept and any("grantWrongProject" in k or "grantBadSignature" in k for k in kept), kept
+    assert not os.path.exists("/tmp/탈출")
 
 
 def test_재개가_끝나면_오케스트레이터가_지운다(project, project_root, conn, grant_key, monkeypatch):
@@ -562,7 +568,7 @@ def test_재개가_끝나면_오케스트레이터가_지운다(project, project
     seen = []
 
     def fake_runner(made):
-        # 세션이 도는 **동안**에는 허가가 있어야 한다
+        # 세션이 도는 **동안**에는 허가가 있어야 한다 (안 쓰인 경우)
         seen.append(os.path.exists(grant_file(project, issued["fingerprint"])))
         return {"ok": True, "result": "", "sessionId": SESSION}
 

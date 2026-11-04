@@ -207,7 +207,7 @@ def _file_name(fp: str) -> str:
     return fp.split(":", 1)[-1] + ".json"
 
 
-def _consumed_dir(project: str) -> str:  # 쓰지 않는다 (S3: 아무것도 보관하지 않음)
+def _consumed_dir(project: str) -> str:
     return os.path.join(registry.grants_dir(project), ".consumed")
 
 
@@ -319,6 +319,49 @@ def _expired(grant: dict, now: datetime) -> bool:
         return datetime.fromisoformat(str(grant.get("expiresAt"))) <= now
     except (TypeError, ValueError):
         return True  # 읽을 수 없는 만료 시각은 만료로 본다
+
+
+def _archive(project: str, claim: str, reason: str) -> None:
+    """소비·무효 기록을 남긴다. CLI 가 "언제 누가 왜" 를 보여 준다.
+
+    ⚠ `project` 는 **부르는 쪽이 검증한 값**을 받는다. 전에는 허가 파일의
+    `project` 칸을 썼는데, 그건 **서명 검증 전에도 읽히는 값**이라 손으로
+    만든 파일로 경로를 비틀 수 있었다 (`"project": "../../.."`).
+    """
+    try:
+        target = os.path.join(
+            _consumed_dir(project),
+            f"{int(time.time())}-{os.path.basename(claim).split('.')[0]}-{reason}.json",
+        )
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        os.replace(claim, target)
+    except OSError:
+        try:
+            os.unlink(claim)
+        except OSError:
+            pass
+
+
+def _claim(path: str) -> str | None:
+    """`os.rename` 한 줄이 상호배제다. 진 쪽은 `None` 을 받는다.
+
+    🔑 **훅이 이걸 쓸 수 있는 이유** (M1·M1b 실측):
+
+    | | 샌드박스 | `server/data/grants/` 쓰기 |
+    |---|---|---|
+    | 훅 | **밖** | **된다** — `allowWrite` 에 아무것도 안 열어도 된다 |
+    | AI 가 쓴 코드 | 안 | **안 된다** (조용히 버려진다) |
+
+    그래서 훅이 쓴다고 AI 에게 열리는 것이 없다. 원래 계획의 원칙 (다)
+    ("허가 소비는 grants 폴더 쓰기 없이")는 **훅이 샌드박스 안이라는 가정**에서
+    나왔고, 그 가정은 M1 으로 무너졌다.
+    """
+    claim = f"{path}.claim.{os.getpid()}.{time.time_ns()}"
+    try:
+        os.rename(path, claim)
+    except OSError:
+        return None
+    return claim
 
 
 #: 허가 **자체가 죽은** 것. 사람이 알아야 하므로 기록한다.
@@ -484,25 +527,41 @@ def _candidates(project: str, fp: str) -> list[str]:
 
 
 def _consume(project, *, event, needs, running, appendable, log, now):
-    """🔑 **파일을 한 바이트도 건드리지 않는다** (S3).
+    """쓸 수 있는 허가를 찾아 **원자적으로 소비**하고 돌려준다.
 
-    전에는 `os.rename` 으로 claim 한 뒤 `.consumed/` 로 옮겼다. 그게 1회용
-    보장이었다. 하지만 훅이 `grants/` 에 쓸 수 있으면 **AI 가 쓴 코드도 쓸 수
-    있다** — 샌드박스 안에서 `server/data` 쓰기가 실패하는 것(M1b)이 허가를
-    믿는 **유일한 근거**이므로, 그 폴더는 통째로 읽기 전용이어야 한다.
+    ## 왜 쓰기를 해도 되나 (M1·M1b 실측)
 
-    1회용은 이제 **세 겹**이다.
+    | | 샌드박스 | `server/data/grants/` 쓰기 |
+    |---|---|---|
+    | 훅 | **밖** | **된다** — `allowWrite` 에 아무것도 안 열어도 된다 |
+    | AI 가 쓴 코드 | 안 | **안 된다** (조용히 버려진다) |
+
+    원래 계획의 원칙 (다)("허가 소비는 grants 폴더 쓰기 없이")는 **훅이
+    샌드박스 안이라는 가정**에서 나왔다. M1 이 그 가정을 뒤집었으므로
+    `os.rename` 상호배제를 되살려 **진짜 1회용**으로 둔다.
+
+    ## 🔑 순서를 바꿨다 — **검증한 뒤에 claim 한다**
+
+    전에는 claim 먼저 하고 검증했다. 그래서 "이 호출의 허가가 아님" 일 때
+    **되돌려 놓는 길**(`_PUT_BACK`)이 필요했고, 되돌리기가 실패하면 남의
+    승인이 조용히 사라졌다 — 복합 명령은 한 호출에 findings 가 여러 개라
+    흔한 경우였다.
+
+    이제 **읽고 → 검증하고 → 쓸 것만 claim** 한다. 그래서
+
+    - 남의 허가는 **건드리지 않는다** (되돌릴 일이 없다).
+    - 두 프로세스가 같이 검증을 통과해도 `os.rename` 은 **한 쪽만** 이긴다.
+      진 쪽은 다음 후보로 넘어가고, 없으면 막힌다 — 1회용이 지켜진다.
+    - 크래시 창이 좁다: claim 과 반환 사이뿐이다.
+
+    ## 1회용은 **네 겹**이다
 
     | | 어디 |
     |---|---|
+    | 파일이 사라진다 (원자적) | 여기 `_claim` |
     | 세션이 같아야 한다 | `_usable` 의 `grantWrongSession` |
     | TTL 10분 | `_usable` 의 `grantExpired` |
-    | 오케스트레이터가 **재개한 세션이 끝난 뒤 파일을 지운다** | `grants.drop_for_session` |
-
-    > ⚠ 약해지는 것: 같은 세션·같은 입력·TTL 안에서는 허가가 **여러 번**
-    > 먹을 수 있다. 훅이 아무것도 안 쓰는 대가다. `approvals` 가
-    > `tool_use_id`(= `request_id`)로 같은 denial 을 두 번 승인하지 않게 막고,
-    > `attempts` 상한이 반복을 끊는다.
+    | 오케스트레이터가 세션 끝난 뒤 지운다 | `drop_for_session` (남은 것 청소) |
     """
     registry.valid_name(project)
     if not needs:
@@ -518,9 +577,14 @@ def _consume(project, *, event, needs, running, appendable, log, now):
     for path in _candidates(project, fp):
         grant = _read(path)
         if grant is None:
+            # 못 읽는 파일은 **치운다** — 안 치우면 매 호출마다 다시 읽는다.
+            claim = _claim(path)
+            if claim is not None:
+                _archive(project, claim, "unreadable")
             if log:
                 log({"event": "grantUnreadable", "file": os.path.basename(path)})
             continue
+
         why = _usable(
             grant,
             project=project,
@@ -534,21 +598,31 @@ def _consume(project, *, event, needs, running, appendable, log, now):
             session=session,
         )
         if why:
-            # `_PUT_BACK` 류는 "이 호출의 허가가 아니다" 이므로 기록하지
-            # 않는다 — 허가가 여러 개면 매 호출마다 로그가 쌓인다.
-            # `_DISCARD` 류(허가 자체가 죽음)는 사람이 알아야 한다.
-            if log and why not in _PUT_BACK:
-                log(
-                    {
-                        "event": why,
-                        "grantId": grant.get("grantId"),
-                        "grantActions": sorted(covers(grant)),
-                        "needed": sorted({a for a, _ in needs}),
-                        "file": os.path.basename(path),
-                    }
-                )
+            # 🔑 **아직 claim 하지 않았다.** 남의 허가는 건드리지 않는다.
+            if why in _DISCARD:
+                # 허가 자체가 죽었다 — 치우지 않으면 매 호출마다 다시 검사하고
+                # 가짜 파일이 쌓인다. 사람이 알아야 하므로 기록도 남긴다.
+                claim = _claim(path)
+                if claim is not None:
+                    _archive(project, claim, why)
+                if log:
+                    log(
+                        {
+                            "event": why,
+                            "grantId": grant.get("grantId"),
+                            "grantActions": sorted(covers(grant)),
+                            "needed": sorted({a for a, _ in needs}),
+                        }
+                    )
+            # `_PUT_BACK` 류("이 호출의 허가가 아니다")는 기록하지 않는다 —
+            # 허가가 여러 개면 매 호출마다 로그가 쌓인다.
             continue
 
+        # 여기까지 왔으면 **쓸 수 있는 허가**다. 이제 claim 한다.
+        claim = _claim(path)
+        if claim is None:
+            continue  # 남이 먼저 가져갔다. 다음 후보로.
+        _archive(project, claim, "consumed")
         if log:
             log(
                 {
@@ -557,8 +631,6 @@ def _consume(project, *, event, needs, running, appendable, log, now):
                     "actions": sorted({a for a, _ in needs}),
                     "rels": sorted({r for _, r in needs if r}),
                     "loose": grant.get("fingerprint") != fp,
-                    # 파일은 그대로 있다 — 오케스트레이터가 세션이 끝난 뒤 지운다
-                    "readOnly": True,
                 }
             )
         grant["looseUsed"] = grant.get("fingerprint") != fp
@@ -571,6 +643,11 @@ def drop_for_session(project: str, session_id: str) -> list[str]:
 
     **재개한 세션이 끝난 뒤**에 부른다. 재개 직후에 지우면 훅이 못 찾는다 —
     훅은 세션이 도는 동안 그 파일을 읽어야 한다.
+
+    소비는 이미 원자적으로 파일을 치우므로(`_claim`) 여기서 지우는 것은
+    **안 쓰인 허가의 청소**다 — 사람이 승인했는데 Claude 가 그 호출을 다시
+    시도하지 않은 경우다. TTL 10분이 지나면 어차피 못 쓰지만, 남겨 두면
+    `labremote approvals list` 가 어지럽다.
 
     훅은 이 함수를 부르지 않는다(쓰기다). 샌드박스 안에서 `server/data` 쓰기가
     실패하므로(M1b) AI 가 쓴 코드도 못 부른다.
