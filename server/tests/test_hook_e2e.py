@@ -11,8 +11,23 @@ import sys
 
 import pytest
 
-from app import runstate
+from app import grants, runstate
 from app.hooks import install
+
+
+#: `hook_event` 픽스처가 쓰는 세션 ID. 허가는 **그 세션에서만** 먹는다(S3).
+SESSION = "sess-테스트"
+
+
+def _issue(project, **kw):
+    """시험용 발급. 세션 ID 를 기본으로 채운다.
+
+    S3 에서 `grants.issue` 가 `session_id` 를 **요구**한다 — 허가가 읽기
+    전용이 되면서 "그 세션 안에서만" 이 1회용 보장의 한 겹이 됐다.
+    """
+    kw.setdefault("session_id", SESSION)
+    return grants.issue(project, **kw)
+
 
 
 @pytest.fixture()
@@ -447,7 +462,7 @@ def test_25_승인_1회로_호출_전체가_통과한다(wrapper, project, proje
     assert headless(wrapper, event)["permissionDecision"] == "deny"
 
     request = A.list_requests("hook-sandbox")[0]
-    grants.issue(
+    _issue(
         "hook-sandbox",
         tool="Bash",
         tool_input={"command": TWO_ASKS},
@@ -465,11 +480,11 @@ def test_25_승인_1회로_호출_전체가_통과한다(wrapper, project, proje
     assert A.list_requests("hook-sandbox") == []
 
 
-def test_25_같은_허가를_두_번_쓸_수_없다(wrapper, project, project_root, hook_event, grant_key):
-    from app import grants
-
+def test_25_세션이_끝난_뒤_지우면_다시_막힌다(wrapper, project, project_root, hook_event, grant_key):
+    """⚠ S3 에서 1회용의 근거가 바뀌었다 — **파일이 사라짐** → **세션 + TTL +
+    오케스트레이터가 지움**. 훅은 `grants/` 에 한 바이트도 쓰지 않는다."""
     event = hook_event("Bash", {"command": TWO_ASKS}, cwd=project_root)
-    grants.issue(
+    _issue(
         "hook-sandbox",
         tool="Bash",
         tool_input={"command": TWO_ASKS},
@@ -477,7 +492,24 @@ def test_25_같은_허가를_두_번_쓸_수_없다(wrapper, project, project_ro
         actions=["net", "pkg"],
     )
     assert headless(wrapper, event)["permissionDecision"] == "allow"
+    # 같은 세션 안에서는 또 먹는다 (약해진 점)
+    assert headless(wrapper, event)["permissionDecision"] == "allow"
+
+    grants.drop_for_session("hook-sandbox", SESSION)
     assert headless(wrapper, event)["permissionDecision"] == "deny"
+
+
+def test_25_다른_세션에서는_안_먹힌다(wrapper, project, project_root, hook_event, grant_key):
+    _issue(
+        "hook-sandbox",
+        tool="Bash",
+        tool_input={"command": TWO_ASKS},
+        action_key="pkg",
+        actions=["net", "pkg"],
+    )
+    other = hook_event("Bash", {"command": TWO_ASKS}, cwd=project_root,
+                       session_id="남의세션")
+    assert headless(wrapper, other)["permissionDecision"] == "deny"
 
 
 def test_25_잠긴_항목이_섞이면_허가가_있어도_차단(wrapper, project, project_root, hook_event, grant_key):
@@ -517,7 +549,7 @@ def test_25_허가로_통과하면_승인_요청을_다시_열지_않는다(
     요청을 다시 열고 "승인 대기" 알림까지 보낸다."""
     from app import approval_log as A, grants
 
-    grants.issue(
+    _issue(
         "hook-sandbox",
         tool="Bash",
         tool_input={"command": TWO_ASKS},

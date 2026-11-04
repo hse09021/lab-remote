@@ -23,6 +23,7 @@ import os
 import re
 from datetime import datetime
 
+from .. import grants as grants_mod
 from .. import loop_layout as L
 from .. import notifier
 from .. import loopstate, registry
@@ -120,7 +121,29 @@ def resume_step(ctx, conn, session_id: str, *, request: dict | None = None) -> d
     )
     LP.set_state(conn, ctx.project, "planning")
     got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=True)
-    return {"ok": bool(got.get("ok")), "stage": "resume", "sessionId": session_id, "result": got}
+
+    # 🔑 **재개한 세션이 끝난 뒤** 허가 파일을 지운다 (S3).
+    #
+    # 허가는 읽기 전용이 됐다 — 훅이 `grants/` 에 쓸 수 있으면 AI 가 쓴 코드도
+    # 쓸 수 있고, 샌드박스 안에서 그 폴더 쓰기가 실패하는 것(M1b)이 허가를
+    # 믿는 유일한 근거다. 그래서 "파일이 사라짐" 으로 1회용을 보장하지 못하고,
+    # **지우는 일을 오케스트레이터가** 한다.
+    #
+    # ⚠ **재개 직후가 아니라 끝난 뒤**다. 재개하자마자 지우면 세션이 도는
+    # 동안 훅이 그 파일을 못 찾는다.
+    dropped = grants_mod.drop_for_session(ctx.project, session_id)
+    if dropped:
+        E.add(
+            conn, ctx.project, "승인",
+            f"재개가 끝나서 허가를 지웠어요: {', '.join(dropped)}",
+        )
+    return {
+        "ok": bool(got.get("ok")),
+        "stage": "resume",
+        "sessionId": session_id,
+        "droppedGrants": dropped,
+        "result": got,
+    }
 
 
 def guard_anchor(ctx, conn, *, when: str, with_fsck: bool = True) -> bool:

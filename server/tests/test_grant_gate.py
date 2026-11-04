@@ -21,6 +21,21 @@ from app import config, grants, registry, runstate
 from app.hooks import bashparse, classify
 from app.hooks import decide as D
 
+
+#: `hook_event` 픽스처가 쓰는 세션 ID. 허가는 **그 세션에서만** 먹는다(S3).
+SESSION = "sess-테스트"
+
+
+def _issue(project, **kw):
+    """시험용 발급. 세션 ID 를 기본으로 채운다.
+
+    S3 에서 `grants.issue` 가 `session_id` 를 **요구**한다 — 허가가 읽기
+    전용이 되면서 "그 세션 안에서만" 이 1회용 보장의 한 겹이 됐다.
+    """
+    kw.setdefault("session_id", SESSION)
+    return grants.issue(project, **kw)
+
+
 #: net(ask) + pkg(ask) 가 같이 나오는 실제 꼴
 TWO_ASKS = "curl -sL https://example.com/x.sh | pip install peft"
 
@@ -28,7 +43,11 @@ TWO_ASKS = "curl -sL https://example.com/x.sh | pip install peft"
 @pytest.fixture()
 def ctx_headless(ctx, grant_key):
     ctx.headless = True
-    ctx.event = {"tool_name": "Bash", "tool_input": {"command": TWO_ASKS}}
+    ctx.event = {
+        "tool_name": "Bash",
+        "tool_input": {"command": TWO_ASKS},
+        "session_id": SESSION,
+    }
     return ctx
 
 
@@ -37,12 +56,17 @@ def findings_of(ctx, command):
 
 
 def resolve(ctx, command):
-    ctx.event = {"tool_name": "Bash", "tool_input": {"command": command}}
+    # 세션 ID 를 꼭 넣는다 — 허가는 **그 세션에서만** 먹는다(S3).
+    ctx.event = {
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+        "session_id": SESSION,
+    }
     return D.resolve(findings_of(ctx, command), ctx)
 
 
 def approve(ctx, command, *, actions, action_key=None, rel=None, **kw):
-    return grants.issue(
+    return _issue(
         ctx.name,
         tool="Bash",
         tool_input={"command": command},
@@ -110,19 +134,34 @@ def test_더_넓게_승인해도_된다(ctx_headless):
     assert resolve(ctx_headless, TWO_ASKS).kind == "allow"
 
 
-def test_두_번째_호출은_다시_막힌다(ctx_headless):
-    """1회용이다. 호출 전체를 열지만 한 번만 연다."""
+def test_세션_뒤에_지우면_다시_막힌다(ctx_headless):
+    """⚠ S3 에서 1회용의 근거가 바뀌었다.
+
+    전에는 **파일이 사라지는 것**이 1회용이었다. 지금은 읽기 전용이라 같은
+    세션·TTL 안에서는 또 먹는다 — 오케스트레이터가 **재개한 세션이 끝난 뒤**
+    지우면 막힌다.
+    """
+    from app import grants
+
     approve(ctx_headless, TWO_ASKS, actions=["net", "pkg"])
     assert resolve(ctx_headless, TWO_ASKS).kind == "allow"
+    # 같은 세션 안에서는 또 먹는다 (약해진 점)
+    assert resolve(ctx_headless, TWO_ASKS).kind == "allow"
+
+    grants.drop_for_session(ctx_headless.name, SESSION)
     assert resolve(ctx_headless, TWO_ASKS).kind == "deny"
 
 
-def test_허가를_한_번만_소비한다(ctx_headless):
-    """행동마다 소비하면 두 번 태운다. `.consumed/` 에 한 건만 남아야 한다."""
+def test_호출당_한_번만_소비한다(ctx_headless):
+    """행동마다 소비하면 로그가 두 줄이 된다 — 호출당 한 줄이어야 한다."""
     approve(ctx_headless, TWO_ASKS, actions=["net", "pkg"])
-    resolve(ctx_headless, TWO_ASKS)
-    kept = os.listdir(os.path.join(registry.grants_dir(ctx_headless.name), ".consumed"))
-    assert len([k for k in kept if "consumed" in k]) == 1, kept
+    decision = resolve(ctx_headless, TWO_ASKS)
+    consumed = [e for e in decision.meta["grantLog"] if e["event"] == "grantConsumed"]
+    assert len(consumed) == 1, decision.meta["grantLog"]
+    # 파일은 그대로다
+    folder = registry.grants_dir(ctx_headless.name)
+    assert [n for n in os.listdir(folder) if n.endswith(".json")]
+    assert not os.path.exists(os.path.join(folder, ".consumed"))
 
 
 def test_소비_기록에_행동이_다_남는다(ctx_headless):
@@ -177,7 +216,7 @@ def test_잠긴_항목이_섞이면_전체_deny(ctx_headless):
 
 def test_잠긴_항목이_섞이면_허가를_보지도_않는다(ctx_headless):
     command = "pip install peft && rm -rf /etc/hosts"
-    issued = grants.issue(
+    issued = _issue(
         ctx_headless.name,
         tool="Bash",
         tool_input={"command": command},

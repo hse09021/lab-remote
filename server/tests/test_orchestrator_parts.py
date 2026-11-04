@@ -124,7 +124,12 @@ def test_승인하면_훅이_쓸_수_있는_허가가_나온다(ready, conn, gra
     # 훅이 같은 호출에서 실제로 소비할 수 있어야 한다
     used = grants.consume(
         "hook-sandbox",
-        event={"tool_name": "Bash", "tool_input": {"command": "pip install peft"}},
+        # 요청 파일의 sessionId 가 허가에 들어가고, 훅은 **그 세션에서만** 쓴다
+        event={
+            "tool_name": "Bash",
+            "tool_input": {"command": "pip install peft"},
+            "session_id": "0f0c",
+        },
         needs=[("pkg", None)],
     )
     assert used and used["grantId"] == grant["grantId"]
@@ -147,7 +152,13 @@ def test_한_호출에_승인이_둘_필요하면_둘_다_연다(ready, conn, gr
     assert sorted(grant["actions"]) == ["net", "pkg"]
     used = grants.consume(
         "hook-sandbox",
-        event={"tool_name": "Bash", "tool_input": {"command": command}},
+        # 허가는 **그 세션에서만** 먹는다(S3). 요청 파일의 sessionId 가
+        # 그대로 허가에 들어간다.
+        event={
+            "tool_name": "Bash",
+            "tool_input": {"command": command},
+            "session_id": "0f0c",
+        },
         needs=[("net", None), ("pkg", None)],
     )
     assert used is not None

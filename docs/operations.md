@@ -3099,3 +3099,94 @@ labremote tools --accept             # 목록이 같다고 보고 판만 기록
 | 🔴 `new` — 분류에 없는 새 도구 | **네** (`classify.TOOLS_2_1_318` 에 적어야 합니다) |
 | 🔴 `missingAllowed` — 쓰겠다고 한 도구가 없음 | **네** (루프가 깨집니다) |
 | ⚪ `absent` — 이 세션에 안 보인 도구 | **아니요** — 계정·환경에 따라 다릅니다. 없는 도구를 끄는 건 해롭지 않고, 나타날 때를 위해 목록에 남깁니다 |
+
+---
+
+# 🎟 S3 — 허가를 **읽기 전용**으로 (2026-11-05)
+
+## 왜 바꿨나
+
+전에는 `grants.consume` 이 **파일을 옮겼습니다** — `os.rename` 으로 claim 한 뒤
+`.consumed/` 로 `os.replace`. 그 "파일이 사라짐" 이 1회용 보장이었습니다.
+
+문제는 그러려면 **훅이 `server/data/grants/` 에 쓸 수 있어야** 한다는 점입니다.
+그런데 샌드박스 안에서 그 폴더 쓰기가 실패하는 것(**M1b**)이 허가를 믿는
+**유일한 근거**입니다. 훅이 쓸 수 있도록 열어 두면 AI 가 쓴 코드도 쓸 수
+있고, 그러면 허가 파일을 직접 만들 수 있습니다.
+
+그래서 `server/data` 를 **통째로 읽기 전용**으로 두고, 1회용을 다른 데로
+옮겼습니다.
+
+## 1회용은 **세 겹**이 됐습니다
+
+| 겹 | 어디 | 막는 것 |
+|---|---|---|
+| **세션 일치** | `_usable` → `grantWrongSession` | 다른 세션이 주워 쓰는 것 |
+| **TTL 10분** | `_usable` → `grantExpired` (전 30분) | 오래 남아 있는 것 |
+| **오케스트레이터가 지움** | `grants.drop_for_session` | 그 세션이 끝난 뒤 재사용 |
+
+### 세션 일치 — 양쪽 모두 있어야 합니다
+
+- 허가에 `sessionId` 가 **없으면 `grantNoSession`** 으로 거절합니다. 그래서
+  `grants.issue()` 가 `session_id` 를 **요구**합니다 — 쓸 수 없는 허가를
+  만들 이유가 없고, 발급에서 막는 게 낫습니다.
+- 이벤트에 `session_id` 가 없으면 `grantWrongSession` 입니다. 비어 있어도
+  통과시키면 **아무 허가나 쓸 수 있는 틈**이 됩니다. `session_id` 는 Claude
+  Code 가 넣는 값이고 AI 가 못 고칩니다.
+- 오케스트레이터는 `--resume <같은 UUID>` 로 이어 가므로 세션 ID 가
+  그대로입니다 (`--fork-session` 은 **쓰지 않습니다** — 세션 ID 가 바뀌면
+  재시도 상한 추적도 끊깁니다).
+
+### 삭제는 **재개한 세션이 끝난 뒤**
+
+```python
+got = _claude(ctx, conn, prompt=…, session_id=session_id, resume=True)
+dropped = grants.drop_for_session(ctx.project, session_id)   # ← 끝난 뒤
+```
+
+⚠ **재개 직후가 아닙니다.** 재개하자마자 지우면 세션이 도는 동안 훅이 그
+파일을 못 찾습니다. 테스트가 "세션이 도는 동안에는 파일이 있다" 까지
+확인합니다.
+
+## ⚠ 약해진 것 — 솔직히 적습니다
+
+**같은 세션·같은 입력·TTL 10분 안에서는 허가가 여러 번 먹습니다.** 훅이
+아무것도 안 쓰는 대가입니다.
+
+- 전에는 두 프로세스가 같이 소비하면 `os.rename` 이 상호배제라 한 쪽만
+  이겼습니다. 이제 **둘 다 먹습니다** — 테스트가 그걸 그대로 적어 뒀습니다
+  (`test_두_프로세스가_같이_소비하면_둘_다_먹는다`).
+- 보완: `approvals` 가 `tool_use_id`(= `request_id`)로 같은 denial 을 두 번
+  승인하지 않게 막고(`UNIQUE(project, request_id)`), `attempts` 상한이 반복을
+  끊습니다. 프롬프트도 *"같은 도구·같은 입력으로 **한 번만**"* 이라고 못박습니다.
+
+## 아무것도 치우지 않습니다
+
+| 상황 | 전 | 이제 |
+|---|---|---|
+| 소비 | `.consumed/` 로 옮김 | **그대로 둠** (파일이 바이트까지 동일) |
+| 만료 | 치움 | 그대로 둠 (`grantExpired` 로 거절만) |
+| 서명 틀림 | 치움 | 그대로 둠 (`grantBadSignature` 로 거절만) |
+| 못 읽음 | 치움 | 건너뜀 (`grantUnreadable` 기록) |
+| 이 호출의 것이 아님 | 되돌려 둠 | **아무것도 안 함** |
+
+쌓인 파일은 오케스트레이터가 세션 뒤에 지우고(`drop_for_session`), 사람은
+`labremote approvals revoke` 로 지웁니다. **둘 다 샌드박스 밖**입니다.
+
+테스트가 소스를 직접 봅니다 — `_claim`·`_archive` 가 다시 생기면 잡히고,
+`grants.py` 의 쓰기 호출이 **세 곳**(발급의 `write_json`, `drop_for_session`·
+`revoke` 의 `unlink`)뿐인 것을 고정합니다.
+
+## 곁다리로 잡은 버그: `verify()` 가 터졌습니다
+
+`hmac.compare_digest` 는 **비ASCII 문자가 든 문자열**을 받으면 `TypeError` 를
+던집니다 (*"comparing strings with non-ASCII characters is not supported"*).
+손으로 만든 가짜 허가의 `sig` 가 그럴 수 있습니다.
+
+전에는 `consume` 의 바깥 `except` 가 `grantError` 로 삼켜서 **막히긴
+했지만**(fail-closed) *왜* 거절됐는지 기록이 쓸모없었습니다. 이제 **바이트로
+비교**하고, 인코딩할 수 없는 값은 서명이 아닌 것으로 봅니다.
+
+이 버그는 S3 전에도 있었고, 소비가 파일을 치우던 동안에는 **보이지 않았습니다**
+— 시험이 "파일이 사라졌나" 만 봤기 때문입니다. 읽기 전용으로 바꾸면서 로그를
+보게 되니 드러났습니다.
