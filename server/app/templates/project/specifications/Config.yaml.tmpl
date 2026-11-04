@@ -17,3 +17,18 @@ usage_limit: wait
 env:
   conda: $env_name
   python: "$python_version"
+
+# 실험을 돌리는 방법. 오케스트레이터가 이것만 보고 띄워요.
+# AI 는 experiments/EXP-NNN/run.json 에 "어느 entrypoint 를 어떤 인자로" 만 적어요.
+# 명령 문자열은 받지 않아요 — 그러면 훅을 완전히 지나가요.
+run:
+  # 돌릴 수 있는 스크립트. **여기 없는 건 시스템이 돌리지 않아요.**
+  entrypoints: []          # 예: [src/train.py]
+  # 학습 스크립트에 넘길 수 있는 환경 변수 **이름**. 값은 run.json 이 정해요.
+  envAllow: []             # 예: [CUDA_VISIBLE_DEVICES, WANDB_MODE]
+  # 체크포인트에서 이어 돌릴 때 쓰는 인자 이름
+  resumeArg: --resume-from
+  # 한 번에 돌 수 있는 최대 시간 (초). 기본 6시간
+  timeoutSec: 21600
+  # 끝낼 때 기다려 주는 시간 (초) — 체크포인트를 저장할 틈이에요
+  graceSec: 120
