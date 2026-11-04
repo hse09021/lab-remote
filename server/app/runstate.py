@@ -11,14 +11,16 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 
 from . import registry
 
-__all__ = ["RunState", "load", "set_running", "set_idle"]
+__all__ = ["RunState", "load", "set_running", "set_idle", "mark_started", "locked"]
 
 
 @dataclass
@@ -82,6 +84,26 @@ def load(name: str) -> RunState:
     return state
 
 
+@contextmanager
+def locked(name: str):
+    """읽고-고쳐-쓰기를 감싼다.
+
+    `started` 목록은 읽어서 더하고 다시 쓴다. ②에서는 오케스트레이터와 CLI 가
+    같이 건드릴 수 있어서, 잠그지 않으면 **한쪽의 추가가 사라진다**(실험 ID 가
+    started 에서 빠지면 "이전 실험" 잠금이 풀린다). 쓰기 자체는
+    `registry.write_json` 이 원자적이라 반쯤 쓰인 파일은 안 생긴다.
+    """
+    folder = os.path.dirname(registry.runstate_path(name))
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, f".{registry.valid_name(name)}.lock")
+    with open(path, "a+") as fh:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+
+
 def _write(name: str, data: dict, *, keep_started: bool = True) -> None:
     if keep_started:
         data.setdefault("started", load(name).started or [])
@@ -91,6 +113,11 @@ def _write(name: str, data: dict, *, keep_started: bool = True) -> None:
 
 def mark_started(name: str, experiment_id: str) -> list[str]:
     """실험 ID 를 "한 번이라도 시작됨" 목록에 넣는다 (중복 없이, 순서 유지)."""
+    with locked(name):
+        return _mark_started(name, experiment_id)
+
+
+def _mark_started(name: str, experiment_id: str) -> list[str]:
     state = load(name)
     started = list(state.started or [])
     if experiment_id and experiment_id not in started:
@@ -116,6 +143,11 @@ def set_running(name: str, experiment_id: str, pid: int | None = None) -> None:
     끝났는지 실패했는지와 상관없이, 한 번 시작된 폴더는 다시 손대면 안 된다
     (spec: 실패한 실험 폴더도 남기고 새 폴더에서 재실행).
     """
+    with locked(name):
+        _set_running(name, experiment_id, pid)
+
+
+def _set_running(name: str, experiment_id: str, pid: int | None) -> None:
     started = list(load(name).started or [])
     if experiment_id and experiment_id not in started:
         started.append(experiment_id)
@@ -135,4 +167,7 @@ def set_running(name: str, experiment_id: str, pid: int | None = None) -> None:
 
 def set_idle(name: str) -> None:
     """실행을 멈춘다. started 목록은 지우지 않는다."""
-    _write(name, {"running": False, "experimentId": None, "pid": None, "source": "cli"})
+    with locked(name):
+        _write(
+            name, {"running": False, "experimentId": None, "pid": None, "source": "cli"}
+        )

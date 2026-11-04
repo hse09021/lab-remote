@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "project": {
     "name": "",
     "root": ""
@@ -146,7 +146,8 @@
       ".claude/**",
       ".mcp.json",
       "logs/Approval_log.csv",
-      "logs/hook_events.jsonl"
+      "logs/hook_events.jsonl",
+      "state/Current.yaml"
     ],
     "journalFiles": [
       "state/State.yaml",
@@ -186,9 +187,31 @@
     "denyCommands": [
       "claude",
       "shred",
-      "mkfs"
+      "mkfs",
+      "labremote",
+      "sqlite3",
+      "systemctl",
+      "systemd-run",
+      "loginctl",
+      "kill",
+      "pkill",
+      "killall",
+      "bwrap",
+      "unshare",
+      "nsenter",
+      "chroot",
+      "setarch",
+      "strace",
+      "ltrace",
+      "gdb",
+      "docker",
+      "podman",
+      "at",
+      "batch",
+      "crontab"
     ],
-    "gitRemoteAsNet": false
+    "gitRemoteAsNet": false,
+    "allowExtra": []
   },
   "headless": {
     "onAsk": "deny-with-reason",
