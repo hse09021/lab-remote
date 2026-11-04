@@ -26,6 +26,8 @@ __all__ = [
     "policy_path",
     "runstate_path",
     "pending_dir",
+    "requests_dir",
+    "grants_dir",
     "load",
     "register",
     "unregister",
@@ -82,6 +84,16 @@ def runstate_path(name: str) -> str:
 
 def pending_dir(name: str) -> str:
     return os.path.join(data_dir(), "pending", valid_name(name))
+
+
+def requests_dir(name: str) -> str:
+    """헤드리스에서 막은 요청이 쌓이는 곳. ②의 승인 대기열이 닫아 준다."""
+    return os.path.join(data_dir(), "requests", valid_name(name))
+
+
+def grants_dir(name: str) -> str:
+    """1회용 허가 파일. 서명이 없거나 틀리면 훅이 무시한다 (`app/grants.py`)."""
+    return os.path.join(data_dir(), "grants", valid_name(name))
 
 
 def write_json(path: str, data) -> None:

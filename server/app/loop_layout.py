@@ -78,6 +78,11 @@ LOOP_LAYOUT: dict[str, str] = {
     "environment": "specifications/environment.yml",
     # state/ — 현재 루프 상태. 매 실험마다 갱신해 덮어쓴다 (PDF 5쪽, 7쪽)
     "state": "state/State.yaml",
+    # "지금 어느 실험이 도는지" 의 유일한 근거. PDF 에는 없고 ②가 넣었다 —
+    # 실측에서 Claude 가 잠금의 이유를 설명하지 못했다(`app/loopstate.py`).
+    # **오케스트레이터만 쓴다.** selfProtect 목록에 넣는 건 2단계다
+    # (정책 판이 2 -> 3 으로 올라가므로 policy migrate 와 같이 간다).
+    "current": "state/Current.yaml",
     # logs/ — 누적 기록 (PDF 5쪽, 7쪽)
     "experiment_log": "logs/Experiment_log.csv",
     "decision_log": "logs/Decision_log.md",

@@ -308,3 +308,21 @@ def test_gitignore_가_판_올림_백업을_무시한다(made):
         fh.write("백업\n")
     tracked = gitops.tracked_files(made["target"])
     assert not any(t.endswith(".bak") for t in tracked)
+
+
+def test_gitignore_가_Current_yaml_을_무시한다(made):
+    """오케스트레이터가 실험 중에 계속 쓰는 파일이다. 추적하면 루프 앞뒤의
+    `git switch` 가 막힌다. `State.yaml` 은 기록 의무라 추적한다."""
+    from app import loop_layout as L
+    from app.generator import gitops
+
+    body = open(os.path.join(made["target"], ".gitignore"), encoding="utf-8").read()
+    assert L.LOOP_LAYOUT["current"] in body
+
+    os.makedirs(os.path.join(made["target"], "state"), exist_ok=True)
+    for key in ("current", "state"):
+        with open(os.path.join(made["target"], L.LOOP_LAYOUT[key]), "w", encoding="utf-8") as fh:
+            fh.write("loop_no: 0\n")
+    tracked = gitops.tracked_files(made["target"])
+    assert L.LOOP_LAYOUT["current"] not in tracked
+    assert L.LOOP_LAYOUT["state"] in tracked
