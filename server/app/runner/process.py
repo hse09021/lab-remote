@@ -32,6 +32,7 @@ import time
 from dataclasses import dataclass, field
 
 from .. import paths
+from . import cache as cache_mod
 from . import sandbox as sandbox_mod
 from .spec import RunSpec
 
@@ -58,11 +59,14 @@ ENV_STRIP = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
 
 #: 학습에 물려주는 기본 환경. 나머지는 지운다 — 오케스트레이터의 환경이
 #: 그대로 새면 `LAB_*` 로 우리 폴더 위치까지 알려 주는 셈이다.
+#:
+#: 캐시 변수(`HF_HOME`·`TMPDIR` …)는 **일부러 빼 뒀다.** 물려받으면
+#: `~/.cache/huggingface` 를 가리키는데 샌드박스에서 그건 쓸 수 없는 곳이고,
+#: `TMPDIR` 은 tmpfs(메모리)로 간다. `runner/cache.py` 가 값을 정한다.
 ENV_KEEP = (
     "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "TZ", "TERM",
-    "PATH", "TMPDIR", "CUDA_VISIBLE_DEVICES", "CUDA_HOME", "NVIDIA_VISIBLE_DEVICES",
+    "PATH", "CUDA_VISIBLE_DEVICES", "CUDA_HOME", "NVIDIA_VISIBLE_DEVICES",
     "CONDA_EXE", "CONDA_PREFIX", "CONDA_PYTHON_EXE", "MAMBA_EXE", "MAMBA_ROOT_PREFIX",
-    "HF_HOME", "TORCH_HOME", "XDG_CACHE_HOME",
 )
 
 
@@ -120,14 +124,22 @@ def build_argv(spec: RunSpec, *, use_sandbox: bool = True, **sandbox_kw) -> list
     wrapped = ["/bin/sh", "-c", script, "labremote-train", *inner_argv(spec)]
     if not use_sandbox:
         return wrapped
+    sandbox_kw.setdefault("extra_ro", spec.data_paths)
     return sandbox_mod.command(wrapped, project_root=spec.root, **sandbox_kw)
 
 
-def build_env(spec: RunSpec) -> dict[str, str]:
-    """학습이 받을 환경 변수."""
+def build_env(spec: RunSpec, *, cache_dir: str = "") -> dict[str, str]:
+    """학습이 받을 환경 변수.
+
+    순서가 의미를 가진다 — **캐시 값이 맨 마지막이라 이긴다.** `run.json` 이
+    같은 이름을 넣지 못하게 `spec.py` 가 이미 막지만(`ENV_MANAGED`), 여기서도
+    뒤에 둬서 두 겹으로 둔다.
+    """
     out = {k: os.environ[k] for k in ENV_KEEP if k in os.environ}
     out.setdefault("PYTHONUNBUFFERED", "1")  # 로그 꼬리가 실시간으로 보이게
     out.update(spec.env)  # spec 이 이미 envAllow 로 걸렀다
+    if cache_dir:
+        out.update(cache_mod.env_for(cache_dir))
     for name in ENV_STRIP:
         out.pop(name, None)
     return out
@@ -210,9 +222,16 @@ def launch(
     *,
     use_sandbox: bool = True,
     append_log: bool = True,
+    cache_dir: str | None = None,
+    policy=None,
     **sandbox_kw,
 ) -> Launched:
-    """학습을 띄운다. **기다리지 않는다** (`wait` 가 기다린다)."""
+    """학습을 띄운다. **기다리지 않는다** (`wait` 가 기다린다).
+
+    공용 캐시 폴더를 검사하고 만들어서 샌드박스에 쓰기로 물려준다.
+    `cache_dir=""` 로 끄면 캐시 없이 돈다(시험용) — 그러면 모델을 매번
+    다시 내려받고 `TMPDIR` 이 tmpfs 로 간다.
+    """
     # `is_inside` 는 **이미 해소된** 경로를 받는다. 그냥 넘기면
     # `<루트>/experiments/../../etc` 가 문자열로는 루트 안처럼 보인다.
     exp_dir_real = paths.real(spec.exp_dir)
@@ -225,8 +244,15 @@ def launch(
     except OSError:
         pass
 
+    cache = cache_mod.cache_dir(policy) if cache_dir is None else cache_dir
+    if cache:
+        # 겹치면 `CacheError` 다 — **학습을 띄우지 않는다.**
+        cache = cache_mod.ensure(cache, spec.root)["dir"]
+        if use_sandbox:
+            sandbox_kw.setdefault("cache_dir", cache)
+
     argv = build_argv(spec, use_sandbox=use_sandbox, **sandbox_kw)
-    env = build_env(spec)
+    env = build_env(spec, cache_dir=cache)
     mode = "ab" if append_log else "wb"
     try:
         log_fh = open(spec.log_path, mode)

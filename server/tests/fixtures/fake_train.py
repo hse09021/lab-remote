@@ -56,6 +56,36 @@ def probe_read(path: str) -> dict:
         return {"path": target, "result": "BLOCKED", "error": f"{type(exc).__name__}: {exc}"}
 
 
+def probe_env(name: str) -> dict:
+    """환경 변수가 가리키는 곳에 **실제로 쓸 수 있는지** 본다.
+
+    캐시 폴더(HF_HOME 등)가 샌드박스 안에서 쓰기 가능한지 보는 장치다.
+    """
+    value = os.environ.get(name, "")
+    if not value:
+        return {"path": f"${name}", "result": "UNSET"}
+    target = os.path.join(value, f"{name.lower()}-probe.txt")
+    got = probe_write(target)
+    return {**got, "env": name, "value": value}
+
+
+def probe_tempfile() -> dict:
+    """`tempfile` 이 쓰는 곳. `TMPDIR` 을 따라간다.
+
+    샌드박스의 `/tmp` 는 tmpfs(메모리)라 큰 임시 파일이면 메모리가 터진다.
+    그래서 `TMPDIR` 이 **진짜 디스크**를 가리켜야 한다.
+    """
+    import tempfile
+
+    try:
+        handle, path = tempfile.mkstemp(prefix="labremote-tmp-")
+        with os.fdopen(handle, "w", encoding="utf-8") as fh:
+            fh.write("SBX-MARK\n")
+        return {"path": path, "result": "MADE", "env": "TMPDIR", "value": tempfile.gettempdir()}
+    except OSError as exc:
+        return {"path": "", "result": "BLOCKED", "env": "TMPDIR", "error": str(exc)}
+
+
 def spawn_children(count: int, sleep_sec: float) -> list[int]:
     """오래 자는 자식들. 학습을 끝낼 때 **손자까지** 정리되는지 보는 장치다."""
     pids = []
@@ -82,6 +112,8 @@ def main() -> int:
     parser.add_argument("--crash-at", type=int, default=0)
     parser.add_argument("--probe-write", action="append", default=[])
     parser.add_argument("--probe-read", action="append", default=[])
+    parser.add_argument("--probe-env", action="append", default=[])
+    parser.add_argument("--probe-tempfile", action="store_true")
     args = parser.parse_args()
 
     exp_dir = args.out or os.environ.get("LAB_EXP_DIR") or os.getcwd()
@@ -90,6 +122,9 @@ def main() -> int:
 
     probes = [probe_write(p) for p in args.probe_write]
     probes += [probe_read(p) for p in args.probe_read]
+    probes += [probe_env(name) for name in args.probe_env]
+    if args.probe_tempfile:
+        probes.append(probe_tempfile())
     for item in probes:
         log(f"[probe] {item['result']:8} {item['path']}" + (f"  {item.get('error','')}" if item.get("error") else ""))
     if probes:

@@ -41,6 +41,8 @@ __all__ = [
     "BWRAP_CANDIDATES",
     "SandboxError",
     "bwrap_path",
+    "secret_paths",
+    "other_project_paths",
     "hidden_paths",
     "command",
     "available",
@@ -72,33 +74,54 @@ def bwrap_path() -> str:
     return ""
 
 
-def hidden_paths(project_root: str) -> list[str]:
-    """가려야 할 경로. 있는 것만 돌려준다 (`--tmpfs` 는 없는 경로에 실패한다).
+def secret_paths(project_root: str = "") -> list[str]:
+    """**읽기까지 막아야 하는** 곳. 있는 것만 돌려준다.
 
     | 가리는 것 | 왜 |
     |---|---|
     | `~/.claude`·`~/.claude.json*` | 훅 등록·자격 증명 |
     | `~/.config/labremote` | 웹훅 주소, **허가 서명 키** |
     | `<저장소>/server` | 정책·허가·`lab.db`·래퍼 — ②와 ①의 상태 전부 |
-    | 다른 실험 프로젝트 | 교차 오염 |
+
+    `run.dataPaths` 로도 **다시 열 수 없는** 목록이다. 다른 실험 프로젝트는
+    여기 없다 — 그건 교차 오염 방지라서, 사람이 `dataPaths` 로 명시하면
+    읽기로 열어 준다.
     """
-    root = paths.real(project_root)
+    root = paths.real(project_root) if project_root else ""
     out: list[str] = []
     for pattern in D.hard_protected_roots():
         target = paths.real(pattern)
-        if target and os.path.isdir(target) and not paths.is_inside(target, root):
+        if target and os.path.isdir(target) and not (root and paths.is_inside(target, root)):
             out.append(target)
     home = os.path.expanduser("~")
     for rel in (".claude", ".config/labremote"):
         target = os.path.join(home, rel)
         if os.path.isdir(target) and target not in out:
             out.append(target)
-    # 다른 실험 프로젝트
+    return sorted(dict.fromkeys(out))
+
+
+def other_project_paths(project_root: str) -> list[str]:
+    """다른 실험 프로젝트. **교차 오염**을 막으려고 가린다.
+
+    비밀이라서가 아니다. 그래서 `run.dataPaths` 로 그 안의 데이터셋을
+    읽기로 다시 열 수 있다 (`Config.yaml` 은 프로젝트 안이지만 실험이 도는
+    중에는 잠겨 있고, 열어 주는 건 **읽기**뿐이다).
+    """
+    root = paths.real(project_root)
+    out = []
     for other_root in registry.load():
         other = paths.real(other_root)
         if other and other != root and os.path.isdir(other):
             out.append(other)
     return sorted(dict.fromkeys(out))
+
+
+def hidden_paths(project_root: str) -> list[str]:
+    """샌드박스가 가릴 경로 전부 (`--tmpfs` 는 없는 경로에 실패한다)."""
+    return sorted(
+        dict.fromkeys(secret_paths(project_root) + other_project_paths(project_root))
+    )
 
 
 def command(
@@ -107,12 +130,27 @@ def command(
     project_root: str,
     hide: list[str] | None = None,
     extra_ro: list[str] | None = None,
+    cache_dir: str = "",
     bwrap: str = "",
     die_with_parent: bool = False,
 ) -> list[str]:
     """`bwrap` 으로 감싼 전체 명령을 돌려준다.
 
     `hide` 를 주면 그 목록만 가린다(시험용). 안 주면 `hidden_paths()`.
+
+    ### 인자 순서가 의미를 바꾼다
+
+    `bwrap` 은 **뒤에 온 것이 이긴다.** 그래서
+
+      1. `--ro-bind / /` 로 전부 읽기 전용
+      2. `--bind <프로젝트>` · `--bind <캐시>` 로 쓸 수 있는 곳 둘
+      3. `--tmpfs <보호 경로>` 로 가리기
+      4. `--ro-bind <데이터셋>` 으로 **가림을 다시 뚫기**
+
+    4번이 3번 **뒤**에 와야 한다. 데이터셋이 가려진 경로 안에 있을 때
+    (다른 프로젝트의 `data/` 를 공유하는 경우 등) 읽을 수 있게 하려는 것이다.
+    루트 전체가 이미 읽기 전용으로 보이니, 가려지지 않은 데이터셋은 이 항목
+    없이도 읽힌다.
 
     ### `--die-with-parent` 는 기본으로 **끈다**
 
@@ -145,17 +183,36 @@ def command(
         "--proc", "/proc",
         # 임시 폴더는 버려지는 것으로. 밖에 흔적을 남기지 않는다.
         "--tmpfs", "/tmp",
-        # **쓸 수 있는 곳은 프로젝트 하나뿐이다.**
+        # 쓸 수 있는 곳은 프로젝트와 (있으면) 공용 캐시뿐이다.
         "--bind", root, root,
     ]
+    cache_real = paths.real(cache_dir) if cache_dir else ""
+    if cache_real:
+        if not os.path.isdir(cache_real):
+            raise SandboxError(
+                f"캐시 폴더가 없어요: {cache_real} · runner/cache.ensure 를 먼저 불러 주세요."
+            )
+        if paths.is_inside(root, cache_real):
+            # 프로젝트 안이면 이미 쓸 수 있다. 같은 곳을 두 번 바인드하지 않는다.
+            cache_real = ""
+        else:
+            out += ["--bind", cache_real, cache_real]
+    for item in hidden_paths(root) if hide is None else hide:
+        target = paths.real(item)
+        if not os.path.exists(target):
+            continue
+        if cache_real and paths.is_inside(target, cache_real):
+            # 여기까지 오면 cache.check 가 놓친 것이다. 가리는 쪽을 포기하면
+            # 보호가 뚫리니, 띄우지 않는다.
+            raise SandboxError(
+                f"캐시 폴더가 보호 경로 안이에요: {cache_real} ⊂ {target}"
+            )
+        out += ["--tmpfs", target]
+    # 가림 **뒤에** 와야 뚫린다 (위 주석).
     for item in extra_ro or []:
         target = paths.real(item)
         if os.path.exists(target):
             out += ["--ro-bind", target, target]
-    for item in hidden_paths(root) if hide is None else hide:
-        target = paths.real(item)
-        if os.path.exists(target):
-            out += ["--tmpfs", target]
     if die_with_parent:
         out.append("--die-with-parent")
     out.append("--")

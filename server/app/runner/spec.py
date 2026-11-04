@@ -41,6 +41,14 @@ __all__ = [
     "check_experiment_id",
 ]
 
+#: **실행기가 정하는** 환경 변수. `run.json` 으로는 못 바꾼다.
+#: 공용 캐시 폴더 아래로 고정한다 (`runner/cache.py`) — AI 가
+#: `HF_HOME=~/.claude` 같은 값을 넣는 길을 없애고, `TMPDIR` 이 샌드박스의
+#: tmpfs(메모리)로 가지 않게 한다.
+ENV_MANAGED = frozenset(
+    {"HF_HOME", "TORCH_HOME", "XDG_CACHE_HOME", "PIP_CACHE_DIR", "WANDB_DIR", "TMPDIR"}
+)
+
 #: 환경 변수처럼 보이지만 **다른 코드를 끼워 넣는 길**. 목록에 있어도 거부한다.
 ENV_NEVER = frozenset(
     {
@@ -97,6 +105,10 @@ class RunSpec:
     timeout_sec: int = DEFAULT_TIMEOUT_SEC
     grace_sec: int = DEFAULT_GRACE_SEC
     conda_env: str = ""
+    #: 샌드박스 안에서 **읽기 전용**으로 다시 열 경로 (`Config.yaml` 의
+    #: `run.dataPaths`). 루트 전체가 이미 읽기 전용이라, 가려진 경로 안에 있는
+    #: 데이터셋을 쓸 때만 필요하다.
+    data_paths: list[str] = field(default_factory=list)
     resume_from: str = ""
     note: str = ""
     #: 검증은 통과했지만 사람이 알아야 할 것 (샌드박스에서 조용히 버려질 쓰기 등)
@@ -273,6 +285,8 @@ def validate(raw, *, project: str, root: str, experiment_id: str) -> RunSpec:
     if conda_env.startswith("["):  # 자리표시
         conda_env = ""
 
+    data_paths, data_warnings = _clean_data_paths(run_cfg.get("dataPaths"), root)
+
     # 샌드박스 안에서 보호 경로 쓰기는 **성공한 것처럼 보이지만** 실제 파일에는
     # 안 남는다(`--tmpfs`). 학습이 "저장했다" 고 믿고 조용히 오동작하지 않게
     # 미리 알린다.
@@ -283,6 +297,7 @@ def validate(raw, *, project: str, root: str, experiment_id: str) -> RunSpec:
                 "샌드박스 안에서는 그 경로에 쓴 내용이 남지 않아요."
             )
 
+    warnings.extend(data_warnings)
     return RunSpec(
         project=project,
         root=root,
@@ -294,10 +309,47 @@ def validate(raw, *, project: str, root: str, experiment_id: str) -> RunSpec:
         timeout_sec=timeout_sec,
         grace_sec=grace_sec,
         conda_env=conda_env,
+        data_paths=data_paths,
         resume_from=resume_from,
         note=str(raw.get("note") or "")[:500],
         warnings=warnings,
     )
+
+
+def _clean_data_paths(value, root: str) -> tuple[list[str], list[str]]:
+    """`Config.yaml` 의 `run.dataPaths` — 샌드박스에서 **읽기 전용**으로 열 경로.
+
+    보호 경로와 겹치면 거절한다. 그걸 허용하면 "데이터셋" 이라는 이름으로
+    정책·자격 증명을 읽을 수 있게 된다.
+    """
+    if value is None:
+        return [], []
+    if not isinstance(value, list):
+        raise SpecError(f"run.dataPaths 가 배열이 아니에요: {type(value).__name__}")
+
+    from .sandbox import secret_paths
+
+    # **비밀만** 막는다. 다른 실험 프로젝트는 사람이 명시하면 읽기로 열어 준다
+    # — 데이터셋을 공유하는 게 정상이고, 열어 주는 건 읽기뿐이다.
+    guards = secret_paths(root)
+    out: list[str] = []
+    warnings: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if not text or text.startswith("["):  # 자리표시
+            continue
+        target = paths.real(text)
+        for guard in guards:
+            if paths.is_inside(guard, target) or paths.is_inside(target, guard):
+                raise SpecError(
+                    f"데이터셋 경로가 보호 경로와 겹쳐요: {target} · {guard} · "
+                    "정책·자격 증명이 있는 곳이라 열 수 없어요."
+                )
+        if not os.path.exists(target):
+            warnings.append(f"데이터셋 경로가 없어요(건너뛰어요): {target}")
+            continue
+        out.append(target)
+    return out, warnings
 
 
 def _clean_args(value) -> list[str]:
@@ -342,6 +394,12 @@ def _clean_env(value, allow) -> dict[str, str]:
         if key in ENV_NEVER:
             raise SpecError(
                 f"{key} 는 환경 변수로 넘길 수 없어요 — 다른 코드를 끼워 넣는 길이에요."
+            )
+        if key in ENV_MANAGED:
+            raise SpecError(
+                f"{key} 는 실행기가 공용 캐시 폴더로 정해요 — run.json 으로는 "
+                "바꿀 수 없어요. 캐시 위치를 옮기려면 정책의 paths.cacheDir 을 "
+                "고쳐 주세요."
             )
         if key not in allowed:
             raise SpecError(

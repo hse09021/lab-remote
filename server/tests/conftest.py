@@ -35,6 +35,18 @@ def isolated_config(tmp_path, monkeypatch):
     return folder
 
 
+@pytest.fixture(autouse=True)
+def isolated_cache(tmp_path, monkeypatch):
+    """공용 캐시 폴더를 임시 폴더로.
+
+    실행기는 띄울 때 캐시 폴더를 **만든다.** 격리하지 않으면 시험이 진짜
+    `~/lab-cache` 를 만들어 둔다.
+    """
+    folder = tmp_path / "lab-cache"
+    monkeypatch.setenv("LAB_CACHE_DIR", str(folder))
+    return folder
+
+
 @pytest.fixture()
 def conn(isolated_data):
     """이행까지 끝난 `lab.db` 연결. 테스트마다 빈 DB 다."""

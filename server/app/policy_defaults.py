@@ -327,6 +327,11 @@ def default_policy(name: str = "", root: str = "") -> dict:
             # 코드의 SECRET_FILES 에 **더하는** 목록. 빼지는 못한다.
             # [웹훅·API 키 파일을 다른 곳에 둔다면 여기에]
             "secretFilesExtra": [],
+            # 샌드박스 안에서 **쓸 수 있는 유일한 바깥**. 모델·pip·W&B 캐시와
+            # 임시 파일이 여기로 모인다. 비우면 코드 기본값(~/lab-cache)이고,
+            # 보호 경로(~/.claude · ~/.config/labremote · server/ · 다른
+            # 프로젝트)와 겹치면 런처가 거부한다(`runner/cache.py`).
+            "cacheDir": "",
             # 데이터셋 심볼릭 링크 예외. [데이터셋 링크 경로 — 미확인]
             # ⚠ 보호 목록(HARD_PROTECTED)과 겹쳐도 보호 목록이 이긴다.
             #   겹치면 doctor 가 ✘ 로 알리고 policy set 이 저장을 거부한다.
