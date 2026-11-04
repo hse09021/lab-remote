@@ -254,10 +254,13 @@ def headless_ask(name: str, inner: str) -> str:
     거부된다. 그래서 기본값이 `deny-with-reason` 이고, 사유에 "요청을 남겨
     뒀다" 를 적어 ②의 승인 대기열로 넘긴다.
     """
-    return (
-        f"[승인 필요: {name}] {inner} 화면 없이 실행 중이라 지금은 승인받을 수 "
-        "없어요. 승인 요청을 남겨 두었어요. 작업을 멈추고 보고해 주세요."
-    )
+    # ⚠ `inner` 에 이미 `NO_WORKAROUND`("…작업을 멈추고 보고해 주세요.")가
+    # 붙어 있다(`with_guard`). 여기서 또 붙이면 같은 지시가 두 번 나온다 —
+    # 실측에서 Claude 가 받은 사유에 그대로 두 번 보였다.
+    tail = "화면 없이 실행 중이라 지금은 승인받을 수 없어요. 승인 요청을 남겨 두었어요."
+    if NO_WORKAROUND not in inner:
+        tail += " " + NO_WORKAROUND
+    return f"[승인 필요: {name}] {inner} {tail}"
 
 
 def also_needed(names: list[str]) -> str:

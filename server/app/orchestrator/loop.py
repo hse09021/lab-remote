@@ -177,7 +177,7 @@ def guard_anchor(ctx, conn, *, when: str, with_fsck: bool = True) -> bool:
             "blocked",
             project=ctx.project,
             subject=notifier.subject_of("gitanchor", ctx.project),
-            title=f"git 기록이 바뀌었어요 · {ctx.project}",
+            title=f"git 기록이 바뀌었어요",
             body=text[:1500],
         )
     except Exception:
@@ -222,7 +222,7 @@ def guard_audit(ctx, conn, *, when: str) -> bool:
             "blocked",
             project=ctx.project,
             subject=notifier.subject_of("audit", ctx.project),
-            title=f"승인 기록이 바뀌었어요 · {ctx.project}",
+            title=f"승인 기록이 바뀌었어요",
             body=text[:1500],
         )
     except Exception:
@@ -249,7 +249,7 @@ def guard_git(ctx, conn, exc) -> None:
             "blocked",
             project=ctx.project,
             subject=notifier.subject_of("gitguard", ctx.project),
-            title=f".git 설정이 위험해요 · {ctx.project}",
+            title=f".git 설정이 위험해요",
             body=text[:1500],
         )
     except Exception:
@@ -287,7 +287,7 @@ def guard_project(ctx, conn, *, when: str, block: bool = True) -> dict:
             "blocked",
             project=ctx.project,
             subject=notifier.subject_of("projectguard", when),
-            title=f"프로젝트 설정이 바뀌어 있었어요 · {ctx.project}",
+            title=f"프로젝트 설정이 바뀌어 있었어요",
             body=text,
             fields=[
                 ("언제", when),
