@@ -215,7 +215,23 @@ def test_타임아웃도_던지지_않는다():
 
 
 @pytest.fixture()
-def asked(project, project_root):
+def made_env(monkeypatch):
+    """conda 환경이 **있는** 것으로 둔다.
+
+    `installs.approve` 가 승인 전에 환경이 실제로 있는지 본다 — 없는 환경에
+    승인하면 `pkg` 와 같은 함정이 된다(사람이 승인했고 기록에 남고 아무 일도
+    안 일어난다). 환경 검사 자체는 `test_condaenv.py` 가 본다.
+    """
+    from app.runner import condaenv
+
+    monkeypatch.setattr(
+        condaenv, "require_made", lambda name: f"/fake/envs/{name}"
+    )
+    return "labenv"
+
+
+@pytest.fixture()
+def asked(project, project_root, made_env):
     """설치 요청이 놓인 프로젝트."""
     from app import loop_layout as L
 
@@ -349,3 +365,72 @@ def test_훅의_pkg_거절_사유가_요청_파일을_안내한다(ctx, hook_eve
     # 다른 행동에는 안 붙는다
     assert "Install_request" not in messages.ask_action("파일 삭제", "x", action="del")
     assert decide is not None
+
+
+# --- 🔑 환경이 없으면 승인 자체를 막는다 (S9 e2e) ----------------------------
+
+
+def test_환경이_없으면_승인하지_않는다(project, project_root, conn, monkeypatch):
+    """없는 환경에 승인하면 `pkg` 와 같은 함정이 된다 — 사람이 승인했고
+    `approvals` 에 기록이 남고 **아무 일도 안 일어난다.**
+
+    승인은 "이 일이 일어난다" 는 뜻이어야 한다.
+    """
+    from app import loop_layout as L
+
+    config = os.path.join(project_root, L.LOOP_LAYOUT["config"])
+    os.makedirs(os.path.dirname(config), exist_ok=True)
+    with open(config, "w", encoding="utf-8") as fh:
+        fh.write("env:\n  conda: nomade-env\n")
+    path = I.request_path(project_root)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump({"packages": [{"name": "peft"}], "reason": "x"}, fh)
+
+    monkeypatch.setattr(I.notifier, "send", lambda *a, **k: {"ok": True})
+    opened = I.sync(conn, "hook-sandbox", project_root)["opened"]
+
+    called = []
+    got = I.approve(
+        conn, "hook-sandbox", opened,
+        runner=lambda *a, **k: called.append(a) or _ok_runner(*a, **k),
+    )
+    assert got["ok"] is False
+    assert "없어요" in got["reason"] and "docs/SETUP.md" in got["reason"]
+    assert got["needsEnv"] == "nomade-env"
+    assert called == [], "설치를 띄우면 안 돼요"
+    # 승인도 소비도 되지 않았다 — 다시 승인할 수 있다
+    from app.store import approvals as AP
+
+    assert AP.get(conn, opened)["state"] == "open"
+
+
+def test_실패_사유가_사람이_읽을_문구다():
+    """⚠ 전에는 CLI 가 `✘ None` 을 찍었다 — `approve()` 의 반환에 `reason` 이
+    없었다(S9 e2e 가 잡았다)."""
+    raw = "EnvironmentLocationNotFound: Not a conda environment: /home/u/envs/x"
+    got = I._human({"ok": False, "reason": raw, "exitCode": 1}, "hook-sandbox")
+    assert "실험 환경 hook-sandbox 이 없어요" in got
+    assert "docs/SETUP.md" in got and "conda create -n hook-sandbox" in got
+
+    got = I._human({"ok": False, "reason": "ERROR: No matching distribution found",
+                    "exitCode": 1}, "e")
+    assert "그런 패키지·버전이 없어요" in got
+
+    # 모르는 실패는 **지어내지 않고** 원문 꼬리를 보여 준다
+    got = I._human({"ok": False, "reason": "알 수 없는 오류\n마지막 줄이에요",
+                    "exitCode": 7}, "e")
+    assert got == "마지막 줄이에요"
+    # 원문이 비면 종료코드라도 보여 준다
+    assert "7" in I._human({"ok": False, "reason": "", "exitCode": 7}, "e")
+
+
+def test_require_made_는_없는_환경을_거절한다():
+    """`check()` 는 아직 없는 환경도 통과시킨다 — `Config.yaml` 에 만들기 전에
+    이름을 적을 수 있어야 한다. **설치**는 있어야 한다."""
+    from app.runner import condaenv
+
+    assert condaenv.check("not-made-yet")["ok"] is True
+    with pytest.raises(condaenv.EnvRefused) as exc:
+        condaenv.require_made("not-made-yet")
+    assert "docs/SETUP.md" in str(exc.value)

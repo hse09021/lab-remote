@@ -465,9 +465,19 @@ def cmd_installs(args) -> int:
                 allow_source=args.allow_source, note=args.note or "",
             )
             if not got["ok"]:
-                print(f"✘ {got.get('reason')}", file=sys.stderr)
+                # ⚠ 전에는 `reason` 칸이 없어서 `✘ None` 을 찍었다 (S9 e2e).
+                print(f"✘ {got.get('reason') or '설치가 실패했어요'}", file=sys.stderr)
+                if got.get("needsEnv"):
+                    print(
+                        f"  conda create -n {got['needsEnv']} python=3.11 -y",
+                        file=sys.stderr,
+                    )
+                    print("  그다음 다시 승인해 주세요 (승인은 아직 열려 있어요).",
+                          file=sys.stderr)
                 result = got.get("result")
                 if result and result.get("output"):
+                    print()
+                    print("--- 원문 ---", file=sys.stderr)
                     print(result["output"][-1500:], file=sys.stderr)
                 return 2
             print(f"✔ 설치했어요 ({got['env']})")

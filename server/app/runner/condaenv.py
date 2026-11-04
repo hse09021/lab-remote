@@ -47,6 +47,8 @@ __all__ = [
     "protected_prefixes",
     "resolve",
     "check",
+    "require",
+    "require_made",
 ]
 
 
@@ -203,6 +205,26 @@ def check(name: str) -> dict:
     out["prefix"] = resolve(text)
     out["ok"] = True
     return out
+
+
+def require_made(name: str) -> str:
+    """환경이 **실제로 있어야** 한다. 없으면 `EnvRefused` (사람이 읽을 문구).
+
+    `check()` 는 아직 없는 환경도 통과시킨다 — `Config.yaml` 에 만들기 전에
+    이름을 적을 수 있어야 하기 때문이다. 하지만 **설치**는 환경이 있어야
+    한다. 없는 환경에 승인하면 `pkg` 와 같은 함정이 된다 — 사람이 승인했고
+    기록에 남고 아무 일도 안 일어난다.
+    """
+    got = check(name)
+    if not got["ok"]:
+        raise EnvRefused(got["reason"])
+    if not got["prefix"]:
+        raise EnvRefused(
+            f"실험 환경 {name} 이 없어요 → docs/SETUP.md 의 "
+            f'"프로젝트마다 별도 conda 환경" 을 먼저 해 주세요: '
+            f"conda create -n {name} python=3.11 -y"
+        )
+    return got["prefix"]
 
 
 def require(name: str) -> str:

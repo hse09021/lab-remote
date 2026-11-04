@@ -3510,3 +3510,91 @@ labremote keys show              # 경로·권한·길이만 (값은 안 찍음)
 
 `labremote service install`(8단계)이 하기로 했던 일이지만, 그 명령은 systemd
 유닛까지 건드립니다. 키만 필요할 때 그걸 돌릴 이유가 없어 명령을 따로 뒀습니다.
+
+---
+
+# ✅ S9 — e2e 가 끝까지 돌았습니다 (2026-11-05)
+
+## `ask → approve → resume → allow` 전 과정
+
+`net`(WebFetch)로 했습니다 — `pkg` 는 승인해도 아무 일이 안 일어나서(M3)
+e2e 로 쓸 수 없습니다.
+
+| 단계 | 결과 |
+|---|---|
+| ask | 훅이 `net` 을 막고 `permission_denials` 1건 · Claude 는 **우회하지 않고 멈춤** |
+| 승인 | 사람이 `labremote approvals approve` · 허가 `g-20261105-084404-a234` |
+| resume | 훅이 `PreToolUse allow net` + `grantConsumed` · **WebFetch 가 실제로 통과** (peft 0.21.2) |
+| 기록 | 사본·진본 **둘 다** `허용 · 1회용 승인` / `사람 승인 · 1회용` · 대조 ✔ |
+| 허가 파일 | `grants/` 에서 사라지고 `.consumed/…-consumed.json` 으로 |
+| 재사용 | **다시 막힘** — 같은 세션·같은 입력인데 파일이 없어서 거절 |
+
+```
+남은 허가: []
+.consumed: ['1793835914-2c17e1dbea964c48a5c8d54d60179f44-consumed.json']
+사본:  …,외부 네트워크 접근,https://pypi.org/simple/peft/,허용 · 1회용 승인,false,사람 승인 · 1회용,…
+진본:  {'action': '외부 네트워크 접근', 'result': '허용 · 1회용 승인', 'handledBy': '사람 승인 · 1회용'}
+대조: True
+```
+
+## 설치 요청 경로도 끝까지
+
+`Install_request.json` → `labremote installs approve` → 오케스트레이터 설치 →
+`Install_result.json` → **다음 프롬프트로 Claude 에게**.
+
+실제로 실패했습니다(`hook-sandbox` conda 환경이 없음) — 그리고 그게 좋은
+시험이 됐습니다. Claude 가 resume 에서:
+
+- `state/Install_result.json` 을 **읽고** `state: failed` 와 사유를 정확히 보고
+- 요청 파일을 **그대로 둠** ("지우라는 건 `installed` 일 때뿐")
+- 설치를 **직접 시도하지 않음**
+- `ls` 로 원인을 보려다 훅에 막히자 **멈추고** 선택지를 제시
+
+프롬프트의 상태 표(`installed`/`failed`/`denied`/`rejected`/`waiting`)가 그대로
+작동했습니다.
+
+## S9 가 추가로 잡은 것 셋
+
+### 1. `✘ None` — `approve()` 의 반환에 `reason` 이 없었습니다
+
+CLI 가 `got.get('reason')` 을 찍는데 설치가 **실행된 뒤** 실패하면 그 칸이
+없었습니다. `_human()` 이 원문을 사람이 읽을 한 줄로 바꿉니다.
+
+```
+✘ 실험 환경 hook-sandbox 이 없어요 → docs/SETUP.md 의 "프로젝트마다 별도 conda 환경" 을
+  먼저 해 주세요: conda create -n hook-sandbox python=3.11 -y
+  conda create -n hook-sandbox python=3.11 -y
+  그다음 다시 승인해 주세요 (승인은 아직 열려 있어요).
+```
+
+`EnvironmentLocationNotFound`·`No matching distribution`·`Could not find a
+version`·`No space left`·`Temporary failure in name resolution` 다섯만
+번역하고, **모르는 실패는 지어내지 않고** 원문 꼬리를 그대로 보여 줍니다.
+
+### 2. 🔑 환경이 없으면 **승인 자체를 막습니다** (판단)
+
+없는 환경에 승인하면 **`pkg` 와 같은 함정**이 됩니다 — 사람이 승인했고
+`approvals` 에 기록이 남고 아무 일도 안 일어납니다. **승인은 "이 일이
+일어난다" 는 뜻이어야 합니다.**
+
+`condaenv.require_made()` 를 새로 뒀습니다. `check()` 는 아직 없는 환경도
+통과시킵니다(`Config.yaml` 에 만들기 전에 이름을 적을 수 있어야 합니다) —
+**설치**만 "있어야 한다" 를 요구합니다. 막히면 승인은 `open` 으로 남아서,
+환경을 만든 뒤 **다시 승인**하면 됩니다.
+
+### 3. 설치 **실패 알림이 없었습니다**
+
+승인 요청만 보내고 결과는 안 보냈습니다 — **사람이 승인하고 자리를 비우면
+실패를 모릅니다.** `write_result` 가 성공·실패 모두 보냅니다(`done`/`failure`,
+패키지·종료코드·원문 꼬리 400자).
+
+### 4. 작은 것 둘
+
+| | 전 | 후 |
+|---|---|---|
+| 알림 제목 | `hook-sandbox · hook-sandbox` | `패키지 설치 승인이 필요해요 · hook-sandbox` |
+| 거절 사유 | "작업을 멈추고 보고해 주세요" **두 번** | 한 번 |
+
+제목은 `embed.py` 가 `· {project}` 를 붙이는데 호출부도 붙여서 겹쳤습니다.
+사유는 `with_guard` 의 `NO_WORKAROUND` 와 `headless_ask` 의 꼬리가 같은 문장을
+반복했습니다 — 이미 있으면 안 붙입니다.

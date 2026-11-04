@@ -157,7 +157,7 @@ def _block_repeated(conn, project: str, row: dict) -> None:
             "blocked",
             project=project,
             subject=notifier.subject_of("repeat", row["request_id"]),
-            title=f"같은 요청이 반복돼서 루프를 멈췄어요 · {project}",
+            title=f"같은 요청이 반복돼서 루프를 멈췄어요",
             body=text,
             fields=[
                 ("요청", str(row.get("request") or ""))[:1],

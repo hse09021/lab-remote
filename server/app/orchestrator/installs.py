@@ -30,7 +30,7 @@ import os
 
 from .. import loop_layout as L
 from .. import notifier, paths, registry
-from ..runner import pkginstall, pkgspec
+from ..runner import condaenv, pkginstall, pkgspec
 from ..store import approvals as AP
 from ..store import events as E
 
@@ -135,7 +135,7 @@ def sync(conn, project: str, root: str, *, job_id: int | None = None) -> dict:
             "approval",
             project=project,
             subject=notifier.subject_of("install", got["fingerprint"]),
-            title=f"패키지 설치 승인이 필요해요 · {project}",
+            title=f"패키지 설치 승인이 필요해요",
             body=got["parsed"]["reason"] or "(사유가 비어 있어요)",
             fields=[
                 ("패키지", "\n".join(pkgspec.requirements(got["parsed"]))),
@@ -210,6 +210,15 @@ def approve(
             "ok": False,
             "reason": "specifications/Config.yaml 의 env.conda 를 읽을 수 없어요",
         }
+    # 🔑 **승인 전에** 환경이 실제로 있는지 본다.
+    #
+    # 없는 환경에 승인하면 `pkg` 와 같은 함정이 된다 — 사람이 승인했고
+    # `approvals` 에 기록이 남고 **아무 일도 안 일어난다.** 승인은 "이 일이
+    # 일어난다" 는 뜻이어야 한다.
+    try:
+        condaenv.require_made(env_name)
+    except condaenv.EnvRefused as exc:
+        return {"ok": False, "reason": str(exc), "needsEnv": env_name}
 
     AP.decide(conn, project, row["request_id"], "approved", by=by)
     if note:
@@ -218,7 +227,13 @@ def approve(
         parsed, env_name, allow_source=allow_source, cwd=root, runner=runner
     )
     write_result(conn, project, root, approval_id, parsed, result)
-    return {"ok": bool(result["ok"]), "result": result, "env": env_name}
+    return {
+        "ok": bool(result["ok"]),
+        "result": result,
+        "env": env_name,
+        # ⚠ 이 칸이 없어서 CLI 가 `✘ None` 을 찍었다 (S9 e2e 가 잡았다).
+        "reason": "" if result["ok"] else _human(result, env_name),
+    }
 
 
 def deny(conn, project: str, approval_id: int, *, reason: str = "", by: str = "cli") -> dict:
@@ -239,6 +254,44 @@ def deny(conn, project: str, approval_id: int, *, reason: str = "", by: str = "c
     return {"ok": True, "reason": ""}
 
 
+#: `conda`·`pip` 의 원문을 사람이 읽을 한 줄로. 모르는 것은 **지어내지 않고**
+#: 원문 꼬리를 그대로 보여 준다.
+_KNOWN_FAILURES = (
+    (
+        "EnvironmentLocationNotFound",
+        '실험 환경 {env} 이 없어요 → docs/SETUP.md 의 "프로젝트마다 별도 conda '
+        "환경\" 을 먼저 해 주세요: conda create -n {env} python=3.11 -y",
+    ),
+    (
+        "No matching distribution",
+        "그런 패키지·버전이 없어요. 이름과 버전을 확인해 주세요.",
+    ),
+    (
+        "Could not find a version",
+        "그 버전을 찾을 수 없어요. 버전 지정을 확인해 주세요.",
+    ),
+    (
+        "No space left",
+        "디스크가 꽉 찼어요.",
+    ),
+    (
+        "Temporary failure in name resolution",
+        "이름 풀이에 실패했어요 — 네트워크나 샌드박스의 허용 도메인을 봐 주세요.",
+    ),
+)
+
+
+def _human(result: dict, env_name: str) -> str:
+    """사람이 읽을 실패 사유. 원문은 `Install_result.json` 에 그대로 남는다."""
+    raw = str(result.get("reason") or result.get("output") or "").strip()
+    for needle, text in _KNOWN_FAILURES:
+        if needle in raw:
+            return text.format(env=env_name)
+    if not raw:
+        return f"설치가 실패했어요 (종료코드 {result.get('exitCode')})"
+    return raw.splitlines()[-1][:300]
+
+
 def write_result(conn, project: str, root: str, approval_id: int, parsed: dict, result: dict) -> None:
     """결과를 `lab.db`(진본) 와 프로젝트 안 파일(AI 가 읽는 쪽) 양쪽에."""
     row = AP.get(conn, approval_id) or {}
@@ -248,12 +301,30 @@ def write_result(conn, project: str, root: str, approval_id: int, parsed: dict, 
             "consumed" if result["ok"] else "blocked",
             by="orchestrator",
         )
+    names = ", ".join(pkgspec.requirements(parsed))
     E.add(
         conn, project, "설치",
-        ("설치했어요: " if result["ok"] else "설치가 실패했어요: ")
-        + ", ".join(pkgspec.requirements(parsed)),
+        ("설치했어요: " if result["ok"] else "설치가 실패했어요: ") + names,
         tone="good" if result["ok"] else "bad",
     )
+    # ⚠ 실패 알림이 **없었다**(S9 e2e 가 잡았다). 승인 요청만 보내고 결과는
+    # 안 보냈다 — 사람이 승인하고 자리를 비우면 실패를 모른다.
+    try:
+        env_name = _conda_env(root)
+        notifier.send(
+            conn,
+            "done" if result["ok"] else "failure",
+            project=project,
+            subject=notifier.subject_of("install-result", names),
+            title=("설치했어요" if result["ok"] else "설치가 실패했어요"),
+            body=names if result["ok"] else _human(result, env_name),
+            fields=[
+                ("패키지", names),
+                ("종료코드", str(result.get("exitCode"))),
+            ] + ([] if result["ok"] else [("원문 꼬리", str(result.get("reason") or "")[-400:])]),
+        )
+    except Exception:
+        pass
     _write(root, {
         "ok": bool(result["ok"]),
         "state": "installed" if result["ok"] else "failed",
