@@ -20,6 +20,11 @@ logs/hook_events.jsonl
 # 판 올림 백업 (labremote policy migrate 가 남겨요)
 logs/*.bak
 
+# 오케스트레이터가 쓰는 런타임 상태 — 서버 쪽 상태의 거울이라 저장소에 둘
+# 이유가 없고, 실험 중에 계속 바뀌어서 추적하면 git switch 가 막혀요.
+# State.yaml 은 반드시 추적해요 (기록 의무)
+state/Current.yaml
+
 # 비밀 값
 .env
 .env.*

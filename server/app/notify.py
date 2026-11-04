@@ -6,7 +6,9 @@
 **실패해도 판정에 영향이 없어야 한다.** 네트워크가 죽어도 훅은 제시간에
 결정을 돌려줘야 하므로 타임아웃을 짧게 잡고 예외를 삼킨다.
 
-웹훅 URL 은 환경 변수 `LAB_DISCORD_WEBHOOK` 에서 읽는다 (`.env` 는 커밋 금지).
+웹훅 URL 은 환경 변수 `LAB_DISCORD_WEBHOOK` 이 먼저고, 없으면
+`~/.config/labremote/config.toml` 에서 읽는다 (`.env` 는 커밋 금지).
+그 폴더는 이미 `SECRET_FILES` 라 Claude 가 읽기까지 막힌다.
 
 표준 라이브러리만 쓴다.
 """
@@ -18,29 +20,62 @@ import os
 import urllib.error
 import urllib.request
 
-__all__ = ["webhook_url", "send"]
+__all__ = ["webhook_url", "send", "send_payload"]
 
 TIMEOUT_SEC = 3
 
 
-def webhook_url() -> str:
-    return os.environ.get("LAB_DISCORD_WEBHOOK", "").strip()
+def webhook_url(kind: str = "") -> str:
+    """보낼 주소. 환경 변수가 이기고, 없으면 설정 파일을 본다.
+
+    설정을 못 읽어도 알림만 안 가야 한다 — 훅 경로라 예외를 올리지 않는다.
+    """
+    env = os.environ.get("LAB_DISCORD_WEBHOOK", "").strip()
+    if env:
+        return env
+    try:
+        from . import config
+
+        return config.discord_webhook(kind)
+    except Exception:
+        return ""
 
 
-def send(text: str) -> dict:
-    """보내 보고 결과를 돌려준다. 던지지 않는다."""
-    url = webhook_url()
-    if not url:
-        return {"sent": False, "reason": "LAB_DISCORD_WEBHOOK 이 비어 있어요"}
+def send(text: str, kind: str = "") -> dict:
+    """평문 한 줄을 보낸다. 던지지 않는다."""
+    return send_payload({"content": text[:1900]}, kind=kind)
+
+
+def send_payload(payload: dict, *, kind: str = "", url: str = "") -> dict:
+    """Discord 에 JSON 한 덩어리를 보낸다 (임베드는 `app/notifier.py` 가 만든다).
+
+    훅 경로에서도 불리므로 **어떤 경우에도 예외를 올리지 않는다.** 네트워크가
+    죽어도 판정은 제시간에 나가야 한다.
+    """
+    target = url or webhook_url(kind)
+    if not target:
+        return {"sent": False, "reason": "웹훅 주소가 비어 있어요"}
     if os.environ.get("LAB_NOTIFY_DISABLED") == "1":
         return {"sent": False, "reason": "알림이 꺼져 있어요"}
 
-    body = json.dumps({"content": text[:1900]}).encode("utf-8")
+    try:
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        return {"sent": False, "reason": f"보낼 내용을 JSON 으로 만들 수 없어요: {exc}"}
     request = urllib.request.Request(
-        url, data=body, headers={"Content-Type": "application/json"}
+        target, data=body, headers={"Content-Type": "application/json"}
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SEC) as resp:
             return {"sent": 200 <= resp.status < 300, "status": resp.status}
+    except urllib.error.HTTPError as exc:
+        # 429(너무 자주)·5xx(서버)는 notifier 가 다시 시도한다.
+        retry_after = exc.headers.get("Retry-After") if exc.headers else None
+        return {
+            "sent": False,
+            "status": exc.code,
+            "retryAfter": retry_after,
+            "reason": str(exc),
+        }
     except (urllib.error.URLError, OSError, ValueError) as exc:
         return {"sent": False, "reason": str(exc)}

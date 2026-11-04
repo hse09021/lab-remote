@@ -26,6 +26,32 @@ def isolated_data(tmp_path, monkeypatch):
     return data
 
 
+@pytest.fixture(autouse=True)
+def isolated_config(tmp_path, monkeypatch):
+    """`~/.config/labremote` 를 건드리지 않게. 웹훅 주소·허가 서명 키가 거기 있다."""
+    folder = tmp_path / "config"
+    folder.mkdir()
+    monkeypatch.setenv("LAB_CONFIG_DIR", str(folder))
+    return folder
+
+
+@pytest.fixture()
+def conn(isolated_data):
+    """이행까지 끝난 `lab.db` 연결. 테스트마다 빈 DB 다."""
+    from app import db
+
+    with db.open_db() as connection:
+        yield connection
+
+
+@pytest.fixture()
+def grant_key(isolated_config):
+    """허가 서명 키를 만들어 둔다. 없으면 모든 허가가 무효다."""
+    from app import config
+
+    return config.ensure_grant_key()
+
+
 @pytest.fixture()
 def project_root(tmp_path):
     """등록은 안 된 빈 프로젝트 폴더."""

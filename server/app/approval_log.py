@@ -423,7 +423,7 @@ def close_stale(
 
 
 def _requests_dir(name: str) -> str:
-    return os.path.join(registry.data_dir(), "requests", registry.valid_name(name))
+    return registry.requests_dir(name)
 
 
 def open_request(name: str, request_id: str, info: dict) -> str:
