@@ -37,7 +37,7 @@ import os
 import subprocess
 
 from .. import paths
-from . import pkgspec
+from . import condaenv, pkgspec
 
 __all__ = [
     "InstallError",
@@ -91,6 +91,13 @@ def build_argv(parsed: dict, env_name: str, *, allow_source: bool = False) -> li
             f"conda 환경 이름이 이상해요: {env_name!r} · "
             "specifications/Config.yaml 의 env.conda 를 봐 주세요"
         )
+    # 🔑 우리 코드가 도는 환경에는 **승인한 패키지라도** 깔지 않는다.
+    # `.pth` 는 인터프리터가 뜰 때 실행된다 — 훅은 도구 호출마다 뜨고
+    # 오케스트레이터도 그 환경에서 돈다. 둘 다 샌드박스 **밖**이다.
+    try:
+        condaenv.require(name)
+    except condaenv.EnvRefused as exc:
+        raise InstallError(str(exc)) from None
     items = pkgspec.requirements(parsed)
     if not items:
         raise InstallError("설치할 게 없어요")

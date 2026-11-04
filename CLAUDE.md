@@ -4,6 +4,8 @@
 
 ## 먼저 읽을 것
 - `docs/HANDOFF.md` — 화면 목록, 디자인 토큰, 기술 스택, 구현 순서
+- `docs/operations.md` — **실측 결과와 보안 경계.** 추측이 아니라 돌려 본 것만 적혀 있어요
+- `docs/SETUP.md` — 사람이 직접 해야 하는 설정 (셸 함수·conda 환경·웹훅)
 - `docs/spec.md` — 기능 사양 (최종본)
 - `docs/mockups/*.dc.html` — 화면별 목업. 구조와 동작의 기준
 
