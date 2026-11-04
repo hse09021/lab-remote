@@ -47,6 +47,7 @@ __all__ = [
     "other_project_paths",
     "hidden_paths",
     "command",
+    "protected_inside",
     "available",
     "describe",
 ]
@@ -188,6 +189,40 @@ def conda_roots() -> list[str]:
     return sorted({p for p in out if p and p != os.sep and os.path.isdir(p)})
 
 
+def protected_inside(root: str) -> list[str]:
+    """프로젝트 **안**인데 학습 코드가 고치면 안 되는 것.
+
+    `--bind <프로젝트>` 로 프로젝트가 통째로 쓰기 가능해진 **뒤에**
+    `--ro-bind` 로 다시 덮는다 (bwrap 은 뒤에 온 것이 이긴다).
+
+    | 대상 | 왜 |
+    |---|---|
+    | `.claude/` | 훅 등록·권한 설정. 맨손 `claude` 가 읽는다(M6) |
+    | `.mcp.json` | 훅이 못 보는 도구가 생긴다(M6d) |
+    | `.git/` | 설정·훅은 물론 **기록 자체**(refs·objects)를 바꿀 수 있다 |
+    | `logs/Approval_log.csv` | 승인 기록 |
+    | `logs/hook_events.jsonl` | 훅 판정 기록 |
+    | `state/Current.yaml` | "지금 어느 실험이 도는지" 의 유일한 근거 |
+
+    훅은 **도구 호출만** 보므로 학습 스크립트 안의 `open(..., "w")` 를 못
+    막는다. 그걸 막는 것은 이 목록뿐이다.
+
+    없는 파일은 뺀다 — `--ro-bind` 는 원본이 없으면 실패한다.
+    """
+    from .. import loop_layout as L
+
+    base = paths.real(root)
+    names = [".claude", ".mcp.json", ".git"] + [
+        L.LOOP_LAYOUT[key] for key in ("approval_log", "hook_events", "current")
+    ]
+    out = []
+    for rel in names:
+        target = os.path.join(base, rel)
+        if os.path.exists(target):
+            out.append(target)
+    return out
+
+
 def command(
     argv: list[str],
     *,
@@ -197,6 +232,7 @@ def command(
     cache_dir: str = "",
     bwrap: str = "",
     die_with_parent: bool = False,
+    ro_inside: list[str] | None = None,
 ) -> list[str]:
     """`bwrap` 으로 감싼 전체 명령을 돌려준다.
 
@@ -207,11 +243,12 @@ def command(
     `bwrap` 은 **뒤에 온 것이 이긴다.** 그래서
 
       1. `--ro-bind / /` 로 전부 읽기 전용
-      2. `--bind <프로젝트>` · `--bind <캐시>` 로 쓸 수 있는 곳 둘
-      3. `--tmpfs <보호 경로>` 로 가리기
+      2. `--tmpfs <보호 경로>` 로 가리기
+      3. `--bind <프로젝트>` · `--bind <캐시>` 로 쓸 수 있는 곳 둘
       4. `--ro-bind <데이터셋>` 으로 **가림을 다시 뚫기**
+      5. `--ro-bind <프로젝트 안 보호 파일>` 로 **쓰기를 다시 덮기**
 
-    4번이 3번 **뒤**에 와야 한다. 데이터셋이 가려진 경로 안에 있을 때
+    4번이 2번 **뒤**에 와야 한다. 데이터셋이 가려진 경로 안에 있을 때
     (다른 프로젝트의 `data/` 를 공유하는 경우 등) 읽을 수 있게 하려는 것이다.
     루트 전체가 이미 읽기 전용으로 보이니, 가려지지 않은 데이터셋은 이 항목
     없이도 읽힌다.
@@ -228,6 +265,12 @@ def command(
     대가로 고아 프로세스가 생길 수 있다. 그건 복구가 이어받거나
     `labremote queue cancel` 로 정리한다 — 되돌릴 수 있는 쪽을 고른다.
     터미널에서 디버깅할 때(`labremote up --foreground`)는 켜면 편하다.
+
+    ### 프로젝트 안에도 못 쓰는 곳이 있다 (5번)
+
+    `.claude`·`.mcp.json`·`.git`·승인 로그·`Current.yaml` 은 프로젝트 안이지만
+    학습 코드가 고치면 안 된다. `--bind <프로젝트>` 뒤에 `--ro-bind` 로 다시
+    덮는다. `ro_inside` 로 바꿔 끼울 수 있다(시험용).
     """
     binary = bwrap or bwrap_path()
     if not binary:
@@ -296,6 +339,20 @@ def command(
         if paths.is_inside(root, target) or (cache_real and paths.is_inside(cache_real, target)):
             continue  # 이미 쓰기로 열려 있다
         out += ["--ro-bind", target, target]
+    # --- 다시 덮기: 프로젝트 안 보호 파일 (**맨 뒤여야 한다**) --------------
+    # `--bind <프로젝트>` 로 통째로 열린 것을 여기서 되돌린다. 순서가 뒤집히면
+    # 조용히 쓰기 가능해진다 — 테스트로 고정한다.
+    inside = protected_inside(root) if ro_inside is None else [
+        paths.real(item) for item in ro_inside
+    ]
+    for target in inside:
+        if not target or not os.path.exists(target):
+            continue
+        if not paths.is_inside(root, target) or target == root:
+            # 프로젝트 밖은 이 목록의 일이 아니다 (이미 읽기 전용이다)
+            continue
+        out += ["--ro-bind", target, target]
+
     if die_with_parent:
         out.append("--die-with-parent")
     out.append("--")

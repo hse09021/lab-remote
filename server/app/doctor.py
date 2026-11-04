@@ -181,6 +181,43 @@ def project_settings_check(root: str, name: str = "") -> Check:
     )
 
 
+def git_anchor_check(root: str, name: str = "") -> Check:
+    """git 기록이 **앵커와 맞나.** — 이전 커밋 바꿔치기를 잡는다.
+
+    `.git` 은 프로젝트 안이고 샌드박스는 작업 디렉터리 쓰기를 못 막으므로(M4)
+    AI 가 쓴 코드가 `branch -D`·`commit --amend`·`reset --hard` 로 실험 기록을
+    위조할 수 있다. 앵커는 `lab.db` 에 있고 샌드박스 안에서 그 파일 쓰기가
+    실패한다(M1b).
+    """
+    from .git import anchor as anchor_mod
+    from .git import ops as ops_mod
+
+    title = f"git 기록 앵커 · {name}" if name else "git 기록 앵커"
+    try:
+        from . import db as db_mod
+
+        with db_mod.open_db() as conn:
+            report = anchor_mod.check(conn, name, root)
+    except ops_mod.GitRefused as exc:
+        return Check(False, title, str(exc).splitlines()[0][:160],
+                     hint="`.git` 설정을 먼저 봐 주세요 (labremote doctor 의 위 줄).")
+    except ops_mod.GitError:
+        return Check(True, title, "git 저장소가 아니거나 커밋이 아직 없어요")
+    except Exception as exc:  # pragma: no cover - DB 를 못 열는 환경
+        return Check(True, title, f"못 봤어요: {exc}")
+    if report["ok"]:
+        return Check(True, title, f"브랜치 {report['checked']}개가 앵커와 맞아요")
+    return Check(
+        False,
+        title,
+        " · ".join(report["problems"])[:200],
+        hint=(
+            "이전 기록이 바뀌었을 수 있어요. 되돌리지 않았어요 — 무엇이 "
+            "사라졌는지 먼저 보세요 (git reflog 가 남아 있을 수 있어요)."
+        ),
+    )
+
+
 def user_sandbox_check() -> Check:
     """사용자 설정에 `sandbox` 절이 있으면 **이 PC 의 모든 세션**이 갇힌다.
 
@@ -377,6 +414,8 @@ def run() -> dict:
         checks.append(bash_sandbox_check(root, name))
         # 프로젝트 설정 정본 — 샌드박스 탈출을 막는 둘째 겹 (M6)
         checks.append(project_settings_check(root, name))
+        # git 기록 앵커 — 이전 커밋 바꿔치기를 잡는다
+        checks.append(git_anchor_check(root, name))
         # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
         checks.append(cache_check(root, pol))
 
