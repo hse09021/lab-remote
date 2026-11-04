@@ -4,6 +4,7 @@
 훅이 통째로 사라진다. 그래서 금지 플래그를 코드로 막고 여기서 고정한다.
 """
 
+import json
 import os
 
 import pytest
@@ -174,15 +175,41 @@ def test_없는_폴더는_거부한다(run):
         L.check_cwd(run)
 
 
-def test_plan_은_샌드박스가_꺼져_있으면_거부한다(run):
-    """AI 가 쓴 테스트 코드를 가두는 유일한 수단이다. 꺼져 있으면 안 띄운다."""
+def test_plan_은_설정_파일을_직접_쓴다(run, monkeypatch):
+    """`--settings` 파일은 **매 실행 전에 코드에서 다시 쓴다.**
+
+    디스크에 있는 걸 믿지 않는다 — 오래된 설정이나 손댄 설정으로 뜨는 길을
+    막는다. 그래서 `plan()` 뒤에는 샌드박스가 **켜져 있는 것이 정상**이다.
+    """
+    from app import policy
+
+    path = policy.launch_settings_path()
+    assert not os.path.exists(path)
+    got = L.plan(run, base_env={})
+    assert got["settings"] == path
+    assert got["sandbox"]["ok"] is True
+    assert got["sandbox"]["source"] == "launch"
+
+
+def test_plan_은_설정을_못_쓰면_거부한다(run, monkeypatch):
+    """fail-closed. 울타리를 못 세웠으면 헤드리스로 띄우지 않는다."""
+    from app import policy
+
+    monkeypatch.setattr(
+        L, "render_settings", lambda root, project="": policy.launch_settings_path()
+    )
     with pytest.raises(L.LaunchRefused) as err:
         L.plan(run, base_env={})
-    assert "샌드박스가 켜져 있지 않아요" in str(err.value)
+    assert "샌드박스" in str(err.value)
 
 
-def test_대화형은_샌드박스가_꺼져_있어도_띄운다(run):
+def test_대화형은_샌드박스가_꺼져_있어도_띄운다(run, monkeypatch):
     """사람이 보고 있다. 막으면 개발이 안 된다."""
+    from app import policy
+
+    monkeypatch.setattr(
+        L, "render_settings", lambda root, project="": policy.launch_settings_path()
+    )
     run.headless = False
     assert L.plan(run, base_env={})["sandbox"]["ok"] is False
 
@@ -219,3 +246,138 @@ def test_대소문자만_다르면_같은_세션(run):
     got = S.new_id()
     assert S.same(got, got.upper()) is True
     assert S.same(got, S.new_id()) is False
+
+
+# --- 🔑 경계 플래그 셋 (M6) ---------------------------------------------------
+#
+# 프로젝트 `.claude/settings.json` 은 AI 가 쓴 코드가 고칠 수 있다(M4). 실측에서
+# 거기 심은 훅이 샌드박스 **밖에서 사용자 권한으로** 돌았고, `sandbox.enabled:false`
+# 한 줄로 샌드박스가 꺼져 AI 코드가 `server/data/runstate/` 에 실제로 썼다.
+# 그래서 그 파일을 **아예 안 읽는다.** 이 절이 그걸 고정한다.
+
+
+def _argv(run):
+    from app import policy
+
+    run.settings_path = policy.launch_settings_path()
+    return L.build_argv(run)
+
+
+def test_argv_에_경계_플래그_셋이_항상_있다(run):
+    from app import policy
+
+    argv = _argv(run)
+    assert "--setting-sources" in argv
+    assert argv[argv.index("--setting-sources") + 1] == "user"
+    assert "--strict-mcp-config" in argv
+    assert argv[argv.index("--settings") + 1] == policy.launch_settings_path()
+
+
+def test_대화형_argv_도_같은_경계를_쓴다(run):
+    """`labremote claude` 로 여는 세션도 프로젝트 설정을 안 읽어야 한다."""
+    run.interactive = True
+    argv = _argv(run)
+    assert "--setting-sources" in argv and "--strict-mcp-config" in argv
+    # 헤드리스 전용은 빠진다
+    assert "-p" not in argv
+    assert "--permission-prompts" not in argv
+    assert "--output-format" not in argv
+    assert run.prompt not in argv
+
+
+def test_settings_는_server_data_아래만_받는다(run, tmp_path):
+    """AI 가 프로젝트 안에 만든 설정 파일을 넘기는 길을 막는다."""
+    fake = tmp_path / "projects" / "hook-sandbox" / "evil-settings.json"
+    fake.parent.mkdir(parents=True, exist_ok=True)
+    fake.write_text("{}", encoding="utf-8")
+    with pytest.raises(L.LaunchRefused):
+        L.check_settings_file(str(fake))
+    with pytest.raises(L.LaunchRefused):
+        L.check_flags(["--settings", str(fake)])
+    with pytest.raises(L.LaunchRefused):
+        L.check_flags([f"--settings={fake}"])
+
+
+def test_setting_sources_는_user_가_빠지면_거부한다():
+    """`user` 가 빠지면 훅 등록을 안 읽는다 — 잠금이 전부 사라진다."""
+    for bad in ("project", "project,local", "local"):
+        with pytest.raises(L.LaunchRefused) as err:
+            L.check_setting_sources(bad)
+        assert "user" in str(err.value)
+    for bad in ("", "managed", "user,nope"):
+        with pytest.raises(L.LaunchRefused):
+            L.check_setting_sources(bad)
+    # user 가 있으면 통과한다 — 우리가 써야 하는 값이다
+    assert L.check_setting_sources("user") == "user"
+    assert L.check_setting_sources("user,project") == "user,project"
+
+
+def test_setting_sources_는_금지_플래그가_아니다():
+    """전에는 이름만 보고 전부 거부했다. 우리가 써야 하므로 값만 본다."""
+    assert "--setting-sources" not in L.FORBIDDEN_FLAGS
+    L.check_flags(["--setting-sources", "user"])
+    L.check_flags(["--setting-sources=user,project"])
+
+
+def test_경계를_넓히는_플래그들을_거부한다():
+    for flag in (
+        "--mcp-config", "--add-dir", "--tools", "--allowedTools",
+        "--plugin-dir", "--agents", "--system-prompt", "--append-system-prompt",
+        "--bare", "--safe-mode", "--restricted", "--dangerously-skip-permissions",
+    ):
+        with pytest.raises(L.LaunchRefused), pytest.MonkeyPatch.context():
+            L.check_flags([flag, "x"])
+
+
+def test_allowWrite_에_넓은_곳이_있으면_샌드박스가_거부된다(project_root, tmp_path):
+    """`~/projects` 를 열면 다른 실험 프로젝트까지 쓰기 가능해진다."""
+    from app import policy, registry
+
+    for bad in (registry.projects_root(), registry.data_dir(), os.path.expanduser("~")):
+        policy.render_launch_settings(project_root, cache_dir=bad, conda_roots=[])
+        state = policy.sandbox_state(project_root)
+        assert state["ok"] is False, bad
+        assert any("너무 넓어요" in r for r in state["reasons"]), (bad, state)
+
+
+def test_allowWrite_에_server_data_가_없다(project_root, tmp_path):
+    """훅은 샌드박스 **밖**에서 돈다(M1) — 열어 줄 이유가 없고, 열면 AI 가
+    `runstate` 를 고쳐 stop·prev 잠금을 풀 수 있다."""
+    from app import policy, registry
+
+    cache = str(tmp_path / "lab-cache")
+    policy.render_launch_settings(project_root, cache_dir=cache, conda_roots=[])
+    state = policy.sandbox_state(project_root)
+    assert state["ok"] is True, state["reasons"]
+    assert state["allowWrite"] == [os.path.realpath(cache)]
+    for name in ("runstate", "grants", "policies", "status", "requests", "pending"):
+        assert not any(name in item for item in state["allowWrite"]), name
+    # 프로젝트 루트도 적지 않는다 — 어차피 열려 있다(M4)
+    assert os.path.realpath(project_root) not in state["allowWrite"]
+
+
+def test_코드는_사용자_설정에_샌드박스를_쓰지_않는다(project_root, tmp_path, monkeypatch):
+    """규칙 0 — 전에 `hooks install` 이 거기에 써서 이 PC 의 모든 세션이 갇혔다."""
+    from app import policy
+    from app.hooks import install
+
+    user = tmp_path / "claude" / "settings.json"
+    user.parent.mkdir(parents=True, exist_ok=True)
+    user.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("LAB_CLAUDE_SETTINGS", str(user))
+    install.install(mode="enforce")
+    data = json.loads(user.read_text(encoding="utf-8"))
+    assert "sandbox" not in data, data
+    assert "hooks" in data
+    # 대신 런처 설정 파일이 생긴다
+    assert os.path.exists(policy.launch_settings_path())
+
+
+def test_런처_설정에는_훅을_넣지_않는다(project_root):
+    """양쪽에 두면 훅이 **두 번** 돈다 (실측 M6f)."""
+    from app import policy
+
+    data = policy.launch_settings(project_root, cache_dir="", conda_roots=[])
+    assert "hooks" not in data
+    assert data["sandbox"]["enabled"] is True
+    assert data["permissions"]["blockWritesOutsideWorkingDirectories"] is True

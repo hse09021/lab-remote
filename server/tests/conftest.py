@@ -88,7 +88,13 @@ def project(project_root):
 def sandboxed(project, project_root, tmp_path, monkeypatch):
     """Claude Bash 샌드박스가 켜진 프로젝트. 코드 실행(`pytest`)이 열리는 조건.
 
-    **진짜 `~/.claude/settings.json` 을 건드리지 않는다.**
+    샌드박스는 **런처가 넘기는 설정 파일**에 있다
+    (`<LAB_DATA_DIR>/agent/headless-settings.json`). `LAB_DATA_DIR` 은
+    `isolated_data` 가 임시 폴더로 돌려 놨다.
+
+    **진짜 `~/.claude/settings.json` 을 건드리지 않는다** — 코드가 그 파일에
+    `sandbox` 를 쓰지 않게 바뀌었지만(T2), 훅 등록 경로를 쓰는 시험이 섞여도
+    안전하게 `LAB_CLAUDE_SETTINGS` 를 임시 파일로 돌려 둔다.
     """
     from app import policy
 
@@ -96,7 +102,7 @@ def sandboxed(project, project_root, tmp_path, monkeypatch):
     path.parent.mkdir(exist_ok=True)
     path.write_text("{}", encoding="utf-8")
     monkeypatch.setenv("LAB_CLAUDE_SETTINGS", str(path))
-    policy.ensure_claude_sandbox(project_root, cache_dir="", conda_roots=[])
+    policy.render_launch_settings(project_root, cache_dir="", conda_roots=[])
     return project_root
 
 

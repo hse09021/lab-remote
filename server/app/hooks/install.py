@@ -225,41 +225,6 @@ def _entry(matcher: str | None, wrapper: str, module: str, on_failure: str) -> d
     return entry
 
 
-def _sandbox_block() -> dict | None:
-    """Claude Bash 샌드박스 설정. 못 만들면 None (설치는 계속한다).
-
-    AI 가 쓴 **테스트 코드**(`pytest`)를 가두는 유일한 수단이다. 꺼져 있으면
-    그 코드가 `~/.ssh` 를 읽고 네트워크로 보낼 수 있다 — 실측에서
-    `~/.claude.json` 과 정책 파일까지 읽혔다.
-    """
-    try:
-        from .. import policy as policy_mod
-        from ..runner import cache as cache_mod
-        from ..runner import sandbox as sandbox_mod
-
-        projects = sorted(registry.load())
-        root = projects[0] if projects else registry.projects_root()
-        pol = None
-        try:
-            pol = policy_mod.load(registry.load()[root]) if projects else None
-        except Exception:
-            pol = None
-        block = policy_mod.sandbox_block(
-            root,
-            cache_dir=cache_mod.cache_dir(pol),
-            conda_roots=sandbox_mod.conda_roots(),
-        )
-        write = list(block["filesystem"]["allowWrite"])
-        for item in [*projects, registry.projects_root()]:
-            target = paths.real(item)
-            if target and target not in write:
-                write.append(target)
-        block["filesystem"]["allowWrite"] = sorted(dict.fromkeys(write))
-        return block
-    except Exception:
-        return None
-
-
 def install(mode: str = "enforce", python: str | None = None, roots: str | None = None) -> dict:
     """래퍼를 만들고 사용자 설정에 등록한다. 되돌리려면 `uninstall()`."""
     if mode not in MODES:
@@ -290,18 +255,42 @@ def install(mode: str = "enforce", python: str | None = None, roots: str | None 
     for event, matcher, module, on_failure in events:
         hooks.setdefault(event, []).append(_entry(matcher, wrapper, module, on_failure))
 
-    # Claude 의 Bash 샌드박스도 **같은 파일**에 쓴다. `filesystem.allowRead` 가
-    # 프로젝트 설정에서는 안 먹어서(실측) 사용자 설정이어야 한다. 훅 등록과
-    # 한 번에 끝나야 "켠 줄 알았는데 안 켜져 있던" 상태가 안 생긴다.
-    sandbox = _sandbox_block()
-    if sandbox:
-        data["sandbox"] = sandbox
+    # ⚠ **샌드박스 절을 여기에 쓰지 않는다.** 전에는 썼고, 그래서 이 PC 의
+    # 모든 Claude 세션(개발 세션까지)이 갇혔다. 샌드박스는 런처가 넘기는
+    # `<data>/agent/headless-settings.json` 에만 있다. 이 파일에 쓰는 것은
+    # **훅 등록뿐**이다 — 규칙 0.
     _write_settings(data)
+
+    # 런처가 `--settings` 로 넘길 파일은 **여기서** 만들어 둔다. 설치와 한
+    # 번에 끝나야 "켠 줄 알았는데 안 켜져 있던" 상태가 안 생긴다. 내용은
+    # 런처가 매 실행 전에 다시 쓴다.
+    launch_settings = None
+    try:
+        from .. import policy as policy_mod
+        from ..runner import cache as cache_mod
+        from ..runner import sandbox as sandbox_mod
+
+        projects = sorted(registry.load())
+        pol = None
+        if projects:
+            try:
+                pol = policy_mod.load(registry.load()[projects[0]])
+            except Exception:
+                pol = None
+        launch_settings = policy_mod.render_launch_settings(
+            projects[0] if projects else registry.projects_root(),
+            cache_dir=cache_mod.cache_dir(pol),
+            conda_roots=sandbox_mod.conda_roots(),
+        )["path"]
+    except Exception:
+        # 못 써도 설치는 끝낸다. `doctor` 가 ✘ 로 알린다.
+        launch_settings = None
 
     info = {
         "mode": mode,
         "wrapper": wrapper,
         "settings": settings_path(),
+        "launchSettings": launch_settings,
         "backup": backup,
         "replaced": replaced,
         "python": paths.real(python or sys.executable),
