@@ -39,6 +39,7 @@ from ..store import experiments as X
 from ..store import jobs as J
 from ..store import loops as LP
 from . import approvals as approvals_mod
+from ..git import anchor as anchor_mod
 from ..git import ops as ops_mod
 from . import gitflow, guards, projectguard
 
@@ -118,6 +119,47 @@ def resume_step(ctx, conn, session_id: str, *, request: dict | None = None) -> d
     LP.set_state(conn, ctx.project, "planning")
     got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=True)
     return {"ok": bool(got.get("ok")), "stage": "resume", "sessionId": session_id, "result": got}
+
+
+def guard_anchor(ctx, conn, *, when: str, with_fsck: bool = True) -> bool:
+    """git 기록이 **앵커와 맞나.** 어긋나면 멈추고 사람을 부른다.
+
+    T4 는 `.git` 이 **코드를 실행하게** 만드는 설정을 막았다. 이건 **기록
+    자체**다 — `branch -D`·`commit --amend`·`reset --hard` 로 실험 기록을
+    위조할 수 있다. 학습 bwrap 은 `.git` 을 읽기 전용으로 덮지만(T5) Claude 의
+    Bash 샌드박스는 작업 폴더 쓰기를 못 막는다(M4).
+
+    앵커는 `lab.db` 에 있고 샌드박스 안에서 그 파일 쓰기가 실패한다(M1b).
+    **되돌리지 않는다** — 무엇이 정본인지 알 수 없다. 사람이 본다.
+    """
+    try:
+        report = anchor_mod.check(conn, ctx.project, ctx.root, with_fsck=with_fsck)
+    except ops_mod.GitRefused as exc:
+        guard_git(ctx, conn, exc)
+        return False
+    except ops_mod.GitError:
+        # git 저장소가 아니거나 아직 커밋이 없다 — 앵커도 없다.
+        return True
+    if report["ok"]:
+        return True
+    text = anchor_mod.describe(report)
+    E.add(conn, ctx.project, "보안", f"git 기록이 앵커와 어긋나요 ({when})", tone="bad")
+    try:
+        notifier.send(
+            conn,
+            "blocked",
+            project=ctx.project,
+            subject=notifier.subject_of("gitanchor", ctx.project),
+            title=f"git 기록이 바뀌었어요 · {ctx.project}",
+            body=text[:1500],
+        )
+    except Exception:
+        pass
+    LP.set_state(
+        conn, ctx.project, "blocked",
+        stop_reason=f"git 기록이 앵커와 어긋나요 ({when}) — 이전 기록이 바뀌었을 수 있어요",
+    )
+    return False
 
 
 def guard_git(ctx, conn, exc) -> None:
@@ -217,6 +259,13 @@ def plan_step(ctx, conn) -> dict:
     # 루프를 시작하기 전에 프로젝트 설정을 정본으로 맞춘다. 지난 루프나
     # 사람의 대화형 세션 뒤에 남은 흔적이 있을 수 있다. 되돌리고 **계속**한다.
     guard_project(ctx, conn, when="루프 시작 전", block=False)
+    # git 기록이 앵커와 맞나. 어긋나면 **루프를 시작하지 않는다** — 위조된
+    # 기록 위에 실험을 더 쌓지 않는다.
+    if not guard_anchor(ctx, conn, when="루프 시작 전"):
+        return {
+            "ok": False, "stage": "plan", "blocked": True,
+            "reason": "git 기록이 앵커와 어긋나요",
+        }
     verdict = guards.check_loop(conn, ctx.project, ctx.root)
     if not verdict.ok:
         LP.set_state(
@@ -229,12 +278,16 @@ def plan_step(ctx, conn) -> dict:
     LP.set_state(conn, ctx.project, "planning")
     try:
         gitflow.start_experiment(ctx.root, exp_id, running=False)
+        # 우리가 만든 브랜치의 HEAD 를 기준값으로 남긴다.
+        anchor_mod.record_all(conn, ctx.project, ctx.root, note=f"{exp_id} 시작")
     except ops_mod.GitRefused as exc:
         guard_git(ctx, conn, exc)
         return {
             "ok": False, "stage": "plan", "blocked": True,
             "reason": str(exc).splitlines()[0],
         }
+    except ops_mod.GitError:
+        pass  # git 저장소가 아니면 기록도 앵커도 없다
 
     session_id = session_mod.new_id()
     prompt = prompts_mod.render(
@@ -383,11 +436,16 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
         )
     # 커밋에 오염이 들어가지 않게 **커밋 전에** 한 번 더 본다.
     guard_project(ctx, conn, when="기록 커밋 전")
-    try:
-        gitflow.record_and_return(ctx.root, exp_id, running=False)
-    except ops_mod.GitRefused as exc:
-        # `.git` 이 코드를 실행하게 만드는 설정을 가졌다. **커밋하지 않는다.**
-        guard_git(ctx, conn, exc)
+    # 커밋 전에 기록이 앵커와 맞는지. 어긋나면 **커밋하지 않는다.**
+    if guard_anchor(ctx, conn, when="기록 커밋 전", with_fsck=False):
+        try:
+            gitflow.record_and_return(ctx.root, exp_id, running=False)
+            anchor_mod.record_all(conn, ctx.project, ctx.root, note=f"{exp_id} 기록")
+        except ops_mod.GitRefused as exc:
+            # `.git` 이 코드를 실행하게 만드는 설정을 가졌다. **커밋하지 않는다.**
+            guard_git(ctx, conn, exc)
+        except ops_mod.GitError:
+            pass
 
     if disagree:
         LP.set_state(

@@ -199,3 +199,24 @@ CREATE TABLE IF NOT EXISTS usage_limits (
   resumed_at  TEXT,
   notified_at TEXT
 );
+
+-- 📌 앵커 — **AI 가 못 쓰는 곳에 둔 기준값.**
+--
+-- 프로젝트 안의 기록은 샌드박스에서 쓰기 가능하다(M4). `.git` 의 refs·objects
+-- 도 마찬가지라 브랜치를 지우거나 이전 커밋을 바꿔치기해서 실험 기록을 위조할
+-- 수 있다. 그래서 오케스트레이터가 **자기가 한 일**의 기준값을 여기 적고,
+-- 다음에 대조한다. 어긋나면 루프를 멈추고 사람을 부른다.
+--
+-- kind 로 여러 종류를 담는다:
+--   git_head        key=브랜치 이름, value=커밋 해시 (T5)
+--   approval_log    key='csv',       value=마지막 해시 체인 값, count=줄 수 (S7)
+CREATE TABLE IF NOT EXISTS anchors (
+  project    TEXT NOT NULL,
+  kind       TEXT NOT NULL,
+  key        TEXT NOT NULL DEFAULT '',
+  value      TEXT NOT NULL,
+  count      INTEGER,
+  note       TEXT,
+  at         TEXT NOT NULL,
+  PRIMARY KEY (project, kind, key)
+);

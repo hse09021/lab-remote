@@ -34,10 +34,25 @@ __all__ = [
 ]
 
 #: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS` 에 줄을 더한다.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 #: 판을 올리는 SQL. `{이전 판: SQL 문자열}` — 판 1 은 schema.sql 통째다.
-MIGRATIONS: dict[int, str] = {}
+MIGRATIONS: dict[int, str] = {
+    # 판 1 -> 2 · 앵커 (AI 가 못 쓰는 곳에 둔 기준값). T5 는 git HEAD,
+    # S7 은 승인 로그 해시 체인을 같은 표에 담는다.
+    1: """
+CREATE TABLE IF NOT EXISTS anchors (
+  project    TEXT NOT NULL,
+  kind       TEXT NOT NULL,
+  key        TEXT NOT NULL DEFAULT '',
+  value      TEXT NOT NULL,
+  count      INTEGER,
+  note       TEXT,
+  at         TEXT NOT NULL,
+  PRIMARY KEY (project, kind, key)
+);
+""",
+}
 
 _SCHEMA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
 
