@@ -79,6 +79,27 @@ def test_Glob_으로_훑는_것도_막힌다(ctx, path):
     ]
 
 
+def test_Glob_에_훅이_실제로_뜬다(sandboxed, project_root):
+    """🔑 위 시험은 **거짓 초록불이었다.**
+
+    판정 코드는 `Glob` 을 막도록 써 뒀는데, `PreToolUse` matcher 에 `Glob` 이
+    없어서 **훅이 아예 안 떴다.** 번들의 matcher 비교는 이름을 나열하면
+    정확 문자열 비교다. 판정만 시험하면 영원히 못 잡는다 — **설치된
+    matcher** 를 같이 본다.
+    """
+    import json
+
+    from app.hooks import install
+
+    install.install(mode="enforce")
+    with open(install.settings_path(), encoding="utf-8") as fh:
+        data = json.load(fh)
+    matchers = [e.get("matcher") for e in data["hooks"]["PreToolUse"]]
+    assert matchers, "PreToolUse 훅이 없어요"
+    # match-all 이어야 `Glob`·`TodoWrite`·`Task`·`mcp__*` 에 훅이 뜬다
+    assert all(m in (None, "", "*", ".*") for m in matchers), matchers
+
+
 @pytest.mark.parametrize("path", NOT_SECRET)
 def test_공개키와_known_hosts_는_비밀이_아니다(ctx, path):
     """막으면 git 원격을 못 쓴다. 비밀이 아닌 건 비밀이라고 하지 않는다."""

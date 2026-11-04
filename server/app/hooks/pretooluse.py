@@ -70,6 +70,20 @@ def _bypass_note(ctx, decision: Decision, findings: list) -> dict | None:
     return None
 
 
+#: 판정할 것이 없는 allow. 이 줄은 `hook_events.jsonl` 에 남기지 않는다 —
+#: S5 로 훅이 모든 도구에 뜨면서 이것들이 로그의 대부분이 된다.
+#: **승인 로그 CSV(`Approval_log.csv`)에는 그대로 남는다** — 거기가 기록
+#: 의무의 대상이고, 체인·앵커로 지키는 쪽이다.
+QUIET_ACTIONS = frozenset(
+    {
+        "readAllowed",   # 프로젝트 안 읽기
+        "toolAllowed",   # 읽기 전용 도구 (Glob·TodoWrite·ToolSearch…)
+        "bashAllowed",   # 허용 목록에 있는 명령
+        "journal",        # 기록 파일 쓰기 (항상 허용)
+    }
+)
+
+
 def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
     """CSV + JSONL + 대기 건. 기록이 실패해도 판정은 그대로 나간다."""
     log = A.log_path(ctx.root, ctx.policy)
@@ -83,32 +97,46 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
     label = decision.label or tool
     bypass = _bypass_note(ctx, decision, findings)
 
-    A.log_event(
-        events,
-        {
-            "event": "PreToolUse",
-            "tool": tool,
-            "toolUseId": tool_use_id,
-            "promptId": prompt_id,
-            "sessionId": session_id,
-            "permissionMode": event.get("permission_mode"),
-            "decision": decision.kind,
-            "action": decision.action,
-            "rel": decision.rel,
-            "findings": [
-                {"action": f.action, "rel": f.rel, "target": f.target, "detail": f.detail}
-                for f in findings
-            ],
-            "reason": decision.reason,
-            "headless": ctx.headless,
-            "runState": {
-                "running": getattr(ctx.run, "running", False),
-                "experimentId": getattr(ctx.run, "experiment_id", None),
-                "stale": getattr(ctx.run, "stale", False),
+    # 🔑 matcher 가 **모든 도구**가 되면서(S5) 훅이 도구 호출마다 뜬다. 그
+    # 대가로 `hook_events.jsonl` 이 폭증한다 — `Read`·`Glob`·`TodoWrite` 가
+    # 압도적으로 많고, 그 줄에는 **판정할 것이 아무것도 없다.**
+    #
+    # 그래서 **아무 소득 없는 allow 는 안 남긴다.** 남기는 기준:
+    #   - 막힌 것(deny)·물은 것(ask)·허가로 통과한 것 → 전부 남긴다
+    #   - 우회 시도·훅 오류 → 전부 남긴다
+    #   - `QUIET_ACTIONS` 의 allow → **안 남긴다** (승인 로그 CSV 에는 남는다)
+    if not (
+        decision.kind == "allow"
+        and not bypass
+        and decision.action in QUIET_ACTIONS
+        and not decision.meta
+    ):
+        A.log_event(
+            events,
+            {
+                "event": "PreToolUse",
+                "tool": tool,
+                "toolUseId": tool_use_id,
+                "promptId": prompt_id,
+                "sessionId": session_id,
+                "permissionMode": event.get("permission_mode"),
+                "decision": decision.kind,
+                "action": decision.action,
+                "rel": decision.rel,
+                "findings": [
+                    {"action": f.action, "rel": f.rel, "target": f.target, "detail": f.detail}
+                    for f in findings
+                ],
+                "reason": decision.reason,
+                "headless": ctx.headless,
+                "runState": {
+                    "running": getattr(ctx.run, "running", False),
+                    "experimentId": getattr(ctx.run, "experiment_id", None),
+                    "stale": getattr(ctx.run, "stale", False),
+                },
+                **({"bypassAttempt": bypass} if bypass else {}),
             },
-            **({"bypassAttempt": bypass} if bypass else {}),
-        },
-    )
+        )
 
     if bypass:
         A.append_row(

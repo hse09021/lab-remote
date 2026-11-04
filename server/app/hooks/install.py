@@ -48,7 +48,22 @@ SHELL_LIMITATION_NOTE = (
 
 #: `Read|Grep` 은 **비밀 파일만** 보려고 들어 있다 (`classify.SECRET_READ_TOOLS`).
 #: 그 밖의 읽기는 판정하지 않는다 — 전면 차단은 소음만 크고 막을 게 없다.
-TOOL_MATCHER = "Bash|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|Read|Grep"
+#: 🔑 **모든 도구**에 훅을 건다.
+#:
+#: 전에는 이름을 나열했다(`"Bash|Write|Edit|…"`). 번들 바이너리의 비교 코드를
+#: 읽어 보니 matcher 가 **없음·`""`·`"*"`·`".*"`** 이면 전부 매치이고, 이름을
+#: 나열하면 **정확 문자열 비교**다 — 그래서 목록에 없는 도구는 훅이 **아예 안
+#: 떴다.** 빠져 있던 것:
+#:
+#: | 도구 | 빠져서 안 돌던 것 |
+#: |---|---|
+#: | `Glob` | `classify.SECRET_READ_TOOLS` 의 `~/.ssh` 훑기 차단 — **테스트는 "막힌다" 고 단정했는데 훅이 안 떴다**(거짓 초록불) |
+#: | `TodoWrite`·`ToolSearch` | `READ_ONLY_TOOLS` 판정 (헤드리스에서 `defer` 가 정지라 `allow` 를 줘야 한다) |
+#: | `Task`·`NotebookRead`·`mcp__*` | "모르는 도구 → ask" (`unclassified`) |
+#:
+#: 대가로 도구 호출마다 훅이 뜬다. `toolAllowed`·`readAllowed` 는
+#: `hook_events.jsonl` 에 남기지 않아 로그 폭증을 막는다.
+TOOL_MATCHER = "*"
 HOOK_TIMEOUT = 10
 
 #: (이벤트, matcher, 모듈, onFailure)
@@ -67,8 +82,8 @@ ENFORCE_EVENTS = [
 
 #: 덤프는 무엇도 막지 않는다. 판정 없이 받아 적기만 한다.
 DUMP_EVENTS = [
-    ("PreToolUse", ".*", "app.hooks.debug", "continue"),
-    ("PostToolUse", ".*", "app.hooks.debug", "continue"),
+    ("PreToolUse", TOOL_MATCHER, "app.hooks.debug", "continue"),
+    ("PostToolUse", TOOL_MATCHER, "app.hooks.debug", "continue"),
     ("UserPromptSubmit", None, "app.hooks.debug", "continue"),
     ("Stop", None, "app.hooks.debug", "continue"),
     ("SubagentStop", None, "app.hooks.debug", "continue"),
