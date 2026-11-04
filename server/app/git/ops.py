@@ -13,10 +13,20 @@ from __future__ import annotations
 import os
 import subprocess
 
-from .. import paths
+from .. import paths, registry
+from .guard import GitRefused
+from . import guard as guard_mod
 
 __all__ = [
     "GitError",
+    "GitRefused",
+    "SAFE_ENV",
+    "ENV_KEEP",
+    "nohooks_dir",
+    "safe_config",
+    "commit_config",
+    "identity",
+    "safe_env",
     "run",
     "inside_worktree",
     "current_branch",
@@ -32,19 +42,174 @@ __all__ = [
 
 TIMEOUT_SEC = 60
 
+#: 빈 훅 폴더. `core.hooksPath` 를 여기로 돌려 `.git/hooks/*` 를 무력화한다.
+#: `server/data/` 아래라 샌드박스 안 코드가 **여기엔 못 쓴다**(M1b).
+NOHOOKS_NAME = "nohooks"
+
+#: git 에 물려주는 환경. **화이트리스트다** — 오케스트레이터의 환경이 그대로
+#: 새면 `LAB_*` 로 우리 폴더 위치까지 알려 주는 셈이고, `GIT_*` 가 섞이면
+#: 아래 고정값을 덮어쓴다.
+ENV_KEEP = ("HOME", "USER", "LOGNAME", "PATH", "LANG", "LC_ALL", "TZ")
+
+#: 무조건 넣는 값. 저장소 **밖**의 설정과 대화형 입력을 끊는다.
+SAFE_ENV = {
+    # 전역·시스템 설정을 안 읽는다. 저장소 설정만 남는다(그건 guard 가 본다).
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_SYSTEM": os.devnull,
+    # 시스템 gitattributes 를 안 읽는다
+    "GIT_ATTR_NOSYSTEM": "1",
+    # 자격 증명·암호를 물어보지 않는다. 물어보면 루프가 멈춘다.
+    "GIT_TERMINAL_PROMPT": "0",
+    "GIT_ASKPASS": "",
+    "SSH_ASKPASS": "",
+    # 편집기·페이저를 띄우지 않는다
+    "GIT_EDITOR": "false",
+    "GIT_SEQUENCE_EDITOR": "false",
+    "GIT_PAGER": "cat",
+    # 외부 diff·머지 도구를 쓰지 않는다
+    "GIT_EXTERNAL_DIFF": "",
+}
+
+#: 전역 설정도 안 읽으므로 커밋 신원이 사라진다. 사람의 신원을 **따로 읽어**
+#: `-c` 로 넘긴다 (설정을 읽는 것은 아무것도 실행하지 않는다). 못 찾으면
+#: 이 값으로 커밋한다 — 루프가 신원 때문에 멈추면 안 된다.
+FALLBACK_IDENTITY = ("lab.remote", "labremote@localhost")
+
+
+#: 커밋 신원이 필요한 하위명령
+NEEDS_IDENTITY = frozenset({"commit", "merge", "revert", "cherry-pick", "tag", "am"})
+
+
+def nohooks_dir() -> str:
+    """빈 훅 폴더를 만들고 경로를 돌려준다."""
+    folder = os.path.join(registry.data_dir(), "agent", NOHOOKS_NAME)
+    try:
+        os.makedirs(folder, exist_ok=True)
+    except OSError:
+        pass
+    return folder
+
+
+def identity(base: dict | None = None) -> tuple[str, str]:
+    """커밋에 쓸 `(이름, 메일)`.
+
+    `SAFE_ENV` 가 전역·시스템 설정을 끊으므로 신원도 같이 사라진다. 그래서
+    **신원만** 전역 설정에서 읽어 `-c user.*` 로 넘긴다. 설정을 읽는 것은
+    훅·필터를 돌리지 않는다.
+
+    왜 전역 설정을 실행에는 안 쓰나: `~/.gitconfig` 는 AI 가 쓴 코드가 못
+    고치지만(홈 쓰기가 버려진다 · bwrap 은 읽기 전용), 거기 `core.hooksPath`
+    같은 게 있으면 우리 의도와 다르게 돈다. 신원만 가져오는 게 가장 좁다.
+    """
+    source = os.environ if base is None else base
+    env = {k: source[k] for k in ENV_KEEP if k in source}
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    got = []
+    for key in ("user.name", "user.email"):
+        value = ""
+        try:
+            done = subprocess.run(
+                ["git", "config", "--get", key],
+                capture_output=True, text=True, timeout=10, env=env,
+            )
+            if done.returncode == 0:
+                value = done.stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            value = ""
+        got.append(value)
+    name = got[0] or FALLBACK_IDENTITY[0]
+    mail = got[1] or FALLBACK_IDENTITY[1]
+    return name, mail
+
+
+def safe_config() -> list[str]:
+    """명령줄 `-c` 로 덮는 값. **`-c` 는 저장소 설정을 이긴다.**
+
+    `.git/config` 는 AI 가 쓴 코드가 고칠 수 있다(M4) — 샌드박스는 작업
+    디렉터리 쓰기를 못 막는다. 그리고 오케스트레이터의 git 은 **샌드박스
+    밖에서 사용자 권한으로** 돈다. 그래서 git 이 무엇을 실행할 수 있는지를
+    우리가 정한다.
+
+    와일드카드가 있는 것(`filter.*`·`diff.*.textconv`)과 파싱 시점에 끼어드는
+    것(`include.path`)은 `-c` 로 덮을 수 없다 — `git/guard.py` 가 찾아서
+    **git 을 아예 안 돌린다.**
+    """
+    return [
+        # `.git/hooks/*` 를 무력화한다 (빈 폴더를 가리킨다)
+        "-c", f"core.hooksPath={nohooks_dir()}",
+        # status 할 때 실행되는 감시 프로그램
+        "-c", "core.fsmonitor=false",
+        # fetch·push 할 때 실행된다
+        "-c", "core.sshCommand=",
+        "-c", "core.gitProxy=",
+        # 대화형으로 뭔가 띄우는 것
+        "-c", "core.editor=false",
+        "-c", "sequence.editor=false",
+        "-c", "core.askPass=",
+        # 빈 값은 helper 목록을 **초기화**한다 (git 문서)
+        "-c", "credential.helper=",
+        # 저장소 밖 속성 파일
+        "-c", "core.attributesFile=" + os.devnull,
+        # 외부 diff 프로그램
+        "-c", "diff.external=",
+        "-c", "gpg.program=false",
+        # ②는 로컬 브랜치만 쓴다 — 원격 전송이 필요 없다
+        "-c", "protocol.allow=never",
+    ]
+
+
+def commit_config() -> list[str]:
+    """`safe_config()` + 커밋 신원. 커밋하는 명령에만 붙인다."""
+    name, mail = identity()
+    return [*safe_config(), "-c", f"user.name={name}", "-c", f"user.email={mail}"]
+
+
+def safe_env(base: dict | None = None) -> dict[str, str]:
+    """git 이 받을 환경. 화이트리스트 + 고정값."""
+    source = os.environ if base is None else base
+    out = {k: source[k] for k in ENV_KEEP if k in source}
+    out.update(SAFE_ENV)
+    return out
+
 
 class GitError(RuntimeError):
     """git 이 실패했을 때. 메시지에 stderr 를 그대로 싣는다."""
 
 
-def run(root: str, args: list[str], *, check: bool = True) -> str:
-    """`git -C <root> <args>`. 실패하면 `GitError`."""
+def guard(root: str) -> dict:
+    """`.git` 이 코드를 실행하게 만드는 설정을 가졌나. 가졌으면 `GitRefused`.
+
+    `run()` 이 매번 부른다. 한 번 보고 캐시하지 않는다 — 세션 사이에 바뀔 수
+    있다. (git 호출은 Claude 세션이 떠 있지 않을 때만 하지만, 학습 프로세스도
+    프로젝트 안에 쓸 수 있다.)
+    """
+    report = guard_mod.check(
+        root, config_args=safe_config(), env=safe_env()
+    )
+    if not report["ok"]:
+        raise GitRefused(guard_mod.describe(report))
+    return report
+
+
+def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True) -> str:
+    """`git -C <root> <args>`. 실패하면 `GitError`.
+
+    `guarded=False` 는 `guard()` 자신이 쓰는 내부 경로용이다 — 밖에서는 쓰지
+    않는다. 모든 호출이 `.git` 검사를 지나간다.
+    """
+    if guarded:
+        guard(root)
+    # 커밋하는 명령에는 신원을 붙인다 — `SAFE_ENV` 가 전역 설정을 끊어서
+    # 그대로면 "who are you" 로 실패한다.
+    config = commit_config() if args and args[0] in NEEDS_IDENTITY else safe_config()
     try:
         done = subprocess.run(
-            ["git", "-C", paths.real(root), *args],
+            ["git", "--no-pager", *config, "-C", paths.real(root), *args],
             capture_output=True,
             text=True,
             timeout=TIMEOUT_SEC,
+            env=safe_env(),
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise GitError(f"git 을 띄우지 못했어요: {exc}") from None

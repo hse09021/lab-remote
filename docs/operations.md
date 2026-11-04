@@ -2274,3 +2274,107 @@ claude --setting-sources user --settings <data>/agent/headless-settings.json \
   `doctor` 가 `labremote claude` 로 열라고 안내합니다.
 - 되돌림과 세션 사이에는 **틈**이 있습니다. 세션이 도는 중에 고친 것은 그
   세션에는 영향이 없고(설정은 뜰 때 읽습니다) 세션이 끝나면 되돌려집니다.
+
+---
+
+# 🔧 T4 — `.git` 경유 탈출을 막습니다 (2026-11-05)
+
+## 왜 `.git` 이 보안 경계인가
+
+오케스트레이터의 git 은 **샌드박스 밖에서 사용자 권한으로** 돕니다 — 커밋·
+브랜치는 훅을 거치지 않습니다(의도된 비대칭). 그런데 샌드박스는 작업 디렉터리
+쓰기를 못 막으므로(M4) AI 가 쓴 코드가 `.git/` 에 쓸 수 있습니다.
+
+```
+.git/hooks/post-commit        커밋할 때 실행돼요
+.git/config  core.hooksPath   훅 폴더를 바꿔요
+             filter.X.process add·checkout 할 때 실행돼요
+             core.fsmonitor   status 할 때 실행돼요
+             core.sshCommand  fetch·push 할 때 실행돼요
+             include.path     다른 파일에서 위 전부를 끌어와요
+.gitattributes  * filter=X    어느 파일에 필터를 걸지 정해요
+```
+
+**AI 가 심고, 오케스트레이터가 실행해 주는** 구조였습니다.
+
+## 두 겹
+
+### 1차 — 명령줄 `-c` 가 저장소 설정을 이깁니다
+
+`app/git/ops.safe_config()`
+
+```
+-c core.hooksPath=<data>/agent/nohooks   ← 빈 폴더. AI 는 server/data 에 못 써요(M1b)
+-c core.fsmonitor=false     -c core.sshCommand=   -c core.gitProxy=
+-c core.editor=false        -c sequence.editor=false   -c core.askPass=
+-c credential.helper=       ← 빈 값은 helper 목록을 초기화해요 (git 문서)
+-c core.attributesFile=/dev/null        -c diff.external=
+-c gpg.program=false        -c protocol.allow=never   (②는 로컬 브랜치만)
+git --no-pager …            ← 페이저를 띄우지 않아요
+```
+
+환경은 **화이트리스트**입니다(`ENV_KEEP` = HOME·USER·LOGNAME·PATH·LANG·LC_ALL·TZ).
+그 위에 고정값을 덮습니다 — `GIT_CONFIG_NOSYSTEM=1`,
+`GIT_CONFIG_GLOBAL`·`GIT_CONFIG_SYSTEM=/dev/null`, `GIT_ATTR_NOSYSTEM=1`,
+`GIT_TERMINAL_PROMPT=0`, `GIT_ASKPASS`·`SSH_ASKPASS=`,
+`GIT_EDITOR`·`GIT_SEQUENCE_EDITOR=false`, `GIT_PAGER=cat`, `GIT_EXTERNAL_DIFF=`.
+`LAB_*` 는 **안 넘깁니다** — 우리 폴더 위치를 알려 줄 이유가 없습니다.
+
+> ⚠ **전역 설정을 끊으면 커밋 신원도 사라집니다** (`user.name` 이 거기 있어요).
+> 그래서 `ops.identity()` 가 **신원만** 따로 읽어 `-c user.name=`·
+> `-c user.email=` 로 넘깁니다(설정을 읽는 것은 아무것도 실행하지 않아요).
+> 못 찾으면 `lab.remote <labremote@localhost>` 로 커밋합니다 — 루프가 신원
+> 때문에 멈추면 안 됩니다. 커밋하는 하위명령(`commit`·`merge`·`revert`·
+> `cherry-pick`·`tag`·`am`)에만 붙입니다.
+
+### 2차 — `-c` 로 **못 덮는 것**은 git 을 아예 안 돌립니다
+
+`app/git/guard.py`. `ops.run()` 이 **매번** 부릅니다 — 캐시하지 않습니다.
+
+| 못 덮는 이유 | 무엇 |
+|---|---|
+| 와일드카드라 `-c` 로 지정할 수 없다 | `filter.*.{clean,smudge,process}` · `diff.*.{command,textconv,external}` · `merge.*.driver` · `url.*.insteadOf` · `http.*.proxy` · `credential.*.helper` · `alias.*` |
+| 파싱 시점에 끼어든다 | `include.path` · `includeIf.*.path` |
+| 설정이 아니다 | `.git/hooks/*` (실행 권한, `*.sample` 제외) · `.gitattributes` 의 `filter=`·`diff=`·`merge=` · `.gitmodules`·`.git/modules` |
+
+설정은 **git 으로 읽습니다** — `git config --list --local -z`. 손으로 파싱하면
+놓치는 게 생깁니다. 설정을 읽는 것은 훅·필터를 돌리지 않습니다.
+
+> 🔑 **실측: `--list --local` 은 `include.path` 가 끌어온 값을 보여 주지
+> 않습니다.** 그래서 끌어온 `filter.x.process` 는 목록에 안 보입니다 —
+> **`include.path` 자체를 거부하는 것이 유일한 수단**입니다. 이 전제를
+> 테스트로 고정했습니다(`--local` 이 나중에 include 를 따라가게 바뀌면 그
+> 시험이 알려 줍니다).
+
+거부하면 **git 을 한 번도 돌리지 않습니다** — 커밋도, `status` 도,
+`rev-parse` 도. 루프는 `blocked` + Discord 로 멈춥니다(`loop.guard_git`).
+**되돌리지 않습니다** — `.git` 의 정본이 무엇인지 알 수 없어서, 사람이 봅니다.
+
+## 실측 — 악성 설정을 심어 두고 진짜 git 으로 확인
+
+가짜 없이 실제 저장소를 만들어 심었습니다. 훅이 돌면 표식 파일이 생기므로,
+**파일이 없는 것이 통과**입니다.
+
+| 심은 것 | 1차(`-c`) | 2차(guard) |
+|---|---|---|
+| `.git/hooks/post-commit` | **안 돌았어요** (표식 없음) | 거부 |
+| `.git/hooks/pre-commit` | **안 돌았어요** | 거부 |
+| `.git/config` 의 `core.hooksPath` + 그 폴더의 훅 | **안 돌았어요** | 거부 |
+| `filter.evil.clean` + `* filter=evil` | — | **거부** (커밋·status·rev-parse 전부) |
+| `diff.evil.textconv` · `core.fsmonitor` · `core.sshCommand` · `url.*.insteadOf` · `alias.*` · `credential.helper` | — | 거부 |
+| `include.path` · `includeIf` | — | 거부 |
+| `.gitmodules` | — | 거부 |
+| 하위 폴더 `.gitattributes` · `.git/info/attributes` | — | 거부 |
+
+평범한 작업은 그대로 됩니다 — `status`·`log`·`commit`·브랜치 전환, 그리고
+**신원이 하나도 없는 저장소에서도 커밋이 됩니다.**
+
+## 아직 안 한 것
+
+- **학습 bwrap 의 `--ro-bind`** 는 T5 입니다 — `.git`·`.claude`·`.mcp.json`·
+  보호 파일을 통째로 읽기 전용으로 덮습니다. 지금은 학습 프로세스가 `.git` 에
+  쓸 수 있고, 그걸 **다음 git 호출에서 guard 가 잡습니다**(막는 게 아니라
+  멈추는 것).
+- 검사와 실행 사이의 **틈**: git 호출은 Claude 세션이 떠 있지 않을 때만
+  하지만 학습 프로세스는 돌 수 있습니다. 매 호출마다 다시 검사하므로 창이
+  좁지만 0 은 아닙니다.
