@@ -201,6 +201,7 @@ def issue(
     action_key: str,
     actions: list[str] | None = None,
     rel: str | None = None,
+    fingerprint_override: str = "",
     request_id: str = "",
     session_id: str = "",
     summary: str = "",
@@ -240,7 +241,10 @@ def issue(
 
     now = _now()
     ttl = int(ttl_sec) if int(ttl_sec) > 0 else DEFAULT_TTL_SEC
-    fp = fingerprint(tool, tool_input)
+    # 승인 경로에서는 **요청 파일에 적힌 지문**을 그대로 쓴다. 요청 파일에는
+    # 본문을 저장하지 않으므로(비밀이 섞일 수 있다) 여기서 다시 계산하면
+    # 훅이 계산할 지문과 달라져서 **허가가 영영 안 맞는다.**
+    fp = fingerprint_override.strip() or fingerprint(tool, tool_input)
     grant = {
         "version": 1,
         "grantId": _grant_id(now),
