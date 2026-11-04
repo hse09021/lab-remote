@@ -2,6 +2,18 @@
 
 $goal
 
+## 시작하기
+
+```bash
+labremote claude $project_name      # 이 프로젝트를 여는 유일한 방법이에요
+labremote doctor                    # 울타리가 제대로 서 있는지 점검
+```
+
+맨손 `claude` 로 열지 마세요. 프로젝트 `.claude/settings.json` 을 읽는데, 그
+파일은 AI 가 쓴 코드가 고칠 수 있어요 — 거기에 훅이나 `sandbox.enabled: false`
+가 끼면 권한 울타리가 사라져요. `labremote claude` 는 정본과 대조한 뒤
+울타리를 직접 넘겨서 띄워요.
+
 ## 실험 개요
 
 [AI 가 채워요 · prompts/readme_summary.md]

@@ -257,7 +257,9 @@ def build_argv(run: AgentRun) -> list[str]:
     mode = check_mode(run.permission_mode, headless=run.headless)
     if not run.settings_path:
         run.settings_path = policy_mod.launch_settings_path()
-    if not run.session_id:
+    if not run.session_id and not run.interactive:
+        # 헤드리스는 승인 뒤 `--resume` 으로 이어 가야 하므로 ID 를 미리 정한다.
+        # 대화형은 사람이 그 자리에 있으니 claude 가 정하게 둔다.
         raise LaunchRefused("세션 ID 가 없어요 — 승인 뒤 이어 가려면 미리 정해야 해요.")
 
     argv = [run.binary]
