@@ -2493,3 +2493,72 @@ Discord 로 멈추고 사람이 봅니다(`projectguard` 와 다른 선택이고
 - 앵커 대조는 **오케스트레이터의 git 작업 시점**에만 돕니다. 그 사이에 위조하고
   되돌려 놓으면 못 봅니다. 완전한 감사가 아니라 **되돌릴 수 없는 손실을 막는
   장치**입니다.
+
+## 🎒 git 기록 복구 — `git bundle` 백업 (T5b)
+
+T5 의 앵커는 위조를 **잡습니다.** 그런데 잡은 다음이 문제였습니다 — `.git` 이
+이미 오염됐고 `git reflog` 는 AI 도 지울 수 있어서, 사람이 알림을 받고
+들여다봐도 **되살릴 정본이 없었습니다.**
+
+**기록 커밋마다** `git bundle create --all` 로 저장소를 통째로 떠서
+`server/data/backups/<프로젝트>/` 에 남깁니다. 그 폴더는 샌드박스 안에서 쓰기가
+실패하므로(M1b) AI 가 쓴 코드가 **백업을 지울 수도 고칠 수도 없습니다.**
+새것 **10개**만 남깁니다(`bundle.KEEP`).
+
+`git bundle` 을 고른 이유: 파일 하나 · `git clone <파일>` 로 그대로 되살아남 ·
+git 말고 아무것도 필요 없음.
+
+```bash
+labremote git-backups <프로젝트>              # 목록 + 깊은 검증 + 복구 명령
+labremote git-backups <프로젝트> --make       # 지금 하나 뜨기
+```
+
+### 복구 절차 (사람이 직접 — 되돌릴 수 없어서 자동으로 안 합니다)
+
+```bash
+# 1. 어떤 백업이 있나. ✔ 는 깊은 검증(clone)까지 통과한 것이에요.
+labremote git-backups hook-sandbox
+
+# 2. 먼저 **다른 곳에** 되살려서 눈으로 확인해요
+git clone ~/Desktop/lab-remote/server/data/backups/hook-sandbox/<시각>.bundle \
+          /tmp/recovered
+cd /tmp/recovered && git log --oneline --all | head -30
+
+# 3. 맞으면 지금 저장소로 가져와요 (덮어쓰지 않고 `백업/` 이름으로)
+cd ~/projects/hook-sandbox
+git fetch ~/Desktop/lab-remote/server/data/backups/hook-sandbox/<시각>.bundle \
+          'refs/heads/*:refs/heads/백업/*'
+git log --oneline 백업/main | head
+
+# 4. 비교한 뒤 사람이 결정해요 — 어디까지가 진짜 기록인지는 사람만 알아요
+git diff 백업/main main
+#   되돌리기로 정했으면:
+git switch main && git reset --hard 백업/main
+
+# 5. 끝나면 루프를 다시 열어 줘요 (blocked 를 풀어요)
+labremote run-state hook-sandbox --idle
+```
+
+> `labremote` 가 **자동으로 되돌리지 않습니다.** `.git` 의 정본이 무엇인지
+> 코드는 알 수 없습니다 — AI 가 쓴 정상 커밋과 위조가 같은 자리에 섞여
+> 있을 수 있습니다. 비교는 코드가 돕고 **결정은 사람이** 합니다.
+
+### ⚠ 실측: `git bundle verify` 는 pack 을 깊게 보지 않습니다
+
+꼬리를 반 잘라 낸 백업도 **통과했습니다** — 머리와 전제(prerequisite)만
+봅니다. 그리고 저장소 안에서 돌려야 합니다(`need a repository to verify a
+bundle`). 그래서 `bundle.verify(deep=True)` 는 **임시 폴더로 `git clone` 해
+봅니다** — 통째로 읽으므로 끊긴 pack 을 잡습니다. 기록만 추적하는 저장소라
+깊게 봐도 쌉니다(지금 8.8KB). `labremote git-backups` 는 깊게 봅니다.
+
+> 곁다리: `safe_config()` 의 `protocol.allow=never` 가 bundle **복제**에
+> 필요한 `file` 전송까지 막았습니다. 깊은 검증 한 명령에만
+> `-c protocol.file.allow=always` 로 그 하나를 엽니다 — 대상은 우리가 쓴
+> 백업 파일이고, 그때는 저장소 설정을 읽지 않습니다.
+
+### 남는 틈
+
+- **백업을 뜨기 전에 위조하면** 그 위조가 백업에 담깁니다. 앵커와 같은 성질
+  입니다 — 창은 한 루프이고, 백업 10개를 뒤로 거슬러 볼 수 있습니다.
+- 백업은 **같은 기계 안**입니다. 디스크가 죽으면 같이 죽습니다. 원격 백업은
+  ③ 이후입니다(push 가 ② 범위 밖).

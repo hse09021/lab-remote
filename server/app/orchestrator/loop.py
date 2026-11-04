@@ -40,6 +40,7 @@ from ..store import jobs as J
 from ..store import loops as LP
 from . import approvals as approvals_mod
 from ..git import anchor as anchor_mod
+from ..git import bundle as bundle_mod
 from ..git import ops as ops_mod
 from . import gitflow, guards, projectguard
 
@@ -441,6 +442,11 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
         try:
             gitflow.record_and_return(ctx.root, exp_id, running=False)
             anchor_mod.record_all(conn, ctx.project, ctx.root, note=f"{exp_id} 기록")
+            # 앵커가 위조를 잡았을 때 **되살릴 정본**을 남긴다. `server/data`
+            # 아래라 AI 가 쓴 코드가 지울 수도 고칠 수도 없다(M1b).
+            saved = bundle_mod.create(ctx.root, ctx.project, note=f"{exp_id} 기록 커밋 뒤")
+            if not saved["ok"]:
+                E.add(conn, ctx.project, "기록", f"git 백업을 못 떴어요: {saved['reason'][:120]}", tone="attention")
         except ops_mod.GitRefused as exc:
             # `.git` 이 코드를 실행하게 만드는 설정을 가졌다. **커밋하지 않는다.**
             guard_git(ctx, conn, exc)
