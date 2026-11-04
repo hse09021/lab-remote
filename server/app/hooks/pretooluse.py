@@ -141,6 +141,7 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
     if bypass:
         A.append_row(
             log,
+            project=ctx.name,
             action="우회 시도",
             request=M.bypass_attempt(bypass["rel"], bypass["before"], bypass["now"]),
             result="차단",
@@ -156,6 +157,7 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
     if mode_now not in ("", "default", "plan", "acceptEdits"):
         A.append_row(
             log,
+            project=ctx.name,
             action="권한 우회 모드",
             request=f"permission_mode={mode_now} · 훅 판정은 {decision.kind}",
             result="기록",
@@ -171,6 +173,7 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
         # 사람이 승인한 허가로 통과했다. 정책이 열어 준 것과 구분해 적는다.
         A.append_row(
             log,
+            project=ctx.name,
             action=label,
             request=request,
             result="허용 · 1회용 승인",
@@ -186,6 +189,7 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
     elif decision.kind == "allow":
         A.append_row(
             log,
+            project=ctx.name,
             action=label,
             request=request,
             result="허용",
@@ -196,6 +200,7 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
         locked = decision.action in decide_mod.LOCK_ACTIONS
         A.append_row(
             log,
+            project=ctx.name,
             action=label,
             request=request,
             result="차단",
@@ -220,6 +225,7 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
         )
         A.append_row(
             log,
+            project=ctx.name,
             action=label,
             request=request,
             result="대기 중",

@@ -48,6 +48,7 @@ def handle(event: dict) -> dict | None:
 
     A.append_row(
         A.log_path(root, pol),
+        project=name,
         action=str(pending.get("action") or event.get("tool_name") or ""),
         request=str(pending.get("request") or ""),
         result="허용",

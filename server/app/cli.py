@@ -350,6 +350,7 @@ def cmd_requests(args) -> int:
             gone.append(request_id)
             approval_log.append_row(
                 approval_log.log_path(root, pol),
+                project=args.project,
                 action="승인 요청 정리",
                 request=request_id,
                 result="정리됨",
@@ -550,6 +551,63 @@ def cmd_tools(args) -> int:
     return 0 if got["ok"] else 1
 
 
+def cmd_audit(args) -> int:
+    """📒 승인 기록의 **진본**과 사본을 대조한다.
+
+    프로젝트의 `logs/Approval_log.csv` 는 AI 가 쓴 코드가 고칠 수 있다(M4).
+    진본은 `server/data/audit/<프로젝트>.jsonl` 이고 AI 는 거기에 못 쓴다(M1b).
+    """
+    from . import approval_log, audit
+
+    root = registry.root_of(args.name)
+    if not root:
+        print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.name}", file=sys.stderr)
+        return 2
+    try:
+        pol = policy.load(args.name)
+    except Exception:
+        pol = None
+    csv_path = approval_log.log_path(root, pol)
+    report = audit.compare(args.name, csv_path)
+
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["ok"] else 1
+
+    print(f"진본  {audit.audit_path(args.name)}  {report['truth']}줄")
+    print(f"사본  {csv_path}  {report['copy']}줄")
+    if report["ok"]:
+        print("✔ 같아요")
+        return 0
+
+    print()
+    print(audit.describe(report))
+
+    if args.seed:
+        print()
+        got = audit.seed(args.name, csv_path)
+        if not got["ok"]:
+            print(f"✘ {got['reason']}", file=sys.stderr)
+            return 2
+        print(f"✔ 지금 사본을 진본의 출발점으로 삼았어요 ({got['rows']}줄)")
+        print("  이제부터 훅이 진본에 직접 남겨요. 사본이 바뀌면 잡혀요.")
+        return 0
+
+    if args.rebuild:
+        print()
+        got = audit.rebuild(args.name, csv_path)
+        if not got["ok"]:
+            print(f"✘ 다시 만들지 못했어요: {got['reason']}", file=sys.stderr)
+            return 2
+        print(f"✔ 진본으로 사본을 다시 만들었어요 ({got['rows']}줄)")
+        print("  루프를 다시 열려면: labremote run-state " + args.name + " --idle")
+        return 0
+
+    print()
+    print(f"다시 만들려면:  labremote audit {args.name} --rebuild")
+    return 1
+
+
 def cmd_git_backups(args) -> int:
     """`git bundle` 백업 목록. 복구는 사람이 손으로 한다 (되돌릴 수 없어서)."""
     from .git import bundle as bundle_mod
@@ -702,6 +760,20 @@ def build_parser() -> argparse.ArgumentParser:
     # 먹거나 `--bare` 를 모르는 인자로 거부한다.
     p.set_defaults(extra=[])
     p.set_defaults(func=cmd_claude)
+
+    p = sub.add_parser(
+        "audit", help="승인 기록 진본과 사본 대조 (사본이 바뀌면 루프가 멈춰요)"
+    )
+    p.add_argument("name")
+    p.add_argument(
+        "--rebuild", action="store_true", help="진본으로 사본을 다시 만들어요"
+    )
+    p.add_argument(
+        "--seed",
+        action="store_true",
+        help="진본이 없을 때 **한 번만** · 지금 사본을 출발점으로 삼아요",
+    )
+    p.set_defaults(func=cmd_audit)
 
     p = sub.add_parser(
         "tools", help="Claude Code 판과 도구 목록 대조·기록 (판이 바뀌면 루프가 멈춰요)"
