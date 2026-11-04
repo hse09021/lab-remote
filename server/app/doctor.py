@@ -299,6 +299,36 @@ SHELL_FILES = ("~/.bashrc", "~/.zshrc", "~/.bash_aliases", "~/.profile")
 SHELL_MARK = "labremote claude"
 
 
+def claude_version_check() -> Check:
+    """Claude Code 판이 **도구 목록을 실측한 판**과 같은가. — ⚠ 다.
+
+    2.1.317 → 2.1.318 이 저절로 바뀌면서 서브에이전트 도구 이름이
+    `Task` → `Agent` 가 됐고, `--disallowedTools Task` 가 무효가 되어
+    서브에이전트가 열린 채로 돌았다. **조용한 실패**였다.
+
+    `doctor` 는 ⚠ 지만 **헤드리스 루프는 멈춥니다**(`guards.check_loop`) —
+    루프는 사람이 안 보는 동안 도므로 조용한 틈이 가장 나쁘다. 대화형은
+    막지 않는다 (사람이 보고 있고, 막으면 재는 것도 못 한다).
+    """
+    from .agent import version as version_mod
+
+    got = version_mod.check()
+    if got["ok"]:
+        return Check(
+            True,
+            "Claude Code 판",
+            f"{got['current']} · 도구 목록 실측 {got['at']}",
+        )
+    return warn(
+        "Claude Code 판",
+        got["reason"][:200],
+        hint=(
+            "labremote tools --probe 로 세션에 도구 목록을 물어 다시 재고 "
+            "기록해 주세요. 그때까지 헤드리스 루프는 멈춰 있어요."
+        ),
+    )
+
+
 def shell_guard_check() -> Check:
     """맨손 `claude` 를 멈춰 세우는 셸 함수가 있나. — ⚠ 다.
 
@@ -546,6 +576,8 @@ def run() -> dict:
 
     # 사용자 설정에 sandbox 가 있으면 이 PC 의 모든 세션이 갇힌다
     checks.append(user_sandbox_check())
+    # Claude Code 판이 바뀌면 도구 이름이 바뀔 수 있다 (⚠ · 루프는 멈춘다)
+    checks.append(claude_version_check())
     # 맨손 `claude` 를 멈춰 세우는 셸 함수 (권고 — ⚠)
     checks.append(shell_guard_check())
 

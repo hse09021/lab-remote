@@ -47,6 +47,24 @@ def isolated_cache(tmp_path, monkeypatch):
     return folder
 
 
+@pytest.fixture(autouse=True)
+def pinned_claude_version(isolated_data, monkeypatch):
+    """Claude Code 판을 고정하고 **기록해 둔다.**
+
+    `guards.check_loop` 이 "마지막으로 도구 목록을 실측한 판" 과 지금 판을
+    대조해서 다르면 루프를 멈춘다(2.1.317 → 2.1.318 에서 서브에이전트 도구
+    이름이 바뀌어 방어에 틈이 생겼다). 시험에서는 그 둘을 같게 둔다 —
+    판이 바뀐 경우는 전용 시험이 따로 본다.
+
+    `claude --version` 을 실제로 돌리지 않는다 (느리고, 없을 수도 있다).
+    """
+    from app.agent import version as version_mod
+
+    monkeypatch.setattr(version_mod, "current", lambda binary="claude": "9.9.9-시험")
+    version_mod.record("9.9.9-시험", tools=None, note="시험 픽스처")
+    return "9.9.9-시험"
+
+
 @pytest.fixture()
 def conn(isolated_data):
     """이행까지 끝난 `lab.db` 연결. 테스트마다 빈 DB 다."""

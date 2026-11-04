@@ -45,7 +45,10 @@ __all__ = [
     "FORBIDDEN_FLAGS",
     "FORBIDDEN_MODES",
     "ALLOWED_MODES",
+    "ALLOWED_TOOLS",
+    "DISALLOWED_TOOLS",
     "ENV_STRIP",
+    "FORCED_ENV",
     "HEADLESS_ENV",
     "LaunchRefused",
     "AgentRun",
@@ -77,9 +80,15 @@ FORBIDDEN_FLAGS = frozenset(
         "--mcp-config",
         # 작업 디렉터리를 넓히면 "폴더 밖 쓰기" 의 기준이 넓어진다.
         "--add-dir",
-        # 도구 화이트리스트는 경로·명령 기반 판정과 축이 달라 진실이 둘이 된다.
-        "--tools",
+        # `--allowedTools` 는 **자동 승인** 목록이다(help: "list of tool names
+        # to allow", `Bash(git *)` 같은 패턴까지 받는다). 훅의 경로·명령 판정과
+        # 축이 달라 진실이 둘이 된다 — 절대 쓰지 않는다.
         "--allowedTools",
+        # `--tools` 와 `--disallowedTools` 는 **우리가 직접 넣는다**(아래
+        # `ALLOWED_TOOLS`·`DISALLOWED_TOOLS`). 넘겨받은 값으로 넓히지 못하게
+        # 금지 목록에 둔다 — `check_flags` 는 `extra_flags` 만 본다.
+        "--tools",
+        "--disallowedTools",
         # 플러그인·서브에이전트·시스템 프롬프트로 지침을 갈아끼우는 길
         "--plugin-dir",
         "--agents",
@@ -110,6 +119,24 @@ ENV_STRIP = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL")
 #: 훅이 "헤드리스" 를 아는 유일한 길. stdin 으로는 구분할 수 없다.
 HEADLESS_ENV = "LABREMOTE_HEADLESS"
 
+#: 무조건 넣는 환경. **자동 업데이트를 끈다.**
+#:
+#: 2.1.317 → 2.1.318 이 저절로 바뀌면서 서브에이전트 도구 이름이
+#: `Task` → `Agent` 가 됐고, `--disallowedTools Task` 가 무효가 되어
+#: 서브에이전트가 열린 채로 돌았다. 조용한 실패였다.
+#:
+#: 번들의 판정 코드(실측): `DISABLE_UPDATES` → `DISABLE_AUTOUPDATER` →
+#: 설정 `autoUpdates:false`. 이 설치는 `native` 라 **설정은 무시될 수 있어서**
+#: 환경 변수가 유일하게 믿을 만한 길이다.
+#:
+#: ⚠ **우리가 띄우는 프로세스만** 막는다. 사람이 자기 터미널에서 `claude` 를
+#: 쓰면 그쪽이 바이너리를 갈아 버린다 — 그래서 `agent/version.py` 가 판을
+#: 기록하고 대조한다.
+FORCED_ENV = {
+    "DISABLE_AUTOUPDATER": "1",
+    "DISABLE_UPDATES": "1",
+}
+
 #: 물려주는 환경. 나머지는 지운다.
 ENV_KEEP = (
     "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "TZ", "TERM", "PATH",
@@ -125,8 +152,35 @@ ENV_KEEP_INTERACTIVE = ENV_KEEP + (
     "SSH_CONNECTION", "SSH_TTY", "NO_COLOR", "FORCE_COLOR",
 )
 
-#: 끄는 도구. **헤드리스와 대화형에 똑같이** 적용한다 (`labremote claude` 도
-#: 같은 경계를 쓴다).
+#: 🔑 **쓸 수 있는 도구를 열거한다** (`--tools`). 실측 2026-11-05.
+#:
+#: `--tools` 는 "Specify the list of available tools from the built-in set" 다 —
+#: **능력 자체를 제한**한다. 실측에서 이 목록만 남고 나머지는 **세션에
+#: 보이지도 않았다.** `--allowedTools` 와 혼동하면 안 된다 — 그쪽은 자동 승인
+#: 목록이라 오히려 게이트를 열어 버린다.
+#:
+#: **왜 끄는 목록이 아니라 허용 목록인가**: 끄는 목록은 새 판에서 도구가
+#: 늘면 **조용히 빠져나간다.** 헤드리스는 훅이 `unclassified → deny` 로
+#: 막지만, **대화형은 `defer`(사람에게 물음)라 사람이 승인창에서 무심코
+#: 허용할 수 있다.** 허용 목록은 모르는 도구를 **애초에 안 보여 준다.**
+#: 필요한 도구가 이름이 바뀌면 루프가 **크게 깨져서** 알게 된다 — 조용히
+#: 열리는 것보다 낫다 (`Task` → `Agent` 가 그 반대 경우였다).
+ALLOWED_TOOLS = (
+    "Bash",            # 훅이 `bashparse` 로 판정한다
+    "Read",            # 비밀 파일·프로젝트 밖 읽기를 훅이 본다
+    "Write",
+    "Edit",
+    "NotebookEdit",    # 2.1.318 에 있는 편집 도구 (`MultiEdit` 는 없다)
+    "WebFetch",        # `net` 으로 판정
+    "WebSearch",
+    "ToolSearch",      # 지연 로드 도구(WebFetch·WebSearch·NotebookEdit)를 불러온다
+    "Skill",           # `.claude/**` 는 selfProtect 라 AI 가 심을 수 없다
+    "ReportFindings",  # 화면에 결과만 쓴다
+)
+
+#: 끄는 도구. `ALLOWED_TOOLS` 가 이미 안 보여 주지만 **한 겹 더** 둔다 —
+#: `--tools` 의 뜻이 판마다 바뀔 수 있다. **헤드리스와 대화형에 똑같이**
+#: 적용한다 (`labremote claude` 도 같은 경계를 쓴다).
 #:
 #: ⚠ **전에는 `("Task",)` 였고, 그건 아무것도 끄지 않았다.** 2.1.318 의
 #: 서브에이전트 도구 이름은 **`Agent`** 다 — 실측으로 확인했다(세션에 도구
@@ -138,11 +192,7 @@ ENV_KEEP_INTERACTIVE = ENV_KEEP + (
 #: | `Agent`·`Workflow`·`ListAgents`·`SendMessage`·`TaskStop` | 서브에이전트. ①에서 가장 성가셨고 루프에 필요 없다. 여러 에이전트를 띄우면 사용량도 터진다 |
 #: | `Artifact`·`ArtifactComments`·`ArtifactData`·`DesignSync` | **claude.ai 로 내보낸다.** 훅의 파일 게이트와 샌드박스의 네트워크 허용 목록을 **둘 다 지나간다** — 연구 데이터가 나가는 길 |
 #: | `SendFeedback`·`PushNotification` | 바깥으로 보낸다. 알림은 우리가 Discord 로 한다 |
-#: | `CronCreate`·`CronDelete`·`CronList`·`RemoteTrigger`·`ScheduleWakeup`·`Monitor` | **훅 밖에서 나중에 실행된다.** `at`·`crontab` 을 `denyCommands` 로 막은 것과 같은 이유다 |
-#:
-#: 남겨 두는 것: `Bash`·`Read`·`Write`·`Edit`·`NotebookEdit`(훅이 판정한다) ·
-#: `WebFetch`·`WebSearch`(`net` 으로 판정) · `ToolSearch`·`Skill`·
-#: `ReportFindings`(읽기 전용).
+#: | `CronCreate`·`CronDelete`·`CronList`·`RemoteTrigger`·`ScheduleWakeup`·`Monitor` | **이 PC 밖이나 훅 밖에서 나중에 실행된다.** `at`·`crontab` 을 `denyCommands` 로 막은 것과 같은 이유다 |
 DISALLOWED_TOOLS = (
     # 서브에이전트
     "Agent",
@@ -157,7 +207,7 @@ DISALLOWED_TOOLS = (
     "DesignSync",
     "SendFeedback",
     "PushNotification",
-    # 훅 밖에서 나중에 실행되는 것
+    # 이 PC 밖이나 나중에 실행되는 것
     "CronCreate",
     "CronDelete",
     "CronList",
@@ -194,6 +244,11 @@ class AgentRun:
     output_format: str = "json"
     #: `--settings` 로 넘길 파일. 비어 있으면 `policy.launch_settings_path()`.
     settings_path: str = ""
+    #: 📌 **도구 목록을 재는 세션**(`labremote tools --probe`)에만 참이다.
+    #: `--tools`·`--disallowedTools` 를 **붙이지 않는다** — 제약을 켠 채로
+    #: 물으면 우리가 허용한 것만 보여서 **새 도구를 영영 못 찾는다**.
+    #: 다른 안전장치(훅·샌드박스·`--permission-prompts none`)는 그대로다.
+    probe: bool = False
     #: 사람이 쓰는 대화형 세션(`labremote claude`). 헤드리스 전용 플래그를
     #: 빼고 프롬프트도 붙이지 않는다. 경계 플래그 셋은 **그대로** 붙는다.
     interactive: bool = False
@@ -319,10 +374,12 @@ def build_argv(run: AgentRun) -> list[str]:
     argv.append("--strict-mcp-config")
 
     argv += ["--permission-mode", mode]
-    # 끄는 도구는 **대화형에도 똑같이** 적용한다 — `labremote claude` 가 있는
-    # 이유가 "같은 경계로 열기" 다.
-    for tool in DISALLOWED_TOOLS:
-        argv += ["--disallowedTools", tool]
+    # 🔑 도구 허용 목록 + 끄는 목록. **대화형에도 똑같이** 적용한다 —
+    # `labremote claude` 가 있는 이유가 "같은 경계로 열기" 다.
+    # 쉼표로 묶어 한 번에 넘긴다 (help: "Comma or space-separated", 실측 확인).
+    if not run.probe:
+        argv += ["--tools", ",".join(ALLOWED_TOOLS)]
+        argv += ["--disallowedTools", ",".join(DISALLOWED_TOOLS)]
     if run.headless and not run.interactive:
         # 훅이 못 보는 MCP 승인창까지 닫는 안전망
         argv += ["--permission-prompts", "none"]
@@ -351,6 +408,7 @@ def build_env(run: AgentRun, *, base: dict | None = None) -> dict[str, str]:
         out[HEADLESS_ENV] = "1"
     for name in ENV_STRIP:
         out.pop(name, None)
+    out.update(FORCED_ENV)
     return out
 
 

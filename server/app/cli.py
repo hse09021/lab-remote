@@ -471,6 +471,76 @@ def cmd_installs(args) -> int:
         return 0
 
 
+def cmd_tools(args) -> int:
+    """📌 Claude Code 판과 도구 목록을 대조·기록한다.
+
+    판이 바뀌면 도구 이름이 바뀔 수 있고, 그러면 방어에 **조용한 틈**이
+    생긴다 — `Task` → `Agent` 가 그랬다. 그래서 헤드리스 루프는 판이
+    기록과 다르면 멈추고, 이 명령으로 다시 재서 풀어 준다.
+    """
+    from .agent import launch as launch_mod
+    from .agent import version as version_mod
+    from .hooks import classify
+
+    got = version_mod.check()
+    print(f"지금 판        {got['current'] or '[못 읽었어요]'}")
+    print(f"실측한 판      {got['recorded'] or '(없어요)'}" + (f" · {got['at']}" if got["at"] else ""))
+    if got["ok"]:
+        print("✔ 같아요 — 헤드리스 루프가 돌 수 있어요")
+    else:
+        print(f"⚠ {got['reason']}")
+
+    if args.probe:
+        if not args.name:
+            print("✘ 어느 프로젝트에서 물어볼지 알려 주세요", file=sys.stderr)
+            return 2
+        print()
+        print(f"세션에 도구 목록을 물어보는 중이에요 ({args.name})…")
+        probed = version_mod.probe_tools(args.name)
+        if not probed["ok"]:
+            print(f"✘ {probed['reason']}", file=sys.stderr)
+            return 2
+        tools = probed["tools"]
+        print(f"받은 도구 {len(tools)}개: {', '.join(tools)}")
+        diff = version_mod.compare(tools)
+        print()
+        alarms = ("new", "missingAllowed")
+        for key, title in (
+            ("new", "🔴 새로 생긴 도구 — classify.TOOLS_2_1_318 에 적고 분류해 주세요"),
+            ("missingAllowed", "🔴 쓰겠다고 한 도구가 없어요 — 루프가 깨져요"),
+            ("absent", "· 이 세션에 안 보인 도구 (경보 아니에요 — 계정·환경에 따라 달라요)"),
+        ):
+            if diff[key]:
+                print(f"{title}: {', '.join(diff[key])}")
+        if not any(diff[k] for k in alarms):
+            print("✔ 새 도구 없음 · 쓰는 도구 전부 있음")
+        version_mod.record(got["current"], tools=tools, note=f"probe · {args.name}")
+        print()
+        print(f"✔ 기록했어요: {version_mod.record_path()}")
+        return 0
+
+    if args.accept:
+        if not got["current"]:
+            print("✘ 지금 판을 못 읽어서 기록할 수 없어요", file=sys.stderr)
+            return 2
+        saved = version_mod.recorded()
+        version_mod.record(
+            got["current"], tools=saved.get("tools"), note=args.note or "사람이 확인했어요"
+        )
+        print(f"✔ 판만 기록했어요: {got['current']} (도구 목록은 그대로 둬요)")
+        return 0
+
+    print()
+    print(f"쓰는 도구 ({len(launch_mod.ALLOWED_TOOLS)}개): {', '.join(launch_mod.ALLOWED_TOOLS)}")
+    print(f"끄는 도구 ({len(launch_mod.DISALLOWED_TOOLS)}개): {', '.join(launch_mod.DISALLOWED_TOOLS)}")
+    print(f"이 판에 없는 이름: {', '.join(sorted(classify.PHANTOM_TOOLS))}")
+    if not got["ok"]:
+        print()
+        print("다시 재려면:  labremote tools --probe <프로젝트>")
+        print("목록이 같다고 보고 판만 기록하려면:  labremote tools --accept")
+    return 0 if got["ok"] else 1
+
+
 def cmd_git_backups(args) -> int:
     """`git bundle` 백업 목록. 복구는 사람이 손으로 한다 (되돌릴 수 없어서)."""
     from .git import bundle as bundle_mod
@@ -623,6 +693,21 @@ def build_parser() -> argparse.ArgumentParser:
     # 먹거나 `--bare` 를 모르는 인자로 거부한다.
     p.set_defaults(extra=[])
     p.set_defaults(func=cmd_claude)
+
+    p = sub.add_parser(
+        "tools", help="Claude Code 판과 도구 목록 대조·기록 (판이 바뀌면 루프가 멈춰요)"
+    )
+    p.add_argument("name", nargs="?", help="--probe 와 함께 · 물어볼 프로젝트")
+    p.add_argument(
+        "--probe", action="store_true",
+        help="세션에 도구 목록을 물어 다시 재고 기록해요 (토큰을 써요)",
+    )
+    p.add_argument(
+        "--accept", action="store_true",
+        help="도구 목록이 같다고 보고 **판만** 기록해요 (사람이 확인한 뒤)",
+    )
+    p.add_argument("--note", help="--accept 와 함께 · 메모")
+    p.set_defaults(func=cmd_tools)
 
     p = sub.add_parser("installs", help="패키지 설치 승인 (오케스트레이터가 설치해요)")
     p.add_argument("action", choices=["list", "approve", "deny"])

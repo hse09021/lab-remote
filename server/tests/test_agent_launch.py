@@ -92,8 +92,21 @@ def test_인자_모양(run):
     assert "--output-format" in argv and "json" in argv
 
 
+def _flag_set(argv, flag):
+    """쉼표로 묶어 한 번에 넘긴다 (help: "Comma or space-separated")."""
+    out = set()
+    for i, x in enumerate(argv):
+        if x == flag and i + 1 < len(argv):
+            out |= {n for n in argv[i + 1].split(",") if n}
+    return out
+
+
 def _disallowed(argv):
-    return {argv[i + 1] for i, x in enumerate(argv) if x == "--disallowedTools"}
+    return _flag_set(argv, "--disallowedTools")
+
+
+def _tools(argv):
+    return _flag_set(argv, "--tools")
 
 
 def test_서브에이전트_도구_이름이_Agent_다(run):
@@ -138,12 +151,53 @@ def test_헤드리스_전용_플래그(run):
     assert argv[argv.index("--permission-prompts") + 1] == "none"
 
 
-def test_대화형도_같은_도구를_끈다(run):
+def test_도구_허용_목록이_붙는다(run):
+    """🔑 `--tools` 는 **능력 자체를 제한**한다 (실측: 이 목록만 세션에 보인다).
+
+    끄는 목록만으로는 새 판에서 늘어난 도구가 조용히 빠져나간다 — 헤드리스는
+    훅이 막지만 **대화형은 `defer` 라 사람이 승인창에서 허용할 수 있다.**
+    """
+    got = _tools(L.build_argv(run))
+    assert got == set(L.ALLOWED_TOOLS)
+    assert "Bash" in got and "Read" in got and "ToolSearch" in got
+    # 끄는 목록과 겹치지 않는다
+    assert not (got & set(L.DISALLOWED_TOOLS))
+
+
+def test_allowedTools_는_여전히_금지다():
+    """`--allowedTools` 는 **자동 승인** 목록이다 — 게이트를 열어 버린다.
+    능력을 제한하는 것은 `--tools` 다. 혼동하면 안 된다."""
+    assert "--allowedTools" in L.FORBIDDEN_FLAGS
+    # 우리가 직접 넣는 둘은 넘겨받지 않는다
+    assert "--tools" in L.FORBIDDEN_FLAGS
+    assert "--disallowedTools" in L.FORBIDDEN_FLAGS
+    with pytest.raises(L.LaunchRefused):
+        L.check_flags(["--tools", "Bash,Agent"])
+    with pytest.raises(L.LaunchRefused):
+        L.check_flags(["--allowedTools", "Bash"])
+
+
+def test_자동_업데이트를_끈다(run):
+    """2.1.317 → 2.1.318 이 저절로 바뀌면서 도구 이름이 달라졌다.
+
+    번들의 판정 코드: `DISABLE_UPDATES` → `DISABLE_AUTOUPDATER` → 설정.
+    이 설치는 native 라 설정은 무시될 수 있어서 환경 변수여야 한다.
+    """
+    env = L.build_env(run, base={"HOME": "/h", "PATH": "/b"})
+    assert env["DISABLE_AUTOUPDATER"] == "1"
+    assert env["DISABLE_UPDATES"] == "1"
+    # 넘겨받은 값이 이기지 못한다
+    env = L.build_env(run, base={"HOME": "/h", "DISABLE_AUTOUPDATER": "0"})
+    assert env["DISABLE_AUTOUPDATER"] == "1"
+
+
+def test_대화형도_같은_도구_경계를_쓴다(run):
     """`labremote claude` 가 있는 이유가 "같은 경계로 열기" 다."""
     run.headless = False
     run.interactive = True
     argv = L.build_argv(run)
     assert _disallowed(argv) == set(L.DISALLOWED_TOOLS)
+    assert _tools(argv) == set(L.ALLOWED_TOOLS)
     # 헤드리스 전용은 안 붙는다
     assert "--permission-prompts" not in argv
     assert "--output-format" not in argv

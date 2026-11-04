@@ -121,7 +121,35 @@ claude() {
 
 ---
 
-## 4. 웹훅 (Discord 알림)
+## 4. Claude Code 자동 업데이트 끄기 (권합니다)
+
+2.1.317 → 2.1.318 이 **저절로** 바뀌었고, 그 판에서 서브에이전트 도구 이름이
+`Task` → `Agent` 로 달라져 **"서브에이전트는 꺼 뒀다" 는 설정이 무효가
+됐습니다.** 조용한 실패였습니다.
+
+오케스트레이터가 띄우는 `claude` 는 **이미 끕니다**(`DISABLE_AUTOUPDATER=1`).
+하지만 사람이 자기 터미널에서 `claude` 를 쓰면 그쪽이 바이너리를 갈아
+버립니다. 같이 끄려면 `~/.bashrc` 에:
+
+```bash
+export DISABLE_AUTOUPDATER=1
+```
+
+> 설정 파일(`~/.claude.json`)의 `autoUpdates: false` 는 **native 설치에서
+> 무시될 수 있습니다**(번들의 판정 코드를 읽어 확인했습니다). 환경 변수가
+> 유일하게 믿을 만한 길입니다.
+
+올릴 때는 **일부러** 올리고, 올린 뒤 도구 목록을 다시 재세요.
+
+```bash
+claude update                        # 사람이 직접
+labremote tools --probe hook-sandbox # 도구 목록 다시 재고 기록
+```
+
+재기 전까지 **헤드리스 루프는 멈춥니다**(`labremote doctor` 가 ⚠ 로 알려
+줍니다). 대화형(`labremote claude`)은 막지 않습니다.
+
+## 5. 웹훅 (Discord 알림)
 
 ```bash
 mkdir -p ~/.config/labremote
@@ -137,7 +165,7 @@ chmod 600 ~/.config/labremote/config.toml
 
 ---
 
-## 5. [미작성 — 7·8단계에서 채웁니다]
+## 6. [미작성 — 7·8단계에서 채웁니다]
 
 - `loginctl enable-linger` 와 systemd 사용자 서비스 (8단계)
 - GPU 드라이버 불일치 해결 (재부팅) 과 nvidia 자동 업데이트 제외

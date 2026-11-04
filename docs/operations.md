@@ -2980,3 +2980,122 @@ NotebookEdit                              → code (정책 판정)
 - `DISALLOWED_TOOLS` 의 **모든 이름이 실제로 있는 도구**다 (없는 이름을 끄면
   "껐다" 는 기록이 거짓이 됩니다 — `Task` 가 그랬습니다)
 - `PHANTOM_TOOLS` 와 `TOOLS_2_1_318` 이 겹치지 않는다
+
+---
+
+# 🧰 S5c — 도구를 **허용 목록**으로, 판을 기록 (2026-11-05)
+
+## 1. 끄는 목록 → **허용 목록**(`--tools`)
+
+### 플래그 셋의 뜻이 다릅니다 (help 원문 + 실측)
+
+| 플래그 | 뜻 | 우리 쓰임 |
+|---|---|---|
+| `--tools <목록>` | *"Specify the list of available tools from the built-in set"* — **능력 자체를 제한** | **씁니다.** 이 목록만 세션에 보입니다 |
+| `--disallowedTools <목록>` | *"tool names to deny"* (`Bash(git *)` 같은 패턴까지) | 한 겹 더로 씁니다 |
+| `--allowedTools <목록>` | *"tool names to allow"* = **자동 승인** | **절대 안 씁니다** — 게이트를 엽니다 |
+
+`--allowedTools` 를 "허용 목록" 으로 읽으면 정반대가 됩니다. 금지 목록에
+그대로 둡니다.
+
+**실측**: `--tools "Bash,Read,Write,Edit,NotebookEdit,WebFetch,WebSearch,ToolSearch,Skill,ReportFindings"`
+→ 세션에 **정확히 그 10개만** 보였습니다. `Agent`·`Artifact`·`Cron*`·
+`Monitor`·`Workflow`·`SendMessage`… 전부 사라졌습니다. 쉼표로 묶어 한 번에
+넘기는 꼴도 동작합니다.
+
+### 왜 끄는 목록만으로는 부족한가
+
+끄는 목록은 **새 판에서 늘어난 도구를 조용히 통과시킵니다.** 헤드리스는 훅이
+`unclassified → deny` 로 막지만, **대화형은 `defer`(사람에게 물음)라 사람이
+승인창에서 무심코 허용할 수 있습니다.** 허용 목록은 모르는 도구를 **애초에
+안 보여 줍니다.**
+
+실패 방향도 맞습니다 — 필요한 도구가 이름이 바뀌면 루프가 **크게 깨져서**
+알게 됩니다. `Task` → `Agent` 는 그 반대(조용히 열림)였습니다.
+
+### 쓰는 도구 10개
+
+`Bash` `Read` `Write` `Edit` `NotebookEdit` `WebFetch` `WebSearch`
+`ToolSearch` `Skill` `ReportFindings`
+
+- `ToolSearch` 는 **필요합니다** — `WebFetch`·`WebSearch`·`NotebookEdit` 이
+  지연 로드라 이걸로 불러옵니다.
+- `Skill` 은 `.claude/**` 가 `selfProtect` + `projectguard` 라 AI 가 심을 수
+  없습니다.
+- 끄는 목록 17개는 그대로 둡니다(위 S5b). 허용 목록이 이미 안 보여 주지만
+  `--tools` 의 뜻이 판마다 바뀔 수 있어 **한 겹 더**입니다.
+
+`--tools`·`--disallowedTools` 는 **금지 플래그에도 넣었습니다** — 우리가
+직접 넣는 값이고, 넘겨받은 값으로 넓히지 못하게 합니다(`check_flags` 는
+`extra_flags` 만 봅니다).
+
+## 2. 자동 업데이트를 끕니다
+
+번들의 판정 코드(실측):
+
+```js
+if (DISABLE_UPDATES) …
+if (DISABLE_AUTOUPDATER) …
+if (config.autoUpdates === false && (installMethod !== "native" || !autoUpdatesProtectedForNative)) …
+```
+
+이 설치는 **`native`** 라 설정의 `autoUpdates:false` 가 **무시될 수
+있습니다.** 그래서 환경 변수가 유일하게 믿을 만한 길입니다 —
+`launch.FORCED_ENV` 가 `DISABLE_AUTOUPDATER=1` · `DISABLE_UPDATES=1` 을
+**무조건** 넣습니다(넘겨받은 값이 못 이깁니다).
+
+> ⚠ 이건 **우리가 띄우는 프로세스만** 막습니다. 사람이 자기 터미널에서
+> `claude` 를 쓰면 그쪽이 바이너리를 갈아 버립니다. 그래서 3번이 필요합니다.
+> 완전히 고정하려면 사람이 `~/.bashrc` 에 `export DISABLE_AUTOUPDATER=1` 을
+> 넣으면 됩니다 (`docs/SETUP.md` 에 적었습니다).
+
+## 3. 판을 기록하고 대조합니다
+
+`server/data/agent/claude_version.json` — 샌드박스 안에서 쓰기가
+실패합니다(M1b).
+
+```json
+{ "version": "2.1.318", "at": "2026-11-04T21:43:56+09:00",
+  "tools": [ … 23개 … ], "note": "probe · hook-sandbox" }
+```
+
+| 어디 | 판이 다르면 |
+|---|---|
+| `doctor` | **⚠** + *"labremote tools --probe 로 다시 재세요"* (종료코드 0) |
+| `guards.check_loop` | **루프를 시작하지 않습니다** (`stop=False` — 재면 풀립니다) |
+| `labremote claude`(대화형) | **막지 않습니다** — 사람이 보고 있고, 막으면 재는 것도 못 합니다 |
+
+### 왜 헤드리스를 멈추나 (제안대로가 아니라 기본값으로)
+
+판이 바뀔 때 생기는 틈은 **조용합니다** — `Task` 가 그랬습니다. 루프는 사람이
+안 보는 동안 몇 시간씩 돕니다. 그 사이 "서브에이전트는 꺼 뒀다" 는 기록이
+거짓이 되는 게 가장 나쁩니다. 멈추는 비용은 **명령 하나**입니다.
+
+```bash
+labremote tools                      # 지금 판 · 기록 · 쓰는/끄는 목록
+labremote tools --probe hook-sandbox # 세션에 물어 다시 재고 기록 (토큰 씀)
+labremote tools --accept             # 목록이 같다고 보고 판만 기록
+```
+
+### 🔑 탐침은 제약을 **풉니다**
+
+처음엔 탐침도 `--tools` 를 켠 채로 돌려서 **우리가 허용한 10개만** 보였습니다
+— 그 상태로는 **새 도구를 영영 못 찾습니다.** `AgentRun(probe=True)` 가
+`--tools`·`--disallowedTools` 를 떼고, 나머지 안전장치(훅·샌드박스·
+`--setting-sources user`·`--strict-mcp-config`·`--permission-prompts none`)는
+그대로 둡니다. 프롬프트도 *"도구를 쓰지 말고 이름만"* 입니다.
+
+### 실측: 도구 노출은 **환경에 따라 다릅니다**
+
+탐침 결과 **23개**였고, `Artifact`·`ArtifactComments`·`ArtifactData`·
+`SendFeedback` 은 **안 보였습니다** — 제가 넓은 환경에서 수동으로 물었을 때는
+보였던 것들입니다. 런처가 환경을 화이트리스트로 좁히면서 사라진 것으로
+보입니다. **덤으로 생긴 방어**입니다.
+
+그래서 `compare()` 의 경보를 둘로 좁혔습니다.
+
+| | 경보인가 |
+|---|---|
+| 🔴 `new` — 분류에 없는 새 도구 | **네** (`classify.TOOLS_2_1_318` 에 적어야 합니다) |
+| 🔴 `missingAllowed` — 쓰겠다고 한 도구가 없음 | **네** (루프가 깨집니다) |
+| ⚪ `absent` — 이 세션에 안 보인 도구 | **아니요** — 계정·환경에 따라 다릅니다. 없는 도구를 끄는 건 해롭지 않고, 나타날 때를 위해 목록에 남깁니다 |
