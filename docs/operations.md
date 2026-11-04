@@ -309,15 +309,22 @@ $PY -m app doctor                     # 전부 ✔ 인지 마지막 확인
 - [x] 빈 stdout + `exit 0`(래퍼의 밖-건너뛰기)이 "결정 안 함" 으로 취급되는지.
       → **그렇습니다.** 판단 표 14번(lab-remote 저장소에서 편집)에서 훅이
       전혀 간섭하지 않았습니다.
-- [ ] `onFailure: "block"` 이 이 버전에서 실제로 동작하는지. **[미확인]**
-      훅을 일부러 `exit 1` 로 깨뜨려 보는 건 아직 안 했습니다.
+- [x] `onFailure: "block"` 이 이 버전에서 실제로 동작하는지.
+      → **동작합니다** (2026-11-04, 2.1.318). `--settings` 로 격리한 설정에
+      `exit 1` 하는 더미 훅을 걸고 A/B 로 쟀습니다.
+      `block` → 파일이 안 생기고 Claude 가 사유까지 정확히 보고 /
+      `continue` → 훅이 실패해도 그냥 진행해 파일이 생김.
+      우리 PreToolUse 는 `block` 이므로 **훅이 깨지면 쓰기가 닫힙니다.**
 - [x] `permission_mode` 가 `acceptEdits`/권한 우회 계열일 때도 훅이 이기는지.
       → **이깁니다.** PC 승인창에서 `Yes, and switch to accept edits` 를 고른
       뒤에도 **다음 Write 에 훅 ask 가 다시 떴습니다.** `auto` 로 뜬 세션에서도
       `pip install` 승인이 사람에게 넘어왔습니다(00:46:55). 판정 코드가
       `permission_mode` 를 아예 읽지 않기 때문입니다(아래 "권한 모드" 참고).
 - [ ] 10분 넘게 도는 Bash(실제 학습) 중에 훅이 끼어들거나 끊지 않는지 **[미확인]**
-- [ ] `bypassPermissions` 에서도 훅이 뜨는지 **[미확인]**
+- [x] `bypassPermissions` 에서도 훅이 뜨는지
+      → **뜨고, 훅이 이깁니다** (2026-11-04, 2.1.318 · 실측 4단계 — ②).
+      `permissionMode='bypassPermissions'` 가 훅 입력에 그대로 오고 `decision=deny`
+      로 막혔습니다. 판정 코드가 `permission_mode` 를 아예 읽지 않기 때문입니다.
       → 그래서 생성기가 프로젝트 설정에 `defaultMode: default` 를 박습니다.
 - [x] 훅 설정을 바꾼 뒤 세션 재시작이 필요한지.
       → **필요합니다.** 이벤트를 늘리면(`UserPromptSubmit`) 돌고 있는 세션은
@@ -611,6 +618,367 @@ agent_transcript_path, last_assistant_message, background_tasks[], session_crons
 
 ②에서 세션을 띄울 때는 `--permission-mode default` 를 명시합니다.
 
+## 실측 4단계 — ② (2026-11-04, Claude Code **2.1.318**)
+
+MVP ②를 시작하며 0단계로 잰 것입니다. ①의 실측은 **2.1.317** 에서 받은 것이라
+버전이 올라간 뒤 다시 확인한 항목도 있습니다.
+
+### ✅ 설계 갈림길 둘이 결정됐습니다
+
+**1. 훅이 `allow` 를 돌려주면 헤드리스에서 쓰기가 그대로 통합니다 → 갈래 A**
+
+프리셋을 `full` 로 두어 `code` 가 `allow` 가 되게 하고 `claude -p` 로 파일 쓰기를 시켰습니다.
+
+```
+permissionMode='default'  decision=allow  action='code'  rel='src/probe_allow.py'
+→ 파일이 실제로 생성됨, 승인 로그에 "허용"
+```
+
+①의 "헤드리스는 Edit/Write 를 자동 거부한다" 는 **훅이 dump 모드(판정 없음 = defer)** 일 때
+나온 값이었습니다. 훅이 `allow` 로 끝내면 승인창 자체가 안 생깁니다.
+→ **`headless.permissionMode = "default"` 로 갑니다. `acceptEdits` 는 필요 없습니다.**
+
+**2. 학습 샌드박스는 두 후보 모두 지금 환경에서 못 씁니다 — 사람 손이 필요합니다**
+
+| 후보 | 결과 |
+|---|---|
+| `bwrap` 0.9.0 | `bwrap: setting up uid map: Permission denied` |
+| `systemd-run --user` | 유닛은 **돌지만** `InaccessiblePaths`·`ProtectHome=yes`·`ProtectSystem=strict`·`PrivateUsers=yes` 가 **전부 무효**. `systemctl --user show` 에는 값이 보이는데 실제로는 아무것도 안 막힘 |
+
+같은 뿌리입니다 — **Ubuntu 24.04 의 `kernel.apparmor_restrict_unprivileged_userns=1`** 이
+비특권 user namespace 의 uid_map 쓰기를 막습니다.
+
+```
+unshare -U  true   → 성공
+unshare -Ur true   → write /proc/self/uid_map: Operation not permitted
+/etc/apparmor.d/unprivileged_userns  존재
+/usr/bin/bwrap  setuid 아님 (-rwxr-xr-x)
+```
+
+**지금은 샌드박스가 없습니다.** 기준선 측정이 그 구멍을 그대로 보여 줍니다 — 학습 스크립트가
+`~/.claude`·`~/.config/labremote`·`server/` 에 **전부 쓸 수 있습니다.**
+→ 아래 "사람이 해야 하는 것" 의 sudo 명령으로 풀어야 합니다. 풀기 전까지는
+**"못 막는 것"** 에 올려 둡니다(아래 7번).
+
+### ✅ ①의 [미확인] 하나가 닫혔습니다 — `bypassPermissions` 에서도 훅이 이깁니다
+
+```
+permissionMode='bypassPermissions'  decision=deny  action='code'
+→ 파일 안 생김. 승인 로그에 "권한 우회 모드 · 기록" + "코드 수정 · 차단" 두 줄
+```
+
+판정 코드가 `permission_mode` 를 아예 읽지 않기 때문입니다. 금지 플래그 목록은 여전히
+필요하지만(아래 `--bare` 참고), **권한 모드만으로는 훅을 못 끕니다.**
+
+### ⚠ ①의 새 구멍 — 실행 래퍼가 분류를 빠져나갑니다
+
+실측 중 Claude 가 **스스로** `conda run -n hook-sandbox pip install peft` 를 골랐는데
+훅이 아무것도 기록하지 않아서 드러났습니다. 전수로 재 보니 훨씬 넓었습니다 —
+아래 "실행 래퍼 우회" 절을 보세요. **잠긴 항목 ①이 이걸로 우회됩니다.**
+
+### 📌 `--permission-prompts none` 은 자동 거부가 아니라 `tool_deferred` 입니다
+
+훅이 분류하지 못한 호출은 Claude Code 자체 권한 흐름으로 가고, 거기서 **턴이 끝납니다.**
+
+```json
+"stop_reason": "tool_deferred",
+"deferred_tool_use": { "id": "toolu_…", "name": "Bash",
+                       "input": { "command": "conda run -n hook-sandbox pip install peft", … } }
+```
+
+- 결과 JSON 에 **도구 이름과 입력 전체**가 담겨 옵니다.
+- 승인 로그에는 **아무것도 안 남습니다**(훅이 판정을 안 했으니까요).
+- → 오케스트레이터는 **`stop_reason == "tool_deferred"` 를 "우리 분류가 못 잡은 호출" 신호로**
+  보고 기록·알림해야 합니다. 그대로 두면 감사 기록에 구멍이 생깁니다.
+
+훅이 제대로 `ask` 를 낸 경우는 다릅니다 — `stop_reason: "end_turn"` 이고
+`requests/` 에 쌓이고 Discord 알림까지 갑니다(6초 만에 끝났습니다).
+
+### ✅ 그 밖에 확인한 것
+
+| 항목 | 결과 |
+|---|---|
+| `--permission-mode default` vs `manual` | **둘 다 훅에는 `permission_mode='default'`** 로 옵니다. CLI 선택지에 `default` 가 없지만 넘겨도 오류가 안 나고, `manual` 이 런타임 `default` 입니다. "권한 우회 모드" 거짓 경보 없음 |
+| `--session-id` + `--resume` | **됩니다.** 미리 정한 UUID 로 세션을 만들고 그 ID 로 이어 갔습니다. 맥락도 유지(앞 턴에서 만든 파일 이름을 정확히 답함) |
+| 쓰인 모델 기록 | 결과 JSON 의 `modelUsage` 에 모델별 토큰·비용이 옵니다(`claude-haiku-5-5`·`claude-opus-5-5`). `total_cost_usd` 도 있습니다 |
+| `claude -p` 의 stdout | **JSON 앞에 경고가 섞일 수 있습니다** — `Warning: no stdin data received in 3s…`. `< /dev/null` 로 넘기고, 파서는 마지막 JSON 덩어리만 읽어야 합니다 |
+| `labremote log` 의 묶기 | `requests clear` 가 원래 `toolUseId` 로 행을 추가해서, 그룹 보기에서 **"차단" 이 "정리됨" 으로 덮입니다.** 원본(`--raw`)에는 다 있습니다. ③의 화면은 이걸 감안해야 합니다 |
+
+### ✅ `onFailure: "block"` 이 동작합니다 — ①의 [미확인] 하나 더 닫힘
+
+`~/projects` 밖(스크래치 폴더)에서 `--settings` 로 격리해 A/B 로 쟀습니다.
+진짜 `~/.claude/settings.json` 은 건드리지 않았고, 래퍼가 그 폴더를 건너뛰어
+진짜 훅도 안 떴습니다.
+
+```
+onFailure=block     → 파일 안 생김. "훅이 파일 쓰기를 막았습니다" 라고 보고
+onFailure=continue  → 훅이 exit 1 해도 그냥 진행, 파일 생김
+```
+
+우리 PreToolUse 는 `onFailure: "block"` 이므로 **훅이 깨지면 조용히 열리지 않고
+닫힙니다.** fail-closed 가 Claude Code 쪽에서도 보장됩니다.
+
+### ⚠ 실행 래퍼 우회 — 62종 중 **52종**이 분류를 빠져나갑니다
+
+`rm -rf <프로젝트 밖>`(잠긴 항목 ①)을 각 래퍼로 감싸 분류되는지 전수로 쟀습니다.
+
+**잡히는 것 10종** — (래퍼 없음) · `env` · `env VAR=1` · `VAR=1` 접두사 ·
+`timeout` · `nohup` · `time` · `sudo` · `command` · `exec`
+
+**빠져나가는 것 52종**
+
+| 갈래 | 형태 | 왜 뚫리나 |
+|---|---|---|
+| A | `nice -n 10` · `ionice -c2` · `stdbuf -oL` | **래퍼 목록에 있는데도** 옵션 인자를 안 건너뛰어 `argv[0]` 이 `-n` 이 됩니다 |
+| B | `setsid` `xargs` `flock` `chrt` `taskset` `watch` `parallel` `runuser` `setpriv` `doas` | 목록에 없습니다 |
+| C | `conda run -n E` `mamba/micromamba run` `poetry run` `pdm run` `hatch run` `uv run` `rye run` `pipx run` `npx` `pnpm exec` `yarn dlx` | `run` 하위명령 뒤를 안 봅니다 |
+| D | `bash -c` `sh -c` `zsh -c` `dash -c` `script -qc` `nix-shell --run` `su -c` `find -exec` `gdb --ex` | 셸 문자열을 품고 있는데 재귀 분석을 안 합니다 |
+| E | `make` `docker/podman run` `systemd-run` `nsenter` `chroot` `setarch` `unshare` `bwrap` `strace` `ltrace` `gdb` `at` `crontab` `ssh host 'cmd'` `python -c` `perl/ruby/node -e` | 정적 분석으로는 못 봅니다 |
+
+실측 중 Claude 가 **스스로** `conda run -n hook-sandbox pip install peft` 를 골랐고
+훅이 아무것도 기록하지 않았습니다. **분류가 없으면 `_record` 도 안 불려 승인 로그에
+흔적이 남지 않습니다**("못 막는 것" 9번).
+
+②의 2단계에서 A~D 는 래퍼 벗기기·재귀 분석으로 고치고, E 는 차단하거나
+승인 경로로 보냅니다. 62종 회귀표를 그대로 테스트로 옮깁니다.
+
+### ✅ 샌드박스 둘 다 동작합니다 (재부팅 + AppArmor 프로파일 뒤)
+
+재부팅 뒤 환경: RTX 5080 16GB · 드라이버 595.99.02 (커널·유저랜드 일치) ·
+`Linger=yes` · `/etc/apparmor.d/bwrap` 적용으로 `bwrap` 동작.
+
+**실측 15 — 학습 프로세스 샌드박스 (bwrap)**
+
+```
+bwrap --ro-bind / / --dev-bind /dev /dev --proc /proc --tmpfs /tmp \
+      --bind   <프로젝트>              <프로젝트> \
+      --tmpfs  ~/.claude  --tmpfs ~/.config/labremote \
+      --tmpfs  <저장소>/server  --tmpfs <다른 프로젝트> \
+      --die-with-parent -- <명령>
+```
+
+| 항목 | 결과 |
+|---|---|
+| `~/.claude/settings.json` 내용 | ✔ 안 보임 |
+| 웹훅 설정·정책 폴더 | ✔ 안 보임 |
+| `~/.claude`·`~/.config/labremote`·`server/`·다른 프로젝트에 쓰기 | ✔ **실제 파일에 안 남음** |
+| 프로젝트 읽기·쓰기 | ✔ 됨 |
+| GPU 장치 · `nvidia-smi` | ✔ RTX 5080 보임, 동작 |
+| conda 환경 · 네트워크 | ✔ |
+
+`--tmpfs` 는 내용을 가리고 쓰기를 버리는 임시 파일시스템으로 받습니다. 샌드박스 안에서는
+쓰기가 **성공한 것처럼 보이지만 실제 파일에는 안 남습니다**(바깥에서 표식으로 확인).
+
+**실측 14 — Claude Bash 샌드박스 (2.1.318, bubblewrap)**
+
+프로젝트 `.claude/settings.json` 에 넣고 쟀습니다. `failIfUnavailable: true` 인데도
+세션이 정상으로 떴습니다.
+
+```jsonc
+"sandbox": { "enabled": true, "failIfUnavailable": true,
+             "autoAllowBashIfSandboxed": false, "allowUnsandboxedCommands": false,
+             "filesystem": { "allowWrite": ["<프로젝트>"],
+                             "denyRead": ["~/.claude", "~/.claude.json",
+                                          "~/.config/labremote", "<저장소>/server"] } }
+```
+
+**핵심 결과 — 훅이 통과시킨 명령을 샌드박스가 막았습니다.**
+
+`echo probe > src/sbx_t.txt && conda run -n base rm -rf /home/hse09021/sbx-victim`
+
+| 층 | 판정 |
+|---|---|
+| 훅 | `decision=allow action='code'` — **통과시킴.** 앞 세그먼트만 분류됐고 `conda run` 은 미분류라 findings 가 `['code']` 뿐이었습니다 |
+| 샌드박스 | `rm: cannot remove '…/keepme.txt': Read-only file system` — **막음** |
+| 결과 | 앞부분(프로젝트 안 쓰기) 성공, 뒷부분(폴더 밖 삭제) 실패 |
+
+### 🔑 래퍼 우회의 1차 방어는 **샌드박스**, `bashparse` 는 보조입니다
+
+명령 문자열 분석은 완전할 수 없습니다. 62종을 메워도 63번째 래퍼가 나옵니다.
+위 실측이 그걸 그대로 보여 줍니다 — **훅이 `allow` 를 준 명령을 샌드박스가 막았습니다.**
+
+그래서 역할을 이렇게 나눠 적습니다.
+
+| 층 | 막는 것 | 성질 |
+|---|---|---|
+| **Claude Bash 샌드박스** (1차) | 명령이 **무엇을 건드릴 수 있나** — 프로젝트 밖 쓰기, 비밀 읽기 | 커널(mount namespace)이 강제. 래퍼·치환·인터프리터와 무관하게 **빠짐없이** 적용 |
+| **학습 샌드박스** (1차) | 오케스트레이터가 띄우는 AI 코드가 건드릴 수 있는 것 | 같음. 훅이 아예 못 보는 영역 |
+| `bashparse` 분류 (보조) | **무엇을 하려는지** — 승인 경로·기록·행동 유형 | 문자열 분석이라 **완전할 수 없음.** 빠지면 기록과 승인이 없어지는 것이지 파일이 뚫리는 건 아님(샌드박스가 있을 때) |
+| `CLAUDE.md` (0차) | Claude 가 스스로 안 하게 | 실측에서 실제로 두 번 자기 거절을 했습니다 |
+
+**샌드박스가 꺼져 있으면 `bashparse` 가 유일한 방어가 되고, 그때는 52종 구멍이 그대로
+파일 접근 구멍입니다.** 그래서 `doctor` 가 샌드박스 설정을 점검하고, 꺼져 있으면 ✘ 로 알립니다.
+
+### ⚠ 헤드리스에서 훅의 `defer` 는 통과가 아니라 **정지**입니다
+
+```
+ls -1  →  훅 defer  →  stop_reason: "tool_deferred", 아무 일도 안 일어남
+```
+
+`--permission-prompts none` 을 빼도 같았습니다. ①의 판단 표 13번("`ls`·`git status`·`cat`
+→ 아무 일 없음")은 **대화형** 세션 결과였습니다. 헤드리스에서는 다릅니다.
+
+| 훅의 결정 | 헤드리스 결과 |
+|---|---|
+| `allow` | 그대로 실행됨 |
+| `deny` | Claude 가 사유를 받고 `end_turn`. `requests/` 에 쌓임 |
+| **`defer`** | **`tool_deferred` — 턴이 아무것도 못 하고 끝남. 기록도 안 남음** |
+
+즉 **헤드리스는 이미 허용 목록처럼 동작합니다.** 우리 정책의 `defer` 는 "모르는 것"인데
+그게 조용한 정지가 됩니다. ②는 이걸 `ask` 로 바꿔 `requests/` 로 보내야 합니다 —
+그래야 사람이 보고, 기록이 남고, 재개할 수 있습니다.
+
+### 📌 그래서 ②는 헤드리스에서 **허용 목록**을 씁니다 (결정)
+
+`defer` 가 정지라면, 모르는 명령을 조용히 멈추게 두는 것보다 **보이는 승인 요청**으로
+올리는 게 낫습니다. 실제로 재 본 소음도 거의 없었습니다 — 지금까지 Claude 가 낸
+고유 Bash 명령 9건 중 허용 목록에 없는 5건은 `curl`(net) · `eval`(치환) ·
+`pip install`(pkg) · `sed -i`(쓰기)로 **이미 승인을 받아야 하는 것들**이었고,
+나머지 하나(`find … | head`)는 지금은 조용히 멈추던 것입니다.
+
+판정 순서는 **금지 명령·비밀 파일·서버 보호·폴더 밖 쓰기·산출물 보호가 먼저**이고,
+허용 목록은 그걸 다 통과하고 findings 가 하나도 없을 때만 봅니다.
+**대화형에는 적용하지 않습니다** — 거기서는 `defer` 가 정상 동작합니다.
+자세한 규칙은 ②의 계획 1-2-1 절에 있습니다.
+
+### ⚠ 복합 명령 우회 — 허용 한 조각이 전체를 통과시킵니다
+
+```
+echo x > src/t.txt                                    → findings ['code']           → allow
+echo x > src/t.txt && conda run -n base touch <밖>     → findings ['code']           → allow  ⚠
+echo x > src/t.txt && rm -rf <밖>                      → findings ['code','outside'] → deny   ✔
+```
+
+분류되지 않은 세그먼트는 findings 에 **아무것도 보태지 않으므로**, 허용되는 세그먼트 하나만
+있으면 전체가 `allow` 가 됩니다. `combine()` 이 "가장 제한적인 것이 이긴다" 인데
+**미분류는 제한을 보태지 않습니다.** ②에서 "세그먼트 중 하나라도 미분류면 전체를 `ask`" 로
+바꿉니다.
+
+### 🔧 GPU 드라이버 불일치 — 원인과 감지
+
+처음 보였던 `Failed to initialize NVML: Driver/library version mismatch` 는
+**우분투 자동 업데이트가 드라이버를 올리고 재부팅을 안 해서** 생긴 것이 맞았습니다.
+
+```
+APT::Periodic::Unattended-Upgrade "1"     ← 켜져 있음
+Unattended-Upgrade::Package-Blacklist     ← 비어 있음 (전부 주석)
+dpkg: nvidia-driver-595-open 595.99.02  +  nvidia-kernel-common-580 580.126.09  ← 580→595 흔적
+```
+
+**감지 방법** (표준 라이브러리만, `doctor` 와 `monitor` 둘 다 씁니다)
+
+| 신호 | 읽는 곳 |
+|---|---|
+| 커널 모듈 드라이버 | `/proc/driver/nvidia/version` 의 `NVRM version:` |
+| 유저랜드 드라이버 | `nvidia-smi --query-gpu=driver_version --format=csv,noheader` |
+| 재부팅 대기 | `/var/run/reboot-required` + `/var/run/reboot-required.pkgs` 에 `nvidia` 가 있나 |
+| 이미 깨진 상태 | `nvidia-smi` 의 stderr 에 `version mismatch` |
+
+판정: 두 버전의 앞 두 자리가 다르거나 stderr 에 `version mismatch` → **불일치**.
+`reboot-required.pkgs` 에 nvidia 만 있으면 **아직 안 깨졌지만 곧 깨질 상태** — 미리 경고합니다.
+
+- `doctor` — 불일치면 ✘ *"재부팅이 필요해요. 실험을 시작하면 실패해요"*,
+  재부팅 대기면 ⚠, 정상이면 ✔. `Package-Blacklist` 에 nvidia 가 없으면 ⚠ 로 안내.
+- `monitor` — 불일치를 GPU `available: false` 의 한 사유로 보고, **상태가 바뀔 때 1회** 알림.
+- `guards` — 불일치 상태에서는 **`train` 작업을 시작하지 않습니다**(큐에 둔 채 대기).
+  어차피 실패할 학습을 띄워 GPU 시간과 사용량을 버리지 않습니다.
+
+### ⬜ 아직 못 잰 것
+
+| # | 항목 | 왜 안 됐나 |
+|---|---|---|
+| 3 | 10분 넘는 Bash | 12분이 걸려 따로 돌려야 합니다 |
+| 7 | 사용량 한도 출력 | 실제로 걸려야 알 수 있습니다(②가 자동 수집) |
+| 9 | 빈 `agent_type` 의 정체 | `Task` 를 끄기로 해서 우선순위가 내려갔습니다 |
+| 10 | `PermissionRequest`·`PermissionDenied`·`TaskCompleted` 훅 | 덤프 설치에 이벤트를 더해야 합니다 |
+| 12 | `--permission-prompt-tool` | MCP 서버가 필요합니다 |
+| 13 | 2.1.318 픽스처 갱신 | Write·Bash 이벤트는 2.1.317 과 필드명이 같았습니다. 나머지 이벤트는 더 받아야 합니다 |
+
+### 사람이 해야 하는 것 — 복사해서 붙여 넣기
+
+> 아래 (1)·(2)·(3) 은 **2026-11-04 에 완료**됐습니다(bwrap 프로파일 · linger · 재부팅).
+> 남은 것은 (5) 드라이버 자동 업데이트 막기입니다.
+
+**(1) 샌드박스를 쓸 수 있게 (sudo 필요, 셋 중 하나)**
+
+가장 좁은 방법 — `bwrap` 에만 user namespace 를 허용합니다. **이걸 권합니다.**
+
+```bash
+sudo tee /etc/apparmor.d/bwrap >/dev/null <<'EOF'
+abi <abi/4.0>,
+include <tunables/global>
+
+profile bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+  include if exists <local/bwrap>
+}
+EOF
+sudo apparmor_parser -r /etc/apparmor.d/bwrap
+bwrap --ro-bind / / --dev /dev --tmpfs /tmp -- /bin/echo "이제 됩니다"
+```
+
+안 되면 시스템 전체로 제한을 끄는 방법(더 넓게 열립니다):
+
+```bash
+sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/60-labremote-userns.conf
+```
+
+**(2) 재부팅 뒤에도 살아나게 (sudo 가 필요할 수 있음)**
+
+```bash
+loginctl enable-linger hse09021
+loginctl show-user hse09021 | grep Linger      # Linger=yes 면 됩니다
+```
+
+**(3) GPU 드라이버 — 재부팅**
+
+커널 모듈 595.84 와 유저랜드 595.99.02 가 어긋나 있습니다. 재부팅 뒤:
+
+```bash
+nvidia-smi
+```
+
+**(4) ~~(1)·(3) 을 하고 나면 알려 주세요~~** → 완료. 실측 14·15 끝났습니다.
+
+**(5) 드라이버 자동 업데이트가 실험을 깨지 않게 (sudo 필요)**
+
+실험 도중에 또 생기지 않게 **nvidia 패키지를 자동 업데이트에서 뺍니다.**
+수동 `apt upgrade` 는 그대로 됩니다 — 재부팅할 수 있을 때 직접 올리면 돼요.
+
+```bash
+sudo tee /etc/apt/apt.conf.d/52labremote-nvidia >/dev/null <<'EOF'
+// lab.remote — 실험 중 드라이버가 바뀌어 NVML 불일치가 나지 않게 합니다.
+// 수동 `apt upgrade` 는 그대로 됩니다. 재부팅할 수 있을 때 올리세요.
+Unattended-Upgrade::Package-Blacklist {
+    "nvidia-";
+    "libnvidia-";
+    "cuda-";
+    "linux-image-";
+    "linux-headers-";
+};
+// 자동 재부팅은 하지 않습니다 (실험이 돌고 있을 수 있어요)
+Unattended-Upgrade::Automatic-Reboot "false";
+EOF
+
+# 문법 확인 — 오류가 없어야 합니다
+sudo unattended-upgrade --dry-run --debug 2>&1 | grep -iE 'blacklist|error' | head -5
+```
+
+되돌리려면 `sudo rm /etc/apt/apt.conf.d/52labremote-nvidia` 입니다.
+
+더 강하게 잠그고 싶으면(수동 `apt upgrade` 도 막힙니다):
+
+```bash
+sudo apt-mark hold nvidia-driver-595-open nvidia-dkms-595-open \
+                   nvidia-kernel-source-595-open nvidia-kernel-common-595
+apt-mark showhold
+# 풀 때: sudo apt-mark unhold <같은 목록>
+```
+
+올린 뒤에는 **재부팅 전까지 실험을 시작하지 마세요.** `labremote doctor` 가
+`/var/run/reboot-required.pkgs` 를 보고 미리 알려 줍니다.
+
 ## 못 막는 것 (문서화된 한계)
 
 1. **프로젝트 폴더 밖에서 Claude Code 를 켜는 것** — 래퍼가 `cwd` 로만
@@ -623,12 +991,28 @@ agent_transcript_path, last_assistant_message, background_tasks[], session_crons
    `PreToolUse` matcher 에 없어 그대로 지나갑니다.
 4. **셸의 완전한 해석** — `bash run.sh` 안의 내용, 변수 치환, heredoc.
    치환이 보이면 해석을 포기하고 `suspicious` 로 올려 승인을 받습니다.
-5. `onFailure: "block"` 의 실제 동작 **[미확인]**.
+5. ~~`onFailure: "block"` 의 실제 동작~~ → **2.1.318 에서 동작 확인**
+   (실측 4단계 — ②). 훅이 깨지면 쓰기가 막힙니다.
 6. **"사용자가 정말 거부했는지" 와 "응답이 없었는지" 를 구분하지 못합니다.**
    둘 다 `거부 또는 미응답` 으로 남습니다. 2.1.317 에
    **`PermissionRequest`·`PermissionDenied`·`TaskCompleted`** 훅이 있어서
    `PermissionDenied` 가 오면 추측 없이 가를 수 있습니다.
    **[미실측 · ②에서 볼 후보]**
+7. **실행 래퍼를 안 벗깁니다 — 62종 중 52종**이 분류를 빠져나갑니다.
+   `conda run -n env rm -rf /홈밖`, `bash -c '…'`, `nice -n 10 …`, `xargs …`,
+   `docker run -v /:/h …` 전부 미분류입니다. **잠긴 항목 ①이 이렇게 우회됩니다.**
+   전수 표는 "실측 4단계 — ②". **②의 2단계에서 고칩니다.**
+8. **학습 스크립트와 AI 가 쓴 코드** — 훅은 **도구 호출만** 봅니다.
+   `train.py` 안의 `open("~/.claude/settings.json","w")` 는 훅을 거치지 않습니다.
+   막는 수단은 **샌드박스**뿐이고, 2026-11-04 에 `bwrap` 으로 동작을
+   확인했습니다(실측 4단계 15번). 다만 **②의 3단계에서 실행기에 붙기 전까지는
+   아무것도 가두지 않습니다** — 그때까지 학습 스크립트는 정책·자격 증명·
+   허가 키를 건드릴 수 있습니다. `/etc/apparmor.d/bwrap` 프로파일이 지워지면
+   다시 열립니다(`doctor` 가 점검합니다).
+9. **분류하지 못한 도구 호출은 기록도 안 남습니다** — 훅이 `defer` 하면
+   `_record` 를 안 부르므로 승인 로그·`hook_events.jsonl` 에 아무것도 없습니다.
+   헤드리스에서는 `stop_reason: "tool_deferred"` 로 드러나므로,
+   ②의 오케스트레이터가 그 신호를 기록·알림으로 받습니다.
 
 ## 비밀 값은 프로젝트 폴더 밖에
 
