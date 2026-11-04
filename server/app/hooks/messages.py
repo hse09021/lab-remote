@@ -20,6 +20,7 @@ BY_LOCK = "Hooks · 잠금"
 BY_POLICY = "AI · 권한 단계"
 BY_APP = "Claude 앱"
 BY_SYSTEM = "시스템"
+BY_GRANT = "사람 승인 · 1회용"
 
 #: 승인 로그 `action` 칸에서 정책 밖 분류에 쓰는 이름
 LABELS = {
@@ -42,6 +43,17 @@ def with_guard(text: str) -> str:
     if NO_WORKAROUND in text:
         return text
     return f"{text} {NO_WORKAROUND}"
+
+
+def add_before_guard(text: str, extra: str) -> str:
+    """이미 우회 금지 지시가 붙은 사유에 한 마디를 **그 앞에** 끼운다.
+
+    "멈추고 보고해 주세요" 가 문장 중간에 끼면 지시가 흐려진다.
+    """
+    if not extra:
+        return text
+    head = text.replace(NO_WORKAROUND, "").rstrip() if NO_WORKAROUND in text else text.rstrip()
+    return with_guard(f"{head} {extra}")
 
 
 # --- 조사 ------------------------------------------------------------------
@@ -214,6 +226,29 @@ def headless_ask(name: str, inner: str) -> str:
     return (
         f"[승인 필요: {name}] {inner} 화면 없이 실행 중이라 지금은 승인받을 수 "
         "없어요. 승인 요청을 남겨 두었어요. 작업을 멈추고 보고해 주세요."
+    )
+
+
+def also_needed(names: list[str]) -> str:
+    """한 호출에서 걸린 행동이 둘 이상일 때. **전부** 보여 준다.
+
+    하나만 알려 주면 Claude 가 "그것만 승인받으면 된다" 고 보고하게 되고,
+    사람은 나머지를 모른 채 승인한다.
+    """
+    unique: list[str] = []
+    for name in names:
+        if name and name not in unique:
+            unique.append(name)
+    if len(unique) < 2:
+        return ""
+    return "이 호출에서 승인이 필요한 것이 " + str(len(unique)) + "가지예요: " + " · ".join(unique) + "."
+
+
+def grant_used(name: str, grant_id: str) -> str:
+    """사람이 승인한 1회용 허가로 통과했을 때. 다시 쓸 수 없다는 걸 적는다."""
+    return (
+        f"{name}{josa(name)} 사람이 승인해 준 1회용 허가로 진행해요 ({grant_id}). "
+        "같은 허가는 다시 쓸 수 없어요."
     )
 
 

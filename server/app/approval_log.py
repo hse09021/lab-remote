@@ -34,6 +34,7 @@ import fcntl
 import io
 import json
 import os
+import time
 import shutil
 from datetime import datetime
 
@@ -451,10 +452,42 @@ def list_requests(name: str) -> list[dict]:
     return out
 
 
-def clear_request(name: str, request_id: str) -> bool:
+def _request_name(request_id: str) -> str:
     safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in request_id)[:120]
+    return f"{safe or 'unknown'}.json"
+
+
+def clear_request(name: str, request_id: str) -> bool:
     try:
-        os.remove(os.path.join(_requests_dir(name), f"{safe}.json"))
+        os.remove(os.path.join(_requests_dir(name), _request_name(request_id)))
+        return True
+    except OSError:
+        return False
+
+
+def close_request(name: str, request_id: str, *, result: str, grant_id: str = "") -> bool:
+    """끝난 요청을 `.closed/` 로 옮기고 결과를 적는다.
+
+    지우지 않고 옮기는 이유: 승인 1회가 **정말 그 호출 하나에만** 쓰였는지
+    나중에 확인할 수 있어야 한다. 허가 쪽 `.consumed/` 와 쌍을 이룬다.
+
+    **기록이 실패해도 판정은 그대로 나간다** — 훅 안에서 불린다.
+    """
+    source = os.path.join(_requests_dir(name), _request_name(request_id))
+    try:
+        with open(source, encoding="utf-8") as fh:
+            info = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return False
+    try:
+        target = os.path.join(
+            _requests_dir(name), ".closed", f"{int(time.time())}-{_request_name(request_id)}"
+        )
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        registry.write_json(
+            target, {**info, "closedAt": now(), "result": result, "grantId": grant_id}
+        )
+        os.remove(source)
         return True
     except OSError:
         return False

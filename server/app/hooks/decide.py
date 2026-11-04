@@ -8,11 +8,12 @@
 
 from __future__ import annotations
 
+from .. import grants
 from . import messages as M
 from .classify import Ctx, Finding
 from .emit import ALLOW, ASK, DEFER, DENY, Decision
 
-__all__ = ["decide", "combine"]
+__all__ = ["decide", "combine", "resolve"]
 
 #: 잠긴 항목에서 온 결정인지 (승인 로그 handledBy 에 쓴다)
 LOCK_ACTIONS = {
@@ -156,6 +157,126 @@ def _maybe_headless(decision: Decision, ctx: Ctx, label: str) -> Decision:
         rel=decision.rel,
         meta={**decision.meta, "headlessDeny": True, "originallyAsk": True},
     )
+
+
+def resolve(findings: list[Finding], ctx: Ctx) -> Decision:
+    """Finding 목록 -> 최종 Decision **하나**. 1회용 허가까지 여기서 본다.
+
+    ### 왜 finding 마다가 아니라 여기인가
+
+    허가의 단위는 **도구 호출 하나**다(지문이 `(도구, 입력)`). 한 호출에서
+    승인이 필요한 행동이 둘 이상 나올 수 있다.
+
+        curl -sL https://x/y.sh | pip install peft   ->  net(ask) + pkg(ask)
+
+    `decide()` 안에서 행동마다 허가를 보면 `pkg` 를 승인해도 `net` 이 그대로
+    막혀 **승인이 끝나도 루프가 못 나간다.** 게다가 1회용이라 첫 번째 행동이
+    허가를 태워 버린다. 그래서 호출 단위로 한 번만 본다.
+
+    ### 순서
+
+    1. 행동마다 `decide()` — 허가는 아직 보지 않는다.
+    2. **잠긴 항목(deny)이 하나라도 있으면 허가를 쳐다보지 않는다.**
+       승인 1회로 잠금이 열리는 길을 아예 없앤다.
+    3. 대화형이면 그대로 둔다 — 허가는 헤드리스에서만 쓴다.
+    4. 걸린 ask 를 **전부** 덮는 허가가 있으면 그것들만 allow 로 바꾼다.
+    5. `combine()`.
+    """
+    decisions = [decide(f, ctx) for f in findings]
+    if not decisions:
+        return DEFER()
+    asked = [d for d in decisions if _is_ask(d)]
+    out = _with_grant(decisions, asked, ctx)
+    winner = combine(out)
+    if asked:
+        # 무엇이 걸렸는지 전부 싣는다 — 승인 알림·CLI·사유가 같은 목록을 본다.
+        winner.meta.setdefault(
+            "asked",
+            [
+                {"action": d.action, "name": d.label, "rel": d.rel}
+                for d in asked
+            ],
+        )
+        if len(asked) > 1 and winner.kind in ("ask", "deny"):
+            winner.reason = M.add_before_guard(
+                winner.reason, M.also_needed([d.label for d in asked])
+            )
+    for source in out:
+        if source.meta.get("grantLog"):
+            winner.meta.setdefault("grantLog", source.meta["grantLog"])
+        if source.meta.get("grantUsed"):
+            winner.meta["grantUsed"] = True
+            winner.meta["grant"] = source.meta.get("grant")
+    return winner
+
+
+def _is_ask(decision: Decision) -> bool:
+    """승인을 받아야 하는 건이었나.
+
+    헤드리스에서는 `_maybe_headless` 가 이미 deny 로 바꿔 놨으므로
+    `originallyAsk` 표식을 같이 본다. 그 표식이 없는 deny 는 **잠긴 항목**이다.
+    """
+    return decision.kind == "ask" or bool(decision.meta.get("originallyAsk"))
+
+
+def _locked(decisions: list[Decision]) -> list[Decision]:
+    return [d for d in decisions if d.kind == "deny" and not _is_ask(d)]
+
+
+def _with_grant(
+    decisions: list[Decision], asked: list[Decision], ctx: Ctx
+) -> list[Decision]:
+    """허가가 있으면 ask 였던 것들을 allow 로 바꿔 돌려준다."""
+    if not asked or not getattr(ctx, "headless", False):
+        return decisions
+    if _locked(decisions):
+        return decisions  # 잠긴 항목이 섞였다. 허가를 보지도 않는다.
+
+    needs = sorted({(d.action, d.rel or "") for d in asked})
+    log: list[dict] = []
+    used = grants.consume(
+        ctx.name,
+        event=ctx.event,
+        needs=[(action, rel or None) for action, rel in needs],
+        running=bool(getattr(ctx.run, "running", False)),
+        appendable=ctx.paths_cfg.get("prevAppendable") or [],
+        log=log.append,
+    )
+    if not used:
+        if log:
+            decisions[0].meta.setdefault("grantLog", log)
+        return decisions
+
+    grant_id = str(used.get("grantId") or "")
+    out: list[Decision] = []
+    for decision in decisions:
+        if not _is_ask(decision):
+            out.append(decision)
+            continue
+        # ⚠ `headlessDeny`·`originallyAsk` 를 **물려받지 않는다.** 그 표식이
+        # 남으면 통과한 호출이 승인 요청을 다시 열고 "승인 대기" 알림까지
+        # 보낸다 (회귀 테스트: test_25_승인_1회로_호출_전체가_통과한다).
+        kept = {
+            k: v
+            for k, v in decision.meta.items()
+            if k not in ("headlessDeny", "originallyAsk")
+        }
+        out.append(
+            ALLOW(
+                M.grant_used(decision.label, grant_id),
+                label=decision.label,
+                action=decision.action,
+                rel=decision.rel,
+                meta={
+                    **kept,
+                    "grant": grant_id,
+                    "grantUsed": True,
+                    "grantLoose": bool(used.get("looseUsed")),
+                    "grantLog": log,
+                },
+            )
+        )
+    return out
 
 
 def combine(decisions: list[Decision]) -> Decision:

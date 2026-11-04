@@ -9,6 +9,23 @@
 (`tests/test_stdlib_only.py` 가 강제한다). 허가의 진실은 파일이고, DB
 (`store/approvals.py`)는 사람이 보는 거울이다.
 
+### 허가는 **호출 하나**에 묶인다 (finding 하나가 아니다)
+
+지문이 `(도구, 입력)` 이라 허가의 단위는 **도구 호출 하나**다. 그런데 한
+호출에서 승인이 필요한 행동이 둘 이상 나올 수 있다.
+
+    curl -sL https://x/y.sh | pip install peft   ->  net(ask) + pkg(ask)
+
+행동 하나씩 허가를 보면 `pkg` 를 승인해도 `net` 이 그대로 막혀서
+**승인이 끝나도 루프가 한 발짝도 못 나간다.** 그래서
+
+  - 허가는 그 호출에서 승인이 필요한 행동을 **전부**(`actions`) 들고 있고,
+  - 소비는 **호출당 한 번**이며 (`decide.resolve` 가 한 번만 부른다),
+  - 지금 걸린 ask 행동을 **모두** 덮지 못하면 아예 쓰지 않는다.
+
+마지막 줄이 중요하다. 승인한 뒤 실행 상태가 바뀌어 새 ask 가 늘었다면
+그건 사람이 본 그 호출이 아니다. 그때는 허가를 쓰지 않고 다시 묻는다.
+
 ### 안전벨트 (전부 테스트로 고정)
 
 1. **HMAC 서명.** 키는 `~/.config/labremote/grant_key` 이고 이미
@@ -46,6 +63,7 @@ __all__ = [
     "canonical",
     "sign",
     "verify",
+    "covers",
     "issue",
     "consume",
     "list_grants",
@@ -181,6 +199,7 @@ def issue(
     tool: str,
     tool_input,
     action_key: str,
+    actions: list[str] | None = None,
     rel: str | None = None,
     request_id: str = "",
     session_id: str = "",
@@ -192,12 +211,19 @@ def issue(
 ) -> dict:
     """허가를 만들어 파일로 쓴다. 쓴 내용을 그대로 돌려준다.
 
-    잠긴 행동이면 `GrantError` 다 — CLI 가 승인 자체를 거절한다.
+    `actions` 는 **그 호출에서 승인이 필요한 행동 전부**다. 비우면
+    `action_key` 하나로 본다. 하나라도 잠긴 행동이면 `GrantError` 다 —
+    CLI 가 승인 자체를 거절한다.
     """
     registry.valid_name(project)
-    if action_key in LOCKED_ACTIONS:
+    covered = sorted({str(a) for a in (actions or [action_key]) if a})
+    if not covered:
+        raise GrantError("무엇을 승인하는지가 비어 있어요.")
+    locked = sorted(set(covered) & LOCKED_ACTIONS)
+    if action_key in LOCKED_ACTIONS or locked:
+        name = locked[0] if locked else action_key
         raise GrantError(
-            f"{action_key!r} 는 승인으로 열 수 없는 잠긴 항목이에요. "
+            f"{name!r} 는 승인으로 열 수 없는 잠긴 항목이에요. "
             "권한 단계와 상관없이 항상 막혀요."
         )
     if loose and tool in NO_LOOSE_TOOLS:
@@ -225,6 +251,8 @@ def issue(
         "looseMatch": bool(loose),
         "tool": str(tool or ""),
         "actionKey": str(action_key or ""),
+        # 이 호출에서 승인이 필요했던 행동 **전부**. 소비할 때 이걸 다 덮어야 한다.
+        "actions": covered,
         "rel": rel,
         "summary": summary or "",
         "input": summarize_input(tool_input),
@@ -304,14 +332,21 @@ _PUT_BACK = frozenset(
 )
 
 
+def covers(grant: dict) -> set[str]:
+    """이 허가가 덮는 행동. 옛 판(목록이 없는 것)은 `actionKey` 하나로 본다."""
+    listed = grant.get("actions")
+    if isinstance(listed, list) and listed:
+        return {str(a) for a in listed}
+    return {str(grant.get("actionKey") or "")}
+
+
 def _usable(
     grant: dict,
     *,
     project: str,
     tool: str,
     fp: str,
-    action: str,
-    rel: str | None,
+    needs: list,
     running: bool,
     appendable: list,
     key: bytes | None,
@@ -321,6 +356,9 @@ def _usable(
 
     사유는 `_DISCARD`(허가가 죽었다) 또는 `_PUT_BACK`(이 호출의 허가가
     아니다) 중 하나로 분류된다.
+
+    `needs` 는 지금 걸린 `(행동, 상대경로)` 목록이다. **하나라도 못 덮으면
+    쓰지 않는다** — 사람이 본 그 호출이 아니라는 뜻이다.
     """
     if not verify(grant, key):
         return "grantBadSignature"
@@ -329,24 +367,29 @@ def _usable(
     if _expired(grant, now):
         return "grantExpired"
     # 허가 자신이 잠긴 행동을 들고 있으면 영원히 못 쓴다.
-    if grant.get("actionKey") in LOCKED_ACTIONS:
+    if covers(grant) & LOCKED_ACTIONS:
         return "grantLockedAction"
-    if grant.get("actionKey") != action:
+    if not needs:
+        return "grantNothingToCover"
+    actions = {action for action, _ in needs}
+    if not actions <= covers(grant):
         return "grantActionMismatch"
-    # 승인할 때는 멈춰 있었어도 **쓸 때** 돌고 있으면 안 된다 (spec III-4).
-    if action == "stop" and running:
-        return "grantRunningNow"
-    if action == "prev":
-        leaf = str(rel or "").rsplit("/", 1)[-1]
-        if leaf not in (appendable or []):
-            return "grantPrevLocked"
+    for action, rel in needs:
+        # 승인할 때는 멈춰 있었어도 **쓸 때** 돌고 있으면 안 된다 (spec III-4).
+        if action == "stop" and running:
+            return "grantRunningNow"
+        if action == "prev":
+            leaf = str(rel or "").rsplit("/", 1)[-1]
+            if leaf not in (appendable or []):
+                return "grantPrevLocked"
     if grant.get("fingerprint") == fp:
         return ""
     if not grant.get("looseMatch"):
         return "grantFingerprintMismatch"
     if tool in NO_LOOSE_TOOLS:
         return "grantLooseNotAllowed"
-    if grant.get("looseKey") != loose_key(tool, rel):
+    rels = {rel for _, rel in needs}
+    if len(rels) != 1 or grant.get("looseKey") != loose_key(tool, rels.pop()):
         return "grantLooseMismatch"
     return ""
 
@@ -355,14 +398,17 @@ def consume(
     project: str,
     *,
     event: dict,
-    action: str,
-    rel: str | None = None,
+    needs,
     running: bool = False,
     appendable: list | None = None,
     log=None,
     now: datetime | None = None,
 ) -> dict | None:
     """이 호출에 쓸 수 있는 허가가 있으면 **소비하고** 돌려준다. 없으면 None.
+
+    `needs` 는 지금 승인이 필요한 `(행동, 상대경로)` 목록이다. **호출당 한
+    번만** 부른다 — `decide.resolve` 가 그렇게 부른다. finding 마다 부르면
+    첫 번째가 허가를 태워 버려서 두 번째가 막힌다.
 
     `log` 를 주면 거절·소비마다 `{"event": ...}` 한 건으로 불린다
     (호출부가 `hook_events.jsonl` 에 적는다). 어떤 이유로든 예외를 올리지
@@ -373,8 +419,7 @@ def consume(
         return _consume(
             project,
             event=event or {},
-            action=action,
-            rel=rel,
+            needs=[(str(a), r) for a, r in (needs or [])],
             running=running,
             appendable=list(appendable or []),
             log=log,
@@ -407,10 +452,12 @@ def _candidates(project: str, fp: str) -> list[str]:
     return out
 
 
-def _consume(project, *, event, action, rel, running, appendable, log, now):
+def _consume(project, *, event, needs, running, appendable, log, now):
     registry.valid_name(project)
-    # 잠긴 행동은 파일을 쳐다보지도 않는다.
-    if action in LOCKED_ACTIONS:
+    if not needs:
+        return None
+    # 잠긴 행동이 섞였으면 파일을 쳐다보지도 않는다.
+    if {action for action, _ in needs} & LOCKED_ACTIONS:
         return None
     tool = str(event.get("tool_name") or "")
     fp = fingerprint(tool, event.get("tool_input"))
@@ -431,8 +478,7 @@ def _consume(project, *, event, action, rel, running, appendable, log, now):
             project=project,
             tool=tool,
             fp=fp,
-            action=action,
-            rel=rel,
+            needs=needs,
             running=running,
             appendable=appendable,
             key=key,
@@ -451,8 +497,8 @@ def _consume(project, *, event, action, rel, running, appendable, log, now):
                     {
                         "event": why,
                         "grantId": grant.get("grantId"),
-                        "actionKey": grant.get("actionKey"),
-                        "action": action,
+                        "grantActions": sorted(covers(grant)),
+                        "needed": sorted({a for a, _ in needs}),
                     }
                 )
             continue
@@ -463,8 +509,8 @@ def _consume(project, *, event, action, rel, running, appendable, log, now):
                 {
                     "event": "grantConsumed",
                     "grantId": grant.get("grantId"),
-                    "action": action,
-                    "rel": rel,
+                    "actions": sorted({a for a, _ in needs}),
+                    "rels": sorted({r for _, r in needs if r}),
                     "loose": grant.get("fingerprint") != fp,
                 }
             )

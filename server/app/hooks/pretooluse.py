@@ -21,7 +21,7 @@ import os
 import sys
 
 from .. import approval_log as A
-from .. import notify, paths, policy as policy_mod, registry, runstate
+from .. import embed, grants, notify, paths, policy as policy_mod, registry, runstate
 from . import classify, debug, decide as decide_mod
 from . import messages as M
 from .emit import DEFER, DENY, Decision, emit
@@ -132,7 +132,27 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
             tool_use_id=tool_use_id,
         )
 
-    if decision.kind == "allow":
+    # 1회용 허가를 보며 생긴 일(소비·서명 불일치·만료)을 남긴다.
+    for entry in decision.meta.get("grantLog") or []:
+        A.log_event(events, {"tool": tool, "toolUseId": tool_use_id, **entry})
+
+    if decision.kind == "allow" and decision.meta.get("grantUsed"):
+        # 사람이 승인한 허가로 통과했다. 정책이 열어 준 것과 구분해 적는다.
+        A.append_row(
+            log,
+            action=label,
+            request=request,
+            result="허용 · 1회용 승인",
+            handled_by=M.BY_GRANT,
+            tool_use_id=tool_use_id,
+        )
+        A.close_request(
+            ctx.name,
+            tool_use_id or f"{prompt_id}:{tool}",
+            result="소비됨",
+            grant_id=str(decision.meta.get("grant") or ""),
+        )
+    elif decision.kind == "allow":
         A.append_row(
             log,
             action=label,
@@ -184,6 +204,10 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
     # 주체가 Claude 앱이 아니라 ②의 승인 대기열이라, 대기 폴더에 두면 영원히
     # 안 닫히는 대기 건이 된다.
     if decision.meta.get("headlessDeny"):
+        asked = decision.meta.get("asked") or [
+            {"action": decision.action, "name": label, "rel": decision.rel}
+        ]
+        tool_input = event.get("tool_input")
         A.open_request(
             ctx.name,
             tool_use_id or f"{prompt_id}:{tool}",
@@ -195,15 +219,50 @@ def _record(ctx, event: dict, findings: list, decision: Decision) -> None:
                 "request": request,
                 "rel": decision.rel,
                 "reason": decision.reason,
+                # --- ②가 1회용 허가를 발급하는 데 필요한 것 ---
+                # 걸린 행동을 **전부** 싣는다. 한 호출에 ask 가 둘 이상일 수
+                # 있고(net + pkg), 승인 1회가 그 전부를 열어야 한다.
+                "actionKey": decision.action,
+                "actions": asked,
+                "fingerprint": grants.fingerprint(tool, tool_input),
+                "looseKey": grants.loose_key(tool, decision.rel),
+                # 본문은 저장하지 않는다 — 길이와 해시만.
+                "toolSummary": grants.summarize_input(tool_input),
+                "cwd": event.get("cwd"),
+                "permissionMode": event.get("permission_mode"),
+                "runState": {
+                    "running": getattr(ctx.run, "running", False),
+                    "experimentId": getattr(ctx.run, "experiment_id", None),
+                },
                 **_agent_of(event),  # ②의 대기열이 누가 낸 요청인지 알아야 한다
             },
         )
         if (ctx.policy.headless or {}).get("notifyDiscord", True):
-            result = notify.send(
-                f"[lab.remote] 승인 대기 · {ctx.name}\n{label} · {request}\n"
-                f"{decision.reason}"
+            result = notify.send_payload(
+                _approval_embed(ctx, asked, request, decision), kind="approval"
             )
             A.log_event(events, {"event": "notify", "result": result})
+
+
+def _approval_embed(ctx, asked: list, request: str, decision: Decision) -> dict:
+    """승인 대기 알림. **걸린 행동 전부와 사유 전문**을 싣는다 (①의 숙제 2번).
+
+    평문으로 보내면 2000자에서 잘려 사유가 사라진다. 임베드 필드는 1024자씩
+    나눠 담는다 (`app/embed.py`).
+    """
+    names = " · ".join(a.get("name") or a.get("action") or "?" for a in asked)
+    fields = [("걸린 행동", names), ("대상", request), ("훅 사유", decision.reason)]
+    rels = [a.get("rel") for a in asked if a.get("rel")]
+    if rels:
+        fields.insert(2, ("파일", "\n".join(dict.fromkeys(rels))))
+    return embed.build(
+        "approval",
+        project=ctx.name,
+        title="승인이 필요해요",
+        body=f"{len(asked)}가지 승인이 필요해요." if len(asked) > 1 else "",
+        fields=fields,
+        footer="labremote approvals list 로 확인하고 approve 로 승인해 주세요.",
+    )
 
 
 def _agent_of(event: dict) -> dict:
@@ -276,7 +335,8 @@ def handle(event: dict) -> Decision:
     findings = classify.classify_event(event, ctx)
     if not findings:
         return DEFER()
-    decision = decide_mod.combine([decide_mod.decide(f, ctx) for f in findings])
+    # 행동마다 판정하고 **호출 단위로** 1회용 허가를 본다 (decide.resolve 주석).
+    decision = decide_mod.resolve(findings, ctx)
     _record(ctx, event, findings, decision)
     return decision
 

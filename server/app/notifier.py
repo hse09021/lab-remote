@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import time
 
-from . import config, db, notify
+from . import config, db, embed, notify
 from .store import notifications as N
 
 __all__ = ["KINDS", "COLORS", "build", "send", "subject_of"]
@@ -38,24 +38,8 @@ KINDS = (
     "test",  # labremote notify test
 )
 
-#: 임베드 왼쪽 띠 색. 목업의 tone 과 뜻을 맞춘다.
-COLORS = {
-    "approval": 0xF0B429,  # 기다리는 중 — 주의
-    "start": 0x4C6EF5,
-    "done": 0x37B24D,
-    "failure": 0xE03131,
-    "usage_limit": 0xF0B429,
-    "driver": 0xE03131,
-    "gpu": 0xF0B429,
-    "recovery": 0x37B24D,
-    "blocked": 0xE03131,
-    "test": 0x868E96,
-}
-
-#: 임베드 하나에 들어갈 수 있는 길이 (Discord 제약)
-_DESC_MAX = 4000
-_FIELD_MAX = 1024
-_FIELDS_MAX = 25
+#: 임베드 왼쪽 띠 색은 `app/embed.py` 가 단일 출처다 — 훅도 같은 모양을 쓴다.
+COLORS = embed.COLORS
 
 #: 5xx 재시도 간격(초). 429 는 `Retry-After` 를 따른다.
 BACKOFF_SEC = (1, 4, 16)
@@ -65,12 +49,6 @@ MAX_ATTEMPTS = 3
 def subject_of(*parts: str) -> str:
     """중복 제거 열쇠에 쓸 주제. "무엇에 대한 알림인가" 를 한 줄로."""
     return "·".join(str(p) for p in parts if p)
-
-
-def _chunk(text: str, limit: int) -> list[str]:
-    """긴 사유를 여러 필드로 나눈다. **자르지 않는다.**"""
-    text = text or ""
-    return [text[i : i + limit] for i in range(0, len(text), limit)] or [""]
 
 
 def build(
@@ -85,29 +63,15 @@ def build(
     """Discord 임베드 payload. 사유가 길면 필드를 나눠 담는다."""
     if kind not in KINDS:
         raise ValueError(f"모르는 알림 종류예요: {kind!r}")
-    embed: dict = {
-        "title": f"{title} · {project}" if project else title,
-        "color": COLORS.get(kind, 0x868E96),
-    }
-    if body:
-        embed["description"] = body[:_DESC_MAX]
-    out_fields: list[dict] = []
-    for name, value in fields or []:
-        parts = _chunk(str(value), _FIELD_MAX)
-        for index, part in enumerate(parts):
-            out_fields.append(
-                {
-                    "name": name if index == 0 else f"{name} ({index + 1})",
-                    "value": part or "—",
-                    "inline": False,
-                }
-            )
-    if out_fields:
-        embed["fields"] = out_fields[:_FIELDS_MAX]
-    if footer:
-        embed["footer"] = {"text": footer[:2048]}
-    embed["timestamp"] = db.now()
-    return {"embeds": [embed]}
+    return embed.build(
+        kind,
+        project=project,
+        title=title,
+        body=body,
+        fields=fields,
+        footer=footer,
+        at=db.now(),
+    )
 
 
 def send(

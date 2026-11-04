@@ -127,24 +127,24 @@ def test_서명_키가_없으면_발급을_거절한다(project, isolated_config
 
 
 def test_허가가_없으면_None(project, grant_key):
-    assert grants.consume(project, event=event(), action="pkg") is None
+    assert grants.consume(project, event=event(), needs=[("pkg", None)]) is None
 
 
 def test_발급한_허가를_소비한다(project, grant_key):
     issued = grants.issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    used = grants.consume(project, event=event(), action="pkg")
+    used = grants.consume(project, event=event(), needs=[("pkg", None)])
     assert used and used["grantId"] == issued["grantId"]
 
 
 def test_두_번째는_안_먹힌다(project, grant_key):
     grants.issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    assert grants.consume(project, event=event(), action="pkg")
-    assert grants.consume(project, event=event(), action="pkg") is None
+    assert grants.consume(project, event=event(), needs=[("pkg", None)])
+    assert grants.consume(project, event=event(), needs=[("pkg", None)]) is None
 
 
 def test_소비_기록이_남는다(project, grant_key):
     grants.issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    grants.consume(project, event=event(), action="pkg")
+    grants.consume(project, event=event(), needs=[("pkg", None)])
     kept = os.listdir(os.path.join(registry.grants_dir(project), ".consumed"))
     assert any("consumed" in name for name in kept), kept
 
@@ -154,7 +154,7 @@ def test_만료되면_안_먹힌다(project, grant_key):
     from datetime import datetime, timedelta
 
     later = datetime.now().astimezone() + timedelta(seconds=5)
-    assert grants.consume(project, event=event(), action="pkg", now=later) is None
+    assert grants.consume(project, event=event(), needs=[("pkg", None)], now=later) is None
 
 
 def test_만료된_허가는_치워진다(project, grant_key):
@@ -162,27 +162,27 @@ def test_만료된_허가는_치워진다(project, grant_key):
     from datetime import datetime, timedelta
 
     later = datetime.now().astimezone() + timedelta(seconds=5)
-    grants.consume(project, event=event(), action="pkg", now=later)
+    grants.consume(project, event=event(), needs=[("pkg", None)], now=later)
     assert not os.path.exists(grant_file(project, issued["fingerprint"]))
 
 
 def test_입력이_다르면_안_먹힌다(project, grant_key):
     grants.issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
     other = event(tool_input={"command": "pip install torch"})
-    assert grants.consume(project, event=other, action="pkg") is None
+    assert grants.consume(project, event=other, needs=[("pkg", None)]) is None
 
 
 def test_안_맞는_허가는_되돌려_둔다(project, grant_key):
     """남의 허가를 소비해 버리면 그 승인이 사라진다."""
     issued = grants.issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    grants.consume(project, event=event(tool_input={"command": "다른 명령"}), action="pkg")
+    grants.consume(project, event=event(tool_input={"command": "다른 명령"}), needs=[("pkg", None)])
     assert os.path.exists(grant_file(project, issued["fingerprint"]))
-    assert grants.consume(project, event=event(), action="pkg")  # 원래 호출엔 여전히 먹힌다
+    assert grants.consume(project, event=event(), needs=[("pkg", None)])  # 원래 호출엔 여전히 먹힌다
 
 
 def test_행동_유형이_다르면_안_먹힌다(project, grant_key):
     grants.issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    assert grants.consume(project, event=event(), action="net") is None
+    assert grants.consume(project, event=event(), needs=[("net", None)]) is None
 
 
 def test_다른_프로젝트의_허가는_안_먹힌다(project, grant_key, tmp_path):
@@ -194,7 +194,7 @@ def test_다른_프로젝트의_허가는_안_먹힌다(project, grant_key, tmp_
     target = grant_file(project, issued["fingerprint"])
     os.makedirs(os.path.dirname(target), exist_ok=True)
     os.replace(grant_file("other-proj", issued["fingerprint"]), target)
-    assert grants.consume(project, event=event(), action="pkg") is None
+    assert grants.consume(project, event=event(), needs=[("pkg", None)]) is None
 
 
 # --- 잠금과 실행 중 조건 -----------------------------------------------------
@@ -228,7 +228,7 @@ def test_잠긴_항목은_손으로_넣어도_안_열린다(project, grant_key):
         }
         grant["sig"] = grants.sign(grant, key)  # 서명까지 맞게 만들어도
         registry.write_json(grant_file(project, grant["fingerprint"]), grant)
-        assert grants.consume(project, event=event(), action=action) is None, action
+        assert grants.consume(project, event=event(), needs=[(action, None)]) is None, action
 
 
 def test_서명_없는_가짜_허가는_잠기지_않은_ask_에도_안_먹힌다(project, grant_key):
@@ -248,7 +248,7 @@ def test_서명_없는_가짜_허가는_잠기지_않은_ask_에도_안_먹힌�
     }
     registry.write_json(grant_file(project, fingerprint), fake)
     seen = []
-    assert grants.consume(project, event=event(), action="pkg", log=seen.append) is None
+    assert grants.consume(project, event=event(), needs=[("pkg", None)], log=seen.append) is None
     assert [e["event"] for e in seen] == ["grantBadSignature"]
 
 
@@ -258,7 +258,7 @@ def test_서명이_틀린_허가는_남겨_두지_않는다(project, grant_key):
         grant_file(project, fingerprint),
         {"project": project, "fingerprint": fingerprint, "actionKey": "pkg", "sig": "hmac-sha256:틀림"},
     )
-    grants.consume(project, event=event(), action="pkg")
+    grants.consume(project, event=event(), needs=[("pkg", None)])
     assert not os.path.exists(grant_file(project, fingerprint))
 
 
@@ -267,8 +267,8 @@ def test_실험이_도는_중이면_stop_허가가_안_먹힌다(project, grant_
     tool_input = {"file_path": "docs/Evaluation.md", "old_string": "a", "new_string": "b"}
     grants.issue(project, tool="Edit", tool_input=tool_input, action_key="stop", rel="docs/Evaluation.md")
     ev = event("Edit", tool_input)
-    assert grants.consume(project, event=ev, action="stop", rel="docs/Evaluation.md", running=True) is None
-    assert grants.consume(project, event=ev, action="stop", rel="docs/Evaluation.md", running=False)
+    assert grants.consume(project, event=ev, needs=[("stop", "docs/Evaluation.md")], running=True) is None
+    assert grants.consume(project, event=ev, needs=[("stop", "docs/Evaluation.md")], running=False)
 
 
 def test_덧붙일_수_없는_이전_실험_파일은_안_먹힌다(project, grant_key):
@@ -276,7 +276,7 @@ def test_덧붙일_수_없는_이전_실험_파일은_안_먹힌다(project, gra
     rel = "experiments/EXP-001/result.csv"
     grants.issue(project, tool="Write", tool_input=tool_input, action_key="prev", rel=rel)
     ev = event("Write", tool_input)
-    assert grants.consume(project, event=ev, action="prev", rel=rel, appendable=["analysis.md"]) is None
+    assert grants.consume(project, event=ev, needs=[("prev", rel)], appendable=["analysis.md"]) is None
 
 
 def test_덧붙일_수_있는_analysis_는_먹힌다(project, grant_key):
@@ -284,7 +284,7 @@ def test_덧붙일_수_있는_analysis_는_먹힌다(project, grant_key):
     rel = "experiments/EXP-001/analysis.md"
     grants.issue(project, tool="Write", tool_input=tool_input, action_key="prev", rel=rel)
     ev = event("Write", tool_input)
-    assert grants.consume(project, event=ev, action="prev", rel=rel, appendable=["analysis.md"])
+    assert grants.consume(project, event=ev, needs=[("prev", rel)], appendable=["analysis.md"])
 
 
 # --- 느슨한 일치 -------------------------------------------------------------
@@ -295,7 +295,7 @@ def test_느슨한_일치는_켜야_쓴다(project, grant_key):
     tool_input = {"file_path": rel, "content": "처음 내용"}
     grants.issue(project, tool="Write", tool_input=tool_input, action_key="code", rel=rel, loose=True)
     changed = event("Write", {"file_path": rel, "content": "다시 쓴 내용"})
-    used = grants.consume(project, event=changed, action="code", rel=rel)
+    used = grants.consume(project, event=changed, needs=[("code", rel)])
     assert used and used["looseUsed"] is True
 
 
@@ -310,7 +310,7 @@ def test_느슨한_일치도_경로가_다르면_안_먹힌다(project, grant_ke
         loose=True,
     )
     other = event("Write", {"file_path": "src/eval.py", "content": "x"})
-    assert grants.consume(project, event=other, action="code", rel="src/eval.py") is None
+    assert grants.consume(project, event=other, needs=[("code", "src/eval.py")]) is None
 
 
 # --- 원자적 소비 -------------------------------------------------------------
@@ -323,7 +323,7 @@ def test_두_프로세스가_같이_소비하면_한_쪽만_이긴다(project, g
         "import json, os, sys\n"
         "from app import grants\n"
         "used = grants.consume(sys.argv[1], event={'tool_name':'Bash',"
-        "'tool_input':{'command':'pip install peft'}}, action='pkg')\n"
+        "'tool_input':{'command':'pip install peft'}}, needs=[('pkg', None)])\n"
         "print(json.dumps(bool(used)))\n"
     )
     env = {**os.environ, "PYTHONPATH": os.getcwd()}
@@ -348,7 +348,7 @@ def test_읽을_수_없는_허가_파일은_치운다(project, grant_key):
     with open(path, "w", encoding="utf-8") as fh:
         fh.write("{반쯤 쓰인 JSON")
     seen = []
-    assert grants.consume(project, event=event(), action="pkg", log=seen.append) is None
+    assert grants.consume(project, event=event(), needs=[("pkg", None)], log=seen.append) is None
     assert not os.path.exists(path)
     assert [e["event"] for e in seen] == ["grantUnreadable"]
 
@@ -367,7 +367,7 @@ def test_목록에_서명_상태가_같이_나온다(project, grant_key):
 def test_취소하면_안_먹힌다(project, grant_key):
     issued = grants.issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
     assert grants.revoke(project, issued["grantId"]) is True
-    assert grants.consume(project, event=event(), action="pkg") is None
+    assert grants.consume(project, event=event(), needs=[("pkg", None)]) is None
     assert grants.revoke(project, issued["grantId"]) is False
 
 
@@ -375,9 +375,9 @@ def test_이_호출의_허가가_아니면_되돌려_둔다(project, grant_key):
     """복합 명령은 한 호출에서 findings 가 여럿이라 action 이 여럿 들어온다.
     먼저 온 action 이 남의 허가를 태워 버리면 승인이 조용히 사라진다."""
     issued = grants.issue(project, tool="Bash", tool_input=TOOL_INPUT, action_key="pkg")
-    assert grants.consume(project, event=event(), action="net") is None
+    assert grants.consume(project, event=event(), needs=[("net", None)]) is None
     assert os.path.exists(grant_file(project, issued["fingerprint"]))
-    used = grants.consume(project, event=event(), action="pkg")
+    used = grants.consume(project, event=event(), needs=[("pkg", None)])
     assert used and used["grantId"] == issued["grantId"]
 
 
@@ -388,5 +388,5 @@ def test_실행_중이라_못_쓴_허가는_남아_있다(project, grant_key):
         project, tool="Edit", tool_input=tool_input, action_key="stop", rel="docs/Evaluation.md"
     )
     ev = event("Edit", tool_input)
-    grants.consume(project, event=ev, action="stop", rel="docs/Evaluation.md", running=True)
+    grants.consume(project, event=ev, needs=[("stop", "docs/Evaluation.md")], running=True)
     assert os.path.exists(grant_file(project, issued["fingerprint"]))

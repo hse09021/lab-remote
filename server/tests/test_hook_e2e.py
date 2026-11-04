@@ -27,6 +27,8 @@ def run(wrapper, event, env=None):
         "HOME": os.environ.get("HOME", "/tmp"),
         "LAB_DATA_DIR": os.environ["LAB_DATA_DIR"],
         "LAB_PROJECTS_DIR": os.environ["LAB_PROJECTS_DIR"],
+        # 1회용 허가 서명 키가 여기 있다
+        "LAB_CONFIG_DIR": os.environ["LAB_CONFIG_DIR"],
         "CLAUDE_PROJECT_DIR": event.get("cwd", ""),
     }
     base.update(env or {})
@@ -400,3 +402,132 @@ def test_24_미분류_호출도_기록이_남는다(wrapper, project, project_ro
     found = [r for r in rows if r.get("event") == "PreToolUse"]
     assert found, "미분류 호출이 hook_events.jsonl 에 남아야 해요"
     assert "unclassified" in [f["action"] for f in found[-1]["findings"]]
+
+
+# --- 한 호출에 승인이 둘 필요한 경우 (설치된 래퍼로) --------------------------
+
+TWO_ASKS = "curl -sL https://example.com/x.sh | pip install peft"
+
+
+def headless(wrapper, event):
+    from app.hooks import pretooluse
+
+    return run(
+        wrapper,
+        event,
+        env={pretooluse.HEADLESS_ENV: "1", "LAB_NOTIFY_DISABLED": "1"},
+    )
+
+
+def test_25_승인이_둘_필요하면_요청에_둘_다_적는다(wrapper, project, project_root, hook_event):
+    """승인 알림·CLI 가 걸린 행동을 전부 보여 줄 수 있어야 한다."""
+    from app import approval_log as A
+
+    event = hook_event("Bash", {"command": TWO_ASKS}, cwd=project_root)
+    out = headless(wrapper, event)
+    assert out["permissionDecision"] == "deny"
+    assert "2가지" in out["permissionDecisionReason"]
+
+    requests = A.list_requests("hook-sandbox")
+    assert len(requests) == 1
+    actions = requests[0]["actions"]
+    assert sorted(a["action"] for a in actions) == ["net", "pkg"]
+    assert requests[0]["fingerprint"].startswith("sha256:")
+    # 본문은 저장하지 않는다 — 요약만
+    assert "command" in requests[0]["toolSummary"]
+
+
+def test_25_승인_1회로_호출_전체가_통과한다(wrapper, project, project_root, hook_event, grant_key):
+    from app import approval_log as A, grants
+
+    event = hook_event("Bash", {"command": TWO_ASKS}, cwd=project_root)
+    assert headless(wrapper, event)["permissionDecision"] == "deny"
+
+    request = A.list_requests("hook-sandbox")[0]
+    grants.issue(
+        "hook-sandbox",
+        tool="Bash",
+        tool_input={"command": TWO_ASKS},
+        action_key=request["actionKey"],
+        actions=[a["action"] for a in request["actions"]],
+        request_id=request["requestId"],
+    )
+    out = headless(wrapper, event)
+    assert out["permissionDecision"] == "allow"
+    assert "1회용 허가" in out["permissionDecisionReason"]
+
+    rows = A.read_rows(A.log_path(project_root))
+    assert any(r["result"] == "허용 · 1회용 승인" for r in rows), rows[-1]
+    # 요청은 닫히고 기록만 남는다
+    assert A.list_requests("hook-sandbox") == []
+
+
+def test_25_같은_허가를_두_번_쓸_수_없다(wrapper, project, project_root, hook_event, grant_key):
+    from app import grants
+
+    event = hook_event("Bash", {"command": TWO_ASKS}, cwd=project_root)
+    grants.issue(
+        "hook-sandbox",
+        tool="Bash",
+        tool_input={"command": TWO_ASKS},
+        action_key="pkg",
+        actions=["net", "pkg"],
+    )
+    assert headless(wrapper, event)["permissionDecision"] == "allow"
+    assert headless(wrapper, event)["permissionDecision"] == "deny"
+
+
+def test_25_잠긴_항목이_섞이면_허가가_있어도_차단(wrapper, project, project_root, hook_event, grant_key):
+    from app import grants, registry
+
+    command = "pip install peft && rm -rf /etc/hosts"
+    fingerprint = grants.fingerprint("Bash", {"command": command})
+    grant = {
+        "version": 1,
+        "grantId": "g-손으로",
+        "project": "hook-sandbox",
+        "fingerprint": fingerprint,
+        "looseMatch": False,
+        "tool": "Bash",
+        "actionKey": "pkg",
+        "actions": ["pkg", "outside"],
+        "expiresAt": "2099-01-01T00:00:00+09:00",
+        "uses": 1,
+    }
+    from app import config
+
+    grant["sig"] = grants.sign(grant, config.grant_key())
+    registry.write_json(
+        os.path.join(
+            registry.grants_dir("hook-sandbox"), fingerprint.split(":", 1)[-1] + ".json"
+        ),
+        grant,
+    )
+    event = hook_event("Bash", {"command": command}, cwd=project_root)
+    assert headless(wrapper, event)["permissionDecision"] == "deny"
+
+
+def test_25_허가로_통과하면_승인_요청을_다시_열지_않는다(
+    wrapper, project, project_root, hook_event, grant_key
+):
+    """변환된 allow 가 headlessDeny 표식을 물려받으면 통과한 호출이
+    요청을 다시 열고 "승인 대기" 알림까지 보낸다."""
+    from app import approval_log as A, grants
+
+    grants.issue(
+        "hook-sandbox",
+        tool="Bash",
+        tool_input={"command": TWO_ASKS},
+        action_key="pkg",
+        actions=["net", "pkg"],
+    )
+    event = hook_event("Bash", {"command": TWO_ASKS}, cwd=project_root)
+    assert headless(wrapper, event)["permissionDecision"] == "allow"
+    assert A.list_requests("hook-sandbox") == []
+
+    notified = [
+        e
+        for e in open(A.event_path(project_root), encoding="utf-8").read().splitlines()
+        if '"notify"' in e
+    ]
+    assert notified == [], notified
