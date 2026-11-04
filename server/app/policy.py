@@ -300,45 +300,47 @@ SANDBOX_DOMAINS = (
 )
 
 
-#: 훅이 **스스로 쓰는** 곳. 샌드박스가 여기를 막으면 훅이 기록에 실패하고,
-#: 그러면 `HOOK_ERROR` 로 모든 도구가 막힌다 (실측에서 당했다).
-#: `policies`·`grants`·`lab.db`·`bin` 은 **일부러 뺐다** — AI 가 쓴 코드가
-#: 정책을 고치면 다음 호출부터 자기에게 allow 를 줄 수 있다.
-HOOK_WRITE_DIRS = ("pending", "requests", "denied", "runstate", "status")
+#: 런처가 `--settings` 로 넘기는 파일. **`server/data/` 아래**다 — 샌드박스
+#: 안에서 그 폴더 쓰기가 실패하는 것을 실측(M1b)으로 확인했으므로 AI 가 쓴
+#: 코드가 이 파일을 고칠 수 없다.
+LAUNCH_SETTINGS_NAME = "headless-settings.json"
 
 
-def hook_write_paths() -> list[str]:
-    data = registry.data_dir()
-    return [os.path.join(data, name) for name in HOOK_WRITE_DIRS]
+def launch_settings_path() -> str:
+    """`<data>/agent/headless-settings.json`."""
+    return os.path.join(registry.data_dir(), "agent", LAUNCH_SETTINGS_NAME)
 
 
 def sandbox_block(root: str, *, cache_dir: str = "", conda_roots=(), domains=()) -> dict:
-    """프로젝트 `.claude/settings.json` 에 넣을 `sandbox` 절.
-
-    실측(2026-11-04)으로 정한 값이다.
+    """런처가 `--settings` 로 넘기는 `sandbox` 절. 실측으로 정한 값이다.
 
     | 칸 | 값 | 왜 |
     |---|---|---|
-    | `enabled` | true | AI 가 쓴 **테스트 코드**(`pytest`)를 가두는 유일한 수단 |
+    | `enabled` | true | AI 가 쓴 **코드**(`pytest`·`python`)를 가두는 유일한 수단 |
     | `failIfUnavailable` | true | 기본이 `false` 라 못 쓰면 경고만 내고 **그냥 돈다** |
     | `autoAllowBashIfSandboxed` | **false** | 기본이 `true` 다. 안 끄면 Bash 가 자동 허용돼 게이트가 무의미해진다 |
-    | `filesystem.allowWrite` | 프로젝트 · 공용 캐시 · 훅이 쓰는 폴더 | 그것만 호스트에 남는다 |
-    | `filesystem.allowRead` | conda 설치 폴더 | **없으면 `python`·`pytest` 가 exit 127 이다** (실측) |
-
-    ⚠ **훅도 샌드박스 안에서 돈다.** 훅이 쓰는 폴더(`pending`·`requests`…)를
-    안 열면 기록에 실패하고 `HOOK_ERROR` 로 모든 도구가 막힌다. `policies`·
-    `grants`·`lab.db` 는 일부러 안 연다 — AI 가 쓴 코드가 정책을 고치면 다음
-    호출부터 자기에게 allow 를 줄 수 있다.
-
-    ⚠ **`allowRead` 는 프로젝트 설정에서 안 먹는다**(실측). 그래서 이 절은
-    **사용자 설정**(`~/.claude/settings.json`)에 쓴다 — 훅 등록이 있는 곳이고
-    `hardProtect` 라 AI 가 못 고친다.
+    | `filesystem.allowWrite` | **공용 캐시만** | 작업 폴더는 이미 쓰기 가능하다(M4). 부모(`~/projects`)를 넣으면 **다른 프로젝트까지** 열린다 |
+    | `filesystem.allowRead` | conda 설치 폴더 | **없으면 `python`·`pytest` 가 exit 127 이다** (M3) |
     | `network.allowedDomains` | pypi·HF·github… | 생 DNS 는 막히고 이 도메인만 프록시로 나간다 |
 
-    `denyRead` 는 따로 적지 않는다 — 샌드박스가 허용한 것 말고는 애초에 안
-    보인다(실측: `~/.ssh`·`~/.claude.json`·정책 파일 전부 `FileNotFoundError`).
+    실측으로 확정된 전제 셋 (`docs/operations.md` 의 S1·M6):
+
+    - **훅은 샌드박스 밖에서 돈다**(M1). 그래서 `server/data/` 를 `allowWrite`
+      에 넣지 않는다 — 넣으면 AI 가 쓴 코드가 `runstate`·`grants` 를 고쳐
+      `stop`·`prev` 잠금을 풀 수 있다.
+    - **작업 디렉터리는 언제나 쓰기 가능하고 좁힐 수 없다**(M4). `denyWrite`
+      키는 없다. 그래서 프로젝트 안 보호 파일은 이 절로 못 지킨다 —
+      훅(도구 호출) · 학습 bwrap(`--ro-bind`) · 감사 체계가 맡는다.
+    - **이 절은 프로젝트 설정에서 안 먹는다**(M3). `--settings` 파일에 둬야
+      `filesystem` 이 먹는다. 사용자 설정에는 **쓰지 않는다**(규칙 0).
+
+    `denyRead` 는 따로 적지 않는다 — 허용한 것 말고는 애초에 안 보인다(실측:
+    `~/.ssh`·`~/.claude.json`·정책 파일 전부 `FileNotFoundError`).
     """
-    write = [paths.real(root)] + hook_write_paths()
+    # 작업 디렉터리는 `allowWrite` 와 무관하게 **언제나** 쓰기 가능하다(M4).
+    # 그래서 프로젝트 루트를 적지 않는다 — 적어도 달라지는 게 없고, 부모
+    # 폴더를 적으면 다른 실험 프로젝트까지 열린다. 캐시만 더한다.
+    write = []
     if cache_dir:
         write.append(paths.real(cache_dir))
     read = [paths.real(item) for item in conda_roots if item]
@@ -357,28 +359,52 @@ def sandbox_block(root: str, *, cache_dir: str = "", conda_roots=(), domains=())
 
 
 def sandbox_state(root: str) -> dict:
-    """프로젝트 설정의 `sandbox` 절이 **기대대로인가.**
+    """지금 **실제로 적용되는** `sandbox` 절이 기대대로인가.
 
     런처가 매 실행 전에 보고, 아니면 헤드리스 루프를 띄우지 않는다
     (fail-closed). 훅도 이걸 보고 `pytest` 같은 코드 실행을 열지 말지 정한다.
 
+    보는 순서가 **곧 적용 순서**다 (M3·M6 실측).
+
+    | # | 어디 | 누가 쓰나 |
+    |---|---|---|
+    | 1 | `<data>/agent/headless-settings.json` | 런처가 `--settings` 로 넘긴다. **헤드리스와 `labremote claude` 가 쓰는 것** |
+    | 2 | 프로젝트 `.claude/settings.json` | 맨손 `claude` 로 열 때만 읽힌다. `filesystem` 은 **안 먹는다**(M3) |
+    | 3 | 사용자 `~/.claude/settings.json` | 우리 코드는 여기에 **쓰지 않는다**(규칙 0). 사람이 넣었으면 기계 전체에 걸린다 |
+
     표준 라이브러리만 쓴다 — 훅 경로에서 불린다.
     """
-    out = {"ok": False, "reasons": [], "allowWrite": [], "allowRead": [], "domains": []}
+    out = {
+        "ok": False, "reasons": [], "notes": [], "allowWrite": [], "allowRead": [],
+        "domains": [], "source": "",
+    }
     block = None
-    # 사용자 설정이 먼저다 — `allowRead` 가 프로젝트 설정에서는 안 먹는다(실측).
-    for path in (user_settings_path(), claude_settings_path(root)):
+    sources = (
+        ("launch", launch_settings_path()),
+        ("project", claude_settings_path(root)),
+        ("user", user_settings_path()),
+    )
+    for label, path in sources:
         try:
             with open(path, encoding="utf-8") as fh:
                 data = json.load(fh)
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             continue
         if isinstance(data, dict) and isinstance(data.get("sandbox"), dict):
-            block = data["sandbox"]
+            block, out["source"] = data["sandbox"], label
             break
     if block is None:
-        out["reasons"].append("sandbox 설정이 없어요 (~/.claude/settings.json)")
+        out["reasons"].append(
+            "sandbox 설정이 없어요 — labremote hooks install 로 "
+            f"{launch_settings_path()} 를 다시 써 주세요"
+        )
         return out
+    if out["source"] == "project":
+        # M3: 프로젝트 설정의 `filesystem` 은 무시된다. 켜진 것처럼 보여도
+        # conda 가 안 보이고 캐시 쓰기가 버려진다.
+        out["reasons"].append(
+            "sandbox 가 프로젝트 설정에만 있어요 — filesystem 이 안 먹어요(실측 M3)"
+        )
 
     if block.get("enabled") is not True:
         out["reasons"].append("sandbox.enabled 가 켜져 있지 않아요")
@@ -398,11 +424,44 @@ def sandbox_state(root: str) -> dict:
     out["allowWrite"] = list(filesystem.get("allowWrite") or [])
     out["allowRead"] = list(filesystem.get("allowRead") or [])
     out["domains"] = list((block.get("network") or {}).get("allowedDomains") or [])
-    if not out["allowWrite"]:
-        out["reasons"].append("sandbox.filesystem.allowWrite 가 비어 있어요")
-    elif not any(paths.is_inside(paths.real(item), paths.real(root)) or
-                 paths.real(item) == paths.real(root) for item in out["allowWrite"]):
-        out["reasons"].append("allowWrite 에 프로젝트 폴더가 없어요")
+    # allowWrite 에 **넓은 곳**이 들어 있으면 거부한다. 작업 폴더는 어차피
+    # 열려 있으니(M4) 여기 적힌 것은 전부 "프로젝트 밖에 추가로 여는 곳" 이다.
+    #
+    # | 대상 | 어떤 방향이 위험한가 |
+    # |---|---|
+    # | `~/projects`·`server/data`·`server/` | **양방향.** 안이면 다른 프로젝트·정책·허가·runstate 가 열리고, 밖이면 그걸 포함한다 |
+    # | 홈·`/` | **포함하는 방향만.** 캐시가 `~/lab-cache` 라 "홈 안" 은 정상이다 |
+    target = paths.real(root)
+    home = paths.real("~")
+    server_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    both_ways = [registry.projects_root(), registry.data_dir(), server_dir]
+    contains_only = [home, os.sep]
+    for item in out["allowWrite"]:
+        real = paths.real(item)
+        if not real or real == target or paths.is_inside(target, real):
+            continue  # 프로젝트 안 — 어차피 열려 있다
+        hit = next(
+            (
+                bad
+                for bad in both_ways
+                if bad and (paths.is_inside(bad, real) or paths.is_inside(real, bad))
+            ),
+            None,
+        ) or next(
+            (bad for bad in contains_only if bad and paths.is_inside(real, bad)),
+            None,
+        )
+        if hit:
+            out["reasons"].append(
+                f"allowWrite 가 너무 넓어요: {item} ({hit} 과 겹쳐요)"
+            )
+    if not out["allowRead"]:
+        # 막는 사유는 아니다 — 켜져 있긴 하다. 다만 conda 가 안 보여
+        # `python`·`pytest` 가 exit 127 이 된다 (M3). `doctor` 가 ⚠ 로 알린다.
+        out["notes"].append(
+            "sandbox.filesystem.allowRead 가 비어 있어요 — conda 가 안 보여서 "
+            "python·pytest 가 안 돌아요"
+        )
 
     out["ok"] = not out["reasons"]
     return out
@@ -419,44 +478,54 @@ def user_settings_path() -> str:
     return os.path.join(os.path.expanduser("~"), ".claude", "settings.json")
 
 
-def ensure_claude_sandbox(
-    root: str, *, cache_dir: str = "", conda_roots=(), domains=(), extra_write=()
+def launch_settings(root: str, *, cache_dir: str = "", conda_roots=(), domains=()) -> dict:
+    """런처가 `--settings` 로 넘길 설정 **전체**. 파일로 쓰지 않고 돌려준다."""
+    return {
+        "permissions": {
+            # 프로젝트 설정을 안 읽으므로(`--setting-sources user`) 거기 있던
+            # 값을 여기로 옮겨야 한다. 홈의 자격 증명을 경로마다 적지 않고
+            # 통째로 막는다 (실측 2026-11-04).
+            "blockReadsOutsideWorkingDirectories": True,
+            "blockWritesOutsideWorkingDirectories": True,
+            # [읽어야 할 바깥 경로 — 비어 있음. 예: ~/datasets]
+            "blockReadsExemptPaths": [],
+        },
+        "sandbox": sandbox_block(
+            root, cache_dir=cache_dir, conda_roots=conda_roots, domains=domains
+        ),
+        # 훅은 **일부러 안 넣는다.** 사용자 설정에 있고 `--setting-sources user`
+        # 가 그걸 읽는다. 양쪽에 두면 **훅이 두 번 돈다** (실측 M6f).
+    }
+
+
+def render_launch_settings(
+    root: str, *, cache_dir: str = "", conda_roots=(), domains=()
 ) -> dict:
-    """`sandbox` 절을 **사용자 설정**에 넣거나 고친다.
+    """`<data>/agent/headless-settings.json` 을 **지금 코드대로 다시 쓴다.**
 
-    프로젝트 설정이 아니라 사용자 설정인 이유: `filesystem.allowRead` 가
-    프로젝트 설정에서는 안 먹는다(실측). 사용자 설정은 훅 등록이 있는 곳이고
-    `hardProtect` 라 AI 가 못 고친다.
+    디스크에 있는 걸 믿지 않는다 — 런처가 매 실행 전에 부른다. 이 파일이
+    `server/data/` 아래인 것이 요점이다: 샌드박스 안에서 그 폴더 쓰기가
+    실패하므로(M1b) AI 가 쓴 코드가 자기 울타리를 고칠 수 없다.
 
-    기계 하나에 프로젝트가 여럿이므로 `allowWrite` 에 **등록된 프로젝트를
-    전부** 넣는다. 다른 키는 그대로 둔다 (병합).
+    **사용자 설정(`~/.claude/settings.json`)에는 쓰지 않는다.** 전에
+    `hooks install` 이 거기에 `sandbox` 절을 넣어 이 PC 의 모든 Claude 세션이
+    갇혔다. 규칙 0 을 코드로 강제한다.
     """
-    path = user_settings_path()
-    data = {}
-    try:
-        with open(path, encoding="utf-8") as fh:
-            loaded = json.load(fh)
-        if isinstance(loaded, dict):
-            data = loaded
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        data = {}
-
-    block = sandbox_block(
+    path = launch_settings_path()
+    data = launch_settings(
         root, cache_dir=cache_dir, conda_roots=conda_roots, domains=domains
     )
-    write = list(block["filesystem"]["allowWrite"])
-    for item in [*registry.load().keys(), *extra_write]:
-        target = paths.real(item)
-        if target and target not in write:
-            write.append(target)
-    block["filesystem"]["allowWrite"] = sorted(dict.fromkeys(write))
-
-    before = json.dumps(data.get("sandbox"), sort_keys=True)
-    data["sandbox"] = block
-    if before == json.dumps(block, sort_keys=True):
-        return {"path": path, "changed": False, "state": sandbox_state(root)}
-    registry.write_json(path, data)
-    return {"path": path, "changed": True, "state": sandbox_state(root)}
+    before = None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            before = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        before = None
+    changed = json.dumps(before, sort_keys=True) != json.dumps(data, sort_keys=True)
+    if changed:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        registry.write_json(path, data)
+    return {"path": path, "changed": changed, "state": sandbox_state(root)}
 
 
 def ensure_permission_mode(root: str, mode: str = D.DEFAULT_PERMISSION_MODE) -> dict:
