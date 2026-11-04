@@ -39,6 +39,7 @@ from ..store import experiments as X
 from ..store import jobs as J
 from ..store import loops as LP
 from . import approvals as approvals_mod
+from ..git import ops as ops_mod
 from . import gitflow, guards, projectguard
 
 __all__ = [
@@ -117,6 +118,32 @@ def resume_step(ctx, conn, session_id: str, *, request: dict | None = None) -> d
     LP.set_state(conn, ctx.project, "planning")
     got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=True)
     return {"ok": bool(got.get("ok")), "stage": "resume", "sessionId": session_id, "result": got}
+
+
+def guard_git(ctx, conn, exc) -> None:
+    """`.git` 이 거부됐다 — 멈추고 사람을 부른다.
+
+    오케스트레이터의 git 은 **샌드박스 밖에서 사용자 권한으로** 돈다. `.git`
+    에 `core.hooksPath`·`filter.*` 같은 게 심겼으면 그걸 실행해 주는 셈이다.
+    되돌릴 수 없으니(무엇이 정본인지 모른다) **멈추고 사람이 본다.**
+    """
+    text = str(exc)
+    E.add(conn, ctx.project, "보안", ".git 설정이 위험해서 git 을 돌리지 않았어요", tone="bad")
+    try:
+        notifier.send(
+            conn,
+            "blocked",
+            project=ctx.project,
+            subject=notifier.subject_of("gitguard", ctx.project),
+            title=f".git 설정이 위험해요 · {ctx.project}",
+            body=text[:1500],
+        )
+    except Exception:
+        pass
+    LP.set_state(
+        conn, ctx.project, "blocked",
+        stop_reason=".git 이 코드를 실행하게 만드는 설정을 가졌어요 — git 을 돌리지 않았어요",
+    )
 
 
 def guard_project(ctx, conn, *, when: str, block: bool = True) -> dict:
@@ -200,7 +227,14 @@ def plan_step(ctx, conn) -> dict:
     exp_id = next_experiment_id(conn, ctx.project, ctx.root)
     loop_no = LP.bump_loop(conn, ctx.project)
     LP.set_state(conn, ctx.project, "planning")
-    gitflow.start_experiment(ctx.root, exp_id, running=False)
+    try:
+        gitflow.start_experiment(ctx.root, exp_id, running=False)
+    except ops_mod.GitRefused as exc:
+        guard_git(ctx, conn, exc)
+        return {
+            "ok": False, "stage": "plan", "blocked": True,
+            "reason": str(exc).splitlines()[0],
+        }
 
     session_id = session_mod.new_id()
     prompt = prompts_mod.render(
@@ -349,7 +383,11 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
         )
     # 커밋에 오염이 들어가지 않게 **커밋 전에** 한 번 더 본다.
     guard_project(ctx, conn, when="기록 커밋 전")
-    gitflow.record_and_return(ctx.root, exp_id, running=False)
+    try:
+        gitflow.record_and_return(ctx.root, exp_id, running=False)
+    except ops_mod.GitRefused as exc:
+        # `.git` 이 코드를 실행하게 만드는 설정을 가졌다. **커밋하지 않는다.**
+        guard_git(ctx, conn, exc)
 
     if disagree:
         LP.set_state(
