@@ -32,17 +32,31 @@ def open_request(
     reason: str = "",
     fingerprint: str = "",
     loose_key: str = "",
+    source: str = "hook",
+    tool_summary=None,
 ) -> dict:
     """요청을 올린다. 같은 요청이 또 오면 `attempts` 만 올린다.
 
     `UNIQUE(project, request_id)` 가 중복을 막는다 — 오케스트레이터가
     `requests/` 를 여러 번 훑어도 줄이 늘지 않는다.
     """
+    from . import dumps
+
     conn.execute(
         "INSERT INTO approvals(project, request_id, job_id, session_id, tool, "
-        "action_key, rel, request, reason, fingerprint, loose_key, state, "
-        "opened_at, attempts) VALUES(?,?,?,?,?,?,?,?,?,?,?, 'open', ?, 1) "
-        "ON CONFLICT(project, request_id) DO UPDATE SET attempts=attempts+1",
+        "action_key, rel, request, reason, fingerprint, loose_key, source, "
+        "tool_summary, state, opened_at, attempts) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?, 1) "
+        "ON CONFLICT(project, request_id) DO UPDATE SET attempts=attempts+1, "
+        # 🔑 `denials` 출처가 `hook` 출처를 **덮는다.** 반대는 안 된다 —
+        # 오케스트레이터가 자기 자식에게서 직접 받은 값이 더 믿을 만하다.
+        "source=CASE WHEN excluded.source='denials' THEN 'denials' ELSE source END, "
+        "fingerprint=CASE WHEN excluded.source='denials' AND excluded.fingerprint<>'' "
+        "            THEN excluded.fingerprint ELSE fingerprint END, "
+        "tool_summary=COALESCE(excluded.tool_summary, tool_summary), "
+        "tool=CASE WHEN excluded.source='denials' THEN excluded.tool ELSE tool END, "
+        # 사유는 훅만 안다 (`permission_denials` 에 사유 칸이 없다 — M2)
+        "reason=CASE WHEN excluded.reason<>'' THEN excluded.reason ELSE reason END",
         (
             project,
             request_id,
@@ -55,6 +69,8 @@ def open_request(
             reason,
             fingerprint,
             loose_key,
+            source,
+            dumps(tool_summary),
             db.now(),
         ),
     )

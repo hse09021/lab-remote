@@ -174,6 +174,30 @@ def summarize_input(tool_input) -> dict:
     return out
 
 
+#: 사람이 승인창에서 보는 한 줄을 만들 때 **먼저 보는** 칸.
+_SHOW_KEYS = ("command", "file_path", "notebook_path", "url", "query", "pattern", "path")
+
+
+def describe_input(tool: str, tool_input) -> str:
+    """사람이 승인할 때 보는 **한 줄**. 본문은 싣지 않는다.
+
+    `permission_denials` 에서 온 `tool_input` 으로 만든다 — 사람이 보는 내용이
+    오케스트레이터가 직접 받은 값과 **같아야** 한다 (원칙 (나)).
+    """
+    if not isinstance(tool_input, dict):
+        return tool
+    for key in _SHOW_KEYS:
+        value = tool_input.get(key)
+        if isinstance(value, str) and value.strip():
+            text = value.strip()
+            return text if len(text) <= 200 else text[:200] + "…"
+    # 보여 줄 칸이 없으면 **본문 없는** 요약으로 (`_BODY_KEYS` 는 길이·해시다)
+    summary = summarize_input(tool_input)
+    if not summary:
+        return tool
+    return f"{tool} · " + ", ".join(f"{k}={summary[k]!r}" for k in sorted(summary))[:200]
+
+
 def sign(grant: dict, key: bytes) -> str:
     body = canonical({k: v for k, v in grant.items() if k != "sig"})
     return "hmac-sha256:" + hmac.new(key, body.encode("utf-8"), hashlib.sha256).hexdigest()

@@ -273,6 +273,18 @@ def _claude(ctx, conn, *, prompt: str, session_id: str, resume: bool) -> dict:
     )
     made = launch_mod.plan(run, preset=ctx.preset)
     got = ctx.runner(made)
+
+    # 🔑 승인 내용과 지문은 **자기 자식의 결과 JSON** 에서 만든다 (원칙 (나)).
+    # 훅의 요청 파일보다 먼저 이걸 본다 — 본문이 여기에만 있어서 지문을
+    # 직접 계산할 수 있고, 훅이 파일을 못 썼어도 무엇이 막혔는지 안다.
+    try:
+        approvals_mod.sync_from_result(
+            conn, ctx.project, got, session_id=session_id
+        )
+    except Exception:
+        # 승인 거울이 루프를 멈추지 않는다. 훅의 요청 파일이 보조로 남는다.
+        pass
+
     # 세션이 끝난 **직후**가 가장 짧은 창이다. 이 세션이 쓴 코드가 프로젝트
     # 설정을 고쳤으면 다음 세션(과 사람의 대화형 세션)이 그걸 읽는다.
     guard_project(ctx, conn, when="Claude 세션 종료 직후")

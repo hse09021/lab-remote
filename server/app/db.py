@@ -34,12 +34,21 @@ __all__ = [
 ]
 
 #: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS` 에 줄을 더한다.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 #: 판을 올리는 SQL. `{이전 판: SQL 문자열}` — 판 1 은 schema.sql 통째다.
 MIGRATIONS: dict[int, str] = {
     # 판 1 -> 2 · 앵커 (AI 가 못 쓰는 곳에 둔 기준값). T5 는 git HEAD,
     # S7 은 승인 로그 해시 체인을 같은 표에 담는다.
+    # 판 2 -> 3 · 승인 내용의 출처를 적는다 (원칙 (나)).
+    #   source='denials'  오케스트레이터가 자기 자식의 결과 JSON 에서 만든 것
+    #   source='hook'     훅의 요청 파일에서 거울한 것 (참고용)
+    # tool_summary 는 **본문 없는** 요약이다 (길이·해시). 비밀이 섞일 수 있어
+    # 원본 tool_input 은 DB 에 넣지 않는다.
+    2: """
+ALTER TABLE approvals ADD COLUMN source TEXT NOT NULL DEFAULT 'hook';
+ALTER TABLE approvals ADD COLUMN tool_summary TEXT;
+""",
     1: """
 CREATE TABLE IF NOT EXISTS anchors (
   project    TEXT NOT NULL,

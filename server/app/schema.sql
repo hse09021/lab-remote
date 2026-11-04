@@ -150,6 +150,13 @@ CREATE TABLE IF NOT EXISTS approvals (
   decided_at  TEXT,
   decided_by  TEXT,
   attempts    INTEGER NOT NULL DEFAULT 0,
+  -- 승인 내용의 출처 (원칙 (나)). 'denials' 는 오케스트레이터가 자기 자식의
+  -- 결과 JSON(permission_denials)에서 만든 것, 'hook' 은 훅의 요청 파일에서
+  -- 거울한 것(참고용)이다.
+  source      TEXT NOT NULL DEFAULT 'hook',
+  -- **본문 없는** 입력 요약 (길이·해시). 비밀이 섞일 수 있어 원본
+  -- tool_input 은 DB 에 넣지 않는다.
+  tool_summary TEXT,
   UNIQUE (project, request_id)
 );
 

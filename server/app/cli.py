@@ -330,7 +330,16 @@ def cmd_requests(args) -> int:
         for item in items:
             print(f"{item.get('openedAt')}  {item.get('requestId')}")
             print(f"  {item.get('action')} · {_shorten(str(item.get('request') or ''))}")
+            if item.get("reason"):
+                # 🔑 사유는 **훅이 쓴 값**이다. `permission_denials` 에는 사유
+                # 칸이 없다(M2). 승인 내용·지문과 같은 무게로 보면 안 되므로
+                # 어디서 왔는지 밝힌다.
+                from .orchestrator.approvals import HOOK_REASON_LABEL
+
+                print(f"  {HOOK_REASON_LABEL}: {_shorten(str(item['reason']))}")
         print("\n②의 승인 대기열이 이 목록을 읽어 가요.")
+        print("승인 내용과 지문은 오케스트레이터가 claude 결과 JSON 에서 만들어요 —")
+        print("이 파일은 참고용이에요.")
         return 0
 
     targets = [args.id] if args.id else [str(i.get("requestId") or "") for i in items]
