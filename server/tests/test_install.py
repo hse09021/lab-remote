@@ -10,6 +10,21 @@ import pytest
 
 from app.hooks import install
 
+#: matcher 가 이 중 하나면 **모든 도구**에 매치된다 (번들 바이너리의 비교 코드:
+#: `if (!matcher || matcher === "*") return true`, 그리고 `".*"`·`""` 도 전부).
+MATCH_ALL = (None, "", "*", ".*")
+
+
+def _matches(matcher, tool: str) -> bool:
+    """번들의 판정을 그대로 흉내 낸다 — 이름 나열은 **정확 문자열 비교**다."""
+    import re
+
+    if matcher in MATCH_ALL:
+        return True
+    if any(ch in str(matcher) for ch in "|()[]*+?^$\\"):
+        return re.fullmatch(str(matcher), tool) is not None
+    return str(matcher) == tool
+
 
 @pytest.fixture(autouse=True)
 def fake_settings(tmp_path, monkeypatch):
@@ -47,14 +62,13 @@ def test_enforce_설치(fake_settings):
     # 거부로 턴이 끊기면 Stop 이 안 돈다 — 이 훅이 빠지면 대기 건이 남는다
     assert "UserPromptSubmit" in data["hooks"]
     assert "app.hooks.userprompt" in data["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
-    # 비밀 파일만 보려고 읽기 도구도 matcher 에 들어 있다
-    assert "Read" in install.TOOL_MATCHER and "Grep" in install.TOOL_MATCHER
     pre = data["hooks"]["PreToolUse"][0]
     # 판정 훅이 깨지면 조용히 문이 열리면 안 된다
     assert pre["hooks"][0]["onFailure"] == "block"
     assert "app.hooks.pretooluse" in pre["hooks"][0]["command"]
-    assert "MultiEdit" in pre["matcher"]  # 실측 안 됐어도 빼지 않는다
-    assert "ToolSearch" not in pre["matcher"]  # 읽기 전용
+    # 🔑 **설치된** matcher 가 match-all 이다. 이름을 나열하면 정확 문자열
+    # 비교라 목록에 없는 도구는 훅이 아예 안 뜬다.
+    assert pre["matcher"] in MATCH_ALL, pre["matcher"]
     # 기록용 훅은 아무것도 막지 않는다
     for event in ("PostToolUse", "Stop", "SessionEnd"):
         assert data["hooks"][event][0]["hooks"][0]["onFailure"] == "continue"
@@ -179,3 +193,103 @@ def test_덤프_모드도_SubagentStop_을_받아_적는다(fake_settings):
     """이 이벤트의 입력은 아직 실측 전이다."""
     install.install(mode="dump")
     assert "SubagentStop" in read(fake_settings)["hooks"]
+
+
+# --- 🔑 S5 · matcher 가 모든 도구를 덮나 ------------------------------------
+#
+# 번들 바이너리의 비교 코드: matcher 가 **없음·`""`·`"*"`·`".*"`** 이면 전부
+# 매치이고, 이름을 나열하면 **정확 문자열 비교**다. 전에는 이름을 나열해서
+# `Glob`·`TodoWrite`·`Task`·`NotebookRead`·`mcp__*` 에 훅이 **아예 안 떴다** —
+# 그런데 테스트는 "막힌다" 고 단정했다(거짓 초록불).
+
+
+def _installed_matchers(path, event="PreToolUse"):
+    data = read(path)
+    return [entry.get("matcher") for entry in data["hooks"][event]]
+
+
+def test_설치된_matcher_가_모든_도구를_덮는다(fake_settings):
+    install.install(mode="enforce")
+    for event in ("PreToolUse", "PostToolUse"):
+        got = _installed_matchers(fake_settings, event)
+        assert got and all(m in MATCH_ALL for m in got), (event, got)
+
+
+def test_classify_의_도구_이름이_전부_matcher_에_걸린다(fake_settings):
+    """판정 코드가 이름을 아는 도구는 **하나도 빠짐없이** 훅이 떠야 한다.
+
+    전에는 `classify` 가 `Glob` 을 `SECRET_READ_TOOLS` 에 넣어 `~/.ssh` 훑기를
+    막도록 써 뒀는데 matcher 에 없어서 훅이 안 떴다.
+    """
+    from app.hooks import classify
+
+    install.install(mode="enforce")
+    matchers = _installed_matchers(fake_settings)
+
+    names = set(classify.WRITE_TOOLS) | set(classify.NET_TOOLS)
+    names |= set(classify.READ_ONLY_TOOLS) | set(classify.SECRET_READ_TOOLS)
+    names |= {"Bash", "Task", "NotebookRead", "mcp__x__y", "모르는도구"}
+    assert "Glob" in names and "TodoWrite" in names and "ToolSearch" in names
+
+    for tool in sorted(names):
+        assert any(_matches(m, tool) for m in matchers), tool
+
+
+def test_덤프_모드도_같은_matcher_를_쓴다(fake_settings):
+    install.install(mode="dump")
+    for event in ("PreToolUse", "PostToolUse"):
+        assert all(m in MATCH_ALL for m in _installed_matchers(fake_settings, event))
+
+
+def test_판정할_것이_없는_allow_는_기록하지_않는다(ctx, hook_event, monkeypatch):
+    """matcher 가 모든 도구가 되면서(S5) 훅이 도구 호출마다 뜬다. 그 줄
+    대부분은 `Read`·`Glob`·`TodoWrite` 이고 판정할 것이 없다 — 남기면
+    `hook_events.jsonl` 이 폭증한다.
+
+    **승인 로그 CSV 에는 그대로 남는다** — 거기가 기록 의무의 대상이다.
+    """
+    from app import approval_log as A
+    from app.hooks import emit, pretooluse
+
+    logged: list[dict] = []
+    rows: list[dict] = []
+    monkeypatch.setattr(A, "log_event", lambda path, obj: logged.append(obj))
+    monkeypatch.setattr(A, "append_row", lambda path, **kw: rows.append(kw))
+    monkeypatch.setattr(A, "remember_denied", lambda *a, **k: None)
+    monkeypatch.setattr(A, "open_pending", lambda *a, **k: None)
+
+    def record(decision):
+        logged.clear()
+        rows.clear()
+        pretooluse._record(ctx, hook_event("Glob", {"pattern": "*"}), [], decision)
+
+    # 1. 조용한 allow → hook_events 에 안 남는다
+    for action in sorted(pretooluse.QUIET_ACTIONS):
+        record(emit.ALLOW("", label="읽기", action=action))
+        assert logged == [], action
+
+    # 2. 막힌 것은 남는다
+    record(emit.DENY("막았어요", label="프로젝트 폴더 밖", action="outside", rel="x"))
+    assert [e["decision"] for e in logged] == ["deny"]
+
+    # 3. 물은 것도 남는다
+    record(emit.ASK("승인이 필요해요", label="패키지 설치", action="pkg"))
+    assert [e["decision"] for e in logged] == ["ask"]
+
+    # 4. 허가로 통과한 것도 남는다 (meta 가 있다)
+    record(emit.ALLOW("", label="읽기", action="toolAllowed", meta={"grant": "g-1"}))
+    assert [e["decision"] for e in logged] == ["allow"]
+
+    # 5. 분류 안 된 allow 도 남는다 (QUIET_ACTIONS 가 아니다)
+    record(emit.ALLOW("", label="코드 수정", action="code"))
+    assert [e["decision"] for e in logged] == ["allow"]
+
+
+def test_막는_행동은_조용한_목록에_없다():
+    """실수로 `outside` 를 넣으면 잠금이 기록 없이 지나간다."""
+    from app.hooks import decide, pretooluse
+
+    for action in decide.LOCK_ACTIONS:
+        assert action not in pretooluse.QUIET_ACTIONS, action
+    for action in ("secret", "selfProtect", "hardProtect", "outputProtect"):
+        assert action not in pretooluse.QUIET_ACTIONS, action

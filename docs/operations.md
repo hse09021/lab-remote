@@ -2806,3 +2806,94 @@ warn("…", "…", hint="…")           # ⚠  종료코드 0
 
 함수는 `command claude` 로 **빠져나갈 수 있습니다.** 막는 장치가 아니라
 **멈춰 세우는 장치**입니다 — 사람이 자기 셸에 넣는 것이니 그게 맞습니다.
+
+---
+
+# 🎯 S5 — matcher 를 **모든 도구**로 (2026-11-05)
+
+## 거짓 초록불이었습니다
+
+`PreToolUse` matcher 가 이름 나열이었습니다.
+
+```
+"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|Read|Grep"
+```
+
+번들 바이너리의 비교 코드를 읽어 보면 matcher 가 **없음·`""`·`"*"`·`".*"`**
+이면 전부 매치이고, **이름을 나열하면 정확 문자열 비교**입니다
+(`if (!matcher || matcher === "*") return true`). 즉 목록에 없는 도구는
+**훅이 아예 안 떴습니다.**
+
+| 빠져 있던 도구 | 안 돌던 것 |
+|---|---|
+| **`Glob`** | `classify.SECRET_READ_TOOLS` 의 `~/.ssh` 훑기 차단. **테스트는 "막힌다" 고 단정했는데 훅이 안 떴습니다** |
+| `TodoWrite`·`ToolSearch` | `READ_ONLY_TOOLS` 판정 — 헤드리스에서 `defer` 는 **정지**라 `allow` 를 줘야 합니다 |
+| `Task`·`NotebookRead`·`mcp__*` | "모르는 도구 → ask" (`unclassified`) |
+
+판정 코드만 시험하면 이걸 **영원히 못 잡습니다.** 판정은 맞는데 그 판정이
+불리지 않는 상태였습니다.
+
+## 고친 것
+
+```python
+TOOL_MATCHER = "*"          # PreToolUse · PostToolUse · dump 모드까지 통일
+```
+
+### 테스트를 **설치된 matcher** 기준으로
+
+- `install.TOOL_MATCHER` 문자열을 보던 단정을 버리고, **쓰인
+  `settings.json` 을 읽어** matcher 가 match-all 인지 봅니다.
+- `classify` 의 `WRITE_TOOLS`·`NET_TOOLS`·`READ_ONLY_TOOLS`·
+  `SECRET_READ_TOOLS` **전부 + `Bash`·`Task`·`NotebookRead`·`mcp__x__y`·
+  모르는 이름**이 걸리는지 대조합니다. 번들의 비교 규칙을 흉내 낸
+  `_matches()` 로 봅니다 — 나중에 누가 이름 나열로 되돌리면 잡힙니다.
+- `test_install.py` 의 `"ToolSearch" not in matcher` 단정을 **뒤집었습니다.**
+- `test_credentials.py` 의 `Glob` 시험에 **설치된 matcher 검사**를 더했습니다.
+
+## 대가 — 로그 폭증을 막습니다
+
+훅이 **도구 호출마다** 뜹니다. 그 줄 대부분은 `Read`·`Glob`·`TodoWrite` 이고
+**판정할 것이 아무것도 없습니다.** 그래서 `hook_events.jsonl` 에
+
+| | 남기나 |
+|---|---|
+| `deny`·`ask` | **네** — 전부 |
+| 우회 시도·훅 오류 | **네** — 전부 |
+| 허가로 통과한 `allow`(`meta` 가 있는 것) | **네** |
+| `QUIET_ACTIONS` 의 `allow` (`readAllowed`·`toolAllowed`·`bashAllowed`·`journal`) | **아니요** |
+
+> `Approval_log.csv` 에는 **그대로 남습니다.** 거기가 기록 의무의 대상이고
+> 해시 체인·앵커(S7)로 지키는 쪽입니다. 줄인 것은 진단용 로그뿐입니다.
+
+테스트가 `decide.LOCK_ACTIONS` 와 `secret`·`selfProtect`·`hardProtect`·
+`outputProtect` 가 **`QUIET_ACTIONS` 에 없는 것**을 고정합니다 — 실수로 넣으면
+잠금이 기록 없이 지나갑니다.
+
+## 사용자 설정에 반영하는 명령 (사람이 돌립니다)
+
+코드는 `~/.claude/settings.json` 을 쓰지 않습니다(규칙 0). 반영은 사람이
+합니다.
+
+```bash
+cd ~/Desktop/lab-remote/server
+labremote hooks install --mode enforce
+```
+
+**바뀌어야 하는 것은 `matcher` 두 줄뿐입니다** (복사본으로 시뮬레이션해
+확인했습니다).
+
+```diff
+     "PreToolUse": [
+       {
+-        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|Read|Grep",
++        "matcher": "*",
+     "PostToolUse": [
+       {
+-        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|Read|Grep",
++        "matcher": "*",
+```
+
+그 외에 바뀌는 것: 파일 끝에 **줄바꿈 하나**가 붙습니다. `sandbox` 절은
+**쓰지 않습니다**(T2). `command`·`timeout`·`onFailure`·다른 이벤트·
+`effortLevel` 은 그대로입니다. `hooks install` 은 고치기 전에 백업을
+남깁니다(`settings.json.labremote-backup`).
