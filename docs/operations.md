@@ -797,6 +797,12 @@ bwrap --ro-bind / / --dev-bind /dev /dev --proc /proc --tmpfs /tmp \
 명령 문자열 분석은 완전할 수 없습니다. 62종을 메워도 63번째 래퍼가 나옵니다.
 위 실측이 그걸 그대로 보여 줍니다 — **훅이 `allow` 를 준 명령을 샌드박스가 막았습니다.**
 
+> ⚠ **이 말이 사실이 되려면 샌드박스가 켜져 있어야 합니다.** ②의 5단계까지는
+> 기본이 꺼짐이었고, 그동안 이 문장은 **사실이 아니었습니다.** 지금은
+> `labremote hooks install` 이 `~/.claude/settings.json` 에 `sandbox` 절을
+> 쓰고, 런처가 매 실행 전에 확인해 꺼져 있으면 헤드리스를 안 띄웁니다
+> (아래 "Claude Bash 샌드박스" 절).
+
 그래서 역할을 이렇게 나눠 적습니다.
 
 | 층 | 막는 것 | 성질 |
@@ -1633,6 +1639,86 @@ Claude 에게 가서 폴더 이름이 됩니다.
 - 기준 문서 **0번**이 `state/Current.yaml` 입니다 (잠금의 이유가 거기에만 있음)
 - **"4번(실험 실행)은 당신이 하지 않아요"** 와 `run.json` 규약
 - 학습이 쓸 수 있는 곳은 프로젝트와 공용 캐시뿐
+
+## 🧰 Claude Bash 샌드박스 — 기본으로 켭니다 (2026-11-04 실측)
+
+### 왜 켜야 하나
+
+`pytest` 가 허용 목록에 있었는데 샌드박스는 꺼져 있었습니다. 그래서 **AI 가 쓴
+테스트 코드가 아무 제약 없이** 돌았습니다. 실측으로 그대로 재현됐습니다.
+
+```
+OK  read ~/.claude.json        OK  read 정책파일(server/data/policies/*.json)
+OK  write ~/.claude/           OK  DNS 조회     OK  write /tmp
+```
+
+정책 파일을 읽을 수 있다는 건 다음 호출의 판정을 들여다볼 수 있다는 뜻이고,
+네트워크가 열려 있으니 읽은 건 나갈 수 있습니다.
+
+켜면 같은 탐침이 이렇게 됩니다.
+
+```
+BLOCKED  read ~/.ssh/known_hosts   BLOCKED  read ~/.bash_history
+BLOCKED  read ~/.claude.json       BLOCKED  read 정책파일
+BLOCKED  write /tmp (읽기 전용)      BLOCKED  DNS 조회
+OK       write 캐시                 OK       write 프로젝트       OK  conda run
+```
+
+`~/.claude` 쓰기는 **성공한 것처럼 보이지만 호스트에 안 남습니다**(학습
+샌드박스와 같은 함정).
+
+### 설정은 **사용자 설정**에 씁니다
+
+| 알아낸 것 | |
+|---|---|
+| `sandbox.enabled` | 프로젝트 설정에서도 **먹습니다** |
+| `sandbox.filesystem.allowRead` | 프로젝트 설정에서는 **안 먹습니다** — 사용자 설정이어야 합니다 |
+| `allowRead` 없이 켜면 | conda 가 안 보여 `python`·`pytest` 가 **exit 127** |
+| `network.allowedDomains` | **프록시 허용 목록**입니다. 생 DNS 는 막히고(유출 차단) 적힌 도메인만 HTTPS 로 나갑니다 |
+| 훅도 샌드박스 안에서 돕니다 | 훅이 쓰는 폴더를 안 열면 기록에 실패하고 `HOOK_ERROR` 로 **모든 도구가 막힙니다** |
+
+그래서 `labremote hooks install` 이 훅 등록과 **같은 파일**에 씁니다.
+
+```jsonc
+"sandbox": {
+  "enabled": true,
+  "failIfUnavailable": true,          // 기본 false — 못 쓰면 경고만 내고 그냥 돌아요
+  "autoAllowBashIfSandboxed": false,  // 기본 true — 안 끄면 Bash 가 자동 허용돼요
+  "allowUnsandboxedCommands": false,
+  "excludedCommands": [],
+  "filesystem": {
+    "allowWrite": [
+      "<프로젝트들>", "<공용 캐시>",
+      "<server>/data/{pending,requests,denied,runstate,status}"   // 훅이 쓰는 곳
+    ],
+    "allowRead": ["<conda 설치 폴더>"]
+  },
+  "network": { "allowedDomains": ["pypi.org", "huggingface.co", "github.com", …] }
+}
+```
+
+`policies`·`grants`·`lab.db`·`bin` 은 **일부러 안 엽니다** — AI 가 쓴 코드가
+정책을 고치면 다음 호출부터 자기에게 `allow` 를 줄 수 있습니다. 허가 파일은
+HMAC 서명이라 써도 못 씁니다.
+
+### 꺼져 있으면 **헤드리스를 안 띄웁니다** (fail-closed)
+
+- `agent/launch.check_sandbox()` 가 매 실행 전에 설정을 **다시 읽습니다.**
+  "한 번 켰으니 켜져 있겠지" 가 아닙니다.
+- 훅도 같은 설정을 보고, **꺼져 있으면 `pytest` 를 허용 목록에서 뺍니다**
+  (`ALLOW_IF_SANDBOXED`). 그러면 `ask` 로 떨어져 사람이 봅니다.
+- `doctor` 에 "Bash 샌드박스" 줄이 생겼습니다.
+
+### 남는 구멍
+
+- **다른 프로젝트에 쓸 수 있습니다.** `allowWrite` 에 등록된 프로젝트를 전부
+  넣기 때문입니다(설정이 기계 하나당 하나라서). 학습 샌드박스(bwrap)는 다른
+  프로젝트를 가리므로, 이건 **Claude 의 Bash 와 그 Bash 가 띄운 코드**에만
+  해당합니다.
+- **승인된 `pip install` 도 허용 도메인만** 됩니다. 다른 저장소를 쓰려면
+  도메인을 더해야 합니다.
+- `/tmp` 가 읽기 전용이라 오케스트레이터가 `TMPDIR` 을 공용 캐시 아래로
+  돌려 줍니다.
 
 ## 판 3 이행 (이미 만든 프로젝트)
 

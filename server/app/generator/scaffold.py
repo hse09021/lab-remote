@@ -174,7 +174,9 @@ def _update(target: str, spec: ProjectSpec, plan: list[PlannedFile]) -> dict:
     added = _write_all(target, spec, plan, only_missing=True)
     _write_all(target, spec, regen)
     # 권한 기본 모드는 **병합**한다 (사용자가 넣은 다른 키를 날리지 않게).
-    settings = policy.ensure_permission_mode(target)
+    from .. import claude_settings
+
+    settings = claude_settings.ensure_claude_settings(target, project=spec.name)
     return {
         "target": target,
         "added": added,

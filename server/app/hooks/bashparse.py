@@ -38,6 +38,7 @@ __all__ = [
     "strip_wrappers",
     "secret_findings",
     "is_allowlisted",
+    "ALLOW_IF_SANDBOXED",
     "allowlisted_segments",
 ]
 
@@ -134,8 +135,16 @@ MAX_SHELL_DEPTH = 2
 ALLOW_PLAIN = {
     "ls", "cat", "head", "tail", "wc", "pwd", "echo", "file", "stat", "du", "df",
     "date", "which", "basename", "dirname", "cut", "uniq", "diff", "nvidia-smi",
-    "cd", "pytest",
+    "cd",
 }
+
+#: **코드를 실행하는** 명령. 샌드박스가 실제로 켜져 있을 때만 통과시킨다.
+#:
+#: `pytest` 는 AI 가 쓴 테스트 코드를 돌린다. 샌드박스가 꺼져 있으면 그 코드가
+#: `~/.ssh` 를 읽고 네트워크로 보낼 수 있다 — 실측에서 `~/.claude.json` 과
+#: **정책 파일**까지 읽혔다. 켜져 있으면 둘 다 `FileNotFoundError` 다.
+#: 꺼져 있으면 `ask` 로 떨어져 사람이 본다.
+ALLOW_IF_SANDBOXED = {"pytest"}
 
 #: `git` 에서 읽기만 하는 하위명령
 GIT_READONLY = {"status", "log", "diff", "show", "branch", "rev-parse"}
@@ -612,8 +621,13 @@ def is_allowlisted(segment: str, argv: list[str], ctx: Ctx) -> bool:
         if target not in SINK_PATHS:
             return False
     name = os.path.basename(argv[0])
-    if name not in ALLOW_CONDITIONAL and not (
-        name in ALLOW_PLAIN or name in allow_extra(ctx)
+    if name in ALLOW_IF_SANDBOXED and not getattr(ctx, "sandbox", False):
+        # 샌드박스가 꺼져 있으면 AI 가 쓴 코드가 그대로 돈다. 사람이 본다.
+        return False
+    if (
+        name not in ALLOW_CONDITIONAL
+        and name not in ALLOW_IF_SANDBOXED
+        and not (name in ALLOW_PLAIN or name in allow_extra(ctx))
     ):
         return False
     if not _targets_inside(argv, ctx):

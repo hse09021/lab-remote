@@ -174,8 +174,22 @@ def test_없는_폴더는_거부한다(run):
         L.check_cwd(run)
 
 
-def test_plan_은_전부_통과해야_나온다(run):
+def test_plan_은_샌드박스가_꺼져_있으면_거부한다(run):
+    """AI 가 쓴 테스트 코드를 가두는 유일한 수단이다. 꺼져 있으면 안 띄운다."""
+    with pytest.raises(L.LaunchRefused) as err:
+        L.plan(run, base_env={})
+    assert "샌드박스가 켜져 있지 않아요" in str(err.value)
+
+
+def test_대화형은_샌드박스가_꺼져_있어도_띄운다(run):
+    """사람이 보고 있다. 막으면 개발이 안 된다."""
+    run.headless = False
+    assert L.plan(run, base_env={})["sandbox"]["ok"] is False
+
+
+def test_plan_은_전부_통과해야_나온다(run, sandboxed):
     got = L.plan(run, base_env={"HOME": "/home/x", "PATH": "/usr/bin"})
+    assert got["sandbox"]["ok"] is True
     assert got["cwd"] == os.path.realpath(run.root)
     assert got["sessionId"] == run.session_id
     assert got["env"][L.HEADLESS_ENV] == "1"

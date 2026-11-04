@@ -66,7 +66,6 @@ def interactive(ctx, command):
         "diff a b",
         "nvidia-smi",
         "cd src",
-        "pytest -q",
         "git status",
         "git log --oneline -5",
         "git diff",
@@ -89,6 +88,34 @@ def test_아는_명령은_헤드리스에서_통과한다(ctx, command):
 def test_대화형에서는_허용_목록을_안_쓴다(ctx, command):
     """사람이 보고 고른다. 훅이 함부로 allow 를 주지 않는다."""
     assert interactive(ctx, command) == "defer", command
+
+
+# --- 코드 실행은 샌드박스가 켜져 있을 때만 --------------------------------------
+
+
+def test_pytest_는_샌드박스가_꺼져_있으면_승인_대상(ctx):
+    """AI 가 쓴 테스트 코드가 그대로 돈다. 실측에서 `~/.claude.json` 과
+    **정책 파일**까지 읽혔다."""
+    assert ctx.sandbox is False  # 기본은 꺼짐으로 본다 (fail-closed)
+    assert headless(ctx, "pytest -q") == "deny"
+
+
+def test_pytest_는_샌드박스가_켜져_있으면_통과(ctx, sandboxed):
+    from app import policy
+
+    ctx.sandbox = policy.sandbox_state(sandboxed)["ok"]
+    assert ctx.sandbox is True
+    assert headless(ctx, "pytest -q") == "allow"
+
+
+def test_샌드박스가_켜져도_대상은_프로젝트_안이어야(ctx, sandboxed):
+    ctx.sandbox = True
+    assert headless(ctx, "pytest /etc") == "deny"
+
+
+def test_코드_실행_목록은_코드에_있다():
+    assert bashparse.ALLOW_IF_SANDBOXED == {"pytest"}
+    assert "pytest" not in bashparse.ALLOW_PLAIN
 
 
 # --- 조건 1: 판정 순서 --------------------------------------------------------

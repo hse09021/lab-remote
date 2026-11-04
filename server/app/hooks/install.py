@@ -225,6 +225,41 @@ def _entry(matcher: str | None, wrapper: str, module: str, on_failure: str) -> d
     return entry
 
 
+def _sandbox_block() -> dict | None:
+    """Claude Bash 샌드박스 설정. 못 만들면 None (설치는 계속한다).
+
+    AI 가 쓴 **테스트 코드**(`pytest`)를 가두는 유일한 수단이다. 꺼져 있으면
+    그 코드가 `~/.ssh` 를 읽고 네트워크로 보낼 수 있다 — 실측에서
+    `~/.claude.json` 과 정책 파일까지 읽혔다.
+    """
+    try:
+        from .. import policy as policy_mod
+        from ..runner import cache as cache_mod
+        from ..runner import sandbox as sandbox_mod
+
+        projects = sorted(registry.load())
+        root = projects[0] if projects else registry.projects_root()
+        pol = None
+        try:
+            pol = policy_mod.load(registry.load()[root]) if projects else None
+        except Exception:
+            pol = None
+        block = policy_mod.sandbox_block(
+            root,
+            cache_dir=cache_mod.cache_dir(pol),
+            conda_roots=sandbox_mod.conda_roots(),
+        )
+        write = list(block["filesystem"]["allowWrite"])
+        for item in [*projects, registry.projects_root()]:
+            target = paths.real(item)
+            if target and target not in write:
+                write.append(target)
+        block["filesystem"]["allowWrite"] = sorted(dict.fromkeys(write))
+        return block
+    except Exception:
+        return None
+
+
 def install(mode: str = "enforce", python: str | None = None, roots: str | None = None) -> dict:
     """래퍼를 만들고 사용자 설정에 등록한다. 되돌리려면 `uninstall()`."""
     if mode not in MODES:
@@ -254,6 +289,13 @@ def install(mode: str = "enforce", python: str | None = None, roots: str | None 
     hooks = data.setdefault("hooks", {})
     for event, matcher, module, on_failure in events:
         hooks.setdefault(event, []).append(_entry(matcher, wrapper, module, on_failure))
+
+    # Claude 의 Bash 샌드박스도 **같은 파일**에 쓴다. `filesystem.allowRead` 가
+    # 프로젝트 설정에서는 안 먹어서(실측) 사용자 설정이어야 한다. 훅 등록과
+    # 한 번에 끝나야 "켠 줄 알았는데 안 켜져 있던" 상태가 안 생긴다.
+    sandbox = _sandbox_block()
+    if sandbox:
+        data["sandbox"] = sandbox
     _write_settings(data)
 
     info = {
@@ -272,11 +314,16 @@ def install(mode: str = "enforce", python: str | None = None, roots: str | None 
 
 
 def uninstall() -> dict:
-    """우리 항목만 뺀다. 사용자가 손으로 넣은 설정은 그대로 둔다."""
+    """우리 항목만 뺀다. 사용자가 손으로 넣은 설정은 그대로 둔다.
+
+    `sandbox` 절도 우리가 쓴 것이라 같이 뺀다 — 남겨 두면 훅이 없는데
+    샌드박스만 켜져 있어서 무엇이 막는지 알 수 없어진다.
+    """
     backup = _backup()
     data = _load_settings()
     removed = _strip_ours(data)
-    if removed:
+    had_sandbox = data.pop("sandbox", None) is not None
+    if removed or had_sandbox:
         _write_settings(data)
 
     previous = None

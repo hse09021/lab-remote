@@ -150,6 +150,9 @@ class Ctx:
     run: object  # app.runstate.RunState
     event: dict = field(default_factory=dict)
     headless: bool = False
+    #: Claude Bash 샌드박스가 **실제로** 켜져 있나. 기본은 꺼짐으로 본다 —
+    #: 모르면 코드 실행(`pytest` 등)을 열지 않는다 (fail-closed).
+    sandbox: bool = False
 
     @property
     def paths_cfg(self) -> dict:

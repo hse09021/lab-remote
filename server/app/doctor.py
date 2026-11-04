@@ -20,6 +20,7 @@ __all__ = [
     "permission_mode_check",
     "project_secrets",
     "sandbox_check",
+    "bash_sandbox_check",
     "cache_check",
 ]
 
@@ -121,6 +122,28 @@ def sandbox_check(root: str) -> Check:
             "학습 스크립트가 정책·자격 증명·허가 키를 건드릴 수 있어요. "
             "sudo apt install bubblewrap 과 /etc/apparmor.d/ 의 bwrap 프로파일을 "
             "확인해 주세요 (docs/operations.md 의 '사람이 해야 하는 것')."
+        ),
+    )
+
+
+def bash_sandbox_check(root: str, name: str = "") -> Check:
+    """Claude 의 Bash 샌드박스가 켜져 있나.
+
+    꺼져 있으면 AI 가 쓴 **테스트 코드**(`pytest`)가 그대로 돈다 — 실측에서
+    `~/.claude.json` 과 정책 파일까지 읽혔다. 런처도 헤드리스를 안 띄운다.
+    """
+    state = policy.sandbox_state(root)
+    if state["ok"]:
+        detail = f"쓰기 {len(state['allowWrite'])}곳 · 도메인 {len(state['domains'])}개"
+        return Check(True, f"Bash 샌드박스 · {name}" if name else "Bash 샌드박스", detail)
+    return Check(
+        False,
+        f"Bash 샌드박스 · {name}" if name else "Bash 샌드박스",
+        " · ".join(state["reasons"])[:160],
+        hint=(
+            "AI 가 쓴 테스트 코드가 자격 증명을 읽을 수 있어요. "
+            "labremote init-project <이름> --if-exists update 로 "
+            ".claude/settings.json 을 다시 써 주세요."
         ),
     )
 
@@ -289,6 +312,8 @@ def run() -> dict:
 
         # 학습 샌드박스 — 학습은 AI 가 쓴 코드다. 막는 수단은 이것뿐이다.
         checks.append(sandbox_check(root))
+        # Claude 의 Bash 샌드박스 — AI 가 쓴 **테스트 코드**를 가두는 수단
+        checks.append(bash_sandbox_check(root, name))
         # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
         checks.append(cache_check(root, pol))
 

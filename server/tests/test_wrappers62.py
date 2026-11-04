@@ -149,9 +149,12 @@ def test_재귀는_깊이에서_멈춘다(ctx):
     assert got & BLOCKED, sorted(got)
 
 
-def test_아는_명령은_래퍼로_감싸도_통과한다(ctx):
+def test_아는_명령은_래퍼로_감싸도_통과한다(ctx, sandboxed):
     """소음 확인 — 래퍼를 벗기는 게 멀쩡한 명령을 막지는 않는다."""
+    from app import policy
+
     ctx.headless = True
+    ctx.sandbox = policy.sandbox_state(sandboxed)["ok"]
     for command in ("nice -n 10 ls -la", "conda run -n base pytest -q", "timeout 30 git status"):
         found = bashparse.classify_with_coverage(command, ctx)
         ctx.event = {"tool_name": "Bash", "tool_input": {"command": command}}
