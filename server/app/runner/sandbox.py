@@ -41,6 +41,8 @@ __all__ = [
     "BWRAP_CANDIDATES",
     "SandboxError",
     "bwrap_path",
+    "home_dirs",
+    "conda_roots",
     "secret_paths",
     "other_project_paths",
     "hidden_paths",
@@ -54,6 +56,16 @@ BWRAP_CANDIDATES = ("/usr/bin/bwrap", "/bin/bwrap")
 
 #: 띄워 보는 데 기다릴 시간
 PROBE_TIMEOUT_SEC = 10
+
+#: conda·mamba 를 찾아볼 곳 (환경 변수로 못 찾았을 때)
+CONDA_GUESSES = (
+    "~/miniconda3",
+    "~/anaconda3",
+    "~/miniforge3",
+    "~/mambaforge",
+    "~/micromamba",
+    "/opt/conda",
+)
 
 
 class SandboxError(RuntimeError):
@@ -124,6 +136,58 @@ def hidden_paths(project_root: str) -> list[str]:
     )
 
 
+def home_dirs() -> list[str]:
+    """가려야 할 홈 폴더들 — 내 홈과 `/home` 아래 **다른 사용자**.
+
+    `--ro-bind / /` 만 하면 홈의 자격 증명이 전부 읽힌다. 네트워크도 열려
+    있으니 AI 가 쓴 학습 코드가 읽어서 밖으로 보낼 수 있다:
+    `~/.ssh` · `~/.gnupg` · `~/.aws` · `~/.git-credentials` · `~/.netrc` ·
+    `~/.docker/config.json` · `~/.kaggle` · `~/.config/gh` · `~/.pypirc` ·
+    브라우저·VS Code 프로필 · `~/.bash_history` …
+
+    그래서 홈은 **허용 목록**으로 간다 — 통째로 가리고 필요한 것만 다시 연다.
+    """
+    out: list[str] = []
+    home = paths.real("~")
+    if home and home != os.sep and os.path.isdir(home):
+        out.append(home)
+    try:
+        for name in sorted(os.listdir("/home")):
+            other = paths.real(os.path.join("/home", name))
+            if other and other != home and os.path.isdir(other):
+                out.append(other)
+    except OSError:
+        pass
+    return sorted(dict.fromkeys(out))
+
+
+def conda_roots() -> list[str]:
+    """conda·mamba 설치 폴더. 홈을 가린 뒤 **읽기로 다시 열어야** 한다.
+
+    `conda run -n <환경>` 이 돌아야 하고, 그 환경의 파이썬·패키지가 전부
+    여기 있다. 환경 변수로 찾고, 없으면 흔한 자리를 본다.
+    """
+    out: list[str] = []
+    exe = os.environ.get("CONDA_EXE") or ""
+    if exe:
+        out.append(os.path.dirname(os.path.dirname(paths.real(exe))))
+    prefix = os.environ.get("CONDA_PREFIX") or ""
+    if prefix:
+        real = paths.real(prefix)
+        parent = os.path.dirname(os.path.dirname(real))
+        out.append(parent if os.path.basename(os.path.dirname(real)) == "envs" else real)
+    for name in ("MAMBA_ROOT_PREFIX", "CONDA_ROOT"):
+        value = os.environ.get(name) or ""
+        if value:
+            out.append(paths.real(value))
+    if not out:
+        for guess in CONDA_GUESSES:
+            target = paths.real(guess)
+            if os.path.isdir(target):
+                out.append(target)
+    return sorted({p for p in out if p and p != os.sep and os.path.isdir(p)})
+
+
 def command(
     argv: list[str],
     *,
@@ -174,18 +238,6 @@ def command(
     if not os.path.isdir(root):
         raise SandboxError(f"프로젝트 폴더가 없어요: {root}")
 
-    out = [
-        binary,
-        # 루트 전체는 **읽기 전용**으로 보인다. conda·CUDA·데이터셋을 읽어야 한다.
-        "--ro-bind", "/", "/",
-        # GPU 장치가 보여야 한다 (`/dev/nvidia*`·`/dev/nvidiactl`·`/dev/nvidia-uvm`)
-        "--dev-bind", "/dev", "/dev",
-        "--proc", "/proc",
-        # 임시 폴더는 버려지는 것으로. 밖에 흔적을 남기지 않는다.
-        "--tmpfs", "/tmp",
-        # 쓸 수 있는 곳은 프로젝트와 (있으면) 공용 캐시뿐이다.
-        "--bind", root, root,
-    ]
     cache_real = paths.real(cache_dir) if cache_dir else ""
     if cache_real:
         if not os.path.isdir(cache_real):
@@ -195,24 +247,55 @@ def command(
         if paths.is_inside(root, cache_real):
             # 프로젝트 안이면 이미 쓸 수 있다. 같은 곳을 두 번 바인드하지 않는다.
             cache_real = ""
-        else:
-            out += ["--bind", cache_real, cache_real]
-    for item in hidden_paths(root) if hide is None else hide:
+
+    # 캐시는 가림 **뒤에** 다시 열린다. 홈 안이면 그게 의도지만(`~/lab-cache`),
+    # **비밀 경로** 안이면 가림을 무효로 만든다. `cache.check` 가 이미 막지만
+    # 여기서 한 번 더 본다 — 뚫리면 조용히 열리는 자리다.
+    guards = list(hide) if hide is not None else hidden_paths(root)
+    if cache_real:
+        for guard in guards:
+            if paths.is_inside(paths.real(guard), cache_real):
+                raise SandboxError(
+                    f"캐시 폴더가 보호 경로 안이에요: {cache_real} ⊂ {paths.real(guard)}"
+                )
+
+    out = [
+        binary,
+        # 루트 전체는 **읽기 전용**으로 보인다. `/usr`·`/lib`·CUDA 를 읽어야 한다.
+        "--ro-bind", "/", "/",
+        # GPU 장치가 보여야 한다 (`/dev/nvidia*`·`/dev/nvidiactl`·`/dev/nvidia-uvm`)
+        "--dev-bind", "/dev", "/dev",
+        "--proc", "/proc",
+        # 임시 폴더는 버려지는 것으로. 밖에 흔적을 남기지 않는다.
+        "--tmpfs", "/tmp",
+    ]
+
+    # --- 가리기. **홈은 통째로** 가린다 (허용 목록 방식) --------------------
+    hides = (home_dirs() + guards) if hide is None else guards
+    for item in hides:
         target = paths.real(item)
         if not os.path.exists(target):
             continue
-        if cache_real and paths.is_inside(target, cache_real):
-            # 여기까지 오면 cache.check 가 놓친 것이다. 가리는 쪽을 포기하면
-            # 보호가 뚫리니, 띄우지 않는다.
-            raise SandboxError(
-                f"캐시 폴더가 보호 경로 안이에요: {cache_real} ⊂ {target}"
-            )
+        if target == root or (cache_real and target == cache_real):
+            raise SandboxError(f"작업 폴더 자신을 가릴 수는 없어요: {target}")
         out += ["--tmpfs", target]
-    # 가림 **뒤에** 와야 뚫린다 (위 주석).
-    for item in extra_ro or []:
-        target = paths.real(item)
-        if os.path.exists(target):
-            out += ["--ro-bind", target, target]
+
+    # --- 다시 열기: 쓰기는 둘, 읽기는 꼭 필요한 것만 ------------------------
+    # bwrap 은 **뒤에 온 것이 이긴다.** 그래서 가림 뒤에 와야 뚫린다.
+    out += ["--bind", root, root]
+    if cache_real:
+        out += ["--bind", cache_real, cache_real]
+    reopen = (conda_roots() if hide is None else []) + [
+        paths.real(item) for item in (extra_ro or [])
+    ]
+    for target in dict.fromkeys(reopen):
+        if not target or not os.path.exists(target):
+            continue
+        if target == root or (cache_real and target == cache_real):
+            continue
+        if paths.is_inside(root, target) or (cache_real and paths.is_inside(cache_real, target)):
+            continue  # 이미 쓰기로 열려 있다
+        out += ["--ro-bind", target, target]
     if die_with_parent:
         out.append("--die-with-parent")
     out.append("--")

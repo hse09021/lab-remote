@@ -1429,6 +1429,127 @@ W&B 링크는 `[W&B 링크 — 미연결]` 자리표시입니다.
 로그는 오프셋을 기억해 **늘어난 만큼만** 읽습니다. `\n` 이 아직 안 온 반쪽
 줄은 다음 호출까지 들고 있습니다 — 넘기면 지표 파싱이 깨집니다.
 
+## 🔐 홈의 자격 증명 (2026-11-04)
+
+`--ro-bind / /` 만 하면 샌드박스 안에서 홈이 **전부 읽힙니다.** 네트워크도
+열려 있으니(데이터셋·모델을 내려받아야 합니다) AI 가 쓴 학습 코드가 읽어서
+밖으로 보낼 수 있습니다. SSH 키 하나로 저장소가, AWS 자격 증명 하나로 계정이
+열립니다.
+
+세 겹으로 막습니다.
+
+| 층 | 막는 것 | 어떻게 |
+|---|---|---|
+| **학습 샌드박스** | AI 가 쓴 **코드** | `$HOME` 을 통째로 `--tmpfs` 로 가리고 필요한 것만 다시 바인드 |
+| **Claude Code 설정** | Claude 의 **도구** (1차) | `permissions.blockReadsOutsideWorkingDirectories` |
+| **훅** | Claude 의 **도구** (2차) | `SECRET_FILES` + `readOutside` 판정 |
+
+### 학습 샌드박스 — 홈은 허용 목록
+
+```
+--ro-bind / /                      # /usr·/lib·CUDA 는 읽어야 해요
+--tmpfs  $HOME                     # 홈을 통째로 가려요
+--tmpfs  /home/<다른 사용자>         # 남의 홈도요
+--bind   <프로젝트>                 # 쓰기
+--bind   <캐시>                    # 쓰기
+--ro-bind <conda 설치 폴더>         # 읽기 (conda run 이 돌아야 해요)
+--ro-bind <dataPaths>              # 읽기 (적었을 때만)
+```
+
+**순서가 의미를 바꿉니다** — bwrap 은 뒤에 온 것이 이깁니다. 다시 여는 바인드가
+가림 **뒤**에 와야 뚫립니다.
+
+실측(2026-11-04): 아래 15개가 샌드박스 안에서 **전부 안 보입니다.**
+`~/.ssh` · `~/.ssh/id_ed25519` · `~/.gnupg` · `~/.git-credentials` · `~/.netrc` ·
+`~/.aws` · `~/.docker/config.json` · `~/.kaggle` · `~/.config/gh` · `~/.pypirc` ·
+`~/.mozilla` · `~/.config/google-chrome` · `~/.config/Code` · `~/.bash_history` ·
+`~/.claude/.credentials.json`
+
+같은 샌드박스에서 **conda 파이썬·RTX 5080·프로젝트 읽기·쓰기는 정상**입니다.
+
+### Claude Code 설정 — 홈 전체를 막습니다 (실측)
+
+경로를 하나하나 적는 `denyRead` 대신 **working directory 밖 읽기를 통째로**
+막는 설정을 찾아 실측했습니다.
+
+```jsonc
+// 프로젝트 .claude/settings.json — selfProtect 라 AI 가 못 고쳐요
+"permissions": {
+  "defaultMode": "default",
+  "blockReadsOutsideWorkingDirectories": true,
+  "blockWritesOutsideWorkingDirectories": true,
+  "blockReadsExemptPaths": []     // 읽어야 할 바깥 경로를 적어요
+}
+```
+
+실측에서 거절 메시지가 이렇게 나왔습니다(`permission_denials: 1`):
+
+```
+/etc/hostname is outside /home/hse09021/projects/hook-sandbox; the
+permissions.blockReadsOutsideWorkingDirectories setting blocks reads
+outside the working directories
+```
+
+`sandbox.*`(bubblewrap 기반 Bash 샌드박스)는 **아직 기본으로 켜지 않습니다.**
+실측 14 에서 동작은 확인했지만, 켜면 Bash 의 쓰기가 프로젝트로 제한돼서
+공용 캐시·conda 환경에 쓰는 일이 막힐 수 있습니다. 그건 따로 한 번 돌려 보고
+정해야 합니다. **[Bash 샌드박스 기본 설정 — 미정]**
+
+### ⚠ 그래서 찾은 것: 헤드리스에서 훅은 **모든 읽기를 정지시키고 있었습니다**
+
+`defer` 가 통과가 아니라 정지라는 걸 ①에서 쟀는데, 그게 Bash 만의 일이
+아니었습니다. `Read`·`Grep`·`Glob`·`TodoWrite`·모르는 도구가 전부 "판정 안
+함 = defer = 정지" 였습니다. 즉 **②의 루프는 파일을 한 개도 못 읽습니다.**
+
+| 도구·대상 | 전 | 후 (대화형 / 헤드리스) |
+|---|---|---|
+| `Read` 프로젝트 안 | defer → **정지** | `defer` / **`allow`** |
+| `Read` 프로젝트 밖 | defer → **정지** | `defer` / **`ask`** |
+| `Grep`·`Glob` 경로 없이 | defer → **정지** | `defer` / **`allow`** |
+| `TodoWrite`·`ToolSearch` | defer → **정지** | `defer` / **`allow`** |
+| 모르는 도구 | defer → **정지** | `defer` / **`ask`** |
+| 비밀 파일 | `deny` | 그대로 `deny` |
+
+프로젝트 밖 읽기를 승인 대상으로 둔 게 위 2번 층과 같은 뜻입니다 — 훅 쪽은
+`readAllowRoots` 정책으로 뿌리를 더할 수 있습니다(기본은 프로젝트뿐).
+
+> 📋 **9단계에서 셀 것**: `readOutside` 승인 요청이 루프 1회당 몇 건인지도
+> 같이 셉니다. conda 환경이나 문서를 읽어야 해서 자주 멈추면
+> `paths.readAllowRoots` 에 그 뿌리를 적습니다.
+
+### 🔑 학습 토큰은 **읽기 전용·최소 권한만**
+
+`HF_TOKEN`·`WANDB_API_KEY` 는 학습 프로세스의 **환경 변수**로 들어갑니다.
+샌드박스는 파일을 가려 주지만 **환경 변수는 못 가립니다** — 가리면 모델을
+못 내려받습니다. 그래서
+
+> ⚠ **AI 가 쓴 학습 코드가 이 토큰을 읽을 수 있다는 전제로 둡니다.**
+> `os.environ` 한 줄이면 보이고, 네트워크가 열려 있으니 밖으로 보낼 수도
+> 있습니다. **읽기 전용·최소 권한 토큰만** 쓰세요. 쓰기 권한이 있는 토큰을
+> 넣으면 AI 가 모델 허브나 저장소에 쓸 수 있습니다.
+
+넣는 자리와 켜는 방법:
+
+```toml
+# ~/.config/labremote/config.toml  (권한 0600 · 이미 SECRET_FILES 라 AI 가 못 읽어요)
+[tokens]
+HF_TOKEN = "hf_읽기전용토큰"
+WANDB_API_KEY = "..."
+```
+
+```json
+// server/data/policies/<프로젝트>.json  — 프로젝트 밖이라 AI 가 못 고쳐요
+"runner": { "injectTokens": ["HF_TOKEN"] }
+```
+
+**기본은 아무것도 주입하지 않습니다.** 정책에 이름을 적은 것만 들어가고,
+`ENV_NEVER`·`ENV_MANAGED`(`LD_PRELOAD`·`TMPDIR` …)는 토큰으로도 못 들어옵니다.
+
+HuggingFace 는 읽기 전용 토큰을 따로 만들 수 있고(Settings → Access Tokens →
+`read`), W&B 는 프로젝트 단위 권한이 없어서 **계정 전체**가 열립니다 —
+가능하면 학습용 별도 계정을 쓰거나 `WANDB_MODE=offline` 으로 두고 나중에
+사람이 올리는 쪽을 권합니다.
+
 ## 판 3 이행 (이미 만든 프로젝트)
 
 정책 파일 판이 2 → 3 으로 올라갔습니다. `state/Current.yaml` 이 보호 목록에

@@ -33,6 +33,9 @@ LABELS = {
     "unparsed": "해석 못 한 명령",
     "unclassified": "분류 못 한 명령",
     "bashAllowed": "읽기 명령",
+    "readAllowed": "프로젝트 안 읽기",
+    "toolAllowed": "읽기 도구",
+    "readOutside": "프로젝트 밖 읽기",
     "schema-unknown": "훅이 못 읽은 입력",
     "denied-command": "금지된 명령",
 }
@@ -243,6 +246,15 @@ def also_needed(names: list[str]) -> str:
     if len(unique) < 2:
         return ""
     return "이 호출에서 승인이 필요한 것이 " + str(len(unique)) + "가지예요: " + " · ".join(unique) + "."
+
+
+def read_outside(target: str) -> str:
+    """프로젝트 밖 읽기. 헤드리스에서만 승인을 받는다."""
+    return (
+        f"프로젝트 폴더 밖이라 읽기 전에 승인이 필요해요: {target} · "
+        "자격 증명이나 남의 자료일 수 있고, 네트워크가 열려 있어서 읽은 건 "
+        "밖으로 나갈 수 있어요. 꼭 필요하면 무엇에 쓰는지 알려 주세요."
+    )
 
 
 def grant_used(name: str, grant_id: str) -> str:
