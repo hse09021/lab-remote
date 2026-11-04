@@ -198,3 +198,40 @@ def test_SubagentStop_이_빠지면_알려_준다(project, project_root, fake_se
     item = check(doctor.run(), "훅 이벤트")
     assert item["ok"] is False
     assert "SubagentStop" in item["detail"]
+
+
+# --- 3단계: 샌드박스와 공용 캐시 ------------------------------------------------
+
+
+def test_샌드박스_점검이_들어_있다(project, project_root):
+    report = doctor.run()
+    titles = [c["title"] for c in report["checks"]]
+    assert "학습 샌드박스" in titles
+    assert "공용 캐시" in titles
+
+
+def test_캐시가_보호_경로와_겹치면_알려_준다(project, project_root, monkeypatch):
+    from app import policy_defaults as D
+
+    monkeypatch.setenv("LAB_CACHE_DIR", os.path.join(D.hard_protected_roots()[0], "캐시"))
+    found = [c for c in doctor.run()["checks"] if c["title"] == "공용 캐시"]
+    assert found and found[0]["ok"] is False
+    assert "보호 경로" in found[0]["detail"]
+
+
+def test_캐시가_프로젝트_안이면_알려_준다(project, project_root, monkeypatch):
+    monkeypatch.setenv("LAB_CACHE_DIR", os.path.join(project_root, "캐시"))
+    found = [c for c in doctor.run()["checks"] if c["title"] == "공용 캐시"]
+    assert found and found[0]["ok"] is False
+    assert "프로젝트 안이에요" in found[0]["hint"]
+
+
+def test_정책을_못_읽어도_뒤_점검이_돈다(project, project_root):
+    """판이 낡아 정책을 못 읽어도 샌드박스·캐시 점검은 나와야 한다."""
+    from app import registry
+
+    data = dict(project.data)
+    data["version"] = 1
+    registry.write_json(project.path, data)
+    titles = [c["title"] for c in doctor.run()["checks"]]
+    assert "학습 샌드박스" in titles and "공용 캐시" in titles

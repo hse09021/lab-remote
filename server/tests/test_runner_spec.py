@@ -198,9 +198,65 @@ def test_API_키는_환경으로도_못_넘긴다(exp):
 
 def test_폴더_밖을_가리키는_환경_변수는_경고로_남는다(exp):
     """샌드박스 안에서 그 경로 쓰기는 **성공한 것처럼 보이지만** 안 남는다."""
-    write_config(exp, entrypoints=["src/train.py"], env_allow=["HF_HOME"])
-    got = load(exp, {"entrypoint": "src/train.py", "env": {"HF_HOME": "/tmp/캐시"}})
+    write_config(exp, entrypoints=["src/train.py"], env_allow=["DATA_ROOT"])
+    got = load(exp, {"entrypoint": "src/train.py", "env": {"DATA_ROOT": "/tmp/자료"}})
     assert got.warnings and "남지 않아요" in got.warnings[0]
+
+
+@pytest.mark.parametrize("name", sorted(S.ENV_MANAGED))
+def test_캐시_변수는_실행기가_정한다(exp, name):
+    """AI 가 `HF_HOME=~/.claude` 를 넣는 길을 없앤다. `TMPDIR` 이 샌드박스의
+    tmpfs(메모리)로 가는 것도 막는다."""
+    write_config(exp, entrypoints=["src/train.py"], env_allow=[name])
+    with pytest.raises(S.SpecError) as err:
+        load(exp, {"entrypoint": "src/train.py", "env": {name: "/tmp/아무데나"}})
+    assert "실행기가 공용 캐시 폴더로 정해요" in str(err.value)
+
+
+# --- 데이터셋 경로 (읽기 전용) --------------------------------------------------
+
+
+def test_데이터셋_경로를_읽어_온다(exp, tmp_path):
+    data = tmp_path / "자료"
+    data.mkdir()
+    write_config(exp, entrypoints=["src/train.py"], extra=f"  dataPaths: ['{data}']\n")
+    got = load(exp, {"entrypoint": "src/train.py"})
+    assert got.data_paths == [os.path.realpath(str(data))]
+
+
+def test_없는_데이터셋_경로는_경고로_건너뛴다(exp):
+    write_config(exp, entrypoints=["src/train.py"], extra="  dataPaths: ['/없는자료']\n")
+    got = load(exp, {"entrypoint": "src/train.py"})
+    assert got.data_paths == []
+    assert any("없어요" in w for w in got.warnings)
+
+
+def test_보호_경로를_데이터셋으로_열_수_없다(exp):
+    """"데이터셋" 이라는 이름으로 정책·자격 증명을 읽는 길을 막는다."""
+    from app import policy_defaults as Dft
+
+    server = Dft.hard_protected_roots()[0]
+    write_config(exp, entrypoints=["src/train.py"], extra=f"  dataPaths: ['{server}']\n")
+    with pytest.raises(S.SpecError) as err:
+        load(exp, {"entrypoint": "src/train.py"})
+    assert "보호 경로와 겹쳐요" in str(err.value)
+
+
+def test_보호_경로를_품는_데이터셋도_거절(exp):
+    write_config(exp, entrypoints=["src/train.py"], extra="  dataPaths: ['~']\n")
+    with pytest.raises(S.SpecError):
+        load(exp, {"entrypoint": "src/train.py"})
+
+
+def test_데이터셋_경로가_배열이_아니면_거절(exp):
+    write_config(exp, entrypoints=["src/train.py"], extra="  dataPaths: /자료\n")
+    with pytest.raises(S.SpecError):
+        load(exp, {"entrypoint": "src/train.py"})
+
+
+def test_자리표시_데이터셋_경로는_건너뛴다(exp):
+    write_config(exp, entrypoints=["src/train.py"], extra="  dataPaths: ['[데이터셋 경로 — 미정]']\n")
+    assert load(exp, {"entrypoint": "src/train.py"}).data_paths == []
 
 
 # --- 그 밖의 fail-closed -------------------------------------------------------

@@ -14,7 +14,14 @@ from . import policy_defaults as D
 from .hooks import check as hooks_check
 from .hooks import install
 
-__all__ = ["run", "Check", "permission_mode_check", "project_secrets"]
+__all__ = [
+    "run",
+    "Check",
+    "permission_mode_check",
+    "project_secrets",
+    "sandbox_check",
+    "cache_check",
+]
 
 
 def _read_json(path: str) -> dict:
@@ -91,6 +98,57 @@ def project_secrets(root: str) -> list[str]:
 class Check(dict):
     def __init__(self, ok: bool, title: str, detail: str = "", hint: str = ""):
         super().__init__(ok=ok, title=title, detail=detail, hint=hint)
+
+
+def sandbox_check(root: str) -> Check:
+    """학습 샌드박스를 **실제로 띄워 보고** 점검한다.
+
+    학습 스크립트는 AI 가 쓴 코드다. 훅은 도구 호출만 보므로 `train.py` 안의
+    파일 쓰기는 훅을 거치지 않는다. 막는 수단은 샌드박스뿐이라, 꺼져 있으면
+    정책·자격 증명·허가 키가 그대로 열린다.
+    """
+    from .runner import sandbox
+
+    state = sandbox.available(root)
+    if state["ok"]:
+        hidden = sandbox.hidden_paths(root)
+        return Check(True, "학습 샌드박스", f"{state['bwrap']} · 가리는 곳 {len(hidden)}개")
+    return Check(
+        False,
+        "학습 샌드박스",
+        state["reason"],
+        hint=(
+            "학습 스크립트가 정책·자격 증명·허가 키를 건드릴 수 있어요. "
+            "sudo apt install bubblewrap 과 /etc/apparmor.d/ 의 bwrap 프로파일을 "
+            "확인해 주세요 (docs/operations.md 의 '사람이 해야 하는 것')."
+        ),
+    )
+
+
+def cache_check(root: str, pol=None) -> Check:
+    """공용 캐시 폴더가 보호 경로와 겹치지 않는지.
+
+    겹치면 **학습 코드에 정책·자격 증명을 쓰기로 열어 주는 셈**이다.
+    런처도 거부하지만(`runner/cache.check`), 돌리기 전에 알려 주는 게 낫다.
+    """
+    from .runner import cache
+
+    state = cache.describe(root, pol)
+    if not state["ok"]:
+        return Check(
+            False,
+            "공용 캐시",
+            state["reason"],
+            hint="정책의 paths.cacheDir 을 프로젝트·보호 경로 밖으로 바꿔 주세요.",
+        )
+    detail = state["dir"]
+    if not state["exists"]:
+        detail += " (아직 없어요 — 첫 학습에서 만들어요)"
+    elif "freeGb" in state:
+        detail += f" · 여유 {state['freeGb']}GB"
+    if state["warnings"]:
+        return Check(False, "공용 캐시", detail, hint=state["warnings"][0])
+    return Check(True, "공용 캐시", detail)
 
 
 def run() -> dict:
@@ -175,6 +233,7 @@ def run() -> dict:
     )
     for root, name in sorted(projects.items()):
         checks.append(Check(os.path.isdir(root), f"프로젝트 폴더 · {name}", root))
+        pol = None  # 정책을 못 읽어도 뒤 점검은 돌아야 한다
         try:
             pol = policy.load(name)
             checks.append(
@@ -227,6 +286,11 @@ def run() -> dict:
                 "프로젝트 밖에 있어요 (AI 가 못 고쳐요)",
             )
         )
+
+        # 학습 샌드박스 — 학습은 AI 가 쓴 코드다. 막는 수단은 이것뿐이다.
+        checks.append(sandbox_check(root))
+        # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
+        checks.append(cache_check(root, pol))
 
     # 자가 점검이 중간에 죽으면 임시 프로젝트 폴더가 남는다
     leftovers = hooks_check.scratch_leftovers()

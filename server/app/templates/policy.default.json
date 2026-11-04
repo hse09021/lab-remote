@@ -180,6 +180,7 @@
     ],
     "allowOutsideRead": true,
     "secretFilesExtra": [],
+    "cacheDir": "",
     "extraWritableRoots": []
   },
   "bash": {
