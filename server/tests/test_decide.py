@@ -233,3 +233,81 @@ def test_기록_허용보다_산출물_보존이_이긴다(ctx):
                 detail="지우거나 옮길"),
     ]
     assert D.combine([D.decide(f, ctx) for f in found]).kind == "deny"
+
+
+# --- 미분류 조각 (①의 경계 버그) ---------------------------------------------
+# 실측에서 훅이 아래 명령에 **allow** 를 줬다. 앞 조각(`echo > src/…`)만 `code`
+# 로 분류되고 `conda run` 쪽은 findings 에 아무것도 보태지 않아서, 사람에게
+# 묻지도 않고 프로젝트 밖 삭제가 실행될 수 있었다. 대화형·헤드리스 둘 다 고정한다.
+
+COMPOSITE_BYPASS = (
+    "echo probe > src/sbx_t.txt && conda run -n base rm -rf /home/사용자/sbx-victim"
+)
+
+
+def composite(ctx):
+    from app.hooks import bashparse
+
+    found = bashparse.classify_with_coverage(COMPOSITE_BYPASS, ctx)
+    assert [f.action for f in found] == ["code", "unclassified"]
+    return D.combine([D.decide(f, ctx) for f in found])
+
+
+@pytest.mark.parametrize("mode", ["manual", "error", "full"])
+def test_미분류_조각이_섞이면_대화형은_allow_가_아니다(ctx, mode):
+    """`code` 가 allow 인 프리셋에서도 전체가 열리면 안 된다. 최소 defer."""
+    ctx.policy.set_saved(mode)
+    ctx.headless = False
+    decision = composite(ctx)
+    assert decision.kind != "allow"
+    assert decision.kind in ("defer", "ask")
+
+
+def test_미분류_조각이_섞이면_헤드리스는_승인_경로로(ctx):
+    """헤드리스에서 defer 는 통과가 아니라 정지(tool_deferred)다. ask 로 올린다."""
+    ctx.policy.set_saved("full")  # code -> allow (실측 조건 그대로)
+    ctx.headless = True
+    decision = composite(ctx)
+    assert decision.kind == "deny"
+    assert decision.meta["originallyAsk"] is True  # ask 에서 온 거절 -> requests/
+    assert "승인 요청을 남겨 두었어요" in decision.reason
+
+
+def test_미분류_하나만_있을_때_대화형은_defer(ctx):
+    """`ls` 처럼 아는 게 없는 명령. 대화형은 Claude Code 승인 흐름에 맡긴다."""
+    assert kind(ctx, Finding("unclassified", target="ls -la")) == "defer"
+
+
+def test_미분류_하나만_있을_때_헤드리스는_ask(ctx):
+    ctx.headless = True
+    ctx.policy.data["headless"]["onAsk"] = "ask"
+    decision = D.decide(Finding("unclassified", target="ls -la"), ctx)
+    assert decision.kind == "ask"
+    assert "알지 못해요" in decision.reason
+    assert M.NO_WORKAROUND in decision.reason
+
+
+def test_미분류는_헤드리스에서도_자동_허용으로_안_넘어간다(ctx):
+    ctx.headless = True
+    for mode in ("ask", "deny-with-reason", "wait", "아무거나"):
+        ctx.policy.data["headless"]["onAsk"] = mode
+        assert kind(ctx, Finding("unclassified", target="ls -la")) in ("ask", "deny")
+
+
+def test_미분류는_잠금이_아니다(ctx):
+    """잠긴 항목과 섞이면 잠금이 이긴다 — 판정 순서가 뒤바뀌지 않게."""
+    found = [
+        Finding("unclassified", target="conda run -n base ls"),
+        Finding("outside", target="/etc/hosts"),
+    ]
+    assert D.combine([D.decide(f, ctx) for f in found]).kind == "deny"
+    assert "unclassified" not in D.LOCK_ACTIONS
+
+
+def test_combine_은_미분류가_섞이면_allow_를_안_준다():
+    """순위표가 바뀌어도 안 열리게 둔 불변식."""
+    from app.hooks.emit import ALLOW
+
+    out = D.combine([ALLOW(action="code"), ALLOW(action="unclassified")])
+    assert out.kind == "defer"
+    assert out.action == "unclassified"

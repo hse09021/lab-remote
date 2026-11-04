@@ -303,3 +303,70 @@ def test_정책으로_비밀_목록을_더할_수_있다(ctx, project_root):
     with open(os.path.join(project_root, "secrets.yaml"), "w", encoding="utf-8") as fh:
         fh.write("key: 비밀\n")
     assert "secret" in actions(ctx, "cat secrets.yaml")
+
+
+# --- 분류 못 한 세그먼트 (coverage) -------------------------------------------
+# `classify()` 는 "들어 있는 행동 유형" 만 돌려준다. 판정은
+# `classify_with_coverage()` 를 쓴다 — 모르는 세그먼트를 말해 주는 쪽이다.
+
+OUTSIDE = "/home/사용자/sbx-victim"
+
+
+def coverage(ctx, command):
+    return [
+        f.target
+        for f in bashparse.classify_with_coverage(command, ctx)
+        if f.action == "unclassified"
+    ]
+
+
+def test_래퍼로_감싼_삭제가_미분류로_올라온다(ctx):
+    """실측: 래퍼 62종 중 52종이 분류를 빠져나간다. 분류는 2단계에서 메우고,
+    지금 고치는 건 "모르는 건 자동으로 열지 않는다" 와 기록이 남는 것이다."""
+    cmd = f"conda run -n base rm -rf {OUTSIDE}"
+    assert actions(ctx, cmd) == []  # 아직 분류는 못 한다
+    assert coverage(ctx, cmd) == [cmd]  # 하지만 모른다고 말한다
+
+
+def test_복합_명령에서_아는_조각_하나가_전체를_덮지_않는다(ctx):
+    """실측에서 훅이 allow 를 준 꼴. 이제 미분류가 같이 올라온다."""
+    cmd = f"echo probe > src/t.txt && conda run -n base rm -rf {OUTSIDE}"
+    found = [f.action for f in bashparse.classify_with_coverage(cmd, ctx)]
+    assert "code" in found and "unclassified" in found
+
+
+def test_분류된_조각은_미분류로_안_센다(ctx):
+    assert coverage(ctx, "pip install peft") == []
+    assert coverage(ctx, f"rm -rf {OUTSIDE}") == []
+    assert coverage(ctx, "sed -i 's/a/b/' docs/Evaluation.md") == []
+
+
+def test_cd_는_끝까지_따라가므로_미분류가_아니다(ctx):
+    assert coverage(ctx, "cd src") == []
+
+
+def test_읽기_명령은_미분류로_올라온다(ctx):
+    """대화형에서는 defer 로 떨어져 소음이 없다. 헤드리스 쪽 소음은
+    허용 목록(계획 1-2-1, 2단계)이 줄인다."""
+    assert coverage(ctx, "ls -la") == ["ls -la"]
+    assert coverage(ctx, "cd src && ls") == ["ls"]
+
+
+def test_래퍼만_남은_꼴도_미분류(ctx):
+    assert coverage(ctx, "env") == ["env"]
+
+
+def test_치환이_보이면_세그먼트를_안_쪼갠다(ctx):
+    """통째로 suspicious 로 올라가니 미분류가 따로 붙지 않는다."""
+    found = [f.action for f in bashparse.classify_with_coverage("echo $(whoami)", ctx)]
+    assert found == ["suspicious"]
+
+
+def test_같은_미분류_세그먼트는_한_번만(ctx):
+    assert coverage(ctx, "ls -la && ls -la") == ["ls -la"]
+
+
+def test_classify_의_계약은_그대로다(ctx):
+    """기존 호출부·시험이 보는 "행동 유형만" 은 안 바뀐다."""
+    assert actions(ctx, "ls -la") == []
+    assert actions(ctx, REAL_BYPASS) == ["journal"]

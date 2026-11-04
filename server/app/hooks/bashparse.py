@@ -31,7 +31,13 @@ import shlex
 from .. import paths
 from .classify import Ctx, Finding, classify_path, is_secret
 
-__all__ = ["classify", "split_segments", "strip_wrappers", "secret_findings"]
+__all__ = [
+    "classify",
+    "classify_with_coverage",
+    "split_segments",
+    "strip_wrappers",
+    "secret_findings",
+]
 
 #: 안에 다른 명령을 끼워 넣는 흔적. 보이면 해석을 포기한다.
 SUSPICIOUS_RE = re.compile(
@@ -389,14 +395,21 @@ def argv_to_findings(argv: list[str], ctx: Ctx) -> list[Finding]:
     return []
 
 
-def classify(command: str, ctx: Ctx) -> list[Finding]:
+def _scan(command: str, ctx: Ctx) -> tuple[list[Finding], list[str]]:
+    """세그먼트별로 훑는다 -> (찾아낸 것, **분류하지 못한 세그먼트**).
+
+    두 번째 값이 ①의 경계 버그를 메운다. 아래 `classify_with_coverage` 의 주석.
+    """
     cfg = getattr(ctx.policy, "bash", {}) or {}
     if cfg.get("escalateOnSubstitution", True) and SUSPICIOUS_RE.search(command):
-        return [Finding("suspicious", target=command[:200], writes=True)]
+        # 치환이 보이면 세그먼트를 쪼개는 것조차 의미가 없다. 통째로 올린다.
+        return [Finding("suspicious", target=command[:200], writes=True)], []
 
     out: list[Finding] = []
+    unknown: list[str] = []
     cwd = ctx.cwd
     for segment in split_segments(command):
+        before = len(out)
         try:
             argv = shlex.split(segment, posix=True)
         except ValueError:
@@ -412,12 +425,16 @@ def classify(command: str, ctx: Ctx) -> list[Finding]:
 
         argv = strip_wrappers(argv)
         if not argv:
+            # `env` 한 개처럼 래퍼만 남은 꼴. 무엇을 하려는지 알 수 없다.
+            if len(out) == before:
+                unknown.append(segment)
             continue
 
         # 읽기든 쓰기든 비밀 파일이 대상이면 막는다 (옵션·와일드카드 포함).
         out.extend(secret_findings(segment, argv, here))
 
         # 단순 `cd X` 는 따라간다. 조건부 cd 는 포기한다(문서화된 한계).
+        # 끝까지 따라간 명령이라 "분류 못 한 것" 에 넣지 않는다.
         if os.path.basename(argv[0]) == "cd":
             operands = _operands(argv)
             if operands:
@@ -425,4 +442,42 @@ def classify(command: str, ctx: Ctx) -> list[Finding]:
             continue
 
         out.extend(argv_to_findings(argv, Ctx(**{**ctx.__dict__, "cwd": cwd})))
-    return out
+        if len(out) == before:
+            unknown.append(segment)
+    return out, unknown
+
+
+def classify(command: str, ctx: Ctx) -> list[Finding]:
+    """명령 안에 들어 있는 **행동 유형**만. 판정은 `classify_with_coverage` 를 쓴다."""
+    return _scan(command, ctx)[0]
+
+
+def classify_with_coverage(command: str, ctx: Ctx) -> list[Finding]:
+    """`classify()` + **분류하지 못한 세그먼트**를 `unclassified` Finding 으로.
+
+    ①의 경계 버그를 메운다. 미분류 세그먼트는 findings 에 아무것도 보태지
+    않았고, `combine()` 은 "가장 제한적인 것이 이긴다" 인데 **없는 것은 제한을
+    보태지 않는다.** 그래서 허용되는 조각 하나가 전체를 통과시켰다 (실측):
+
+        echo x > src/t.txt                                 -> ['code'] -> allow
+        echo x > src/t.txt && conda run -n base rm -rf <밖>  -> ['code'] -> allow  ⚠
+        echo x > src/t.txt && rm -rf <밖>                    -> ['code','outside'] -> deny
+
+    이제 두 번째 줄이 `['code', 'unclassified']` 가 되어 allow 로 떨어지지
+    않는다. 대화형은 defer(사람에게 묻기), 헤드리스는 ask(승인 대기열)다 —
+    `decide.decide` 의 `unclassified` 분기.
+
+    **이건 보조 수단이다.** 1차 방어는 Claude Bash 샌드박스다(실측 14).
+    여기서 하는 일은 "모르는 건 자동으로 열지 않는다" 와 **기록을 남기는 것**이다.
+    """
+    found, unknown = _scan(command, ctx)
+    seen: set[str] = set()
+    for segment in unknown:
+        key = segment[:200]
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(
+            Finding("unclassified", target=key, detail=command[:200], writes=True)
+        )
+    return found

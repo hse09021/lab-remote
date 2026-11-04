@@ -401,7 +401,8 @@ def classify_event(event: dict, ctx: Ctx) -> list[Finding]:
         command = pick(tool_input, COMMAND_KEYS)
         if command is None:
             return [Finding("schema-unknown", detail=f"Bash · 받은 키: {sorted(tool_input)}", writes=True)]
-        return bashparse.classify(str(command), ctx)
+        # 분류 못 한 세그먼트까지 받는다 — 미분류가 allow 로 떨어지는 구멍을 막는다.
+        return bashparse.classify_with_coverage(str(command), ctx)
 
     if tool in NET_TOOLS:
         return [Finding("net", target=str(pick(tool_input, URL_KEYS) or ""))]
