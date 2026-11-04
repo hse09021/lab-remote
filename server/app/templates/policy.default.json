@@ -211,7 +211,8 @@
       "crontab"
     ],
     "gitRemoteAsNet": false,
-    "allowExtra": []
+    "allowExtra": [],
+    "entrypoints": []
   },
   "headless": {
     "onAsk": "deny-with-reason",

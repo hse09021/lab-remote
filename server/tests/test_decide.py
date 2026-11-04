@@ -240,9 +240,9 @@ def test_기록_허용보다_산출물_보존이_이긴다(ctx):
 # 로 분류되고 `conda run` 쪽은 findings 에 아무것도 보태지 않아서, 사람에게
 # 묻지도 않고 프로젝트 밖 삭제가 실행될 수 있었다. 대화형·헤드리스 둘 다 고정한다.
 
-COMPOSITE_BYPASS = (
-    "echo probe > src/sbx_t.txt && conda run -n base rm -rf /home/사용자/sbx-victim"
-)
+#: 래퍼는 2단계에서 벗겼으니 미분류 경로는 **진짜 모르는 명령**으로 잰다.
+#: 래퍼로 감싼 꼴은 이제 `outside` 로 잡혀 더 센 deny 가 된다(이 파일 맨 끝).
+COMPOSITE_BYPASS = "echo probe > src/sbx_t.txt && 처음보는도구 --무엇이든"
 
 
 def composite(ctx):
@@ -311,3 +311,16 @@ def test_combine_은_미분류가_섞이면_allow_를_안_준다():
     out = D.combine([ALLOW(action="code"), ALLOW(action="unclassified")])
     assert out.kind == "defer"
     assert out.action == "unclassified"
+
+
+def test_래퍼로_감싼_꼴은_미분류보다_센_판정을_받는다(ctx):
+    """2단계에서 래퍼를 벗겼다. `conda run … rm -rf <밖>` 은 잠긴 항목이다."""
+    from app.hooks import bashparse
+
+    cmd = "echo probe > src/sbx_t.txt && conda run -n base rm -rf /home/사용자/sbx-victim"
+    ctx.policy.set_saved("full")
+    found = bashparse.classify_with_coverage(cmd, ctx)
+    assert sorted(f.action for f in found) == ["code", "outside"]
+    for headless in (False, True):
+        ctx.headless = headless
+        assert D.combine([D.decide(f, ctx) for f in found]).kind == "deny"

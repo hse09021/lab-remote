@@ -347,7 +347,10 @@ def test_22_서브에이전트_대기_건은_Stop_이_아니라_SubagentStop_이
 # 분류돼서, 사람에게 묻지도 않고 `conda run … rm -rf <프로젝트 밖>` 이
 # 실행될 수 있었다. 샌드박스가 실제로 막아 준 덕에 피해는 없었다(실측 14).
 
-COMPOSITE_BYPASS = (
+#: 래퍼로 감싼 꼴은 2단계에서 벗겨 `outside` 로 잡는다(이 파일 맨 끝).
+#: 미분류 경로는 **진짜 모르는 명령**으로 잰다 — 63번째 래퍼는 언제든 나온다.
+COMPOSITE_BYPASS = "echo probe > src/sbx_t.txt && 처음보는도구 --무엇이든"
+WRAPPED_BYPASS = (
     "echo probe > src/sbx_t.txt && conda run -n base rm -rf /home/사용자/sbx-victim"
 )
 
@@ -578,3 +581,13 @@ def test_26_프리셋을_올려도_Current_yaml_은_잠겨_있다(wrapper, proje
     path = os.path.join(project_root, L.LOOP_LAYOUT["current"])
     event = hook_event("Write", {"file_path": path, "content": "x"}, cwd=project_root)
     assert decision(wrapper, event) == "deny"
+
+
+def test_24_래퍼로_감싼_꼴은_이제_차단한다(wrapper, project, project_root, hook_event):
+    """실측에서 훅이 allow 를 줬고 샌드박스가 막아 줬던 명령이다.
+    래퍼를 벗겨서 훅도 막는다 — 샌드박스가 꺼져 있어도."""
+    with_full_preset(project)
+    event = hook_event("Bash", {"command": WRAPPED_BYPASS}, cwd=project_root)
+    out = run(wrapper, event)
+    assert out["permissionDecision"] == "deny"
+    assert "프로젝트 폴더 밖" in out["permissionDecisionReason"]

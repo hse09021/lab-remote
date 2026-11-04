@@ -109,6 +109,16 @@ def decide(finding: Finding, ctx: Ctx) -> Decision:
             ASK(M.with_guard(M.unparsed(str(finding.target))), **base), ctx, label
         )
 
+    # --- 허용 목록에 있는 명령 (헤드리스 전용) ------------------------------
+    # 실측: 헤드리스에서 `defer` 는 통과가 아니라 **정지**다(tool_deferred).
+    # `ls` 조차 아무것도 못 하고 끝난다. 그래서 아는 명령은 allow 를 준다.
+    # 대화형에서는 defer 가 정상 동작하므로 그대로 둔다 — 훅이 함부로 allow 를
+    # 주지 않는다는 이 모듈의 원칙을 헤드리스에서만 접는다.
+    if action == "bashAllowed":
+        if ctx.headless:
+            return ALLOW(**base)
+        return DEFER(**base)
+
     # --- 분류 못 한 세그먼트 (①의 경계 버그) -------------------------------
     # 미분류 세그먼트는 findings 에 아무것도 보태지 않아서
     #   echo x > src/t.txt && conda run -n base rm -rf <프로젝트 밖>
