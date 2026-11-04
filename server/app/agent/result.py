@@ -27,6 +27,7 @@ __all__ = [
     "JSON_RE",
     "AgentResult",
     "parse",
+    "denials",
     "looks_like_usage_limit",
     "STALL_REASONS",
 ]
@@ -109,6 +110,59 @@ def parse(raw: str, *, exit_code: int | None = None) -> AgentResult:
         and str(data.get("stop_reason") or "") not in STALL_REASONS
     )
     return out
+
+
+def denials(result) -> list[dict]:
+    """`permission_denials` 를 정규화한다. — **승인 내용의 출처다.**
+
+    ## 왜 여기서 가져오나 (원칙 (나))
+
+    사람이 승인할 때 보는 내용과 지문은 **오케스트레이터가 자기 자식
+    프로세스에서 직접 받은 것**이어야 한다. 훅이 쓴 요청 파일을 거치면
+    믿어야 할 것이 하나 늘고, 훅이 파일을 못 썼을 때(디스크·크래시)
+    오케스트레이터가 무엇이 막혔는지 모른다.
+
+    > ℹ️ 원래 계획은 *"훅의 요청 파일을 AI 가 꾸밀 수 있다"* 를 이유로 들었다.
+    > **그 이유는 M1 으로 사라졌다** — `server/data/requests/` 는 샌드박스
+    > 안에서 쓰기가 실패하므로(M1b) AI 코드가 못 고친다. 남은 이유는
+    > 위의 둘, 그리고 **본문을 여기서만 볼 수 있다**는 것이다.
+
+    요청 파일에는 본문을 저장하지 않는다(비밀이 섞일 수 있다). 그래서
+    `approve` 가 지문을 **다시 계산할 수 없고** 훅이 계산한 값을 믿어야
+    했다. `permission_denials` 에는 `tool_input` 전체가 있으므로
+    오케스트레이터가 **직접 계산**한다.
+
+    ## 모양 (M2 실측 2026-11-05)
+
+    ```json
+    { "tool_name": "Bash",
+      "tool_use_id": "toolu_01MLut…",
+      "tool_input": {"command": "pip install peft", "description": "…"} }
+    ```
+
+    칸은 **셋뿐이다. 사유가 없다.** 그래서 사유는 훅의 요청 파일에서 가져와
+    *"훅 참고(검증 안 됨)"* 로 따로 표시한다.
+    """
+    rows = []
+    items = result.get("denials") if isinstance(result, dict) else None
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        tool = str(item.get("tool_name") or "")
+        if not tool:
+            continue
+        tool_input = item.get("tool_input")
+        rows.append(
+            {
+                "tool": tool,
+                # Claude Code 가 넣는 값. AI 가 못 고친다.
+                "toolUseId": str(item.get("tool_use_id") or ""),
+                "toolInput": tool_input if isinstance(tool_input, dict) else {},
+                # [미확인] 사유 칸은 2.1.318 의 `permission_denials` 에 없다
+                "reason": "",
+            }
+        )
+    return rows
 
 
 def _model_of(data: dict) -> str | None:
