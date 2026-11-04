@@ -165,8 +165,35 @@ def stop_idle(rel: str) -> str:
 # --- 정책에서 온 판정 -------------------------------------------------------
 
 
-def ask_action(name: str, what: str) -> str:
-    return f"{name}{josa(name)} 승인이 필요해요: {what}"
+#: 📦 패키지 설치만 안내가 다르다 — 승인해도 **Claude 의 Bash 로는 안 된다.**
+#:
+#: S1 의 M3 실측: conda 환경은 프로젝트 밖이라 샌드박스가 쓰기를 버린다.
+#: `pip install` 이 프로그램에는 성공으로 보이고 실제로는 아무 일도 안 난다.
+#: 그래서 요청 파일을 쓰게 안내한다 — 설치는 오케스트레이터가 한다.
+PKG_HINT = (
+    "설치는 제가 직접 못 해요 — conda 환경이 프로젝트 폴더 밖이라 샌드박스가 "
+    "쓰기를 버려서, 성공한 것처럼 보이고 실제로는 안 깔려요. "
+    "{request} 에 패키지 이름과 버전만 적어 주세요 "
+    '(예: {{"version": 1, "packages": [{{"name": "peft", "spec": "==0.13.2"}}], '
+    '"reason": "왜 필요한지"}}). '
+    "사람이 승인하면 시스템이 설치하고 결과를 {result} 로 알려 줘요."
+)
+
+
+def pkg_hint() -> str:
+    from .. import loop_layout as L
+
+    return PKG_HINT.format(
+        request=L.LOOP_LAYOUT["install_request"],
+        result=L.LOOP_LAYOUT["install_result"],
+    )
+
+
+def ask_action(name: str, what: str, *, action: str = "") -> str:
+    text = f"{name}{josa(name)} 승인이 필요해요: {what}"
+    if action == "pkg":
+        text += " · " + pkg_hint()
+    return text
 
 
 def block_action(name: str, what: str) -> str:

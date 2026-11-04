@@ -39,6 +39,7 @@ from ..store import experiments as X
 from ..store import jobs as J
 from ..store import loops as LP
 from . import approvals as approvals_mod
+from . import installs as installs_mod
 from ..git import anchor as anchor_mod
 from ..git import bundle as bundle_mod
 from ..git import ops as ops_mod
@@ -252,6 +253,14 @@ def _claude(ctx, conn, *, prompt: str, session_id: str, resume: bool) -> dict:
     # 세션이 끝난 **직후**가 가장 짧은 창이다. 이 세션이 쓴 코드가 프로젝트
     # 설정을 고쳤으면 다음 세션(과 사람의 대화형 세션)이 그걸 읽는다.
     guard_project(ctx, conn, when="Claude 세션 종료 직후")
+    # 📦 Claude 가 설치 요청을 남겼으면 승인 대기를 연다. 설치는 사람이
+    # 승인한 뒤 **오케스트레이터가 샌드박스 밖에서** 한다 (M3: Claude 의
+    # Bash 로는 조용히 실패한다).
+    try:
+        installs_mod.sync(conn, ctx.project, ctx.root)
+    except Exception:
+        # 설치 요청 처리가 루프를 멈추지 않는다.
+        pass
     return got
 
 

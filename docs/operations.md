@@ -2562,3 +2562,128 @@ bundle`). 그래서 `bundle.verify(deep=True)` 는 **임시 폴더로 `git clone
   입니다 — 창은 한 루프이고, 백업 10개를 뒤로 거슬러 볼 수 있습니다.
 - 백업은 **같은 기계 안**입니다. 디스크가 죽으면 같이 죽습니다. 원격 백업은
   ③ 이후입니다(push 가 ② 범위 밖).
+
+---
+
+# 📦 T6 — 패키지 설치는 오케스트레이터가 합니다 (2026-11-05)
+
+## 왜 경로를 새로 만들었나
+
+S1 의 **M3** 에서 드러난 것: **Claude 의 Bash 로는 `pip install` 이 조용히
+실패합니다.** conda 환경은 프로젝트 폴더 밖이라 샌드박스가 쓰기를 버리고,
+`pip` 에는 성공으로 보입니다. **사람이 승인해도 아무 일이 안 일어납니다.**
+승인 경로가 작동하는 것처럼 보이면서 실제로는 아무것도 못 하는 상태였습니다.
+
+## 흐름
+
+```
+Claude 가 state/Install_request.json 을 쓴다 (이름·버전만)
+  → 세션이 끝나면 오케스트레이터가 읽고 pkgspec 으로 검증
+  → approvals 에 1건 (action_key='install') + Discord(패키지 목록·사유)
+  → labremote installs approve <프로젝트> <번호> [--allow-source]
+  → 오케스트레이터가 **샌드박스 밖에서**
+       conda run -n <env> --no-capture-output python -m pip install \
+         --no-input --no-cache-dir --disable-pip-version-check \
+         --only-binary=:all: <검증된 패키지들>
+  → 결과를 lab.db(진본) 와 state/Install_result.json(AI 가 읽는 쪽) 에
+  → resume 프롬프트가 결과를 읽게 안내한다
+```
+
+```bash
+labremote installs list                        # 기다리는 요청
+labremote installs approve hook-sandbox 3      # 승인 + 바로 설치
+labremote installs deny hook-sandbox 3 --reason "버전이 안 맞아요"
+```
+
+## 받는 것은 **이름과 버전만** (`app/runner/pkgspec.py`)
+
+```json
+{ "version": 1,
+  "packages": [ {"name": "peft", "spec": "==0.13.2"}, {"name": "accelerate"} ],
+  "reason": "LoRA 어댑터를 쓰려고요" }
+```
+
+- 이름: `^[A-Za-z][A-Za-z0-9._-]{0,63}$` · 버전: `^(==|>=|<=|~=|!=|<|>)[0-9]…$` ·
+  extras: `^[a-z0-9][a-z0-9,_-]{0,63}$` — 셋 다 **앵커된 화이트리스트**입니다.
+- 거부: 공백·`/ \ : @ ; & | $ ` ( ) ' "`·`..`·`--`·`git+`·`http`·`file:`·
+  `.whl`·`.tar.gz`·`.zip`·`%`·줄바꿈. 모르는 칸이 있으면 거부.
+- **설치 도구 자신을 거부합니다** — `pip`·`setuptools`·`wheel`·`pkg-resources`·
+  `conda`·`mamba`·`claude`·`anthropic`. 바꿔치기하면 **다음 설치가 임의
+  코드**가 됩니다.
+- 한 번에 **20개**까지. 사람이 눈으로 볼 수 있는 양이어야 합니다.
+- 하나라도 어긋나면 **전체를 거부**합니다. 일부만 걸러서 "고쳐 준" 요청을
+  돌리면 사람이 승인한 것과 다른 게 깔립니다.
+
+> 곁다리로 잡은 모순: `BAD_SUBSTRINGS` 에 `<`·`>` 를 넣어 뒀더니 `>=0.13` 같은
+> **정상 버전 지정이 거부**됐습니다. 세 정규식이 앵커된 화이트리스트라 그
+> 둘은 빼도 안전합니다.
+
+## 휠만 받습니다 — 양쪽이 맞아야 열립니다
+
+소스 배포(sdist)는 설치할 때 `setup.py` 를 **실행**합니다. 샌드박스 밖 임의
+코드 실행입니다. 그래서 `--only-binary=:all:` 이 기본이고, 풀려면
+
+| | 어디 |
+|---|---|
+| 요청에 `allowSource: true` | AI 가 씁니다 |
+| 승인에 `--allow-source` | 사람이 붙입니다 |
+
+**둘 다** 맞아야 열립니다(한쪽만으로는 안 열리는 것을 테스트로 고정).
+
+## 🔑 공용 캐시를 쓰지 않습니다
+
+`~/lab-cache` 는 모든 프로젝트가 쓰기로 공유합니다. 그래서 한 프로젝트의 AI
+코드가 **휠 캐시를 오염시킬 수 있고**, 거기 든 것은 다음에 설치될 코드입니다.
+오케스트레이터는 **샌드박스 밖**에서 돕니다.
+
+- `--no-cache-dir` 를 **항상** 붙입니다.
+- pip 환경은 **화이트리스트**이고 캐시 변수가 거기 없습니다 —
+  `PIP_CACHE_DIR`·`HF_HOME`·`HF_HUB_CACHE`·`TORCH_HOME`·`XDG_CACHE_HOME`·
+  `WANDB_DIR`·`TMPDIR`·`TEMP`·`TMP` 가 하나도 안 갑니다(테스트로 고정).
+- `PIP_CONFIG_FILE=/dev/null` — pip 전역 설정의 `index-url` 로 모르는 곳에서
+  받는 길을 막습니다.
+- `ANTHROPIC_*` 도 지웁니다.
+
+## 사람이 승인한 것과 설치되는 것이 같습니다
+
+승인할 때 지문(`pkgspec.fingerprint`)을 적어 두고, **설치 직전에 요청 파일을
+다시 읽어 지문을 대조**합니다. 그 사이에 AI 가 요청 파일을 바꿔 치면 지문이
+달라져 **설치하지 않습니다**(테스트: 바꿔치기하면 `subprocess` 를 한 번도
+부르지 않습니다).
+
+지문에 `reason` 은 **넣지 않습니다** — 사유만 고쳐 같은 설치를 다시
+승인받는 길을 막습니다.
+
+conda 환경 이름은 요청이 아니라 **`specifications/Config.yaml` 의 `env.conda`**
+에서 읽습니다. 그 파일은 실험이 도는 중에 잠겨 있고(`stop` 잠금), AI 가
+환경을 정하게 두면 다른 환경에 깔 수 있습니다.
+
+## 진본은 `lab.db`
+
+`state/Install_result.json` 은 프로젝트 안이라 AI 가 쓴 코드가 고칠 수
+있습니다(M4). 그건 **AI 에게 알려 주는 쪽**이고, 승인·설치 기록의 진본은
+`approvals` 표입니다(`server/data/` 아래 — M1b).
+
+## 훅은 그대로 막고 안내만 바꿉니다
+
+`pkg` 행동의 `ask` 사유에 안내가 붙습니다(`messages.pkg_hint`).
+
+> 패키지 설치는 승인이 필요해요: pip install peft · 설치는 제가 직접 못 해요 —
+> conda 환경이 프로젝트 폴더 밖이라 샌드박스가 쓰기를 버려서, 성공한 것처럼
+> 보이고 실제로는 안 깔려요. `state/Install_request.json` 에 패키지 이름과
+> 버전만 적어 주세요 … 사람이 승인하면 시스템이 설치하고 결과를
+> `state/Install_result.json` 로 알려 줘요.
+
+같은 내용이 생성기 `CLAUDE.md` 템플릿과 `loop_plan.md`·
+`resume_after_approval.md` 프롬프트에도 들어갔습니다.
+
+## 남는 틈
+
+- **설치 자체가 코드 실행입니다.** 휠도 import 되면 돕니다. 막는 것은 "사람이
+  목록을 보고 승인한다" 와 "휠만" 두 가지뿐입니다. PyPI 를 신뢰하는 범위를
+  좁히려면 사설 인덱스나 잠금 파일(`requirements.lock`)이 필요한데 ② 범위
+  밖입니다.
+- `--allow-source` 로 승인하면 `setup.py` 가 돕니다. 사람이 그걸 알고 붙여야
+  하므로 CLI 도움말에 적어 뒀습니다.
+- 같은 요청을 반복하면 `approvals.attempts` 가 올라갑니다. 상한으로 루프를
+  멈추는 것은 **7단계**(승인 대기열 CLI)에서 붙입니다.
