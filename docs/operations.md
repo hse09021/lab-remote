@@ -453,9 +453,70 @@ background children of its own. …the same task-id may notify more than once.</
 `taskNotification` · `UserPromptSubmit` · `PreToolUse` · `cli`). Stop 이
 건너뛴 서브에이전트 건은 `skippedAgents` 로 남습니다.
 
-**`SubagentStop` 의 입력은 아직 실측 못 했습니다 [미확인].** 이벤트 이름이
-2.1.317 에 있는 건 확인했고, `agent_id` 가 와도 안 와도 동작하게 써 뒀습니다.
-한 번 돌려 보고 `sweep.by` 를 보면 확정됩니다.
+#### `SubagentStop` 입력 — 실측 끝났습니다 (2026-11-04 09:27~09:33) ✅
+
+픽스처: `server/tests/fixtures/hook_events/20261104-0930*-SubagentStop.json`
+
+```
+session_id, transcript_path, cwd, scratchpad_dir, prompt_id, permission_mode,
+agent_id, agent_type, effort{level}, hook_event_name, stop_hook_active,
+agent_transcript_path, last_assistant_message, background_tasks[], session_crons[]
+```
+
+**`agent_id` 가 옵니다.** 그래서 1차 갈래(`sweep.by = "SubagentStop"`)로 갑니다.
+`SubagentStop-session` 갈래는 다른 버전 대비로만 남겨 뒀습니다.
+
+메인 `Stop` 과 구분되는 필드는 `agent_id`·`agent_type`·`agent_transcript_path`
+셋입니다.
+
+##### 1회차 — 거부 (09:27~09:30)
+
+```
+09:27:37  PreToolUse    Write d.py   agent=af3199313de4e46ff  -> ask (대기 건 열림)
+09:27:38  Stop          prompt=93f2315a…                      -> skippedAgents, closed: []
+          … 사람이 승인창을 3분 14초 동안 열어 둠 …
+09:30:51  SubagentStop  agent=af3199313de4e46ff               -> "거부 또는 미응답"
+```
+
+**거부 경로에도 `SubagentStop` 이 옵니다.** 이게 이번에 확인하려던 핵심이었고,
+`Stop` 이 건너뛴 건을 실제로 받아 닫았습니다. 서브에이전트가 남긴 보고도
+설계대로였습니다 — 거절 메시지를 그대로 옮기고 **다른 도구나 경로로 재시도하지
+않았습니다.**
+
+##### 2회차 — 승인 (09:33)
+
+```
+09:33:12  PreToolUse    Write e.py   agent=a452cce47629baeb8  -> ask (대기 건 열림)
+09:33:15  SubagentStop  agent=a35d1440a1faf2512  type=""      -> 아무것도 안 닫음
+09:33:41  PostToolUse   Write e.py                            -> "허용"
+09:33:46  SubagentStop  agent=a452cce47629baeb8               -> 이미 닫혀 행 없음
+```
+
+중간에 거짓 거부가 끼지 않았고 `pending/` 도 비었습니다.
+
+##### 왜 `SubagentStop` 이 짧은 간격으로 두 번 오나
+
+같은 이벤트가 두 번 오는 게 **아닙니다.** `agent_id` 가 서로 다른 두 에이전트고,
+두 회차 모두 같은 모양이었습니다.
+
+| 회차 | 시각 | `agent_id` | `agent_type` | `background_tasks` | PreToolUse 낸 적 |
+|---|---|---|---|---|---|
+| 1 | 09:30:51 | `af3199313de4e46ff` | `general-purpose` | 1건(자기, running) | ○ d.py |
+| 1 | 09:30:58 | `afbdfab71ba9cbf43` | `""` | 없음 | ✕ |
+| 2 | 09:33:15 | `a35d1440a1faf2512` | `""` | 1건 | ✕ |
+| 2 | 09:33:46 | `a452cce47629baeb8` | `general-purpose` | 1건(자기, running) | ○ e.py |
+
+**`agent_type` 이 빈 쪽은 도구를 한 번도 쓴 적이 없는 에이전트**입니다. 그게
+정확히 무엇인지는 덤프만으로는 모릅니다 **[미확인]**. 다만 대기 건과 절대
+맞지 않아 해가 없습니다 — `agent_id` 로 묶기 때문입니다.
+
+**`prompt_id` 로 묶었다면 2회차에서 사고가 났습니다.** 09:33:15 의 빈 에이전트가
+승인 26초 전에 e.py 대기 건을 가로채 거짓 "거부 또는 미응답" 을 남겼을 겁니다.
+`agent_id` 로 묶은 이유가 이것이고, 시험
+(`test_실측_빈_agent_type_쪽은_아무것도_안_닫는다`)으로 고정했습니다.
+
+덤으로 확인한 것: **`SubagentStop` 시점에도 `background_tasks` 의 자기 항목은
+아직 `status: "running"`** 입니다. "끝났나" 를 그 필드로 판단하면 안 됩니다.
 
 ### 승인창이 열려 있으면 사람이 끼어들 수 없습니다
 
@@ -505,6 +566,20 @@ background children of its own. …the same task-id may notify more than once.</
 프로젝트 안 `state/State.yaml`(loop 0)과 서버 쪽 runstate(EXP-002 running)가
 서로 다른 말을 했습니다. 훅은 runstate 만 보므로 판정은 맞았지만, 사람이 보는
 문서가 틀려 있습니다. **②의 오케스트레이터가 둘을 맞춥니다.**
+
+#### Claude 가 "지금 어느 실험이 도는지" 를 모릅니다 (2026-11-04 09:33)
+
+백그라운드 에이전트 확인 중에 Claude 가 *"EXP-002 가 이미 시작된 실험이면
+막혀야 하는데"* 라고 혼동했습니다. 판정 자체는 맞았지만, **Claude 가 참고할 수
+있는 문서 어디에도 현재 실험이 적혀 있지 않습니다.**
+
+- runstate(`started`·`experimentId`)는 서버 쪽에 있고 프로젝트에서 안 보입니다.
+  일부러 그렇게 뒀습니다 — 프로젝트 안에 두면 AI 가 고쳐서 잠금을 풀 수 있어요.
+- `state/State.yaml` 은 보이지만 AI 가 쓰는 파일이라 **근거가 될 수 없고**,
+  지금은 실제로 어긋나 있습니다.
+
+그래서 잠금이 "왜" 걸렸는지 Claude 가 설명하지 못하고, 사람에게도 추측으로
+보고하게 됩니다. ②의 숙제입니다 (아래 "②로 넘기는 것" 3번).
 
 ## 권한 모드 — `auto` 로 뜨는 문제
 
@@ -654,7 +729,12 @@ $PY -m app init-project hook-sandbox --if-exists update
 2. **알림에 사유 싣기** — ask 를 낼 때 훅이 쓴 사유를 `notify` 로 함께 보냅니다
    (위 "훅 사유가 보이는 곳" 의 대안).
 3. **State.yaml ↔ runstate 정합** — 오케스트레이터가 실험을 시작·종료할 때 둘을
-   같이 갱신합니다.
+   같이 갱신합니다. 같이 할 것: **현재 실험을 Claude 에게 보이게** 하기.
+   runstate 는 서버 쪽이라 프로젝트에서 안 보이고, `State.yaml` 은 AI 가 쓰는
+   파일이라 근거가 못 됩니다. 오케스트레이터가 쓰는 "현재 실험" 한 줄을
+   `State.yaml`(또는 생성기 `CLAUDE.md`)에 두고, 그 줄은 AI 가 못 고치게
+   잠가야 합니다. 안 그러면 Claude 가 잠금의 이유를 추측으로 설명합니다
+   (위 "Claude 가 지금 어느 실험이 도는지 모릅니다").
 
 ## 임시 폴더
 
