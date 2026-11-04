@@ -95,13 +95,51 @@ WRITE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 #: 바깥으로 나가는 도구
 NET_TOOLS = ("WebFetch", "WebSearch")
 
+#: 📋 **2.1.318 에 실제로 있는 도구** (실측 2026-11-05 — 세션에 물어봤다).
+#:
+#: 직접: `Agent` `Artifact` `Bash` `Edit` `ListAgents` `Read` `ReportFindings`
+#: `ScheduleWakeup` `SendFeedback` `Skill` `ToolSearch` `Workflow` `Write`
+#: 지연: `ArtifactComments` `ArtifactData` `Cron{Create,Delete,List}`
+#: `DesignSync` `Monitor` `NotebookEdit` `PushNotification` `RemoteTrigger`
+#: `SendMessage` `TaskStop` `WebFetch` `WebSearch`
+#:
+#: ⚠ **없는 도구**: `Glob` `Grep` `TodoWrite` `MultiEdit` `NotebookRead` `LS`
+#: `Task`. 번들에 문자열은 있지만 세션에 노출되지 않는다.
+#:
+#: 아래 목록에서 **빼지는 않는다** — 다른 판·다른 모델이 쓸 수 있고 빠져
+#: 있으면 그게 구멍이다. 다만 **"막힌다" 고 말하지 않는다**: 없는 도구로는
+#: 애초에 시도할 수 없다. `~/.ssh` 훑기의 실제 경로는 **`Bash`**(`ls`·
+#: `grep -r`·`find`)이고 그건 `bashparse` 가 본다.
+TOOLS_2_1_318 = frozenset(
+    {
+        "Agent", "Artifact", "ArtifactComments", "ArtifactData", "Bash",
+        "CronCreate", "CronDelete", "CronList", "DesignSync", "Edit",
+        "ListAgents", "Monitor", "NotebookEdit", "PushNotification", "Read",
+        "RemoteTrigger", "ReportFindings", "ScheduleWakeup", "SendFeedback",
+        "SendMessage", "Skill", "TaskStop", "ToolSearch", "WebFetch",
+        "WebSearch", "Workflow", "Write",
+    }
+)
+
+#: 이 판에는 **없는** 이름. 분류에는 남겨 두지만 시험·문서가 "막힌다" 고
+#: 단정하지 않게 한 곳에 모아 둔다.
+PHANTOM_TOOLS = frozenset(
+    {"Glob", "Grep", "TodoWrite", "MultiEdit", "NotebookRead", "LS", "Task"}
+)
+
 #: 읽기 전용이라 경로 판정은 하지 않는 도구.
 #  ToolSearch 는 도구 스키마만 불러온다 (실측: tool_input = {query, max_results}).
 #  다만 쓰기 가능한 MCP 도구를 불러올 수는 있으므로 MCP 구멍 안내에 함께 적는다.
-READ_ONLY_TOOLS = ("Read", "Glob", "Grep", "ToolSearch", "TodoWrite")
+#  Skill·ReportFindings 는 2.1.318 에서 새로 보였다 — 파일을 안 건드린다.
+#  `Glob`·`Grep`·`TodoWrite` 는 이 판에 없다 (PHANTOM_TOOLS).
+READ_ONLY_TOOLS = (
+    "Read", "Glob", "Grep", "ToolSearch", "TodoWrite", "Skill", "ReportFindings",
+)
 
 #: 경로를 받는 읽기 도구. 비밀 파일을 막고, **프로젝트 안인지**도 본다.
 #  Read 는 file_path, Grep·Glob 은 path 를 쓴다.
+#  ⚠ `Grep`·`Glob` 은 2.1.318 에 **없다.** 남겨 두는 건 앞날을 위한 것이고,
+#  이 판에서 `~/.ssh` 를 훑는 실제 경로는 `Bash` 다.
 SECRET_READ_TOOLS = {
     "Read": WRITE_PATH_KEYS,
     "Grep": ("path", "file_path"),

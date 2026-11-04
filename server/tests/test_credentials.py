@@ -73,19 +73,32 @@ def test_복사도_막힌다(ctx, path):
 
 
 @pytest.mark.parametrize("path", ["~/.ssh", "~/.gnupg", "~/.aws", "~/.config/gh"])
-def test_Glob_으로_훑는_것도_막힌다(ctx, path):
+def test_Glob_판정은_준비돼_있다(ctx, path):
+    """⚠ **오늘의 보호가 아니다.** `Glob` 은 2.1.318 에 **없는 도구**다
+    (실측 2026-11-05 — 세션에 도구 목록을 물어봤다). 이 판에서는 애초에
+    호출할 수 없으므로 "Glob 으로 훑는 것을 막는다" 고 말하지 않는다.
+
+    이 판에서 `~/.ssh` 를 훑는 실제 경로는 **`Bash`** 다 (`ls`·`grep -r`·
+    `find`) — 그건 아래 `test_Bash_로도_못_읽는다` 와 `bashparse` 가 본다.
+
+    그래도 분류는 남겨 둔다: 다른 판에서 도구가 돌아오면 그때 바로 먹는다.
+    `tests/test_tools_2_1_318.py` 가 그 경계를 지킨다.
+    """
     assert actions(one(ctx, "Glob", {"pattern": "*", "path": os.path.expanduser(path)})) == [
         "secret"
     ]
 
 
-def test_Glob_에_훅이_실제로_뜬다(sandboxed, project_root):
-    """🔑 위 시험은 **거짓 초록불이었다.**
+def test_matcher_가_모든_도구를_덮는다(sandboxed, project_root):
+    """🔑 위 시험은 **두 겹으로 거짓 초록불이었다.**
 
-    판정 코드는 `Glob` 을 막도록 써 뒀는데, `PreToolUse` matcher 에 `Glob` 이
-    없어서 **훅이 아예 안 떴다.** 번들의 matcher 비교는 이름을 나열하면
-    정확 문자열 비교다. 판정만 시험하면 영원히 못 잡는다 — **설치된
-    matcher** 를 같이 본다.
+    1. `PreToolUse` matcher 에 `Glob` 이 없어서 **훅이 아예 안 떴다**
+       (번들의 matcher 비교는 이름 나열이면 정확 문자열 비교다). → S5 에서
+       match-all 로 고쳤다.
+    2. 그리고 `Glob` 은 2.1.318 에 **없는 도구**였다. → 문구를 고쳤다.
+
+    판정만 시험하면 둘 다 영원히 못 잡는다. 여기서는 **설치된 matcher** 를
+    보고, `tests/test_tools_2_1_318.py` 가 **실제 도구 목록**을 본다.
     """
     import json
 
