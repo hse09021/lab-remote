@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 from datetime import datetime
 
+from ..agent import version as version_mod
 from .. import loop_layout as L
 from ..monitor import gpu as gpu_mod
 from ..monitor import host as host_mod
@@ -117,6 +118,16 @@ def check_loop(conn, project: str, root: str, *, now: datetime | None = None) ->
         return _no(f"사람이 멈춰 뒀어요: {loop.get('paused_reason') or '사유 없음'}")
     if loop.get("state") in ("stopped", "done"):
         return _no(f"이미 멈춘 루프예요: {loop.get('stop_reason') or loop.get('state')}", stop=True)
+
+    # 📌 Claude Code 판이 바뀌었으면 **루프를 시작하지 않는다.**
+    #
+    # 2.1.317 → 2.1.318 에서 서브에이전트 도구 이름이 Task → Agent 가 됐고
+    # `--disallowedTools Task` 가 무효가 되어 서브에이전트가 열린 채로 돌았다.
+    # 그 틈은 **조용하다** — 루프는 사람이 안 보는 동안 몇 시간씩 돈다.
+    # 멈추는 비용은 명령 하나다: `labremote tools --probe`.
+    seen = version_mod.check()
+    if not seen["ok"]:
+        return _no(seen["reason"])
 
     limits = limits_of(read_config(root))
     done = [e for e in X.listing(conn, project) if e.get("state") in ("done", "failed", "stopped")]

@@ -134,3 +134,121 @@ def test_끄는_목록이_판정_가능한_도구를_안_끈다():
     keep = {"Bash", "Read", "Write", "Edit", "NotebookEdit", "WebFetch",
             "WebSearch", "ToolSearch", "Skill", "ReportFindings"}
     assert not (set(L.DISALLOWED_TOOLS) & keep)
+
+
+# --- 📌 판이 바뀌면 루프가 멈춘다 --------------------------------------------
+
+
+def test_판이_같으면_루프가_돈다(conn, project, project_root):
+    from app.agent import version as version_mod
+    from app.orchestrator import guards
+
+    assert version_mod.check()["ok"] is True
+    assert guards.check_loop(conn, "hook-sandbox", project_root).ok is True
+
+
+def test_판이_바뀌면_루프를_시작하지_않는다(conn, project, project_root, monkeypatch):
+    """🔑 `Task` → `Agent` 가 그랬다 — 틈이 **조용했다.**
+
+    루프는 사람이 안 보는 동안 몇 시간씩 돈다. 멈추는 비용은 명령 하나다.
+    """
+    from app.agent import version as version_mod
+    from app.orchestrator import guards
+
+    monkeypatch.setattr(version_mod, "current", lambda binary="claude": "9.9.10-새판")
+    verdict = guards.check_loop(conn, "hook-sandbox", project_root)
+    assert verdict.ok is False
+    assert "판이 바뀌었어요" in verdict["reason"]
+    assert "labremote tools --probe" in verdict["reason"]
+    # 종료 조건이 아니다 — 재면 풀린다
+    assert verdict["stop"] is False
+
+
+def test_기록이_없으면_루프를_시작하지_않는다(conn, project, project_root):
+    from app.agent import version as version_mod
+    from app.orchestrator import guards
+    import os
+
+    os.unlink(version_mod.record_path())
+    verdict = guards.check_loop(conn, "hook-sandbox", project_root)
+    assert verdict.ok is False and "기록이 없어요" in verdict["reason"]
+
+
+def test_doctor_는_경고만_한다(project, project_root, monkeypatch):
+    """`doctor` 가 ✘ 면 "고칠 수 없는 ✘" 가 아니라 "재면 되는 ⚠" 다."""
+    from app import doctor
+    from app.agent import version as version_mod
+
+    assert doctor.claude_version_check()["level"] == "ok"
+    monkeypatch.setattr(version_mod, "current", lambda binary="claude": "9.9.10")
+    got = doctor.claude_version_check()
+    assert got["level"] == "warn"
+    assert "labremote tools --probe" in got["hint"]
+
+
+def test_대화형은_판_때문에_막지_않는다():
+    """사람이 보고 있고, 막으면 재는 것도 못 한다."""
+    import inspect
+
+    from app import cli
+
+    body = inspect.getsource(cli.cmd_claude)
+    assert "version" not in body
+
+
+# --- 📌 자동 업데이트 --------------------------------------------------------
+
+
+def test_탐침은_제약을_푼다():
+    """우리 허용 목록을 켠 채로 물으면 그 10개만 보여서 **새 도구를 영영
+    못 찾는다.** 실측에서 실제로 10개만 나왔다."""
+    from app.agent import launch as L2
+
+    from app import policy
+
+    run = L2.AgentRun(project="p", root="/x", prompt="q", session_id="s", probe=True)
+    run.settings_path = policy.launch_settings_path()
+    argv = L2.build_argv(run)
+    assert "--tools" not in argv
+    assert "--disallowedTools" not in argv
+    # 다른 안전장치는 그대로다
+    assert "--setting-sources" in argv and "--strict-mcp-config" in argv
+    assert "--permission-prompts" in argv
+
+
+def test_판_기록은_server_data_아래다():
+    """샌드박스 안에서 쓰기가 실패하므로(M1b) AI 가 기록을 못 고친다."""
+    import os
+
+    from app import registry
+    from app.agent import version as version_mod
+
+    assert version_mod.record_path().startswith(
+        os.path.join(registry.data_dir(), "agent")
+    )
+
+
+def test_도구_이름_파싱():
+    from app.agent import version as version_mod
+
+    text = "- Bash\n- Read\n* WebFetch (지연)\nWrite\n설명 줄은 무시\n- 1숫자\n"
+    got = version_mod.parse_tools(text)
+    assert {"Bash", "Read", "WebFetch", "Write"} <= set(got)
+
+
+def test_compare_는_새_도구를_경보로_본다():
+    from app.agent import launch as L2
+    from app.agent import version as version_mod
+
+    live = sorted(set(C.TOOLS_2_1_318) | {"아주새로운도구"})
+    got = version_mod.compare(live)
+    assert got["new"] == ["아주새로운도구"]
+    assert got["missingAllowed"] == []
+
+    # 쓰는 도구가 사라지면 경보
+    live2 = [t for t in C.TOOLS_2_1_318 if t != "Bash"]
+    assert version_mod.compare(live2)["missingAllowed"] == ["Bash"]
+
+    # 끄는 도구가 안 보이는 것은 경보가 아니다 (계정·환경에 따라 달라요)
+    live3 = [t for t in C.TOOLS_2_1_318 if t not in L2.DISALLOWED_TOOLS]
+    assert version_mod.compare(live3)["missingAllowed"] == []
