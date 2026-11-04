@@ -109,6 +109,8 @@ def main() -> int:
     parser.add_argument("--children", type=int, default=0)
     parser.add_argument("--child-sleep", type=float, default=600.0)
     parser.add_argument("--nan-at", type=int, default=0)
+    parser.add_argument("--diverge-at", type=int, default=0)
+    parser.add_argument("--oom-at", type=int, default=0)
     parser.add_argument("--crash-at", type=int, default=0)
     parser.add_argument("--probe-write", action="append", default=[])
     parser.add_argument("--probe-read", action="append", default=[])
@@ -150,17 +152,24 @@ def main() -> int:
     fresh = start_epoch == 0 or not os.path.exists(result_path)
     with open(result_path, "a" if not fresh else "w", encoding="utf-8", newline="") as fh:
         writer = csv.writer(fh)
+        # 열 규약은 templates/result_example.csv 와 같다 (긴 형식).
         if fresh:
-            writer.writerow(["epoch", "train_loss", "val_loss", "val_acc"])
+            writer.writerow(["step", "split", "metric", "value"])
         for epoch in range(start_epoch + 1, args.epochs + 1):
             if args.sleep:
                 time.sleep(args.sleep)
             loss = round(2.0 / epoch, 4)
             if args.nan_at and epoch >= args.nan_at:
                 loss = float("nan")
+            if args.diverge_at and epoch >= args.diverge_at:
+                loss = round(2.0 * 10 * epoch, 4)
             accuracy = round(min(0.99, 0.5 + 0.1 * epoch), 4)
-            writer.writerow([epoch, loss, round(loss * 1.1, 4), accuracy])
+            writer.writerow([epoch, "train", "loss", loss])
+            writer.writerow([epoch, "val", "loss", round(loss * 1.1, 4)])
+            writer.writerow([epoch, "val", "accuracy", accuracy])
             fh.flush()
+            if args.oom_at and epoch >= args.oom_at:
+                log("RuntimeError: CUDA out of memory. Tried to allocate 2.00 GiB")
             log(f"epoch {epoch}/{args.epochs}  loss={loss}  val_acc={accuracy}  lr={args.lr}")
 
             checkpoint = os.path.join(output, f"epoch_{epoch:03d}.ckpt")
