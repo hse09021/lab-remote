@@ -15,6 +15,10 @@ $goal
   뜨지 않아 아래 잠긴 항목이 막히지 않아요.
 - 권한 우회 옵션(`--dangerously-skip-permissions` 등)은 쓰지 마세요.
   권한 기본 모드는 `.claude/settings.json` 에 `default` 로 박아 뒀어요.
+- **패키지는 직접 설치하지 마세요.** `pip install`·`conda install` 은 샌드박스
+  안에서 **조용히 실패해요**(conda 환경이 프로젝트 폴더 밖이에요).
+  `state/Install_request.json` 에 이름과 버전만 적으면 사람이 승인한 뒤
+  시스템이 설치하고 결과를 `state/Install_result.json` 에 적어 줘요.
 - 확인 못 한 값은 지어내지 말고 `[대괄호 자리표시]` 로 남겨 주세요.
 - 거절당하면 **다른 도구나 명령으로 돌아가지 말고** 작업을 멈추고 알려 주세요.
 

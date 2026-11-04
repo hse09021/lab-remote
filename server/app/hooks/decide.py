@@ -152,7 +152,7 @@ def decide(finding: Finding, ctx: Ctx) -> Decision:
         return ALLOW(**base)
     if permission == "block":
         return DENY(M.with_guard(M.block_action(label, str(what))), **base)
-    return _maybe_headless(ASK(M.with_guard(M.ask_action(label, str(what))), **base), ctx, label)
+    return _maybe_headless(ASK(M.with_guard(M.ask_action(label, str(what), action=finding.action)), **base), ctx, label)
 
 
 def _maybe_headless(decision: Decision, ctx: Ctx, label: str) -> Decision:

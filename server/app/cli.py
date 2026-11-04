@@ -418,6 +418,59 @@ def cmd_claude(args) -> int:
     return 0  # pragma: no cover — execvpe 는 돌아오지 않는다
 
 
+def cmd_installs(args) -> int:
+    """📦 패키지 설치 승인. 승인하면 **오케스트레이터가 바로 설치한다.**
+
+    Claude 의 Bash 로는 설치가 조용히 실패한다(S1 의 M3) — conda 환경이
+    프로젝트 폴더 밖이라 샌드박스가 쓰기를 버린다. 그래서 이 경로가 있다.
+    """
+    from . import db as db_mod
+    from .orchestrator import installs as installs_mod
+
+    with db_mod.open_db() as conn:
+        if args.action == "list":
+            items = installs_mod.pending(conn, args.name)
+            if args.json:
+                print(json.dumps(items, ensure_ascii=False, indent=2))
+                return 0
+            if not items:
+                print("기다리는 설치 요청이 없어요.")
+                return 0
+            for item in items:
+                print(f"[{item['id']}] {item['project']} · {item['request']}")
+                if item.get("reason"):
+                    print(f"      사유: {item['reason']}")
+                print(f"      열린 때: {item['opened_at']} · 횟수 {item['attempts']}")
+            print()
+            print(f"승인: labremote installs approve <프로젝트> <번호>")
+            return 0
+
+        if not args.name or args.id is None:
+            print("✘ 프로젝트와 번호를 주세요", file=sys.stderr)
+            return 2
+
+        if args.action == "approve":
+            got = installs_mod.approve(
+                conn, args.name, args.id,
+                allow_source=args.allow_source, note=args.note or "",
+            )
+            if not got["ok"]:
+                print(f"✘ {got.get('reason')}", file=sys.stderr)
+                result = got.get("result")
+                if result and result.get("output"):
+                    print(result["output"][-1500:], file=sys.stderr)
+                return 2
+            print(f"✔ 설치했어요 ({got['env']})")
+            return 0
+
+        got = installs_mod.deny(conn, args.name, args.id, reason=args.reason or "")
+        if not got["ok"]:
+            print(f"✘ {got.get('reason')}", file=sys.stderr)
+            return 2
+        print("✔ 거절했어요")
+        return 0
+
+
 def cmd_git_backups(args) -> int:
     """`git bundle` 백업 목록. 복구는 사람이 손으로 한다 (되돌릴 수 없어서)."""
     from .git import bundle as bundle_mod
@@ -570,6 +623,20 @@ def build_parser() -> argparse.ArgumentParser:
     # 먹거나 `--bare` 를 모르는 인자로 거부한다.
     p.set_defaults(extra=[])
     p.set_defaults(func=cmd_claude)
+
+    p = sub.add_parser("installs", help="패키지 설치 승인 (오케스트레이터가 설치해요)")
+    p.add_argument("action", choices=["list", "approve", "deny"])
+    p.add_argument("name", nargs="?", help="프로젝트 이름")
+    p.add_argument("id", nargs="?", type=int, help="승인 번호")
+    p.add_argument(
+        "--allow-source",
+        action="store_true",
+        help="소스 배포(sdist)도 허용해요 — setup.py 가 실행돼요. 요청에도 "
+        "allowSource 가 있어야 해요",
+    )
+    p.add_argument("--note", help="승인 메모")
+    p.add_argument("--reason", help="거절 사유")
+    p.set_defaults(func=cmd_installs)
 
     p = sub.add_parser(
         "git-backups", help="git bundle 백업 보기 (기록 위조에서 되살릴 정본)"
