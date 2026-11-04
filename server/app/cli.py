@@ -418,6 +418,49 @@ def cmd_claude(args) -> int:
     return 0  # pragma: no cover — execvpe 는 돌아오지 않는다
 
 
+def cmd_git_backups(args) -> int:
+    """`git bundle` 백업 목록. 복구는 사람이 손으로 한다 (되돌릴 수 없어서)."""
+    from .git import bundle as bundle_mod
+
+    root = registry.root_of(args.name)
+    if not root:
+        print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.name}", file=sys.stderr)
+        return 2
+    if args.make:
+        got = bundle_mod.create(root, args.name, note=args.note or "손으로 떴어요")
+        if not got["ok"]:
+            print(f"✘ 백업을 못 떴어요: {got['reason']}", file=sys.stderr)
+            return 2
+        print(f"✔ {got['path']} ({got['bytes']:,}바이트)")
+        for dropped in got["pruned"]:
+            print(f"  오래된 백업을 지웠어요: {os.path.basename(dropped)}")
+        return 0
+
+    items = bundle_mod.listing(args.name)
+    if args.json:
+        print(json.dumps(items, ensure_ascii=False, indent=2))
+        return 0
+    if not items:
+        print(f"백업이 없어요. 폴더: {bundle_mod.backup_dir(args.name)}")
+        print("기록 커밋 때 자동으로 떠요. 지금 뜨려면 --make 를 붙여 주세요.")
+        return 0
+    print(f"백업 {len(items)}개 · {bundle_mod.backup_dir(args.name)}")
+    for item in items:
+        checked = bundle_mod.verify(item["path"], root=root, deep=True)
+        mark = "✔" if checked["ok"] else "✘"
+        note = f" · {item['note']}" if item["note"] else ""
+        print(f"  {mark} {item['at']}  {item['bytes']:>10,}바이트{note}")
+        if not checked["ok"]:
+            print(f"      {checked['reason'][:120]}")
+    print()
+    print("복구 (되돌릴 수 없어서 사람이 직접 해요):")
+    print(f"  git bundle verify {items[0]['path']}")
+    print(f"  git clone {items[0]['path']} /tmp/recovered")
+    print(f"  cd {root} && git fetch {items[0]['path']} "
+          "'refs/heads/*:refs/heads/백업/*'")
+    return 0
+
+
 def cmd_doctor(args) -> int:
     report = doctor.run()
     if args.json:
@@ -527,6 +570,14 @@ def build_parser() -> argparse.ArgumentParser:
     # 먹거나 `--bare` 를 모르는 인자로 거부한다.
     p.set_defaults(extra=[])
     p.set_defaults(func=cmd_claude)
+
+    p = sub.add_parser(
+        "git-backups", help="git bundle 백업 보기 (기록 위조에서 되살릴 정본)"
+    )
+    p.add_argument("name")
+    p.add_argument("--make", action="store_true", help="지금 하나 떠요")
+    p.add_argument("--note", help="--make 와 함께 · 메모 한 줄")
+    p.set_defaults(func=cmd_git_backups)
 
     p = sub.add_parser("doctor", help="설치와 설정 점검")
     p.set_defaults(func=cmd_doctor)

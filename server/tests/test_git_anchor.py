@@ -273,3 +273,101 @@ def test_bwrap_은_프로젝트_밖은_이_목록으로_안_덮는다(tmp_path):
         ro_inside=[str(outside)], bwrap="/bin/bwrap",
     )
     assert str(outside) not in argv
+
+
+# --- 🎒 bundle 백업 (T5b) — 앵커가 잡은 뒤 되살릴 정본 -----------------------
+
+
+def test_백업을_뜨고_되살릴_수_있다(repo, tmp_path):
+    """`git clone <bundle>` 로 실제로 되살아나야 한다."""
+    from app.git import bundle as B
+
+    got = B.create(repo, PROJECT, note="시험")
+    assert got["ok"] is True, got["reason"]
+    assert got["bytes"] > 0
+    assert B.verify(got["path"], root=repo)["ok"] is True
+    assert B.verify(got["path"], deep=True)["ok"] is True
+
+    out = tmp_path / "recovered"
+    done = subprocess.run(
+        ["git", "clone", "-q", got["path"], str(out)],
+        capture_output=True, text=True, env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1"},
+    )
+    assert done.returncode == 0, done.stderr
+    assert (out / "src" / "b.txt").exists()
+
+
+def test_백업이_모든_브랜치를_담는다(repo):
+    from app.git import bundle as B
+
+    _git(repo, "branch", "exp-001")
+    got = B.create(repo, PROJECT)
+    text = B.verify(got["path"], root=repo)
+    assert got["ok"] is True and text["ok"] is True
+    listed = subprocess.run(
+        ["git", "bundle", "list-heads", got["path"]],
+        capture_output=True, text=True, env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1"},
+    ).stdout
+    assert "refs/heads/main" in listed and "refs/heads/exp-001" in listed
+
+
+def test_백업이_server_data_아래다(repo):
+    """샌드박스 안에서 쓰기가 실패하므로(M1b) AI 가 백업을 못 지운다."""
+    from app import registry
+    from app.git import bundle as B
+
+    folder = B.backup_dir(PROJECT)
+    assert folder.startswith(os.path.join(registry.data_dir(), "backups"))
+    got = B.create(repo, PROJECT)
+    assert got["path"].startswith(folder)
+
+
+def test_오래된_백업을_지운다(repo):
+    from app.git import bundle as B
+
+    made = []
+    for n in range(5):
+        _touch(repo, f"src/x{n}.txt")
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-q", "-m", f"c{n}")
+        got = B.create(repo, PROJECT, keep=3, note=f"{n}")
+        assert got["ok"] is True
+        made.append(got)
+    items = B.listing(PROJECT)
+    assert len(items) == 3, [i["at"] for i in items]
+    # 새것이 남는다
+    assert items[0]["note"] == "4"
+
+
+def test_커밋이_없으면_뜰_것이_없다고_알린다(tmp_path):
+    from app.git import bundle as B
+
+    empty = str(tmp_path / "empty")
+    os.makedirs(empty)
+    _git(empty, "init", "-q", "-b", "main")
+    got = B.create(empty, PROJECT)
+    assert got["ok"] is False and got["reason"]
+    assert not os.path.exists(got["path"] or "/nope")
+
+
+def test_깨진_백업을_verify_가_잡는다(repo):
+    from app.git import bundle as B
+
+    got = B.create(repo, PROJECT)
+    # 꼬리를 잘라 낸다 — pack 이 끊기면 verify 가 잡아야 한다
+    with open(got["path"], "r+b") as fh:
+        fh.truncate(got["bytes"] // 2)
+    # 얕은 검사는 통과한다 — git bundle verify 는 pack 을 깊게 안 본다(실측)
+    assert B.verify(got["path"], root=repo)["ok"] is True
+    # 깊은 검사(clone)는 잡는다
+    deep = B.verify(got["path"], root=repo, deep=True)
+    assert deep["ok"] is False and deep["deep"] is True
+
+
+def test_백업_실패가_루프를_멈추지_않는다(repo, conn, monkeypatch):
+    """백업은 보험이다 — 못 떠도 루프는 계속한다."""
+    from app.git import bundle as B
+
+    monkeypatch.setattr(B, "backup_dir", lambda project: "/proc/못쓰는곳")
+    got = B.create(repo, PROJECT)
+    assert got["ok"] is False and got["path"] == ""
