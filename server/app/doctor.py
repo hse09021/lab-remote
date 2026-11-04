@@ -134,7 +134,12 @@ def bash_sandbox_check(root: str, name: str = "") -> Check:
     """
     state = policy.sandbox_state(root)
     if state["ok"]:
-        detail = f"쓰기 {len(state['allowWrite'])}곳 · 도메인 {len(state['domains'])}개"
+        detail = (
+            f"{state['source']} · 쓰기 {len(state['allowWrite'])}곳 · "
+            f"도메인 {len(state['domains'])}개"
+        )
+        if state["notes"]:
+            detail += " · " + " · ".join(state["notes"])
         return Check(True, f"Bash 샌드박스 · {name}" if name else "Bash 샌드박스", detail)
     return Check(
         False,
@@ -142,10 +147,66 @@ def bash_sandbox_check(root: str, name: str = "") -> Check:
         " · ".join(state["reasons"])[:160],
         hint=(
             "AI 가 쓴 테스트 코드가 자격 증명을 읽을 수 있어요. "
-            "labremote init-project <이름> --if-exists update 로 "
-            ".claude/settings.json 을 다시 써 주세요."
+            "labremote hooks install 로 "
+            f"{policy.launch_settings_path()} 를 다시 써 주세요."
         ),
     )
+
+
+def project_settings_check(root: str, name: str = "") -> Check:
+    """프로젝트 설정이 **정본과 같은가.** — 샌드박스 탈출을 막는 둘째 겹.
+
+    작업 디렉터리는 샌드박스에서 언제나 쓰기 가능하므로(M4) AI 가 쓴 코드가
+    `.claude/settings.json` 을 고칠 수 있다. 실측(M6)에서 거기 심은 훅이
+    샌드박스 **밖에서 사용자 권한으로** 돌았고, `sandbox.enabled:false` 로
+    AI 코드가 `server/data/runstate/` 에 **실제로 썼다.**
+
+    런처는 그 파일을 안 읽지만(`--setting-sources user`) 맨손 `claude` 는
+    읽는다. 그래서 ✘ 다.
+    """
+    from .orchestrator import projectguard
+
+    title = f"프로젝트 설정 정본 · {name}" if name else "프로젝트 설정 정본"
+    report = projectguard.check(root)
+    if report["ok"]:
+        return Check(True, title, "템플릿과 같아요 (훅·sandbox·permissions 추가 없음)")
+    return Check(
+        False,
+        title,
+        " · ".join(report["problems"])[:200],
+        hint=(
+            f"labremote claude {name or '<이름>'} --force 로 되돌릴 수 있어요. "
+            "AI 가 쓴 코드가 고쳤을 수 있으니 무엇이 바뀌었는지 먼저 보세요."
+        ),
+    )
+
+
+def user_sandbox_check() -> Check:
+    """사용자 설정에 `sandbox` 절이 있으면 **이 PC 의 모든 세션**이 갇힌다.
+
+    우리 코드는 그 파일에 샌드박스를 쓰지 않는다(규칙 0). 사람이 넣었거나
+    옛 판이 넣어 둔 것이면 개발 세션까지 갇히므로 알려 준다.
+    """
+    import json as _json
+
+    path = policy.user_settings_path()
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = _json.load(fh)
+    except (FileNotFoundError, ValueError, OSError):
+        return Check(True, "사용자 설정 샌드박스", "없어요 (맞아요)")
+    if isinstance(data, dict) and isinstance(data.get("sandbox"), dict):
+        return Check(
+            False,
+            "사용자 설정 샌드박스",
+            f"{path} 에 sandbox 절이 있어요",
+            hint=(
+                "이 PC 의 **모든** Claude 세션(개발 세션까지)이 갇혀요. "
+                "샌드박스는 런처가 "
+                f"{policy.launch_settings_path()} 로 넘겨요 — 그 절을 지워 주세요."
+            ),
+        )
+    return Check(True, "사용자 설정 샌드박스", "없어요 (맞아요)")
 
 
 def cache_check(root: str, pol=None) -> Check:
@@ -314,8 +375,13 @@ def run() -> dict:
         checks.append(sandbox_check(root))
         # Claude 의 Bash 샌드박스 — AI 가 쓴 **테스트 코드**를 가두는 수단
         checks.append(bash_sandbox_check(root, name))
+        # 프로젝트 설정 정본 — 샌드박스 탈출을 막는 둘째 겹 (M6)
+        checks.append(project_settings_check(root, name))
         # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
         checks.append(cache_check(root, pol))
+
+    # 사용자 설정에 sandbox 가 있으면 이 PC 의 모든 세션이 갇힌다
+    checks.append(user_sandbox_check())
 
     # 자가 점검이 중간에 죽으면 임시 프로젝트 폴더가 남는다
     leftovers = hooks_check.scratch_leftovers()

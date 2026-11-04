@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import sys
 
@@ -356,6 +357,67 @@ def cmd_requests(args) -> int:
 # --- doctor -----------------------------------------------------------------
 
 
+def cmd_claude(args) -> int:
+    """등록된 프로젝트에서 **경계를 지킨 채** 대화형 Claude 를 띄운다.
+
+    맨손 `claude` 로 열면 프로젝트 `.claude/settings.json` 을 읽는다. 거기에
+    AI 가 쓴 코드가 훅을 써 넣거나 `sandbox.enabled:false` 를 넣을 수
+    있고(M4·M6), 그러면 사람이 여는 세션이 그걸 그대로 쓴다. 그래서 **여는
+    길을 하나로 만든다.**
+
+        1. 등록된 프로젝트인지 (아니면 거부 — 훅이 안 뜬다)
+        2. projectguard — 변조면 **되돌리고 멈춘다** (`--force` 로만 진행)
+        3. `--settings` 파일을 코드에서 다시 쓴다
+        4. 헤드리스와 **같은 경계 플래그**로 대화형 claude 를 execvpe
+    """
+    from .agent import launch as launch_mod
+    from .orchestrator import projectguard
+
+    root = registry.root_of(args.name)
+    if not root:
+        print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.name}", file=sys.stderr)
+        print("  labremote init-project <이름> 으로 만들거나 이름을 확인해 주세요.", file=sys.stderr)
+        return 2
+
+    report = projectguard.check(root)
+    if not report["ok"]:
+        print("⚠ " + projectguard.describe(report))
+        if not args.force:
+            print()
+            print("되돌리고 열려면 --force 를 붙여 주세요. 먼저 무엇이 바뀌었는지 보세요:")
+            print(f"  {projectguard.settings_path(root)}")
+            return 3
+        got = projectguard.restore(root, args.name)
+        print("↩ 정본으로 되돌렸어요: " + (", ".join(got["restored"]) or "없음"))
+        if got.get("evidence"):
+            print(f"  원본은 증거로 남겼어요: {got['evidence']}")
+
+    run = launch_mod.AgentRun(
+        project=args.name,
+        root=root,
+        prompt="",
+        session_id="",
+        permission_mode=args.permission_mode or D.DEFAULT_PERMISSION_MODE,
+        headless=False,
+        interactive=True,
+        extra_flags=list(args.extra or []),
+    )
+    launch_mod.check_cwd(run)
+    run.settings_path = launch_mod.render_settings(root, project=args.name)
+    argv = launch_mod.build_argv(run)
+    env = launch_mod.build_env(run)
+
+    if args.dry_run:
+        print(" ".join(argv))
+        return 0
+
+    print(f"▶ {args.name} · {root}")
+    print(f"  설정: {run.settings_path}")
+    os.chdir(root)
+    os.execvpe(argv[0], argv, env)
+    return 0  # pragma: no cover — execvpe 는 돌아오지 않는다
+
+
 def cmd_doctor(args) -> int:
     report = doctor.run()
     if args.json:
@@ -445,13 +507,41 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_log)
 
+    p = sub.add_parser(
+        "claude",
+        help="실험 프로젝트에서 대화형 Claude 를 띄워요 (경계 플래그를 붙여서)",
+    )
+    p.add_argument("name")
+    p.add_argument(
+        "--permission-mode",
+        help="권한 모드 (기본: 정책의 값). 대화형은 manual 도 돼요",
+    )
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help="프로젝트 설정이 변조됐어도 되돌리고 열어요",
+    )
+    p.add_argument("--dry-run", action="store_true", help="띄우지 않고 명령만 보여 줘요")
+    # `--` 뒤의 인자는 `main()` 이 떼어서 `args.extra` 로 넣는다. argparse 의
+    # `nargs="*"`·`REMAINDER` 는 둘 다 `--dry-run` 같은 우리 옵션을 같이
+    # 먹거나 `--bare` 를 모르는 인자로 거부한다.
+    p.set_defaults(extra=[])
+    p.set_defaults(func=cmd_claude)
+
     p = sub.add_parser("doctor", help="설치와 설정 점검")
     p.set_defaults(func=cmd_doctor)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    items = list(sys.argv[1:] if argv is None else argv)
+    passthrough: list[str] = []
+    if "--" in items:
+        cut = items.index("--")
+        items, passthrough = items[:cut], items[cut + 1 :]
+    args = build_parser().parse_args(items)
+    if passthrough:
+        args.extra = passthrough
     try:
         return args.func(args)
     except (scaffold.ScaffoldError, policy.PolicyError, registry.InvalidName, RuntimeError) as exc:

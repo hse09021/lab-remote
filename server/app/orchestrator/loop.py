@@ -24,6 +24,7 @@ import re
 from datetime import datetime
 
 from .. import loop_layout as L
+from .. import notifier
 from .. import loopstate, registry
 from ..agent import launch as launch_mod
 from ..agent import prompts as prompts_mod
@@ -38,7 +39,7 @@ from ..store import experiments as X
 from ..store import jobs as J
 from ..store import loops as LP
 from . import approvals as approvals_mod
-from . import gitflow, guards
+from . import gitflow, guards, projectguard
 
 __all__ = [
     "EXP_RE",
@@ -114,11 +115,57 @@ def resume_step(ctx, conn, session_id: str, *, request: dict | None = None) -> d
         },
     )
     LP.set_state(conn, ctx.project, "planning")
-    got = _claude(ctx, prompt=prompt, session_id=session_id, resume=True)
+    got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=True)
     return {"ok": bool(got.get("ok")), "stage": "resume", "sessionId": session_id, "result": got}
 
 
-def _claude(ctx, *, prompt: str, session_id: str, resume: bool) -> dict:
+def guard_project(ctx, conn, *, when: str, block: bool = True) -> dict:
+    """프로젝트 설정이 정본과 다르면 **되돌리고 알린다.** — 보안 경계다.
+
+    작업 디렉터리는 샌드박스에서 언제나 쓰기 가능하므로(M4) AI 가 쓴 코드가
+    `.claude/settings.json` 에 훅을 써 넣거나 `sandbox.enabled:false` 로
+    다음 세션의 샌드박스를 끌 수 있다 — 실측에서 둘 다 됐다(M6).
+
+    런처는 그 파일을 안 읽지만(`--setting-sources user`), **맨손 `claude`** 로
+    열면 읽힌다. 그래서 되돌린다.
+
+    | 부르는 자리 | `block` | 왜 |
+    |---|---|---|
+    | 루프 시작 전 | False | 이미 손댄 흔적이다. 되돌리고 계속한다 |
+    | Claude 세션 종료 직후 | **True** | 그 세션이 범인이다. 멈추고 사람을 부른다 |
+    | 기록 커밋 전 | **True** | 오염을 커밋에 넣지 않는다 |
+    """
+    got = projectguard.restore(ctx.root, ctx.project)
+    if got.get("ok"):
+        return got
+    text = projectguard.describe(got)
+    E.add(conn, ctx.project, "보안", f"프로젝트 설정이 바뀌어 있었어요 ({when}) — 되돌렸어요", tone="bad")
+    try:
+        notifier.send(
+            conn,
+            "blocked",
+            project=ctx.project,
+            subject=notifier.subject_of("projectguard", when),
+            title=f"프로젝트 설정이 바뀌어 있었어요 · {ctx.project}",
+            body=text,
+            fields=[
+                ("언제", when),
+                ("되돌린 파일", ", ".join(got.get("restored") or []) or "없음"),
+                ("증거", got.get("evidence") or "[못 남겼어요]"),
+            ],
+        )
+    except Exception:
+        # 알림 실패가 루프를 멈추지 않는다 (notify 의 예외 삼킴 원칙).
+        pass
+    if block:
+        LP.set_state(
+            conn, ctx.project, "blocked",
+            stop_reason=f"프로젝트 설정이 바뀌어 있었어요 ({when}) — 되돌렸어요",
+        )
+    return got
+
+
+def _claude(ctx, conn, *, prompt: str, session_id: str, resume: bool) -> dict:
     """Claude 를 한 번 띄운다. `ctx.runner` 가 실제 실행을 맡는다."""
     run = launch_mod.AgentRun(
         project=ctx.project,
@@ -131,11 +178,18 @@ def _claude(ctx, *, prompt: str, session_id: str, resume: bool) -> dict:
         cache_dir=ctx.cache_dir,
     )
     made = launch_mod.plan(run, preset=ctx.preset)
-    return ctx.runner(made)
+    got = ctx.runner(made)
+    # 세션이 끝난 **직후**가 가장 짧은 창이다. 이 세션이 쓴 코드가 프로젝트
+    # 설정을 고쳤으면 다음 세션(과 사람의 대화형 세션)이 그걸 읽는다.
+    guard_project(ctx, conn, when="Claude 세션 종료 직후")
+    return got
 
 
 def plan_step(ctx, conn) -> dict:
     """A · 설계. Claude 가 `run.json` 까지 쓴다."""
+    # 루프를 시작하기 전에 프로젝트 설정을 정본으로 맞춘다. 지난 루프나
+    # 사람의 대화형 세션 뒤에 남은 흔적이 있을 수 있다. 되돌리고 **계속**한다.
+    guard_project(ctx, conn, when="루프 시작 전", block=False)
     verdict = guards.check_loop(conn, ctx.project, ctx.root)
     if not verdict.ok:
         LP.set_state(
@@ -153,7 +207,7 @@ def plan_step(ctx, conn) -> dict:
         "loop_plan",
         {"loop_no": loop_no, "next_exp": exp_id, "context": ctx.context},
     )
-    got = _claude(ctx, prompt=prompt, session_id=session_id, resume=False)
+    got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=False)
     X.upsert(conn, ctx.project, exp_id, state="planned", branch=gitflow.branch_name(exp_id))
 
     # 훅이 막아 둔 요청이 있으면 거기서 멈춘다. 사람이 승인하면 **이어 간다.**
@@ -268,7 +322,7 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
             "context": ctx.context,
         },
     )
-    got = _claude(ctx, prompt=prompt, session_id=session_id, resume=False)
+    got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=False)
 
     report = report_mod.parse(str(got.get("text") or ""))
     said = report_mod.success_of(report)
@@ -293,6 +347,8 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
             metric_name=numbers.get("metric") or "loss",
             metric_value=numbers["value"],
         )
+    # 커밋에 오염이 들어가지 않게 **커밋 전에** 한 번 더 본다.
+    guard_project(ctx, conn, when="기록 커밋 전")
     gitflow.record_and_return(ctx.root, exp_id, running=False)
 
     if disagree:

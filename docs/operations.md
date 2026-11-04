@@ -2146,3 +2146,131 @@ claude -p
 
 `doctor` 는 프로젝트 설정에 `hooks`·`permissions.allow`·`permissions.deny`·
 `sandbox.enabled:false`·`.mcp.json` 이 있으면 **✘** 입니다.
+
+## ⚠ 공용 캐시(`~/lab-cache`)는 **오염될 수 있습니다** — 샌드박스 밖에서는 쓰지 않습니다
+
+`~/lab-cache` 는 **모든 프로젝트가 쓰기로 공유**합니다(샌드박스의 `allowWrite`
+에 있는 유일한 바깥). 그래서 한 프로젝트의 AI 코드가 캐시를 오염시킬 수
+있습니다 — torch hub 의 `hubconf.py`, HuggingFace 캐시의 `*.py`(원격 코드),
+`pip` 휠 캐시가 전부 **다음에 실행될 코드**입니다.
+
+**피해가 갇히는 조건**: 그 캐시를 쓰는 모든 것이 샌드박스 안에서 돌 때입니다.
+
+| 누가 | 캐시를 쓰나 | 가둬지나 |
+|---|---|---|
+| 학습 프로세스 | 네 (`HF_HOME`·`TORCH_HOME`·`TMPDIR` …) | **네** — bwrap 안 |
+| Claude 의 Bash | 네 (`TMPDIR` 만) | **네** — Claude Bash 샌드박스 안 |
+| **오케스트레이터 자신** | **아니요 — 절대 쓰지 않습니다** | 아니요 (샌드박스 밖, 사용자 권한) |
+
+그래서 **오케스트레이터는 이 캐시를 쓰지 않습니다.** 지금 구조가 이미 그렇습니다
+— `runner/process.ENV_KEEP` 에 캐시 변수가 **일부러 빠져 있고**, 캐시 값은
+`runner/cache.py` 가 **학습 프로세스의 환경에만** 넣습니다. 오케스트레이터는
+자기 환경에 `HF_HOME` 같은 것을 두지 않습니다.
+
+**패키지 설치(T6)에서 특히 중요합니다.** 오케스트레이터가 샌드박스 밖에서
+`pip install` 을 돌리므로, 오염된 휠 캐시를 읽으면 그게 곧 코드 실행입니다.
+
+```
+conda run -n <env> python -m pip install --no-input --no-cache-dir \
+    --only-binary=:all: <검증된 패키지들>
+```
+
+`--no-cache-dir` 를 **반드시** 붙이고(또는 오케스트레이터 전용 캐시 폴더를
+따로 두고), 그것을 테스트로 고정합니다. `PIP_CACHE_DIR` 이 환경에 섞여
+들어오지 않는 것도 같이 봅니다.
+
+> 더 줄이려면 캐시를 **프로젝트마다** 따로 두는 길이 있습니다
+> (`~/lab-cache/<프로젝트>`). 그러면 모델을 프로젝트마다 다시 내려받아
+> 디스크와 시간을 더 씁니다. **지금은 공유로 두고 이 한계를 적어 둡니다** —
+> 바꾸려면 정책의 캐시 경로에 프로젝트 이름을 넣으면 됩니다.
+
+---
+
+# 🛡 T3 — 프로젝트 설정 되돌리기 + `labremote claude` (2026-11-05)
+
+M6 는 **헤드리스**의 구멍을 막았습니다(`--setting-sources user`). 남은 둘을 닫습니다.
+
+| 남은 길 | 닫는 방법 |
+|---|---|
+| 사람이 맨손 `claude` 로 열면 프로젝트 설정을 읽는다 | **`labremote claude <프로젝트>`** 로 여는 길을 하나로 |
+| 이미 손댄 흔적이 남아 있을 수 있다 | **`projectguard`** 가 정본과 대조해 되돌린다 |
+
+## 정본은 생성기 템플릿입니다
+
+`app/templates/project/claude/settings.json.tmpl` 에는 변수가 없어서 정본이
+코드 안에 있습니다. 비교는 **파싱한 JSON** 으로 합니다 — 들여쓰기 차이로
+싸우지 않게. `.mcp.json` 의 정본은 **없음**이라 생기면 **지웁니다.**
+
+잡아내는 것(전부 M6 에서 실제로 효력이 있었습니다):
+
+```
+hooks 가 들어가 있어요 — 훅은 샌드박스 밖에서 실행돼요
+sandbox.enabled 가 꺼져 있어요 — 샌드박스가 안 떠요
+permissions.allow 가 들어가 있어요 — 승인 경로가 바뀌어요
+permissions.defaultMode 가 달라요: 'bypassPermissions' (정본: 'default')
+.mcp.json 이 있어요 — 훅이 못 보는 도구가 생겨요
+```
+
+원본은 **되돌리기 전에** `server/data/tamper/<프로젝트>/<시각>/` 에 증거로
+남깁니다. 샌드박스 안에서 그 폴더 쓰기가 실패하므로(M1b) AI 가 증거를 지울 수
+없습니다. `report.json` 에 무엇이 달랐고 무엇을 되돌렸는지 같이 적습니다.
+
+## 부르는 자리 셋
+
+| 자리 | 되돌림 | `blocked` | 왜 |
+|---|---|---|---|
+| 루프 시작 전 (`plan_step`) | 네 | **아니요** | 지난 루프나 사람의 세션이 남긴 흔적이다. 되돌리고 계속한다 |
+| **각 Claude 세션 종료 직후** (`_claude`) | 네 | **네** | 그 세션이 범인이다. 가장 짧은 창이다 |
+| 기록 커밋 전 (`review_step`) | 네 | **네** | 오염을 커밋에 넣지 않는다 |
+
+`_claude` 가 모든 Claude 호출(설계·분석·재개)의 **단일 깔때기**라 세 번째
+자리를 따로 챙길 필요가 없습니다. 알림이 실패해도 루프는 계속합니다(`notify`
+의 예외 삼킴 원칙).
+
+## `labremote claude <프로젝트>`
+
+```
+labremote claude hook-sandbox                 # 정본 확인 후 대화형으로 열어요
+labremote claude hook-sandbox --force         # 변조됐으면 되돌리고 열어요
+labremote claude hook-sandbox --dry-run       # 띄우지 않고 명령만 보여 줘요
+labremote claude hook-sandbox -- --model opus # `--` 뒤는 claude 로 그대로
+```
+
+1. 등록된 프로젝트인지 (아니면 **거부** — 그 밖에서 열면 훅이 안 뜹니다)
+2. `projectguard.check` — 변조면 **무엇이 바뀌었는지 보여 주고 멈춥니다**
+   (종료코드 3). `--force` 로만 되돌리고 진행합니다
+3. `--settings` 파일을 코드에서 다시 씁니다
+4. **헤드리스와 같은 경계 플래그**로 `os.execvpe`
+
+```
+claude --setting-sources user --settings <data>/agent/headless-settings.json \
+       --strict-mcp-config --permission-mode default
+```
+
+헤드리스 전용(`-p`·`--permission-prompts`·`--disallowedTools`·
+`--output-format`)은 붙지 않습니다. `--` 뒤의 인자도 `check_flags` 를
+지나가므로 `--bare`·`--add-dir`·`--setting-sources project` 는 거부됩니다.
+`ANTHROPIC_*` 는 대화형에서도 지웁니다. 색·입력기 변수는 더 물려줍니다.
+
+> 실측: `labremote claude hook-sandbox -- --version` → `2.1.318` 출력.
+> 변조된 설정에서는 종료코드 3 으로 멈추고, `--force` 로 되돌린 뒤 열립니다.
+
+## `doctor` 에 늘어난 점검 둘
+
+| 줄 | ✘ 인 조건 |
+|---|---|
+| `프로젝트 설정 정본 · <이름>` | 템플릿과 다름 (`hooks`·`sandbox`·`permissions.allow`·`defaultMode` 변경·`.mcp.json`) |
+| `사용자 설정 샌드박스` | `~/.claude/settings.json` 에 `sandbox` 절이 있음 — 이 PC 의 **모든** 세션이 갇힙니다 |
+
+`Bash 샌드박스` 줄은 이제 **어디서 온 설정인지**(`launch`/`project`/`user`)를
+같이 보여 줍니다. `project` 면 `filesystem` 이 안 먹으므로(M3) ✘ 입니다.
+
+## 그래도 못 막는 것
+
+- **AI 가 쓴 코드는 프로젝트 설정을 여전히 고칠 수 있습니다.** 샌드박스가
+  작업 폴더 쓰기를 못 막기 때문입니다(M4). 다만 이제 **효과가 없습니다** —
+  헤드리스는 그 파일을 안 읽고, 대화형은 `labremote claude` 가 되돌립니다.
+  **맨손 `claude` 로 열면 그대로 먹습니다.** 그래서 `CLAUDE.md`·`README` 와
+  `doctor` 가 `labremote claude` 로 열라고 안내합니다.
+- 되돌림과 세션 사이에는 **틈**이 있습니다. 세션이 도는 중에 고친 것은 그
+  세션에는 영향이 없고(설정은 뜰 때 읽습니다) 세션이 끝나면 되돌려집니다.
