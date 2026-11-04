@@ -23,6 +23,8 @@ import os
 import re
 from datetime import datetime
 
+from .. import approval_log as A
+from .. import audit as audit_mod
 from .. import grants as grants_mod
 from .. import loop_layout as L
 from .. import notifier
@@ -183,6 +185,51 @@ def guard_anchor(ctx, conn, *, when: str, with_fsck: bool = True) -> bool:
     LP.set_state(
         conn, ctx.project, "blocked",
         stop_reason=f"git 기록이 앵커와 어긋나요 ({when}) — 이전 기록이 바뀌었을 수 있어요",
+    )
+    return False
+
+
+def _approval_csv(ctx) -> str:
+    """승인 로그 CSV 경로. 정책의 `logPath` 를 본다 (못 읽으면 기본값)."""
+    from .. import policy as policy_mod
+
+    try:
+        pol = policy_mod.load(ctx.project)
+    except Exception:
+        pol = None
+    return A.log_path(ctx.root, pol)
+
+
+def guard_audit(ctx, conn, *, when: str) -> bool:
+    """승인 기록이 **진본과 같은가.** 다르면 멈추고 사람을 부른다.
+
+    프로젝트의 `logs/Approval_log.csv` 는 AI 가 쓴 코드가 고칠 수 있다(M4 —
+    샌드박스는 작업 디렉터리 쓰기를 못 막는다). 진본은
+    `server/data/audit/<프로젝트>.jsonl` 에 있고 AI 는 거기에 못 쓴다(M1b).
+
+    **되돌리지 않는다** — 되살리는 것은 사람이 `labremote audit <프로젝트>
+    --rebuild` 로 한다. 자동으로 덮어쓰면 "무엇이 바뀌었나" 를 볼 기회가
+    사라진다.
+    """
+    report = audit_mod.compare(ctx.project, _approval_csv(ctx))
+    if report["ok"]:
+        return True
+    text = audit_mod.describe(report)
+    E.add(conn, ctx.project, "보안", f"승인 기록이 진본과 달라요 ({when})", tone="bad")
+    try:
+        notifier.send(
+            conn,
+            "blocked",
+            project=ctx.project,
+            subject=notifier.subject_of("audit", ctx.project),
+            title=f"승인 기록이 바뀌었어요 · {ctx.project}",
+            body=text[:1500],
+        )
+    except Exception:
+        pass
+    LP.set_state(
+        conn, ctx.project, "blocked",
+        stop_reason=f"승인 기록이 진본과 달라요 ({when}) — labremote audit 로 봐 주세요",
     )
     return False
 
@@ -481,8 +528,10 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
         )
     # 커밋에 오염이 들어가지 않게 **커밋 전에** 한 번 더 본다.
     guard_project(ctx, conn, when="기록 커밋 전")
+    # 커밋 전에 승인 기록이 진본과 같은지. 어긋난 사본을 커밋하지 않는다.
+    audit_ok = guard_audit(ctx, conn, when="기록 커밋 전")
     # 커밋 전에 기록이 앵커와 맞는지. 어긋나면 **커밋하지 않는다.**
-    if guard_anchor(ctx, conn, when="기록 커밋 전", with_fsck=False):
+    if audit_ok and guard_anchor(ctx, conn, when="기록 커밋 전", with_fsck=False):
         try:
             gitflow.record_and_return(ctx.root, exp_id, running=False)
             anchor_mod.record_all(conn, ctx.project, ctx.root, note=f"{exp_id} 기록")

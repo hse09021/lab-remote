@@ -65,6 +65,7 @@ def handle(event: dict, *, event_name: str = "Stop", main_only: bool = True) -> 
             continue  # PostToolUse 가 먼저 닫았다 — 두 번 기록하지 않는다
         A.append_row(
             A.log_path(root, pol),
+            project=name,
             action=str(got.get("action") or ""),
             request=str(got.get("request") or ""),
             result=RESULT,

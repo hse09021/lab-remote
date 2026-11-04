@@ -299,6 +299,31 @@ SHELL_FILES = ("~/.bashrc", "~/.zshrc", "~/.bash_aliases", "~/.profile")
 SHELL_MARK = "labremote claude"
 
 
+def audit_check(root: str, name: str = "", pol=None) -> Check:
+    """승인 기록이 **진본과 같은가.**
+
+    프로젝트의 `logs/Approval_log.csv` 는 AI 가 쓴 코드가 고칠 수 있다(M4 —
+    샌드박스는 작업 디렉터리 쓰기를 못 막고 좁힐 수도 없다). 진본은
+    `server/data/audit/<프로젝트>.jsonl` 이고 AI 는 거기에 못 쓴다(M1b).
+    """
+    from . import approval_log as A
+    from . import audit
+
+    title = f"승인 기록 진본 · {name}" if name else "승인 기록 진본"
+    report = audit.compare(name, A.log_path(root, pol))
+    if report["ok"]:
+        return Check(True, title, f"사본이 진본과 같아요 ({report['truth']}줄)")
+    return Check(
+        False,
+        title,
+        audit.describe(report).splitlines()[0][:200],
+        hint=(
+            f"labremote audit {name or '<이름>'} 로 어디가 다른지 보고, "
+            "--rebuild 로 사본을 다시 만들 수 있어요."
+        ),
+    )
+
+
 def claude_version_check() -> Check:
     """Claude Code 판이 **도구 목록을 실측한 판**과 같은가. — ⚠ 다.
 
@@ -571,6 +596,8 @@ def run() -> dict:
         checks.append(git_anchor_check(root, name))
         # 실험 conda 환경이 우리 환경이 아닌지 (.pth 자동 실행)
         checks.append(project_env_check(root, name))
+        # 승인 기록 사본이 진본과 같은지
+        checks.append(audit_check(root, name, pol))
         # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
         checks.append(cache_check(root, pol))
 

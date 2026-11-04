@@ -17,6 +17,8 @@ from __future__ import annotations
 import os
 from datetime import datetime
 
+from .. import approval_log as A
+from .. import audit
 from ..agent import version as version_mod
 from .. import loop_layout as L
 from ..monitor import gpu as gpu_mod
@@ -129,6 +131,15 @@ def check_loop(conn, project: str, root: str, *, now: datetime | None = None) ->
     if not seen["ok"]:
         return _no(seen["reason"])
 
+    # 📒 승인 기록이 진본과 같은가. 다르면 **루프를 시작하지 않는다.**
+    #
+    # 프로젝트의 `logs/Approval_log.csv` 는 AI 가 쓴 코드가 고칠 수 있다(M4).
+    # 진본은 `server/data/audit/` 에 있고 AI 는 거기에 못 쓴다(M1b).
+    # 되살릴 수 있으므로(`labremote audit <프로젝트> --rebuild`) `stop` 은 아니다.
+    seen = audit.compare(project, A.log_path(root, _policy_of(project)))
+    if not seen["ok"]:
+        return _no(audit.describe(seen).splitlines()[0] + " · labremote audit 로 보세요")
+
     limits = limits_of(read_config(root))
     done = [e for e in X.listing(conn, project) if e.get("state") in ("done", "failed", "stopped")]
 
@@ -165,3 +176,13 @@ def check_train(root: str, *, cache_dir: str = "", config: dict | None = None) -
     if disk.get("ok") and disk["freeGb"] < threshold:
         return _no(f"디스크 여유가 {disk['freeGb']}GB 뿐이에요 (임계 {threshold}GB)")
     return _ok()
+
+
+def _policy_of(project: str):
+    """`log_path` 가 정책의 `logPath` 를 본다. 못 읽으면 기본값으로."""
+    from .. import policy as policy_mod
+
+    try:
+        return policy_mod.load(project)
+    except Exception:
+        return None

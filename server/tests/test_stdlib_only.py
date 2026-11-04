@@ -45,6 +45,7 @@ HOOK_PATH_FILES = sorted(APP.glob("hooks/*.py")) + [
     APP / "registry.py",
     APP / "runstate.py",
     APP / "approval_log.py",
+    APP / "audit.py",
     APP / "loop_layout.py",
     APP / "notify.py",
     # ②에서 추가된 훅 경로

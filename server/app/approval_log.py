@@ -113,21 +113,37 @@ def append_row(
     handled_by: str = "",
     tool_use_id: str = "",
     when: str | None = None,
+    project: str = "",
 ) -> None:
-    """한 번의 write() 로 한 행을 덧붙인다. 여러 프로세스가 동시에 써도 안전."""
+    """한 번의 write() 로 한 행을 덧붙인다. 여러 프로세스가 동시에 써도 안전.
+
+    `project` 를 주면 **진본에도 같은 줄을 남긴다**
+    (`server/data/audit/<프로젝트>.jsonl`).
+
+    왜 둘인가: 이 CSV 는 프로젝트 안이라 **AI 가 쓴 코드가 고칠 수
+    있다**(M4 — 샌드박스는 작업 디렉터리 쓰기를 못 막는다). 진본은
+    `server/data/` 아래라 AI 가 못 쓴다(M1b). 그래서 **CSV 는 사람이 보고
+    git 에 남는 사본**이고 진본은 서버 쪽에 있다.
+
+    진본 쓰기가 실패해도 **CSV 는 쓴다** — 막는 것과 기록이 먼저다.
+    어긋난 것은 `audit.compare` 가 잡아낸다.
+    """
     ensure_log(path)
+    cells = [
+        when or now(),
+        summarize(action),
+        summarize(request),
+        summarize(result),
+        "true" if pending else "false",
+        summarize(handled_by),
+        summarize(tool_use_id),
+    ]
+    if project:
+        from . import audit
+
+        audit.append(project, dict(zip(audit.FIELDS, cells)))
     buf = io.StringIO()
-    csv.writer(buf, lineterminator="\n").writerow(
-        [
-            when or now(),
-            summarize(action),
-            summarize(request),
-            summarize(result),
-            "true" if pending else "false",
-            summarize(handled_by),
-            summarize(tool_use_id),
-        ]
-    )
+    csv.writer(buf, lineterminator="\n").writerow(cells)
     line = buf.getvalue().encode("utf-8")
 
     fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
@@ -393,6 +409,7 @@ def close_stale(
             kind = "정리됨 · 자가 점검"
         append_row(
             log_path(root, policy),
+            project=name,
             action=str(got.get("action") or ""),
             request=str(got.get("request") or ""),
             result=kind,
