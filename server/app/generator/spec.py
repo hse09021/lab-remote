@@ -27,6 +27,20 @@ class ProjectSpec:
     def __post_init__(self) -> None:
         if not self.env_name:
             self.env_name = self.name  # 환경 이름은 프로젝트 이름과 같게
+        # 🔑 우리 코드가 도는 환경(`labremote`)·`base` 는 실험용으로 쓸 수
+        # 없다. `.pth` 는 인터프리터가 뜰 때 실행되므로, 거기 패키지를 깔면
+        # 훅·오케스트레이터 프로세스 안(샌드박스 **밖**)에서 코드가 돈다.
+        from .. import registry
+        from ..runner import condaenv
+
+        got = condaenv.check(self.env_name)
+        if not got["ok"]:
+            # `InvalidName` 으로 던진다 — 이름이 잘못된 것이고, CLI 가 이미
+            # 그걸 잡아 종료코드 2 로 돌려준다.
+            raise registry.InvalidName(
+                f"conda 환경 이름을 다시 정해 주세요 — {got['reason']} "
+                "(--env-name 으로 바꿀 수 있어요)"
+            )
 
     @property
     def mode_name(self) -> str:

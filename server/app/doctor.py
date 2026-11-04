@@ -96,9 +96,41 @@ def project_secrets(root: str) -> list[str]:
     return sorted(found)
 
 
+#: 점검 한 줄의 무게. `warn` 은 **종료코드를 바꾸지 않는다.**
+#:
+#: 전에는 `ok` 참/거짓뿐이어서 하나만 거짓이면 exit 1 이었다. 그래서
+#: "GPU 조회 실패"·"캐시가 프로젝트 안"·"셸 함수가 없음" 같은 **권고**가
+#: `labremote doctor` 를 통째로 빨갛게 만들었고, 고칠 수 없는 ✘(드라이버
+#: 불일치는 재부팅해야 한다)가 섞여 사람이 ✘ 를 무시하게 된다.
+LEVELS = ("ok", "warn", "bad")
+
+MARKS = {"ok": "✔", "warn": "⚠", "bad": "✘"}
+
+
 class Check(dict):
-    def __init__(self, ok: bool, title: str, detail: str = "", hint: str = ""):
-        super().__init__(ok=ok, title=title, detail=detail, hint=hint)
+    """`level` 이 참 무게다. `ok` 는 호환을 위해 남겨 둔 거울이다.
+
+    - `Check(True, …)` → `level="ok"`
+    - `Check(False, …)` → `level="bad"`
+    - `Check(False, …, level="warn")` → ⚠ (종료코드 0)
+    """
+
+    def __init__(
+        self, ok: bool, title: str, detail: str = "", hint: str = "", level: str = ""
+    ):
+        if level:
+            if level not in LEVELS:
+                raise ValueError(f"모르는 점검 무게예요: {level!r}")
+        else:
+            level = "ok" if ok else "bad"
+        super().__init__(
+            ok=(level == "ok"), level=level, title=title, detail=detail, hint=hint
+        )
+
+
+def warn(title: str, detail: str = "", hint: str = "") -> Check:
+    """⚠ — 알려는 주지만 종료코드를 바꾸지 않는다."""
+    return Check(False, title, detail, hint, level="warn")
 
 
 def sandbox_check(root: str) -> Check:
@@ -138,15 +170,19 @@ def bash_sandbox_check(root: str, name: str = "") -> Check:
             f"{state['source']} · 쓰기 {len(state['allowWrite'])}곳 · "
             f"도메인 {len(state['domains'])}개"
         )
+        title = f"Bash 샌드박스 · {name}" if name else "Bash 샌드박스"
         if state["notes"]:
-            detail += " · " + " · ".join(state["notes"])
-        return Check(True, f"Bash 샌드박스 · {name}" if name else "Bash 샌드박스", detail)
-    return Check(
-        False,
+            # 켜져 있긴 하다. conda 가 안 보이면 `python`·`pytest` 가 exit 127
+            # 이라 허용 목록이 죽은 줄이 된다 (M3).
+            return warn(title, detail, hint=" · ".join(state["notes"]))
+        return Check(True, title, detail)
+    # ⚠ 다 — 꺼져 있으면 런처가 **헤드리스를 안 띄운다**(fail-closed). 위험한
+    # 상태로 도는 게 아니라 **안 도는** 상태라서 종료코드를 바꾸지 않는다.
+    return warn(
         f"Bash 샌드박스 · {name}" if name else "Bash 샌드박스",
-        " · ".join(state["reasons"])[:160],
+        "헤드리스 루프가 안 떠요 (launch.check_sandbox 가 거부해요) · "
+        + " · ".join(state["reasons"])[:120],
         hint=(
-            "AI 가 쓴 테스트 코드가 자격 증명을 읽을 수 있어요. "
             "labremote hooks install 로 "
             f"{policy.launch_settings_path()} 를 다시 써 주세요."
         ),
@@ -218,6 +254,92 @@ def git_anchor_check(root: str, name: str = "") -> Check:
     )
 
 
+def project_env_check(root: str, name: str = "") -> Check:
+    """실험용 conda 환경이 **우리 환경이 아닌지.**
+
+    `.pth` 는 인터프리터가 뜰 때 실행된다. 훅은 도구 호출마다 그 파이썬으로
+    뜨고 오케스트레이터도 같은 환경에서 돈다 — 둘 다 샌드박스 **밖**이다.
+    그래서 실험용 환경이 `labremote`·`base` 면 **사람이 승인한 패키지 하나가**
+    잠금 판정 코드 안의 임의 코드 실행이 된다.
+    """
+    import yaml
+
+    from . import loop_layout as L
+    from .runner import condaenv
+
+    title = f"실험 conda 환경 · {name}" if name else "실험 conda 환경"
+    path = os.path.join(root, L.LOOP_LAYOUT["config"])
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        return Check(False, title, f"Config.yaml 을 읽을 수 없어요: {exc}")
+    env = (data.get("env") or {}) if isinstance(data, dict) else {}
+    env_name = str((env or {}).get("conda") or "").strip()
+
+    got = condaenv.check(env_name)
+    if got["ok"]:
+        where = got["prefix"] or "아직 만들지 않았어요"
+        return Check(True, title, f"{env_name} · {where}")
+    return Check(
+        False,
+        title,
+        got["reason"][:200],
+        hint=(
+            "실험용 환경을 따로 만들고 specifications/Config.yaml 의 env.conda "
+            "를 고쳐 주세요: conda create -n <이름> python=3.11"
+        ),
+    )
+
+
+#: 셸 함수를 찾아볼 파일
+SHELL_FILES = ("~/.bashrc", "~/.zshrc", "~/.bash_aliases", "~/.profile")
+
+#: 그 파일에 이 문자열이 있으면 "넣었다" 로 본다
+SHELL_MARK = "labremote claude"
+
+
+def shell_guard_check() -> Check:
+    """맨손 `claude` 를 멈춰 세우는 셸 함수가 있나. — ⚠ 다.
+
+    T3 뒤에도 남는 구멍 하나: **사람이 실험 프로젝트 폴더에서 맨손 `claude`
+    를 치면** 프로젝트 설정이 그대로 먹는다(M6). `CLAUDE.md`·`README` 가
+    안내하지만 습관은 안내보다 세다.
+
+    `doctor` 는 대화형 셸의 함수를 볼 수 없으니 **셸 설정 파일을 읽는다.**
+    읽기만 한다 — 사람의 셸 설정을 코드가 고치지 않는다(규칙 0 과 같은 이유).
+
+    **✘ 가 아닌 이유**: 없어도 루프는 정상이다. 사람의 습관을 돕는 장치라
+    종료코드를 바꾸면 "고칠 수 없는 ✘" 가 된다.
+    """
+    found = []
+    unreadable = []
+    for item in SHELL_FILES:
+        path = os.path.expanduser(item)
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                if SHELL_MARK in fh.read():
+                    found.append(item)
+        except OSError:
+            unreadable.append(item)
+    if found:
+        return Check(True, "셸 보호 함수", "있어요: " + ", ".join(found))
+    detail = "맨손 claude 를 멈춰 세우는 셸 함수가 없어요"
+    if unreadable:
+        detail += f" (못 읽은 파일: {', '.join(unreadable)})"
+    return warn(
+        "셸 보호 함수",
+        detail,
+        hint=(
+            "docs/SETUP.md 의 \"맨손 claude 를 멈춰 세우기\" 문구를 ~/.bashrc 에 "
+            "붙여 주세요. 프로젝트 폴더에서 claude 를 치면 "
+            "labremote claude <이름> 으로 열라고 알려 줘요."
+        ),
+    )
+
+
 def user_sandbox_check() -> Check:
     """사용자 설정에 `sandbox` 절이 있으면 **이 PC 의 모든 세션**이 갇힌다.
 
@@ -268,7 +390,8 @@ def cache_check(root: str, pol=None) -> Check:
     elif "freeGb" in state:
         detail += f" · 여유 {state['freeGb']}GB"
     if state["warnings"]:
-        return Check(False, "공용 캐시", detail, hint=state["warnings"][0])
+        # 권고다 — 캐시가 프로젝트 안이면 저장소가 커지지만 루프는 돈다.
+        return warn("공용 캐시", detail, hint=state["warnings"][0])
     return Check(True, "공용 캐시", detail)
 
 
@@ -416,11 +539,15 @@ def run() -> dict:
         checks.append(project_settings_check(root, name))
         # git 기록 앵커 — 이전 커밋 바꿔치기를 잡는다
         checks.append(git_anchor_check(root, name))
+        # 실험 conda 환경이 우리 환경이 아닌지 (.pth 자동 실행)
+        checks.append(project_env_check(root, name))
         # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
         checks.append(cache_check(root, pol))
 
     # 사용자 설정에 sandbox 가 있으면 이 PC 의 모든 세션이 갇힌다
     checks.append(user_sandbox_check())
+    # 맨손 `claude` 를 멈춰 세우는 셸 함수 (권고 — ⚠)
+    checks.append(shell_guard_check())
 
     # 자가 점검이 중간에 죽으면 임시 프로젝트 폴더가 남는다
     leftovers = hooks_check.scratch_leftovers()
@@ -446,7 +573,10 @@ def run() -> dict:
     )
 
     return {
-        "ok": all(c["ok"] for c in checks),
+        # ⚠ 는 종료코드를 바꾸지 않는다 — 고칠 수 없는 ✘ 가 섞이면 사람이
+        # ✘ 를 무시하게 된다.
+        "ok": not any(c.get("level", "bad" if not c["ok"] else "ok") == "bad" for c in checks),
+        "warnings": [c for c in checks if c.get("level") == "warn"],
         "checks": checks,
         "limitations": install.limitations(),
     }
@@ -455,12 +585,21 @@ def run() -> dict:
 def render(report: dict) -> str:
     lines = []
     for check in report["checks"]:
-        mark = "✔" if check["ok"] else "✘"
+        mark = MARKS.get(check.get("level") or ("ok" if check["ok"] else "bad"), "✘")
         line = f"{mark} {check['title']:<24} {check['detail']}"
         lines.append(line)
-        if not check["ok"] and check["hint"]:
+        if mark != "✔" and check["hint"]:
             lines.append(f"    → {check['hint']}")
     lines.append("")
+    counts = {name: 0 for name in LEVELS}
+    for check in report["checks"]:
+        counts[check.get("level") or ("ok" if check["ok"] else "bad")] += 1
+    if counts["bad"] or counts["warn"]:
+        lines.append(
+            f"✘ {counts['bad']}개 · ⚠ {counts['warn']}개 · ✔ {counts['ok']}개"
+            + ("  (⚠ 는 종료코드를 바꾸지 않아요)" if counts["warn"] else "")
+        )
+        lines.append("")
     for note in report["limitations"]:
         lines.append(f"· {note}")
     return "\n".join(lines)

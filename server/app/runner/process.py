@@ -32,6 +32,7 @@ import time
 from dataclasses import dataclass, field
 
 from .. import paths
+from . import condaenv
 from . import cache as cache_mod
 from . import sandbox as sandbox_mod
 from .spec import RunSpec
@@ -115,6 +116,10 @@ def inner_argv(spec: RunSpec) -> list[str]:
     else:
         inner = [target]
     if spec.conda_env:
+        # 🔑 우리 코드가 도는 환경(`labremote`)·`base`·시스템 파이썬에서는
+        # 돌리지 않는다. 학습 스크립트는 AI 가 쓴 코드이고, 그 환경에 쓰기가
+        # 되면 `.pth` 한 줄이 훅 프로세스 안에서 돈다 (`runner/condaenv.py`).
+        condaenv.require(spec.conda_env)
         inner = ["conda", "run", "-n", spec.conda_env, "--no-capture-output", *inner]
     return [*inner, *spec.args]
 
