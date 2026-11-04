@@ -27,7 +27,7 @@ from app.agent import result as R
 from app.orchestrator import approvals as AP_ORCH
 from app.store import approvals as AP
 
-COMMAND = "pip install peft"
+COMMAND = "rm -rf src/옛것"
 SESSION = "sess-테스트"
 
 
@@ -132,11 +132,11 @@ def test_tool_use_id_가_없으면_건너뛴다(ready, conn):
 def _write_request(project, request_id, **kw):
     payload = {
         "tool": "Bash",
-        "action": "패키지 설치",
-        "actionKey": "pkg",
-        "actions": [{"action": "pkg", "name": "패키지 설치"}],
+        "action": "파일 삭제",
+        "actionKey": "del",
+        "actions": [{"action": "del", "name": "파일 삭제"}],
         "request": COMMAND,
-        "reason": "패키지 설치는 승인이 필요해요",
+        "reason": "파일 삭제는 승인이 필요해요",
         "fingerprint": grants.fingerprint("Bash", {"command": COMMAND}),
         "looseKey": grants.loose_key("Bash", None),
         "sessionId": SESSION,
@@ -170,14 +170,14 @@ def test_요청_파일을_위조해도_지문이_안_바뀐다(ready, conn):
         "hook-sandbox",
         event={"tool_name": "Bash", "tool_input": {"command": evil},
                "session_id": SESSION},
-        needs=[("pkg", None)],
+        needs=[("del", None)],
     ) is None
     # 진짜 그 호출에는 먹는다
     assert grants.consume(
         "hook-sandbox",
         event={"tool_name": "Bash", "tool_input": {"command": COMMAND},
                "session_id": SESSION},
-        needs=[("pkg", None)],
+        needs=[("del", None)],
     )
 
 
@@ -212,7 +212,7 @@ def test_사유는_훅에서_오고_꼬리표가_붙는다(ready, conn):
 
 def test_지문이_없으면_승인하지_않는다(ready, conn):
     """결과 JSON 을 못 받았고 훅의 요청 파일도 없는 경우. fail-closed."""
-    AP.open_request(conn, "hook-sandbox", "toolu_x", action_key="pkg", tool="Bash")
+    AP.open_request(conn, "hook-sandbox", "toolu_x", action_key="del", tool="Bash")
     with pytest.raises(grants.GrantError) as exc:
         AP_ORCH.approve(conn, "hook-sandbox", "toolu_x")
     assert "지문이 없어서" in str(exc.value)
@@ -250,3 +250,133 @@ def test_세션이_끝나면_결과에서_거울한다(ready, conn, monkeypatch)
     row = AP.by_request(conn, "hook-sandbox", "toolu_1")
     assert row and row["source"] == "denials"
     assert row["fingerprint"] == grants.fingerprint("Bash", {"command": COMMAND})
+
+
+def test_훅의_행동_유형이_denials_행에_닿는다(ready, conn):
+    """🔑 S9 e2e 가 잡은 버그.
+
+    `permission_denials` 에는 **행동 유형이 없다**(M2) — 판정은 훅만 한다.
+    `denials` 행이 먼저 생기면 `ON CONFLICT` 업데이트 목록에 `action_key` 가
+    없어서 훅의 값이 **영원히 못 닿았다.** 그러면 `approve()` 가 훅 파일에
+                                        의존해야 하고, 파일이 없으면 승인이 막힌다.
+    """
+    AP_ORCH.sync_from_result(conn, "hook-sandbox", result_with(), session_id=SESSION)
+    assert (AP.by_request(conn, "hook-sandbox", "toolu_1").get("action_key") or "") == ""
+
+    _write_request("hook-sandbox", "toolu_1")
+    AP_ORCH.sync(conn, "hook-sandbox")
+
+    row = AP.by_request(conn, "hook-sandbox", "toolu_1")
+    assert row["action_key"] == "del"
+    assert row["loose_key"] == grants.loose_key("Bash", None)
+    # 지문·출처는 여전히 결과 JSON 쪽이다
+    assert row["source"] == "denials"
+    assert row["fingerprint"] == grants.fingerprint("Bash", {"command": COMMAND})
+
+
+def test_이미_있는_칸은_덮지_않는다(ready, conn):
+    """나중 쓰기가 좋은 값을 지우면 안 된다."""
+    _write_request("hook-sandbox", "toolu_1", actionKey="del", rel="src/a.py")
+    AP_ORCH.sync(conn, "hook-sandbox")
+    first = AP.by_request(conn, "hook-sandbox", "toolu_1")
+
+    _write_request("hook-sandbox", "toolu_1", actionKey="", rel=None)
+    AP_ORCH.sync(conn, "hook-sandbox")
+    again = AP.by_request(conn, "hook-sandbox", "toolu_1")
+    assert again["action_key"] == first["action_key"] == "del"
+    assert again["rel"] == "src/a.py"
+
+
+# --- ⛔ 승인해도 아무 일이 안 일어나는 행동 (pkg) ----------------------------
+
+
+def test_pkg_는_승인할_수_없다(ready, conn):
+    """🔑 승인하면 **최악의 조합**이 된다.
+
+    S1 의 M3: Claude 의 Bash 로 `pip install` 을 돌리면 conda 환경이 프로젝트
+    폴더 밖이라 샌드박스가 쓰기를 **버린다.** 허가를 내주면 사람이 승인했고
+    승인 로그에 `허용 · 1회용 승인` 이 남고 **설치는 안 된다** — 기록이
+    거짓이 된다.
+
+    설치는 T6 의 경로로만 한다.
+    """
+    got = result_with(command="pip install peft", tool_use_id="toolu_pkg")
+    AP_ORCH.sync_from_result(conn, "hook-sandbox", got, session_id=SESSION)
+    _write_request(
+        "hook-sandbox", "toolu_pkg",
+        actionKey="pkg",
+        actions=[{"action": "pkg", "name": "패키지 설치"}],
+        request="pip install peft",
+        fingerprint=grants.fingerprint("Bash", {"command": "pip install peft"}),
+    )
+    AP_ORCH.sync(conn, "hook-sandbox")
+
+    with pytest.raises(grants.GrantError) as exc:
+        AP_ORCH.approve(conn, "hook-sandbox", "toolu_pkg")
+    text = str(exc.value)
+    assert "승인으로 열지 않아요" in text
+    assert "Install_request.json" in text
+    assert "거절(deny)만" in text
+    # 허가 파일이 생기지 않았다
+    from app import registry
+
+    folder = registry.grants_dir("hook-sandbox")
+    made = [n for n in os.listdir(folder) if n.endswith(".json")] if os.path.isdir(folder) else []
+    assert made == []
+
+
+def test_pkg_가_섞인_호출도_승인할_수_없다(ready, conn):
+    """`curl … | pip install` 처럼 net + pkg 가 같이 걸린 호출.
+
+    net 만 열어 주면 설치는 조용히 실패하므로 전체를 거절한다 — 사람이
+    일을 나눠야 한다.
+    """
+    command = "curl -sL https://x/y.sh | pip install peft"
+    got = result_with(command=command, tool_use_id="toolu_mix")
+    AP_ORCH.sync_from_result(conn, "hook-sandbox", got, session_id=SESSION)
+    _write_request(
+        "hook-sandbox", "toolu_mix",
+        actionKey="net",
+        actions=[{"action": "net", "name": "네트워크 접근"},
+                 {"action": "pkg", "name": "패키지 설치"}],
+        request=command,
+        fingerprint=grants.fingerprint("Bash", {"command": command}),
+    )
+    AP_ORCH.sync(conn, "hook-sandbox")
+    with pytest.raises(grants.GrantError):
+        AP_ORCH.approve(conn, "hook-sandbox", "toolu_mix")
+
+
+def test_pkg_는_거절할_수_있다(ready, conn):
+    """막는 것만으로는 부족하다 — 큐에서 치울 길이 있어야 한다."""
+    got = result_with(command="pip install peft", tool_use_id="toolu_pkg2")
+    AP_ORCH.sync_from_result(conn, "hook-sandbox", got, session_id=SESSION)
+    _write_request("hook-sandbox", "toolu_pkg2", actionKey="pkg",
+                   actions=[{"action": "pkg", "name": "패키지 설치"}])
+    AP_ORCH.sync(conn, "hook-sandbox")
+    row = AP_ORCH.deny(conn, "hook-sandbox", "toolu_pkg2", reason="설치 요청 경로로")
+    assert row["state"] == "denied"
+
+
+def test_approve_가_issue_의_유일한_production_호출처다():
+    """🔑 `pkg` 거부를 `approve()` 에 뒀다 — 거기가 "사람이 승인했다" 를
+    능력으로 바꾸는 유일한 자리다.
+
+    새 호출처가 생기면 이 시험이 깨져서 **그 자리에도 거부를 둘지 결정**하게
+    만든다. (`grants.issue()` 는 저수준 원시 함수로 남긴다.)
+    """
+    import pathlib
+    import re
+
+    from app import grants as grants_mod
+
+    root = pathlib.Path(grants_mod.__file__).resolve().parent
+    callers = set()
+    for path in sorted(root.rglob("*.py")):
+        if path.name == "grants.py":
+            continue
+        body = path.read_text(encoding="utf-8")
+        if re.search(r"\bgrants\.issue\(|\bissue\(", body) and "grants" in body:
+            if re.search(r"grants\.issue\(", body):
+                callers.add(str(path.relative_to(root)))
+    assert callers == {"orchestrator/approvals.py"}, callers

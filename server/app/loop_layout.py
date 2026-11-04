@@ -127,6 +127,21 @@ STOP_LOCKED_KEYS = ("config", "evaluation")
 #: docs/spec.md IV + PDF 9쪽 "Update Order" 의 갱신 대상이다.
 JOURNAL_KEYS = ("state", "experiment_log", "decision_log", "failures", "readme")
 
+#: 📦 **요청 파일.** 기록 의무는 아니지만 `journal` 과 같은 무게로 **항상
+#: 쓰기를 허용**한다.
+#:
+#: 왜: `state/Install_request.json` 은 "설치해 달라" 는 **요청**이다. 그걸
+#: 쓰는 것을 `ask` 로 두면 **승인을 요청하려고 승인이 필요한** 순환이 된다
+#: (S9 e2e 가 잡았다 — 수동제어 프리셋에서 `code` 로 분류돼 막혔다).
+#:
+#: 안전한 이유: 요청을 쓰는 것은 아무것도 실행하지 않는다. 설치는 사람이
+#: `labremote installs approve` 한 뒤 **오케스트레이터가** 한다. 내용도
+#: `runner/pkgspec.py` 가 전부 검증한다.
+#:
+#: `JOURNAL_KEYS` 에 넣지 **않는다** — 그건 Update Order 검수 대상이고,
+#: 요청 파일은 매 루프마다 갱신할 것이 아니다.
+REQUEST_KEYS = ("install_request",)
+
 
 class LayoutPending(RuntimeError):
     """아직 확인 못 한 경로를 실제로 쓰려고 했을 때."""
@@ -176,9 +191,13 @@ def stop_locked_files() -> list[str]:
 
 
 def journal_files() -> list[str]:
-    """기록 의무 파일. 실험 폴더별 결과·분석까지 포함 (PDF 9쪽 Update Order)."""
+    """**항상 쓰기를 허용**하는 파일. 정책의 `journalFiles` 가 된다.
+
+    기록 의무 파일(`JOURNAL_KEYS`, PDF 9쪽 Update Order) + 실험 폴더별
+    결과·분석 + **요청 파일**(`REQUEST_KEYS`).
+    """
     exp = experiments_dir()
-    return _values(JOURNAL_KEYS) + [
+    return _values(JOURNAL_KEYS) + _values(REQUEST_KEYS) + [
         f"{exp}/*/{EXPERIMENT_FILES['result']}",
         f"{exp}/*/{EXPERIMENT_FILES['analysis']}",
     ]

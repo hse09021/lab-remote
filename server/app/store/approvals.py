@@ -47,7 +47,11 @@ def open_request(
         "action_key, rel, request, reason, fingerprint, loose_key, source, "
         "tool_summary, state, opened_at, attempts) "
         "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?, 1) "
-        "ON CONFLICT(project, request_id) DO UPDATE SET attempts=attempts+1, "
+        # ⚠ **`attempts` 를 여기서 올리지 않는다.** 전에는 올렸고, 그래서
+        # 거울(`sync`·`sync_from_result`)을 부를 때마다 횟수가 늘어 **한 번의
+        # 거절이 3회**가 됐다(S9 e2e 가 잡았다). 상한이 2라 정상 요청이
+        # 막힐 수 있었다. 진짜 재시도는 `bump()` 로 센다.
+        "ON CONFLICT(project, request_id) DO UPDATE SET "
         # 🔑 `denials` 출처가 `hook` 출처를 **덮는다.** 반대는 안 된다 —
         # 오케스트레이터가 자기 자식에게서 직접 받은 값이 더 믿을 만하다.
         "source=CASE WHEN excluded.source='denials' THEN 'denials' ELSE source END, "
@@ -56,7 +60,19 @@ def open_request(
         "tool_summary=COALESCE(excluded.tool_summary, tool_summary), "
         "tool=CASE WHEN excluded.source='denials' THEN excluded.tool ELSE tool END, "
         # 사유는 훅만 안다 (`permission_denials` 에 사유 칸이 없다 — M2)
-        "reason=CASE WHEN excluded.reason<>'' THEN excluded.reason ELSE reason END",
+        "reason=CASE WHEN excluded.reason<>'' THEN excluded.reason ELSE reason END, "
+        # 🔑 **비어 있던 칸만 채운다.** `permission_denials` 에는 행동 유형·
+        # 상대경로가 없다(M2) — 그건 훅만 안다. S9 e2e 가 이걸 잡았다:
+        # `denials` 행이 먼저 생기면 훅의 `action_key` 가 영원히 못 닿았다.
+        # 이미 값이 있으면 **덮지 않는다** (나중 쓰기가 좋은 값을 지우면 안 된다).
+        "action_key=CASE WHEN COALESCE(action_key,'')='' "
+        "           THEN excluded.action_key ELSE action_key END, "
+        "rel=COALESCE(rel, excluded.rel), "
+        "loose_key=CASE WHEN COALESCE(loose_key,'')='' "
+        "          THEN excluded.loose_key ELSE loose_key END, "
+        "session_id=CASE WHEN COALESCE(session_id,'')='' "
+        "           THEN excluded.session_id ELSE session_id END, "
+        "job_id=COALESCE(job_id, excluded.job_id)",
         (
             project,
             request_id,

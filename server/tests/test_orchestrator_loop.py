@@ -375,7 +375,7 @@ def test_세션_ID_를_미리_정한다(conn, ready, fake):
 # --- 승인 대기 → 허가 → 이어 가기 (계획 6-1) --------------------------------------
 
 
-def make_request(project_root, command="pip install peft", request_id="toolu_1"):
+def make_request(project_root, command="rm -rf src/옛것", request_id="toolu_1"):
     """훅이 헤드리스에서 막았을 때 남기는 요청 파일을 그대로 흉내 낸다."""
     from app import approval_log as A
     from app import grants
@@ -385,11 +385,11 @@ def make_request(project_root, command="pip install peft", request_id="toolu_1")
         request_id,
         {
             "tool": "Bash",
-            "action": "패키지 설치",
-            "actionKey": "pkg",
-            "actions": [{"action": "pkg", "name": "패키지 설치"}],
+            "action": "파일 삭제",
+            "actionKey": "del",
+            "actions": [{"action": "del", "name": "파일 삭제"}],
             "request": command,
-            "reason": "패키지 설치는 승인이 필요해요",
+            "reason": "파일 삭제는 승인이 필요해요",
             "fingerprint": grants.fingerprint("Bash", {"command": command}),
             "looseKey": grants.loose_key("Bash", None),
             "toolSummary": {"command": command},
@@ -442,7 +442,7 @@ def test_승인하면_이어_간다(conn, ready, fake, grant_key):
     # 2) 사람이 승인한다
     AP.sync(conn, "hook-sandbox")
     grant = AP.approve(conn, "hook-sandbox", "toolu_1")
-    assert grant["actions"] == ["pkg"]
+    assert grant["actions"] == ["del"]
 
     # 3) 다음 바퀴에서 `--resume` 으로 이어 가고 완주한다
     second = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
@@ -458,18 +458,37 @@ def test_이어_갈_때_같은_입력을_쓰라고_못박는다(conn, ready, fak
     from app.agent import prompts
 
     text = prompts.render(
-        "resume_after_approval", {"request": "pip install peft", "actions": "패키지 설치", "context": ""}
+        "resume_after_approval", {"request": "rm -rf src/옛것", "actions": "패키지 설치", "context": ""}
     )
     assert "같은 도구·같은 입력으로 한 번만" in text
     assert "한 번 쓰면 사라지니" in text
 
 
-def test_같은_요청이_반복되면_알아챈다(conn, ready, fake):
-    """무한 반복 방지 — 상한을 넘으면 사람이 봐야 한다."""
+def test_같은_요청이_반복되면_루프를_멈춘다(conn, ready, fake, monkeypatch):
+    """무한 반복 방지 — 상한을 넘으면 **루프를 멈추고** 사람을 부른다.
+
+    ⚠ 전에는 `too_many()` 가 **아무 데서도 안 불렸다** — "같은 요청이
+    반복되면 멈춘다" 는 기록이 거짓이었다(S9 e2e 가 잡았다).
+    """
+    import json as jsonmod
+
     from app.orchestrator import approvals as AP
     from app.store import approvals as APS
+    from app.store import loops as LP
 
-    make_request(ready)
-    for _ in range(AP.MAX_ATTEMPTS + 1):
-        AP.sync(conn, "hook-sandbox")
-    assert AP.too_many(APS.by_request(conn, "hook-sandbox", "toolu_1")) is True
+    def denial(session):
+        return jsonmod.loads(jsonmod.dumps({
+            "denials": [{
+                "tool_name": "Bash",
+                "tool_use_id": "toolu_repeat",
+                "tool_input": {"command": "rm -rf src/옛것"},
+            }],
+        }))
+
+    # 세션이 바뀔 때마다 **진짜 재시도**다
+    for n in range(AP.MAX_ATTEMPTS + 1):
+        AP.sync_from_result(conn, "hook-sandbox", denial(n), session_id=f"S{n}")
+    row = APS.by_request(conn, "hook-sandbox", "toolu_repeat")
+    assert row["attempts"] > AP.MAX_ATTEMPTS
+    assert AP.too_many(row) is True
+    assert LP.ensure(conn, "hook-sandbox")["state"] == "blocked"

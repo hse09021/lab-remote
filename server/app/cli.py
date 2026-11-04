@@ -551,6 +551,177 @@ def cmd_tools(args) -> int:
     return 0 if got["ok"] else 1
 
 
+def cmd_keys(args) -> int:
+    """🔑 허가 서명 키만 만든다·점검한다.
+
+    승인(`labremote approvals approve`)이 1회용 허가를 **HMAC 으로 서명**한다.
+    키가 없으면 `grants.verify` 가 전부 거짓이 되어 **헤드리스 승인이 아예
+    안 된다** — 훅이 허가를 무시하고 그대로 막는다(fail-closed).
+
+    `labremote service install`(8단계)이 하기로 했던 일인데, 그 명령은 systemd
+    유닛까지 건드린다. 키만 필요할 때 그걸 돌릴 이유가 없다.
+
+    **키 값은 절대 찍지 않는다.** 경로·권한·길이만 보여 준다.
+    """
+    from . import config
+
+    path = config.grant_key_path()
+    if args.action == "show":
+        mode = config.mode_of(path)
+        if mode is None:
+            print(f"✘ 키가 없어요: {path}")
+            print("  labremote keys init 로 만들어 주세요.")
+            return 1
+        raw = config.grant_key()
+        print(f"경로   {path}")
+        print(f"권한   {oct(mode)[2:]}" + ("" if config.is_private(path) else "  ⚠ 남이 읽을 수 있어요"))
+        print(f"길이   {len(raw or b'')}자")  # 값은 찍지 않아요
+        return 0 if config.is_private(path) and raw else 1
+
+    # init
+    if os.path.exists(path):
+        mode = config.mode_of(path)
+        private = config.is_private(path)
+        print(f"키가 이미 있어요: {path}")
+        print(f"  권한 {oct(mode or 0)[2:]}" + ("" if private else "  ⚠ 남이 읽을 수 있어요"))
+        if not private:
+            print("  labremote keys init --fix-mode 로 권한만 0600 으로 고칠 수 있어요.")
+            if args.fix_mode:
+                config.ensure_grant_key()  # 있으면 권한만 고친다
+                print(f"✔ 권한을 {oct(config.mode_of(path) or 0)[2:]} 로 고쳤어요")
+                return 0
+            return 1
+        print("  **덮어쓰지 않아요** — 키를 바꾸면 아직 안 쓴 허가가 전부 무효가 돼요.")
+        return 0
+
+    made = config.ensure_grant_key()
+    print(f"✔ 키를 만들었어요: {made}")
+    print(f"  권한 {oct(config.mode_of(made) or 0)[2:]} · 32바이트 랜덤 (값은 찍지 않아요)")
+    print()
+    print("이 폴더는 훅의 SECRET_FILES 라 Claude 가 읽기까지 막혀요.")
+    print("백업하지 마세요 — 잃으면 새로 만들면 되고, 새 키는 아직 안 쓴 허가만 무효로 해요.")
+    return 0
+
+
+def cmd_approvals(args) -> int:
+    """🎟 승인 대기열 — 사람이 승인하는 자리.
+
+    승인 **내용과 지문**은 오케스트레이터가 `claude -p` 결과 JSON 의
+    `permission_denials` 에서 만든 것이다(원칙 (나), S4). 훅이 쓴 사유는
+    "훅 참고(검증 안 됨)" 로 따로 보여 준다 — `permission_denials` 에 사유
+    칸이 없다(M2).
+    """
+    from . import db as db_mod
+    from . import grants
+    from .orchestrator import approvals as AP_ORCH
+    from .store import approvals as APS
+
+    with db_mod.open_db() as conn:
+        if args.action == "list":
+            rows = [
+                r for r in APS.pending(conn, args.name or None)
+                if r.get("action_key") != "install"
+            ]
+            if args.json:
+                print(json.dumps(rows, ensure_ascii=False, indent=2))
+                return 0
+            if not rows:
+                print("기다리는 승인이 없어요.")
+                return 0
+            for row in rows:
+                mark = "📋" if row.get("source") == "denials" else "🪝"
+                print(f"{mark} [{row['id']}] {row['project']} · {row['request_id']}")
+                print(f"     {row.get('action_key')} · {_shorten(str(row.get('request') or ''))}")
+                print(f"     열린 때 {row['opened_at']} · 횟수 {row['attempts']}"
+                      f" · 출처 {row.get('source')}")
+                if str(row.get("action_key") or "") in grants.NO_GRANT_ACTIONS:
+                    # 승인해도 아무 일이 안 일어난다 (M3) — 기록만 거짓이 된다
+                    print("     ⛔ 승인 불가 — 설치 요청 경로로 "
+                          "(state/Install_request.json → labremote installs approve)")
+                    print("        이 요청은 거절(deny)만 할 수 있어요")
+            print()
+            print("📋 = 결과 JSON 에서 만든 것 (지문을 우리가 계산) · 🪝 = 훅 파일에서 거울")
+            print(f"자세히:  labremote approvals show {rows[0]['project']} {rows[0]['request_id']}")
+            print(f"승인:    labremote approvals approve {rows[0]['project']} {rows[0]['request_id']}")
+            return 0
+
+        if not args.name or not args.id:
+            print("✘ 프로젝트와 요청 ID 를 주세요", file=sys.stderr)
+            return 2
+
+        row = APS.by_request(conn, args.name, args.id)
+        if not row:
+            print(f"✘ 그런 승인 요청이 없어요: {args.id}", file=sys.stderr)
+            return 2
+
+        if args.action == "show":
+            if args.json:
+                print(json.dumps(row, ensure_ascii=False, indent=2))
+                return 0
+            print(f"요청      {row['request_id']}")
+            print(f"프로젝트   {row['project']}")
+            print(f"도구      {row.get('tool')}")
+            print(f"행동      {row.get('action_key')}")
+            print(f"내용      {row.get('request')}")
+            print(f"지문      {row.get('fingerprint')}")
+            print(f"출처      {row.get('source')}"
+                  + ("  (오케스트레이터가 결과 JSON 에서 계산)"
+                     if row.get("source") == "denials" else "  (훅 파일에서 거울)"))
+            print(f"세션      {row.get('session_id')}")
+            print(f"상태      {row['state']} · 횟수 {row['attempts']}")
+            if str(row.get("action_key") or "") in grants.NO_GRANT_ACTIONS:
+                print()
+                print("⛔ 승인 불가")
+                for line in grants.NO_GRANT_REASON.split(". "):
+                    print(f"  {line.strip()}")
+            if row.get("tool_summary"):
+                print(f"입력 요약  {row['tool_summary']}")
+            if row.get("reason"):
+                print()
+                print(f"{AP_ORCH.HOOK_REASON_LABEL}:")
+                for line in str(row["reason"]).splitlines():
+                    print(f"  {line}")
+            return 0
+
+        if args.action == "approve":
+            try:
+                grant = AP_ORCH.approve(
+                    conn, args.name, args.id,
+                    ttl_sec=_ttl(args.ttl), loose=args.loose, note=args.note or "",
+                )
+            except grants.GrantError as exc:
+                print(f"✘ {exc}", file=sys.stderr)
+                return 2
+            print(f"✔ 승인했어요 · {grant['grantId']}")
+            print(f"  행동   {', '.join(grant['actions'])}")
+            print(f"  만료   {grant['expiresAt']}")
+            print(f"  세션   {grant['sessionId']}  (이 세션에서만 먹어요)")
+            print()
+            print("오케스트레이터가 같은 세션을 --resume 으로 이어 가요.")
+            return 0
+
+        try:
+            AP_ORCH.deny(conn, args.name, args.id, reason=args.reason or "")
+        except Exception as exc:
+            print(f"✘ {exc}", file=sys.stderr)
+            return 2
+        print("✔ 거절했어요")
+        return 0
+
+
+def _ttl(text: str | None) -> int:
+    """`10m`·`2h`·`600` 을 초로. 없으면 기본값."""
+    from . import grants as grants_mod
+
+    if not text:
+        return grants_mod.DEFAULT_TTL_SEC
+    raw = str(text).strip().lower()
+    unit = {"s": 1, "m": 60, "h": 3600}
+    if raw and raw[-1] in unit:
+        return max(1, int(float(raw[:-1]) * unit[raw[-1]]))
+    return max(1, int(float(raw)))
+
+
 def cmd_audit(args) -> int:
     """📒 승인 기록의 **진본**과 사본을 대조한다.
 
@@ -760,6 +931,29 @@ def build_parser() -> argparse.ArgumentParser:
     # 먹거나 `--bare` 를 모르는 인자로 거부한다.
     p.set_defaults(extra=[])
     p.set_defaults(func=cmd_claude)
+
+    p = sub.add_parser("keys", help="허가 서명 키 만들기·점검 (승인에 필요해요)")
+    p.add_argument("action", nargs="?", choices=["init", "show"], default="show")
+    p.add_argument(
+        "--fix-mode",
+        action="store_true",
+        help="이미 있는 키의 권한만 0600 으로 고쳐요 (키는 안 바꿔요)",
+    )
+    p.set_defaults(func=cmd_keys)
+
+    p = sub.add_parser("approvals", help="승인 대기열 — 사람이 승인하는 자리")
+    p.add_argument("action", choices=["list", "show", "approve", "deny"])
+    p.add_argument("name", nargs="?", help="프로젝트 이름")
+    p.add_argument("id", nargs="?", help="요청 ID (tool_use_id)")
+    p.add_argument("--ttl", help="허가 만료 (예: 10m · 2h · 600). 기본 10분")
+    p.add_argument(
+        "--loose",
+        action="store_true",
+        help="입력이 조금 달라도 허용해요 (Bash 는 지원하지 않아요)",
+    )
+    p.add_argument("--note", help="승인 메모")
+    p.add_argument("--reason", help="거절 사유")
+    p.set_defaults(func=cmd_approvals)
 
     p = sub.add_parser(
         "audit", help="승인 기록 진본과 사본 대조 (사본이 바뀌면 루프가 멈춰요)"

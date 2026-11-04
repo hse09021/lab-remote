@@ -188,7 +188,10 @@ def test_doctor_는_dump_모드를_알려_준다(capsys, made):
     assert "판정 모드" in out and "아무것도 막지 않아요" in out
 
 
-def test_doctor_가_enforce_에서_초록(capsys, made):
+def test_doctor_가_enforce_에서_초록(capsys, made, grant_key):
+    # `grant_key` 픽스처가 허가 서명 키를 만든다. 실제 설치에서도
+    # `labremote keys init` 이 꼭 필요한 한 단계다 — 없으면 헤드리스 승인이
+    # 아예 안 되므로 `doctor` 가 ✘ 로 잡는다.
     """bwrap 을 못 쓰는 환경(샌드박스 안에서 시험을 돌리는 경우 등)에서는
     "학습 샌드박스" 만 ✘ 다 — 그건 `doctor` 가 알려 줘야 할 사실이다."""
     from app.runner import sandbox

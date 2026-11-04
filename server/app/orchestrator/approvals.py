@@ -104,6 +104,18 @@ def sync_from_result(conn, project: str, result, *, job_id: int | None = None,
             )
             continue
         tool_input = item["toolInput"]
+        # 🔑 **진짜 재시도만** 센다. 거울을 부를 때마다 올리면 한 번의 거절이
+        # 여러 번이 된다(S9 e2e 가 잡았다). 재시도의 신호는 둘이다.
+        #   - 다른 세션에서 같은 denial 이 또 왔다
+        #   - 이미 결정된(승인·거절) 요청이 또 막혔다 — 재개 뒤 같은 호출
+        before = AP.by_request(conn, project, request_id)
+        retried = bool(
+            before
+            and (
+                before.get("state") != "open"
+                or (session_id and str(before.get("session_id") or "") != session_id)
+            )
+        )
         row = AP.open_request(
             conn,
             project,
@@ -118,8 +130,45 @@ def sync_from_result(conn, project: str, result, *, job_id: int | None = None,
             source="denials",
             tool_summary=grants.summarize_input(tool_input),
         )
+        if retried:
+            AP.bump(conn, project, request_id)
+            row = AP.by_request(conn, project, request_id) or row
+        # 🔑 무한 반복 방지. 전에는 `too_many` 가 **아무 데서도 안 불렸다** —
+        # "같은 요청이 반복되면 멈춘다" 는 기록이 거짓이었다(S9 e2e 가 잡았다).
+        if too_many(row):
+            _block_repeated(conn, project, row)
         out.append(row)
     return out
+
+
+def _block_repeated(conn, project: str, row: dict) -> None:
+    """같은 요청이 상한을 넘었다 — 루프를 멈추고 사람을 부른다."""
+    from .. import notifier
+    from ..store import loops as LP
+
+    text = (
+        f"같은 요청이 {row['attempts']}번 반복됐어요 (상한 {MAX_ATTEMPTS}): "
+        f"{row.get('request')}"
+    )
+    E.add(conn, project, "승인", text, tone="bad")
+    try:
+        notifier.send(
+            conn,
+            "blocked",
+            project=project,
+            subject=notifier.subject_of("repeat", row["request_id"]),
+            title=f"같은 요청이 반복돼서 루프를 멈췄어요 · {project}",
+            body=text,
+            fields=[
+                ("요청", str(row.get("request") or ""))[:1],
+                ("횟수", f"{row['attempts']} / 상한 {MAX_ATTEMPTS}"),
+                ("승인", f"labremote approvals approve {project} {row['request_id']}"),
+                ("거절", f"labremote approvals deny {project} {row['request_id']}"),
+            ][1:],
+        )
+    except Exception:
+        pass
+    LP.set_state(conn, project, "blocked", stop_reason=text)
 
 
 def pending(conn, project: str) -> list[dict]:
@@ -177,6 +226,15 @@ def approve(
         actions = [str(row.get("action_key") or "")] if row.get("action_key") else []
     if not actions:
         raise _missing_actions(request_id)
+
+    # 🔑 **승인해도 아무 일이 안 일어나는 행동은 승인하지 않는다.**
+    #
+    # S1 의 M3: Claude 의 Bash 로 `pip install` 을 돌리면 conda 환경이
+    # 프로젝트 밖이라 샌드박스가 쓰기를 버린다. 허가를 내주면 **최악의
+    # 조합**이 된다 — 사람이 승인했고 승인 로그에 `허용 · 1회용 승인` 이
+    # 남고 설치는 안 된다. 기록이 거짓이 된다.
+    if set(actions) & grants.NO_GRANT_ACTIONS:
+        raise grants.GrantError(grants.NO_GRANT_REASON)
 
     fingerprint = str(row.get("fingerprint") or "")
     if not fingerprint:

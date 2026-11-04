@@ -164,3 +164,57 @@ def test_종류별_채널로_보낸다(conn, isolated_config, monkeypatch):
     assert result["sent"] is True
     assert N.get(conn, result["id"])["route"] == "https://discord.test/승인"
     assert poster.calls[0][1] == "approval"
+
+
+# --- 🔑 Discord 가 파이썬 기본 User-Agent 를 막는다 (실측 2026-11-05) --------
+
+
+def test_고정_User_Agent_를_보낸다(monkeypatch):
+    """같은 URL 에 `curl` 은 204 인데 `urllib` 기본값은 403 이었다.
+
+    `HTTP Error 403: Forbidden` 때문에 **승인 알림이 한 건도 안 갔다.**
+    배관은 돌고 있었고(훅이 전송을 시도하고 결과를 기록했다) 헤더만
+    문제였다 — 조용한 실패였다.
+    """
+    from app import notify
+
+    seen = {}
+
+    class FakeResp:
+        status = 204
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b""
+
+    def fake_urlopen(request, timeout=None):
+        seen["headers"] = dict(request.headers)
+        seen["url"] = request.full_url
+        return FakeResp()
+
+    monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.com/api/webhooks/x/y")
+    monkeypatch.setattr(notify.urllib.request, "urlopen", fake_urlopen)
+    got = notify.send_payload({"content": "x"})
+
+    assert got["sent"] is True and got["status"] == 204
+    # urllib 은 헤더 이름을 Title-Case 로 바꾼다
+    assert seen["headers"].get("User-agent") == notify.USER_AGENT
+    assert seen["headers"].get("Content-type") == "application/json"
+
+
+def test_User_Agent_에_개인_정보가_없다():
+    """웹훅은 Discord 서버로 나가는 요청이다. 이메일·호스트 이름을 싣지 않는다."""
+    import os
+    import socket
+
+    from app import notify
+
+    text = notify.USER_AGENT
+    assert text == "lab.remote-notifier/1.0"
+    for leak in (os.path.expanduser("~"), socket.gethostname(), "@", "hse09021"):
+        assert leak not in text, leak

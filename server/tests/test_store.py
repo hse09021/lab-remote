@@ -138,10 +138,15 @@ def test_승인_요청을_올리고_결정한다(conn):
     assert A.pending(conn, "p") == []
 
 
-def test_같은_요청이_또_오면_횟수만_올라간다(conn):
+def test_거울을_또_불러도_횟수가_안_올라간다(conn):
+    """⚠ 전에는 올라갔다. 그래서 `sync` 를 부를 때마다 횟수가 늘어 **한 번의
+    거절이 3회**가 됐다(S9 e2e 가 잡았다). 상한이 2라 정상 요청이 막혔다.
+
+    진짜 재시도는 `bump()` 로 센다.
+    """
     A.open_request(conn, "p", "toolu_1", tool="Bash", action_key="pkg")
     again = A.open_request(conn, "p", "toolu_1", tool="Bash", action_key="pkg")
-    assert again["attempts"] == 2
+    assert again["attempts"] == 1
     assert len(A.pending(conn, "p")) == 1
 
 
