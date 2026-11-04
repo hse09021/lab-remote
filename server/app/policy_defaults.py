@@ -265,6 +265,11 @@ BASH_DEFAULTS = {
     # 정책 파일은 어차피 프로젝트 밖이라 AI 가 못 고친다.
     # [사람이 손으로 추가할 명령 — 비어 있음]
     "allowExtra": [],
+    # `specifications/Config.yaml` 의 `run.entrypoints` 를 **복사**해 둔다.
+    # 훅은 YAML 을 읽지 않으므로(표준 라이브러리만) 여기로 거울을 둔다.
+    # Claude 가 학습을 직접 돌리면 `newexp` 로 분류해 승인을 받는다.
+    # [Config.yaml 의 entrypoints — 생성기가 채움]
+    "entrypoints": [],
 }
 
 HEADLESS_DEFAULTS = {

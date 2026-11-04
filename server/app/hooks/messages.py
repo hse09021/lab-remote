@@ -32,6 +32,7 @@ LABELS = {
     "suspicious": "확인이 필요한 명령",
     "unparsed": "해석 못 한 명령",
     "unclassified": "분류 못 한 명령",
+    "bashAllowed": "읽기 명령",
     "schema-unknown": "훅이 못 읽은 입력",
     "denied-command": "금지된 명령",
 }

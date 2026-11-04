@@ -320,17 +320,37 @@ def coverage(ctx, command):
     ]
 
 
-def test_래퍼로_감싼_삭제가_미분류로_올라온다(ctx):
-    """실측: 래퍼 62종 중 52종이 분류를 빠져나간다. 분류는 2단계에서 메우고,
-    지금 고치는 건 "모르는 건 자동으로 열지 않는다" 와 기록이 남는 것이다."""
+def allowed(ctx, command):
+    return [
+        f.target
+        for f in bashparse.classify_with_coverage(command, ctx)
+        if f.action == "bashAllowed"
+    ]
+
+
+def test_래퍼로_감싼_삭제를_잡는다(ctx):
+    """실측에서 62종 중 52종이 빠져나갔다. 래퍼를 벗겨서 이제 잡는다."""
     cmd = f"conda run -n base rm -rf {OUTSIDE}"
-    assert actions(ctx, cmd) == []  # 아직 분류는 못 한다
-    assert coverage(ctx, cmd) == [cmd]  # 하지만 모른다고 말한다
+    assert actions(ctx, cmd) == ["outside"]
+    assert coverage(ctx, cmd) == []
 
 
 def test_복합_명령에서_아는_조각_하나가_전체를_덮지_않는다(ctx):
-    """실측에서 훅이 allow 를 준 꼴. 이제 미분류가 같이 올라온다."""
+    """실측에서 훅이 allow 를 준 꼴. 이제 뒤 조각이 outside 로 잡힌다."""
     cmd = f"echo probe > src/t.txt && conda run -n base rm -rf {OUTSIDE}"
+    found = [f.action for f in bashparse.classify_with_coverage(cmd, ctx)]
+    assert "code" in found and "outside" in found
+
+
+def test_처음_보는_명령은_여전히_미분류다(ctx):
+    """래퍼를 메워도 63번째가 나온다. 모르는 건 자동으로 열지 않는다."""
+    cmd = "처음보는도구 --무엇이든"
+    assert actions(ctx, cmd) == []
+    assert coverage(ctx, cmd) == [cmd]
+
+
+def test_복합_명령에_모르는_조각이_섞이면_미분류가_같이_올라온다(ctx):
+    cmd = "echo probe > src/t.txt && 처음보는도구 --무엇이든"
     found = [f.action for f in bashparse.classify_with_coverage(cmd, ctx)]
     assert "code" in found and "unclassified" in found
 
@@ -345,11 +365,11 @@ def test_cd_는_끝까지_따라가므로_미분류가_아니다(ctx):
     assert coverage(ctx, "cd src") == []
 
 
-def test_읽기_명령은_미분류로_올라온다(ctx):
-    """대화형에서는 defer 로 떨어져 소음이 없다. 헤드리스 쪽 소음은
-    허용 목록(계획 1-2-1, 2단계)이 줄인다."""
-    assert coverage(ctx, "ls -la") == ["ls -la"]
-    assert coverage(ctx, "cd src && ls") == ["ls"]
+def test_읽기_명령은_허용_목록으로_간다(ctx):
+    """2단계에서 허용 목록이 생겼다. 모르는 게 아니라 **아는** 명령이다."""
+    assert coverage(ctx, "ls -la") == []
+    assert allowed(ctx, "ls -la") == ["ls -la"]
+    assert allowed(ctx, "cd src && ls") == ["cd src", "ls"]
 
 
 def test_래퍼만_남은_꼴도_미분류(ctx):
@@ -363,10 +383,53 @@ def test_치환이_보이면_세그먼트를_안_쪼갠다(ctx):
 
 
 def test_같은_미분류_세그먼트는_한_번만(ctx):
-    assert coverage(ctx, "ls -la && ls -la") == ["ls -la"]
+    assert coverage(ctx, "처음보는도구 x && 처음보는도구 x") == ["처음보는도구 x"]
 
 
 def test_classify_의_계약은_그대로다(ctx):
     """기존 호출부·시험이 보는 "행동 유형만" 은 안 바뀐다."""
     assert actions(ctx, "ls -la") == []
     assert actions(ctx, REAL_BYPASS) == ["journal"]
+
+
+# --- 리다이렉트의 & 는 명령 구분자가 아니다 ----------------------------------
+
+
+@pytest.mark.parametrize(
+    "command,expected",
+    [
+        ("ls -la 2>&1 >/dev/null", ["ls -la 2>&1 >/dev/null"]),
+        ("ls >&2", ["ls >&2"]),
+        ("ls &>/dev/null", ["ls &>/dev/null"]),
+        ("ls &>>로그.txt", ["ls &>>로그.txt"]),
+        # 뒤에 백그라운드로 돌리는 `&` 는 그대로 구분자다
+        ("ls & cat x", ["ls", "cat x"]),
+        ("ls && cat x", ["ls", "cat x"]),
+    ],
+)
+def test_리다이렉트의_앰퍼샌드로는_안_쪼갠다(command, expected):
+    """`2>&1` 에서 쪼개면 뒤 조각의 명령 이름이 "1" 이 된다."""
+    assert bashparse.split_segments(command) == expected
+
+
+def test_파일_서술자_복제는_파일_쓰기가_아니다(ctx):
+    """`2>&1` 을 파일로 읽으면 `&1` 이라는 파일을 쓰는 것처럼 보인다."""
+    assert actions(ctx, "ls -la 2>&1 >/dev/null") == []
+    assert actions(ctx, "ls >&2") == []
+
+
+def test_명령_이름이_아닌_게_남으면_승인_대상(ctx):
+    """래퍼를 벗겼는데 숫자만 남는 건 벗기기가 어긋난 것이다.
+    조용히 미분류로 흘리면 대화형에서 defer 로 그냥 지나간다."""
+    assert bashparse._plausible_command("rm") is True
+    assert bashparse._plausible_command("/usr/bin/rm") is True
+    assert bashparse._plausible_command("0") is False
+    assert bashparse._plausible_command("10") is False
+    assert bashparse._plausible_command("") is False
+    assert bashparse._plausible_command("rm -rf x") is False  # 통째로 한 토큰
+    assert actions(ctx, "flock /tmp/잠금 123") == ["suspicious"]
+
+
+def test_래퍼_뒤에_제대로_된_명령이_오면_그걸_본다(ctx):
+    assert actions(ctx, "chrt -p 0 rm -rf /etc/hosts") == ["outside"]
+    assert actions(ctx, "chrt -f 10 rm -rf /etc/hosts") == ["outside"]
