@@ -92,18 +92,61 @@ def test_인자_모양(run):
     assert "--output-format" in argv and "json" in argv
 
 
-def test_헤드리스는_서브에이전트를_끈다(run):
-    """①에서 가장 성가셨던 게 서브에이전트 대기 건이었다."""
+def _disallowed(argv):
+    return {argv[i + 1] for i, x in enumerate(argv) if x == "--disallowedTools"}
+
+
+def test_서브에이전트_도구_이름이_Agent_다(run):
+    """🔑 전에는 `Task` 였고 **그건 아무것도 끄지 않았다.**
+
+    2.1.318 의 서브에이전트 도구 이름은 `Agent` 다 — 세션에 도구 목록을
+    물어봐서 확인했다. `Task` 는 존재하지 않는 이름이라
+    `--disallowedTools Task` 가 무효였고 서브에이전트가 계속 열려 있었다.
+    """
+    assert "Agent" in L.DISALLOWED_TOOLS
+    assert "Task" not in L.DISALLOWED_TOOLS, "없는 도구를 끄는 척하면 안 돼요"
+    assert "Agent" in _disallowed(L.build_argv(run))
+
+
+def test_바깥으로_내보내는_도구를_끈다(run):
+    """`Artifact` 는 claude.ai 로 올린다 — 훅의 파일 게이트와 샌드박스의
+    네트워크 허용 목록을 **둘 다** 지나간다."""
+    got = _disallowed(L.build_argv(run))
+    for tool in ("Artifact", "ArtifactComments", "ArtifactData", "SendFeedback",
+                 "PushNotification", "DesignSync"):
+        assert tool in got, tool
+
+
+def test_나중에_실행되는_도구를_끈다(run):
+    """`at`·`crontab` 을 denyCommands 로 막은 것과 같은 이유다."""
+    got = _disallowed(L.build_argv(run))
+    for tool in ("CronCreate", "CronDelete", "CronList", "RemoteTrigger",
+                 "ScheduleWakeup", "Monitor"):
+        assert tool in got, tool
+
+
+def test_판정할_수_있는_도구는_남겨_둔다(run):
+    """훅이 판정하는 것은 끄지 않는다 — 끄면 일을 못 한다."""
+    got = _disallowed(L.build_argv(run))
+    for tool in ("Bash", "Read", "Write", "Edit", "NotebookEdit",
+                 "WebFetch", "WebSearch", "ToolSearch", "Skill"):
+        assert tool not in got, tool
+
+
+def test_헤드리스_전용_플래그(run):
     argv = L.build_argv(run)
-    assert argv[argv.index("--disallowedTools") + 1] == "Task"
     assert argv[argv.index("--permission-prompts") + 1] == "none"
 
 
-def test_대화형은_그_둘을_안_붙인다(run):
+def test_대화형도_같은_도구를_끈다(run):
+    """`labremote claude` 가 있는 이유가 "같은 경계로 열기" 다."""
     run.headless = False
+    run.interactive = True
     argv = L.build_argv(run)
-    assert "--disallowedTools" not in argv
+    assert _disallowed(argv) == set(L.DISALLOWED_TOOLS)
+    # 헤드리스 전용은 안 붙는다
     assert "--permission-prompts" not in argv
+    assert "--output-format" not in argv
 
 
 def test_재개는_resume_로(run):

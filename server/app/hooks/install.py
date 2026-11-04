@@ -57,9 +57,9 @@ SHELL_LIMITATION_NOTE = (
 #:
 #: | 도구 | 빠져서 안 돌던 것 |
 #: |---|---|
-#: | `Glob` | `classify.SECRET_READ_TOOLS` 의 `~/.ssh` 훑기 차단 — **테스트는 "막힌다" 고 단정했는데 훅이 안 떴다**(거짓 초록불) |
-#: | `TodoWrite`·`ToolSearch` | `READ_ONLY_TOOLS` 판정 (헤드리스에서 `defer` 가 정지라 `allow` 를 줘야 한다) |
-#: | `Task`·`NotebookRead`·`mcp__*` | "모르는 도구 → ask" (`unclassified`) |
+#: | `ToolSearch`·`Skill`·`ReportFindings` | `READ_ONLY_TOOLS` 판정 (헤드리스에서 `defer` 는 **정지**라 `allow` 를 줘야 한다) |
+#: | `Agent`·`Workflow`·`Artifact`·`Cron*`·`Monitor`·`mcp__*` | "모르는 도구 → ask" (`unclassified`). 런처가 끄기도 하지만 두 겹이다 |
+#: | `Glob`·`TodoWrite` | 이 판에는 **없는 도구**다(`classify.PHANTOM_TOOLS`). 다른 판에서 돌아오면 그때 먹는다 |
 #:
 #: 대가로 도구 호출마다 훅이 뜬다. `toolAllowed`·`readAllowed` 는
 #: `hook_events.jsonl` 에 남기지 않아 로그 폭증을 막는다.

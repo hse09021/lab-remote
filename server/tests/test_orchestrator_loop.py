@@ -352,7 +352,9 @@ def test_헤드리스로_띄운다(conn, ready, fake):
     once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
     argv = fake.calls[0]["argv"]
     assert "--permission-prompts" in argv and "none" in argv
-    assert argv[argv.index("--disallowedTools") + 1] == "Task"
+    disallowed = {argv[i + 1] for i, x in enumerate(argv) if x == "--disallowedTools"}
+    assert "Agent" in disallowed and "Artifact" in disallowed
+    assert "Task" not in disallowed  # 없는 도구다 (2.1.318 실측)
     assert fake.calls[0]["env"]["LABREMOTE_HEADLESS"] == "1"
     assert "ANTHROPIC_API_KEY" not in fake.calls[0]["env"]
 

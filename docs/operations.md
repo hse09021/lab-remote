@@ -2826,9 +2826,9 @@ warn("…", "…", hint="…")           # ⚠  종료코드 0
 
 | 빠져 있던 도구 | 안 돌던 것 |
 |---|---|
-| **`Glob`** | `classify.SECRET_READ_TOOLS` 의 `~/.ssh` 훑기 차단. **테스트는 "막힌다" 고 단정했는데 훅이 안 떴습니다** |
-| `TodoWrite`·`ToolSearch` | `READ_ONLY_TOOLS` 판정 — 헤드리스에서 `defer` 는 **정지**라 `allow` 를 줘야 합니다 |
-| `Task`·`NotebookRead`·`mcp__*` | "모르는 도구 → ask" (`unclassified`) |
+| `ToolSearch`·`Skill`·`ReportFindings` | `READ_ONLY_TOOLS` 판정 — 헤드리스에서 `defer` 는 **정지**라 `allow` 를 줘야 합니다 |
+| `Agent`·`Workflow`·`Artifact`·`Cron*`·`Monitor`·`mcp__*` | "모르는 도구 → ask" (`unclassified`) |
+| `Glob`·`TodoWrite` | 이 판에는 **없는 도구**입니다 — 아래 S5b 를 보세요 |
 
 판정 코드만 시험하면 이걸 **영원히 못 잡습니다.** 판정은 맞는데 그 판정이
 불리지 않는 상태였습니다.
@@ -2897,3 +2897,86 @@ labremote hooks install --mode enforce
 **쓰지 않습니다**(T2). `command`·`timeout`·`onFailure`·다른 이벤트·
 `effortLevel` 은 그대로입니다. `hooks install` 은 고치기 전에 백업을
 남깁니다(`settings.json.labremote-backup`).
+
+---
+
+# 📋 S5b — 2.1.318 의 **실제 도구 목록** (2026-11-05 실측)
+
+## 왜 쟀나
+
+`labremote claude hook-sandbox` 로 열고 *"Glob 으로 `~/.ssh/*` 찾아 줘"* 를
+시켰더니 **`Glob` 도구가 세션에 아예 없어서** 호출조차 못 했습니다. 그런데
+`tests/test_credentials.py` 는 *"Glob 으로 훑는 것도 막힌다"* 고 단정하고
+있었습니다 — **S5 의 matcher 거짓 초록불과 같은 종류의 거짓**입니다. 판정은
+맞지만 없는 도구로는 시도할 수 없으니 그건 오늘의 보호가 아닙니다.
+
+세션에 도구 목록을 직접 물어봤습니다(가장 믿을 만한 출처입니다 — 번들에
+문자열이 있어도 노출되지 않습니다. `Glob`·`Grep`·`TodoWrite` 는 문자열은
+있지만 세션에 없습니다).
+
+| | 도구 |
+|---|---|
+| **직접** | `Agent` `Artifact` `Bash` `Edit` `ListAgents` `Read` `ReportFindings` `ScheduleWakeup` `SendFeedback` `Skill` `ToolSearch` `Workflow` `Write` |
+| **지연(deferred)** | `ArtifactComments` `ArtifactData` `CronCreate` `CronDelete` `CronList` `DesignSync` `Monitor` `NotebookEdit` `PushNotification` `RemoteTrigger` `SendMessage` `TaskStop` `WebFetch` `WebSearch` |
+| **없음** | `Glob` `Grep` `TodoWrite` `MultiEdit` `NotebookRead` `LS` **`Task`** |
+
+## 🔑 그래서 드러난 것: `--disallowedTools Task` 는 **아무것도 끄지 않았습니다**
+
+2.1.318 의 서브에이전트 도구 이름은 **`Agent`** 입니다. `Task` 는 없는 이름이라
+`--disallowedTools Task` 가 무효였고, **서브에이전트가 계속 열려 있었습니다.**
+"서브에이전트는 꺼 뒀다" 는 ②의 기록이 거짓이었습니다.
+
+실측으로 확인했습니다 — `--disallowedTools Agent --disallowedTools Artifact` 를
+주면 `Agent`·`Artifact`·`ArtifactComments`·`ArtifactData`·`SendFeedback` 이
+목록에서 **사라집니다.**
+
+## 끄는 도구 (헤드리스·대화형 **둘 다**)
+
+`labremote claude` 가 있는 이유가 "같은 경계로 열기" 라서 대화형에도 같이
+적용합니다.
+
+| 끄는 것 | 왜 |
+|---|---|
+| `Agent` `Workflow` `ListAgents` `SendMessage` `TaskStop` | 서브에이전트. ①에서 가장 성가셨고 루프에 필요 없습니다. 여러 에이전트를 띄우면 사용량도 터집니다 |
+| `Artifact` `ArtifactComments` `ArtifactData` `DesignSync` | **claude.ai 로 내보냅니다.** 훅의 파일 게이트와 샌드박스의 네트워크 허용 목록을 **둘 다 지나갑니다** — 연구 데이터가 나가는 길이었습니다 |
+| `SendFeedback` `PushNotification` | 바깥으로 보냅니다. 알림은 우리가 Discord 로 합니다 |
+| `CronCreate` `CronDelete` `CronList` `RemoteTrigger` `ScheduleWakeup` `Monitor` | **훅 밖에서 나중에 실행됩니다.** `at`·`crontab` 을 `denyCommands` 로 막은 것과 같은 이유입니다 |
+
+남겨 두는 것: `Bash`·`Read`·`Write`·`Edit`·`NotebookEdit`(훅이 판정) ·
+`WebFetch`·`WebSearch`(`net`) · `ToolSearch`·`Skill`·`ReportFindings`(읽기 전용).
+
+## 훅의 fail-closed 가 이미 덮고 있었습니다 (두 겹)
+
+끄는 목록과 별개로, 훅은 모르는 도구를 전부 `unclassified` 로 봅니다.
+헤드리스 실측:
+
+```
+Skill · ReportFindings · ToolSearch        → toolAllowed → allow
+Agent · Workflow · Artifact · CronCreate  → unclassified → deny
+Monitor · ListAgents · SendMessage · mcp__*→ unclassified → deny
+NotebookEdit                              → code (정책 판정)
+```
+
+읽기 전용 셋이 `allow` 여야 하는 이유: **헤드리스에서 `defer` 는 정지**입니다.
+
+## 분류 목록에서 없는 도구를 **빼지는 않았습니다**
+
+`Glob`·`Grep`·`TodoWrite`·`MultiEdit` 는 `classify` 에 그대로 둡니다 — 다른
+판·다른 모델이 쓸 수 있고 빠져 있으면 그게 구멍입니다. `classify.PHANTOM_TOOLS`
+에 모아 두고, **문구만** 고쳤습니다.
+
+- `test_Glob_으로_훑는_것도_막힌다` → **`test_Glob_판정은_준비돼_있다`**
+  ("오늘의 보호가 아니다" 를 docstring 에 명시)
+- 이 판에서 `~/.ssh` 를 훑는 실제 경로는 **`Bash`** 입니다 (`ls`·`grep -r`·
+  `find`) — `test_Bash_로도_못_읽는다` 와 `bashparse` 가 봅니다.
+
+## 새 판이 나오면 먼저 깨지는 시험
+
+`tests/test_tools_2_1_318.py`:
+
+- `TOOLS_2_1_318` 의 **모든** 도구가 "런처가 끄거나 / 훅이 판정하거나" 둘 중
+  하나다 (읽기 전용 아닌 것이 `allow` 로 새면 실패)
+- 모르는 도구는 헤드리스에서 **`deny`**
+- `DISALLOWED_TOOLS` 의 **모든 이름이 실제로 있는 도구**다 (없는 이름을 끄면
+  "껐다" 는 기록이 거짓이 됩니다 — `Task` 가 그랬습니다)
+- `PHANTOM_TOOLS` 와 `TOOLS_2_1_318` 이 겹치지 않는다

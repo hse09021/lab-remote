@@ -125,8 +125,46 @@ ENV_KEEP_INTERACTIVE = ENV_KEEP + (
     "SSH_CONNECTION", "SSH_TTY", "NO_COLOR", "FORCE_COLOR",
 )
 
-#: 헤드리스에서 끄는 도구. 서브에이전트는 ①에서 가장 성가셨고 루프에 필요 없다.
-DISALLOWED_TOOLS = ("Task",)
+#: 끄는 도구. **헤드리스와 대화형에 똑같이** 적용한다 (`labremote claude` 도
+#: 같은 경계를 쓴다).
+#:
+#: ⚠ **전에는 `("Task",)` 였고, 그건 아무것도 끄지 않았다.** 2.1.318 의
+#: 서브에이전트 도구 이름은 **`Agent`** 다 — 실측으로 확인했다(세션에 도구
+#: 목록을 물어봤다). `Task` 는 존재하지 않는 이름이라 `--disallowedTools Task`
+#: 는 무효였고, 서브에이전트가 계속 열려 있었다.
+#:
+#: | 끄는 것 | 왜 |
+#: |---|---|
+#: | `Agent`·`Workflow`·`ListAgents`·`SendMessage`·`TaskStop` | 서브에이전트. ①에서 가장 성가셨고 루프에 필요 없다. 여러 에이전트를 띄우면 사용량도 터진다 |
+#: | `Artifact`·`ArtifactComments`·`ArtifactData`·`DesignSync` | **claude.ai 로 내보낸다.** 훅의 파일 게이트와 샌드박스의 네트워크 허용 목록을 **둘 다 지나간다** — 연구 데이터가 나가는 길 |
+#: | `SendFeedback`·`PushNotification` | 바깥으로 보낸다. 알림은 우리가 Discord 로 한다 |
+#: | `CronCreate`·`CronDelete`·`CronList`·`RemoteTrigger`·`ScheduleWakeup`·`Monitor` | **훅 밖에서 나중에 실행된다.** `at`·`crontab` 을 `denyCommands` 로 막은 것과 같은 이유다 |
+#:
+#: 남겨 두는 것: `Bash`·`Read`·`Write`·`Edit`·`NotebookEdit`(훅이 판정한다) ·
+#: `WebFetch`·`WebSearch`(`net` 으로 판정) · `ToolSearch`·`Skill`·
+#: `ReportFindings`(읽기 전용).
+DISALLOWED_TOOLS = (
+    # 서브에이전트
+    "Agent",
+    "Workflow",
+    "ListAgents",
+    "SendMessage",
+    "TaskStop",
+    # 바깥으로 내보내는 것
+    "Artifact",
+    "ArtifactComments",
+    "ArtifactData",
+    "DesignSync",
+    "SendFeedback",
+    "PushNotification",
+    # 훅 밖에서 나중에 실행되는 것
+    "CronCreate",
+    "CronDelete",
+    "CronList",
+    "RemoteTrigger",
+    "ScheduleWakeup",
+    "Monitor",
+)
 
 #: 전부 막혀서 루프가 한 발짝도 못 나가는 조합
 MANUAL_PRESET = "manual"
@@ -281,11 +319,13 @@ def build_argv(run: AgentRun) -> list[str]:
     argv.append("--strict-mcp-config")
 
     argv += ["--permission-mode", mode]
+    # 끄는 도구는 **대화형에도 똑같이** 적용한다 — `labremote claude` 가 있는
+    # 이유가 "같은 경계로 열기" 다.
+    for tool in DISALLOWED_TOOLS:
+        argv += ["--disallowedTools", tool]
     if run.headless and not run.interactive:
         # 훅이 못 보는 MCP 승인창까지 닫는 안전망
         argv += ["--permission-prompts", "none"]
-        for tool in DISALLOWED_TOOLS:
-            argv += ["--disallowedTools", tool]
         if run.output_format:
             argv += ["--output-format", run.output_format]
     argv += list(run.extra_flags)
