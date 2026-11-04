@@ -39,6 +39,8 @@ __all__ = [
     "check_flags",
     "build_argv",
     "build_env",
+    "check_sandbox",
+    "plan",
 ]
 
 #: 훅을 끄거나 설정을 무시하는 플래그. **하나라도 있으면 안 띄운다.**
@@ -95,6 +97,9 @@ class AgentRun:
     #: 정책에서 읽은 권한 모드
     permission_mode: str = "default"
     headless: bool = True
+    #: 공용 캐시. 샌드박스 안에서 `/tmp` 는 **읽기 전용**이라(실측) 임시
+    #: 파일을 여기로 돌린다.
+    cache_dir: str = ""
     resume: bool = False
     extra_flags: list[str] = field(default_factory=list)
     binary: str = "claude"
@@ -175,6 +180,9 @@ def build_env(run: AgentRun, *, base: dict | None = None) -> dict[str, str]:
     """
     source = os.environ if base is None else base
     out = {k: source[k] for k in ENV_KEEP if k in source}
+    if run.cache_dir:
+        # 샌드박스 안에서 `/tmp` 는 읽기 전용이다 (실측). 캐시 아래로 돌린다.
+        out["TMPDIR"] = os.path.join(run.cache_dir, "tmp")
     if run.headless:
         out[HEADLESS_ENV] = "1"
     for name in ENV_STRIP:
@@ -199,13 +207,35 @@ def check_cwd(run: AgentRun) -> str:
     return root
 
 
+def check_sandbox(root: str, *, headless: bool = True) -> dict:
+    """Claude Bash 샌드박스가 **실제로** 켜져 있나. 헤드리스면 안 켜져 있을 때 거부.
+
+    설정 파일을 매번 읽는다 — "한 번 켰으니 켜져 있겠지" 가 아니라 **지금**
+    켜져 있는지를 본다. 꺼진 채로 헤드리스를 돌리면 AI 가 쓴 테스트 코드가
+    `~/.ssh` 를 읽고 네트워크로 보낼 수 있다 (실측).
+    """
+    from .. import policy as policy_mod
+
+    state = policy_mod.sandbox_state(root)
+    if headless and not state["ok"]:
+        raise LaunchRefused(
+            "Claude Bash 샌드박스가 켜져 있지 않아요 — 헤드리스로 띄우지 않아요: "
+            + " · ".join(state["reasons"])
+            + " · labremote hooks install 또는 init-project --if-exists update 로 "
+            ".claude/settings.json 을 다시 써 주세요."
+        )
+    return state
+
+
 def plan(run: AgentRun, *, preset: str = "", base_env: dict | None = None) -> dict:
     """띄우기 직전 한 덩어리. 검사를 **전부** 통과해야 나온다."""
     check_mode(run.permission_mode, preset=preset, headless=run.headless)
     root = check_cwd(run)
+    sandbox = check_sandbox(root, headless=run.headless)
     return {
         "argv": build_argv(run),
         "env": build_env(run, base=base_env),
         "cwd": root,
         "sessionId": run.session_id,
+        "sandbox": sandbox,
     }

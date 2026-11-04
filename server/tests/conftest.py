@@ -85,6 +85,22 @@ def project(project_root):
 
 
 @pytest.fixture()
+def sandboxed(project, project_root, tmp_path, monkeypatch):
+    """Claude Bash 샌드박스가 켜진 프로젝트. 코드 실행(`pytest`)이 열리는 조건.
+
+    **진짜 `~/.claude/settings.json` 을 건드리지 않는다.**
+    """
+    from app import policy
+
+    path = tmp_path / "claude" / "settings.json"
+    path.parent.mkdir(exist_ok=True)
+    path.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("LAB_CLAUDE_SETTINGS", str(path))
+    policy.ensure_claude_sandbox(project_root, cache_dir="", conda_roots=[])
+    return project_root
+
+
+@pytest.fixture()
 def ctx(project, project_root):
     """수동제어 · 실험이 안 도는 상태."""
     from app import runstate

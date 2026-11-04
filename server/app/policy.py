@@ -282,6 +282,183 @@ def claude_settings_path(root: str) -> str:
     return os.path.join(root, ".claude", "settings.json")
 
 
+#: Claude 의 Bash 가 바깥으로 나갈 수 있는 곳. **프록시 허용 목록**이다 —
+#: 생 DNS 는 막히고(유출 차단) 여기 적힌 도메인만 HTTPS 로 나간다 (실측).
+#: [더 필요한 도메인 — 정책의 paths.sandboxDomains 에 적어 주세요]
+SANDBOX_DOMAINS = (
+    "pypi.org",
+    "files.pythonhosted.org",
+    "huggingface.co",
+    "cdn-lfs.huggingface.co",
+    "cdn-lfs-us-1.hf.co",
+    "github.com",
+    "codeload.github.com",
+    "raw.githubusercontent.com",
+    "objects.githubusercontent.com",
+    "repo.anaconda.com",
+    "conda.anaconda.org",
+)
+
+
+#: 훅이 **스스로 쓰는** 곳. 샌드박스가 여기를 막으면 훅이 기록에 실패하고,
+#: 그러면 `HOOK_ERROR` 로 모든 도구가 막힌다 (실측에서 당했다).
+#: `policies`·`grants`·`lab.db`·`bin` 은 **일부러 뺐다** — AI 가 쓴 코드가
+#: 정책을 고치면 다음 호출부터 자기에게 allow 를 줄 수 있다.
+HOOK_WRITE_DIRS = ("pending", "requests", "denied", "runstate", "status")
+
+
+def hook_write_paths() -> list[str]:
+    data = registry.data_dir()
+    return [os.path.join(data, name) for name in HOOK_WRITE_DIRS]
+
+
+def sandbox_block(root: str, *, cache_dir: str = "", conda_roots=(), domains=()) -> dict:
+    """프로젝트 `.claude/settings.json` 에 넣을 `sandbox` 절.
+
+    실측(2026-11-04)으로 정한 값이다.
+
+    | 칸 | 값 | 왜 |
+    |---|---|---|
+    | `enabled` | true | AI 가 쓴 **테스트 코드**(`pytest`)를 가두는 유일한 수단 |
+    | `failIfUnavailable` | true | 기본이 `false` 라 못 쓰면 경고만 내고 **그냥 돈다** |
+    | `autoAllowBashIfSandboxed` | **false** | 기본이 `true` 다. 안 끄면 Bash 가 자동 허용돼 게이트가 무의미해진다 |
+    | `filesystem.allowWrite` | 프로젝트 · 공용 캐시 · 훅이 쓰는 폴더 | 그것만 호스트에 남는다 |
+    | `filesystem.allowRead` | conda 설치 폴더 | **없으면 `python`·`pytest` 가 exit 127 이다** (실측) |
+
+    ⚠ **훅도 샌드박스 안에서 돈다.** 훅이 쓰는 폴더(`pending`·`requests`…)를
+    안 열면 기록에 실패하고 `HOOK_ERROR` 로 모든 도구가 막힌다. `policies`·
+    `grants`·`lab.db` 는 일부러 안 연다 — AI 가 쓴 코드가 정책을 고치면 다음
+    호출부터 자기에게 allow 를 줄 수 있다.
+
+    ⚠ **`allowRead` 는 프로젝트 설정에서 안 먹는다**(실측). 그래서 이 절은
+    **사용자 설정**(`~/.claude/settings.json`)에 쓴다 — 훅 등록이 있는 곳이고
+    `hardProtect` 라 AI 가 못 고친다.
+    | `network.allowedDomains` | pypi·HF·github… | 생 DNS 는 막히고 이 도메인만 프록시로 나간다 |
+
+    `denyRead` 는 따로 적지 않는다 — 샌드박스가 허용한 것 말고는 애초에 안
+    보인다(실측: `~/.ssh`·`~/.claude.json`·정책 파일 전부 `FileNotFoundError`).
+    """
+    write = [paths.real(root)] + hook_write_paths()
+    if cache_dir:
+        write.append(paths.real(cache_dir))
+    read = [paths.real(item) for item in conda_roots if item]
+    return {
+        "enabled": True,
+        "failIfUnavailable": True,
+        "autoAllowBashIfSandboxed": False,
+        "allowUnsandboxedCommands": False,
+        "excludedCommands": [],
+        "filesystem": {
+            "allowWrite": sorted(dict.fromkeys(write)),
+            "allowRead": sorted(dict.fromkeys(read)),
+        },
+        "network": {"allowedDomains": sorted(dict.fromkeys(list(domains) or list(SANDBOX_DOMAINS)))},
+    }
+
+
+def sandbox_state(root: str) -> dict:
+    """프로젝트 설정의 `sandbox` 절이 **기대대로인가.**
+
+    런처가 매 실행 전에 보고, 아니면 헤드리스 루프를 띄우지 않는다
+    (fail-closed). 훅도 이걸 보고 `pytest` 같은 코드 실행을 열지 말지 정한다.
+
+    표준 라이브러리만 쓴다 — 훅 경로에서 불린다.
+    """
+    out = {"ok": False, "reasons": [], "allowWrite": [], "allowRead": [], "domains": []}
+    block = None
+    # 사용자 설정이 먼저다 — `allowRead` 가 프로젝트 설정에서는 안 먹는다(실측).
+    for path in (user_settings_path(), claude_settings_path(root)):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            continue
+        if isinstance(data, dict) and isinstance(data.get("sandbox"), dict):
+            block = data["sandbox"]
+            break
+    if block is None:
+        out["reasons"].append("sandbox 설정이 없어요 (~/.claude/settings.json)")
+        return out
+
+    if block.get("enabled") is not True:
+        out["reasons"].append("sandbox.enabled 가 켜져 있지 않아요")
+    if block.get("failIfUnavailable") is not True:
+        # 기본이 false 다. 그대로 두면 샌드박스를 못 쓸 때 경고만 내고 그냥 돈다.
+        out["reasons"].append("sandbox.failIfUnavailable 이 켜져 있지 않아요")
+    if block.get("autoAllowBashIfSandboxed") is not False:
+        # 기본이 true 다. 안 끄면 Bash 가 자동 허용돼 승인 게이트가 무의미해진다.
+        out["reasons"].append("sandbox.autoAllowBashIfSandboxed 를 꺼야 해요")
+    if block.get("allowUnsandboxedCommands"):
+        out["reasons"].append("sandbox.allowUnsandboxedCommands 가 켜져 있어요")
+    excluded = block.get("excludedCommands") or []
+    if excluded:
+        out["reasons"].append(f"sandbox.excludedCommands 가 비어 있지 않아요: {excluded}")
+
+    filesystem = block.get("filesystem") if isinstance(block.get("filesystem"), dict) else {}
+    out["allowWrite"] = list(filesystem.get("allowWrite") or [])
+    out["allowRead"] = list(filesystem.get("allowRead") or [])
+    out["domains"] = list((block.get("network") or {}).get("allowedDomains") or [])
+    if not out["allowWrite"]:
+        out["reasons"].append("sandbox.filesystem.allowWrite 가 비어 있어요")
+    elif not any(paths.is_inside(paths.real(item), paths.real(root)) or
+                 paths.real(item) == paths.real(root) for item in out["allowWrite"]):
+        out["reasons"].append("allowWrite 에 프로젝트 폴더가 없어요")
+
+    out["ok"] = not out["reasons"]
+    return out
+
+
+def user_settings_path() -> str:
+    """`~/.claude/settings.json` — 훅 등록이 있는 곳. `hardProtect` 다.
+
+    `LAB_CLAUDE_SETTINGS` 로 바꿀 수 있다 (`hooks/install.py` 와 같은 장치).
+    """
+    override = os.environ.get("LAB_CLAUDE_SETTINGS")
+    if override:
+        return os.path.abspath(override)
+    return os.path.join(os.path.expanduser("~"), ".claude", "settings.json")
+
+
+def ensure_claude_sandbox(
+    root: str, *, cache_dir: str = "", conda_roots=(), domains=(), extra_write=()
+) -> dict:
+    """`sandbox` 절을 **사용자 설정**에 넣거나 고친다.
+
+    프로젝트 설정이 아니라 사용자 설정인 이유: `filesystem.allowRead` 가
+    프로젝트 설정에서는 안 먹는다(실측). 사용자 설정은 훅 등록이 있는 곳이고
+    `hardProtect` 라 AI 가 못 고친다.
+
+    기계 하나에 프로젝트가 여럿이므로 `allowWrite` 에 **등록된 프로젝트를
+    전부** 넣는다. 다른 키는 그대로 둔다 (병합).
+    """
+    path = user_settings_path()
+    data = {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        if isinstance(loaded, dict):
+            data = loaded
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        data = {}
+
+    block = sandbox_block(
+        root, cache_dir=cache_dir, conda_roots=conda_roots, domains=domains
+    )
+    write = list(block["filesystem"]["allowWrite"])
+    for item in [*registry.load().keys(), *extra_write]:
+        target = paths.real(item)
+        if target and target not in write:
+            write.append(target)
+    block["filesystem"]["allowWrite"] = sorted(dict.fromkeys(write))
+
+    before = json.dumps(data.get("sandbox"), sort_keys=True)
+    data["sandbox"] = block
+    if before == json.dumps(block, sort_keys=True):
+        return {"path": path, "changed": False, "state": sandbox_state(root)}
+    registry.write_json(path, data)
+    return {"path": path, "changed": True, "state": sandbox_state(root)}
+
+
 def ensure_permission_mode(root: str, mode: str = D.DEFAULT_PERMISSION_MODE) -> dict:
     """프로젝트 `.claude/settings.json` 에 `permissions.defaultMode` 를 박는다.
 

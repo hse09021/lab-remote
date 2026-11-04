@@ -189,11 +189,19 @@ def test_doctor_는_dump_모드를_알려_준다(capsys, made):
 
 
 def test_doctor_가_enforce_에서_초록(capsys, made):
+    """bwrap 을 못 쓰는 환경(샌드박스 안에서 시험을 돌리는 경우 등)에서는
+    "학습 샌드박스" 만 ✘ 다 — 그건 `doctor` 가 알려 줘야 할 사실이다."""
+    from app.runner import sandbox
+
     run(["hooks", "install", "--mode", "enforce"])
     capsys.readouterr()
     code = run(["doctor"])
     out = capsys.readouterr().out
-    assert code == 0, out
+    if sandbox.available()["ok"]:
+        assert code == 0, out
+        return
+    failed = [line for line in out.splitlines() if line.startswith("✘")]
+    assert failed and all("학습 샌드박스" in line for line in failed), out
 
 
 def test_doctor_가_한계를_매번_안내(capsys, made):
