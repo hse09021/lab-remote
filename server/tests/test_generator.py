@@ -326,3 +326,16 @@ def test_gitignore_가_Current_yaml_을_무시한다(made):
     tracked = gitops.tracked_files(made["target"])
     assert L.LOOP_LAYOUT["current"] not in tracked
     assert L.LOOP_LAYOUT["state"] in tracked
+
+
+def test_CLAUDE_md_가_루프_규약을_적는다(made):
+    """프롬프트만으로는 부족하다 — 고정 지침에도 있어야 매 세션에서 읽힌다."""
+    from app import loop_layout as L
+
+    body = open(os.path.join(made["target"], "CLAUDE.md"), encoding="utf-8").read()
+    # "현재 실험" 의 근거를 맨 앞에서 읽게 한다
+    assert L.LOOP_LAYOUT["current"] in body
+    # 4번(실험 실행)은 AI 가 하지 않는다
+    assert "4번(실험 실행)은 당신이 하지 않아요" in body
+    assert "run.json" in body and "문자열 배열" in body
+    assert "$" not in body  # 자리표시가 새어 나가지 않았다

@@ -43,6 +43,8 @@ $goal
 
 ## 기준 문서 (이 순서로 참조해요)
 
+0. `$current_path` — **지금 어느 실험이 도는지.** 시스템이 쓰는 파일이라
+   당신은 못 고쳐요. 무엇이 왜 잠겼는지가 여기에만 있어요.
 1. `$state_path` — 현재 루프 상태
 2. `$experiment_spec_path` — 가설·변인·조건
 3. `$config_path` — 종료 조건과 실행 환경 (잠김)
@@ -60,6 +62,18 @@ $goal
 
 1. 현재 상태 확인 → 2. 실험 조건 검증 → 3. 새 실험 폴더 생성 →
 4. 실험 실행 → 5. 결과 저장 → 6. 결과 평가 → 7. 로그 갱신 → 8. 상태 갱신
+
+> ⚠ **4번(실험 실행)은 당신이 하지 않아요.**
+> `$experiments_dir/EXP-NNN/run.json` 에 **명세만** 쓰면 시스템이 돌려요.
+> 학습을 직접 띄우면 (`python src/train.py` 같은) 승인 대기로 떨어져요.
+>
+> ```json
+> {"entrypoint": "<Config.yaml 의 run.entrypoints 에 있는 것>",
+>  "args": ["--epochs", "50"], "timeout_sec": 21600}
+> ```
+>
+> `args` 는 **문자열 배열**이에요. `command` 같은 자유 문자열은 안 받아요.
+> 캐시 변수(`HF_HOME`·`TMPDIR` …)는 시스템이 정해요.
 
 ## 실험 규칙
 
@@ -87,7 +101,10 @@ $goal
 
 - conda 환경: `$env_name` (Python $python_version)
 - 활성화: `conda activate $env_name`
-- 실험 실행: `[실행 명령 — 첫 실험을 설계할 때 채워 주세요]`
+- 실험 실행: **시스템이 해요.** `$config_path` 의 `run.entrypoints` 에 돌릴 수
+  있는 스크립트를 적어 두면, `run.json` 의 명세를 보고 시스템이 띄워요.
+- 학습이 쓸 수 있는 곳: **이 프로젝트 폴더와 공용 캐시뿐**이에요. 모델·pip·
+  임시 파일은 시스템이 캐시 폴더로 돌려 놨어요 (`HF_HOME`·`TMPDIR` …).
 
 ## 승인이 필요한 행동
 

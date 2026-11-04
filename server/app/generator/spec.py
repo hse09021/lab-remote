@@ -48,6 +48,8 @@ class ProjectSpec:
             "exp_id": self.first_exp or "EXP-001",
             # LOOP_LAYOUT 의 경로를 그대로 템플릿 문구에 쓴다
             "state_path": L.LOOP_LAYOUT["state"],
+            # ②: AI 가 못 고치는 "현재 실험" 표시 (selfProtect)
+            "current_path": L.LOOP_LAYOUT["current"],
             "config_path": L.LOOP_LAYOUT["config"],
             "evaluation_path": L.LOOP_LAYOUT["evaluation"],
             "process_path": L.LOOP_LAYOUT["process"],
