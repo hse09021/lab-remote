@@ -80,8 +80,8 @@ LOOP_LAYOUT: dict[str, str] = {
     "state": "state/State.yaml",
     # "지금 어느 실험이 도는지" 의 유일한 근거. PDF 에는 없고 ②가 넣었다 —
     # 실측에서 Claude 가 잠금의 이유를 설명하지 못했다(`app/loopstate.py`).
-    # **오케스트레이터만 쓴다.** selfProtect 목록에 넣는 건 2단계다
-    # (정책 판이 2 -> 3 으로 올라가므로 policy migrate 와 같이 간다).
+    # **오케스트레이터만 쓴다.** selfProtect 목록에 들어 있어서 AI 가
+    # 고치려 하면 훅이 무조건 DENY 한다 (정책 판 3).
     "current": "state/Current.yaml",
     # logs/ — 누적 기록 (PDF 5쪽, 7쪽)
     "experiment_log": "logs/Experiment_log.csv",
@@ -179,12 +179,18 @@ def journal_files() -> list[str]:
 
 
 def self_protected_files() -> list[str]:
-    """훅 자신을 지키는 목록. 잠긴 3개와 같은 무게로 항상 차단한다."""
+    """훅 자신을 지키는 목록. 잠긴 3개와 같은 무게로 항상 차단한다.
+
+    `Current.yaml` 이 여기 있는 이유: 실측에서 Claude 가 잠금의 이유를
+    설명하지 못했다. 그 근거 파일을 AI 가 고칠 수 있으면 근거가 아니다.
+    오케스트레이터만 쓴다 (`app/loopstate.py`).
+    """
     return [
         ".claude/**",
         ".mcp.json",
         LOOP_LAYOUT["approval_log"],
         LOOP_LAYOUT["hook_events"],
+        LOOP_LAYOUT["current"],
     ]
 
 

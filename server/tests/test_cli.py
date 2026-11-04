@@ -372,7 +372,9 @@ def test_policy_migrate(capsys, made):
 
     assert run(["policy", "migrate", "hook-sandbox"]) == 0
     out = capsys.readouterr().out
-    assert "1 → 2" in out
+    from app import policy_defaults as D
+
+    assert f"1 → {D.POLICY_VERSION}" in out
     assert "defaultMode=default" in out
     assert policy.load("hook-sandbox").headless["onAsk"] == "deny-with-reason"
 

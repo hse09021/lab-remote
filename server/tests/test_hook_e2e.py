@@ -531,3 +531,50 @@ def test_25_허가로_통과하면_승인_요청을_다시_열지_않는다(
         if '"notify"' in e
     ]
     assert notified == [], notified
+
+
+# --- 판 3: Current.yaml 보호 --------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "tool,tool_input",
+    [
+        ("Write", {"content": "running: false"}),
+        ("Edit", {"old_string": "true", "new_string": "false"}),
+    ],
+)
+def test_26_Current_yaml_수정은_차단(wrapper, project, project_root, hook_event, tool, tool_input):
+    """"지금 어느 실험이 도는지" 의 근거다. AI 가 고치면 근거가 아니다."""
+    from app import loop_layout as L
+
+    path = os.path.join(project_root, L.LOOP_LAYOUT["current"])
+    event = hook_event(tool, {"file_path": path, **tool_input}, cwd=project_root)
+    out = run(wrapper, event)
+    assert out["permissionDecision"] == "deny"
+    assert "훅과 권한 설정을 지키는 파일" in out["permissionDecisionReason"]
+
+
+def test_26_Bash_로_Current_yaml_을_고치는_것도_차단(wrapper, project, project_root, hook_event):
+    event = hook_event(
+        "Bash", {"command": "sed -i 's/true/false/' state/Current.yaml"}, cwd=project_root
+    )
+    assert decision(wrapper, event) == "deny"
+
+
+def test_26_State_yaml_은_여전히_AI_것이다(wrapper, project, project_root, hook_event):
+    """PDF 의 Update Order 가 깨지면 안 된다."""
+    from app import loop_layout as L
+
+    path = os.path.join(project_root, L.LOOP_LAYOUT["state"])
+    event = hook_event("Write", {"file_path": path, "content": "loop_no: 3"}, cwd=project_root)
+    assert decision(wrapper, event) == "allow"
+
+
+def test_26_프리셋을_올려도_Current_yaml_은_잠겨_있다(wrapper, project, project_root, hook_event):
+    from app import loop_layout as L, policy
+
+    project.set_saved("full")
+    policy.save(project)
+    path = os.path.join(project_root, L.LOOP_LAYOUT["current"])
+    event = hook_event("Write", {"file_path": path, "content": "x"}, cwd=project_root)
+    assert decision(wrapper, event) == "deny"

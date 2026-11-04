@@ -302,3 +302,78 @@ def test_migrate_기록이_JSONL_에_남는다(project, project_root):
     path = approval_log.event_path(project_root)
     lines = [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
     assert any(item["event"] == "policy-migrate" for item in lines)
+
+
+# --- 판 3: ②가 들어오면서 늘어난 것 -------------------------------------------
+
+
+def test_판_3_이다():
+    assert D.POLICY_VERSION == 3
+
+
+def test_Current_yaml_이_selfProtect_에_있다(project):
+    """AI 가 고칠 수 있으면 "현재 실험" 의 근거가 되지 못한다."""
+    from app import loop_layout as L
+
+    protected = project.paths["selfProtectedFiles"]
+    assert L.LOOP_LAYOUT["current"] in protected
+    assert L.LOOP_LAYOUT["state"] not in protected  # State.yaml 은 AI 소유
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # 자기 승인·자기 조작
+        "labremote",
+        "sqlite3",
+        "systemctl",
+        "systemd-run",
+        "loginctl",
+        "kill",
+        "pkill",
+        "killall",
+        # 격리를 깨는 것
+        "bwrap",
+        "unshare",
+        "nsenter",
+        "chroot",
+        "setarch",
+        # 프로세스에 붙는 것
+        "strace",
+        "ltrace",
+        "gdb",
+        # 컨테이너
+        "docker",
+        "podman",
+        # 훅 밖에서 나중에 실행되는 것
+        "at",
+        "batch",
+        "crontab",
+        # ① 에서부터 막던 것
+        "claude",
+        "shred",
+        "mkfs",
+    ],
+)
+def test_금지_명령_목록(project, command):
+    assert command in project.bash["denyCommands"], command
+
+
+def test_허용_목록은_추가만_하는_칸이_있다(project):
+    """기본 목록은 코드에 둔다 — AI 가 정책으로 목록을 넓히지 못하게."""
+    assert project.bash["allowExtra"] == []
+
+
+def test_migrate_가_판_3_으로_올린다(project, project_root):
+    from app import policy, registry
+
+    data = dict(project.data)
+    data["version"] = 2
+    registry.write_json(project.path, data)
+    info = policy.migrate("hook-sandbox")
+    assert info["from"] == 2 and info["to"] == 3
+    after = policy.load("hook-sandbox")
+    assert "labremote" in after.bash["denyCommands"]
+    from app import loop_layout as L
+
+    assert L.LOOP_LAYOUT["current"] in after.paths["selfProtectedFiles"]

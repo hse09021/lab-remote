@@ -79,3 +79,39 @@ def test_started_는_프로젝트_밖에_쌓인다(project_root):
     runstate.set_running("hook-sandbox", "EXP-001")
     path = paths.real(registry.runstate_path("hook-sandbox"))
     assert paths.rel_or_none(project_root, path) is None
+
+
+def test_동시에_실험을_시작해도_목록이_안_사라진다(isolated_data):
+    """`started` 는 읽어서 더하고 다시 쓴다. 잠그지 않으면 한쪽의 추가가
+    사라지고, 그러면 "이전 실험" 잠금이 조용히 풀린다."""
+    import os
+    import subprocess
+    import sys
+
+    code = (
+        "import sys\n"
+        "from app import runstate\n"
+        "for i in range(20):\n"
+        "    runstate.mark_started('hook-sandbox', f'{sys.argv[1]}-{i:03d}')\n"
+    )
+    env = {**os.environ, "PYTHONPATH": os.getcwd()}
+    procs = [
+        subprocess.Popen([sys.executable, "-c", code, tag], env=env, cwd=os.getcwd())
+        for tag in ("EXP", "OTH")
+    ]
+    for proc in procs:
+        assert proc.wait() == 0
+
+    started = runstate.load("hook-sandbox").started
+    assert len(started) == 40, len(started)
+    assert len(set(started)) == 40
+
+
+def test_잠금_파일은_데이터_폴더에_생긴다(isolated_data):
+    with runstate.locked("hook-sandbox"):
+        pass
+    import os
+
+    assert os.path.exists(
+        os.path.join(str(isolated_data), "runstate", ".hook-sandbox.lock")
+    )

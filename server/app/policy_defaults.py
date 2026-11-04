@@ -29,14 +29,18 @@ __all__ = [
     "HARD_PROTECTED",
     "SECRET_FILES",
     "SECRET_EXEMPT",
+    "DENY_COMMANDS",
     "default_policy",
 ]
 
 #: 정책 파일 스키마 판. 올라가면 policy.load() 가 거절한다.
 #:   1 -> 2  보호 목록·비밀 파일·산출물 보존이 생기고 headless 기본값이
 #:           deny-with-reason 으로 바뀌었다 (2026-11-04 승인 경로 실측).
+#:   2 -> 3  ②가 들어왔다. state/Current.yaml 이 selfProtect 에 들어가고,
+#:           denyCommands 에 **자기 승인 차단**(labremote·sqlite3·systemctl·
+#:           kill 류)과 격리를 깨는 명령이 들어갔다. bash.allowExtra 가 생겼다.
 #:           `labremote policy migrate <이름>` 으로 올린다.
-POLICY_VERSION = 2
+POLICY_VERSION = 3
 
 PERMISSIONS = ("allow", "ask", "block")
 
@@ -210,11 +214,57 @@ SECRET_FILES = [
 #: 비밀이 아닌 것. 변수 **이름**만 적어 커밋하는 파일이라 읽을 수 있어야 한다.
 SECRET_EXEMPT = ["**/.env.example", "**/.env.sample", "**/.env.template"]
 
+#: 이름만으로 막는 명령. **AI 가 ②를 되돌리지 못하게 하는 1차 자물쇠다.**
+#:
+#: ②가 `labremote approve` 같은 명령을 만드는 순간, Claude 의 Bash 가 그걸
+#: 불러 **자기 요청을 스스로 승인**할 수 있다. 그러면 1회용 허가 설계 전체가
+#: 무의미해진다. 그래서 승인·큐·서비스를 건드릴 수 있는 길을 이름부터 막는다.
+#:
+#: 이름만으로는 부족하다 — `python -m app.cli approve` 처럼 돌아가는 길은
+#: `hooks/bashparse.py` 가 따로 본다.
+DENY_COMMANDS = [
+    # ① 에서부터 막던 것
+    "claude",
+    "shred",
+    "mkfs",
+    # 자기 승인·자기 조작 (②)
+    "labremote",
+    "sqlite3",
+    "systemctl",
+    "systemd-run",
+    "loginctl",
+    "kill",
+    "pkill",
+    "killall",
+    # 격리를 깨는 것 — 학습 샌드박스가 이것들로 풀린다
+    "bwrap",
+    "unshare",
+    "nsenter",
+    "chroot",
+    "setarch",
+    # 프로세스에 붙어 들여다보거나 주입하는 것
+    "strace",
+    "ltrace",
+    "gdb",
+    # `-v /:/h` 한 줄이면 호스트 전체가 열린다
+    "docker",
+    "podman",
+    # 훅 밖에서 나중에 실행되는 길
+    "at",
+    "batch",
+    "crontab",
+]
+
 BASH_DEFAULTS = {
     "escalateOnSubstitution": True,
-    "denyCommands": ["claude", "shred", "mkfs"],
+    "denyCommands": list(DENY_COMMANDS),
     # git 원격은 ②의 오케스트레이터가 전담한다. net 으로 보면 ask 소음만 늘어난다.
     "gitRemoteAsNet": False,
+    # 헤드리스 허용 목록에 **더하는** 명령. 빼지는 못한다 (코드가 기본 목록의
+    # 단일 출처다). AI 가 정책을 통해 목록을 넓히는 길을 막으려는 것이고,
+    # 정책 파일은 어차피 프로젝트 밖이라 AI 가 못 고친다.
+    # [사람이 손으로 추가할 명령 — 비어 있음]
+    "allowExtra": [],
 }
 
 HEADLESS_DEFAULTS = {
