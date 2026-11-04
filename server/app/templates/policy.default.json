@@ -179,6 +179,7 @@
       "*.log"
     ],
     "allowOutsideRead": true,
+    "readAllowRoots": [],
     "secretFilesExtra": [],
     "cacheDir": "",
     "extraWritableRoots": []
@@ -218,6 +219,9 @@
   "headless": {
     "onAsk": "deny-with-reason",
     "notifyDiscord": true
+  },
+  "runner": {
+    "injectTokens": []
   },
   "logPath": "logs/Approval_log.csv",
   "eventLogPath": "logs/hook_events.jsonl",

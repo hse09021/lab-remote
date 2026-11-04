@@ -220,3 +220,90 @@ def test_기본_가림_목록으로도_돈다(ready):
     assert outcome.state == "done"
     probes = json.load(open(os.path.join(spec.output_dir, "probes.json"), encoding="utf-8"))
     assert probes[0]["result"] == "BLOCKED"
+
+
+# --- 홈 허용 목록 (bwrap 필요) ---------------------------------------------------
+
+#: 사용자가 꼽은 자격 증명 경로. 샌드박스 안에서 **하나도 보이면 안 된다.**
+HOME_SECRETS = [
+    "~/.ssh",
+    "~/.ssh/id_ed25519",
+    "~/.gnupg",
+    "~/.git-credentials",
+    "~/.netrc",
+    "~/.aws",
+    "~/.docker/config.json",
+    "~/.kaggle",
+    "~/.config/gh",
+    "~/.pypirc",
+    "~/.mozilla",
+    "~/.config/google-chrome",
+    "~/.config/Code",
+    "~/.bash_history",
+    "~/.claude/.credentials.json",
+]
+
+
+def inside(argv_tail, script):
+    """샌드박스 안에서 셸 한 줄을 돌리고 출력을 돌려준다."""
+    import subprocess
+
+    done = subprocess.run(
+        [*argv_tail, "/bin/sh", "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    return done.stdout + done.stderr
+
+
+@needs_bwrap
+def test_샌드박스_안에서_홈_자격_증명이_안_보인다(ready, cache_dir_for_test=None):
+    """`--ro-bind / /` 만 하면 전부 읽힌다. 네트워크가 열려 있으니 곧 나간다."""
+    argv = SB.command([], project_root=ready, bwrap=STATE["bwrap"])[:-1]
+    checks = " ".join(f'"{p}"' for p in HOME_SECRETS)
+    out = inside(argv, f'for p in {checks}; do [ -e "$p" ] && echo "읽힘 $p"; done; echo 끝')
+    assert "읽힘" not in out, out
+    assert "끝" in out
+
+
+@needs_bwrap
+def test_샌드박스_안에서도_학습에_필요한_것은_된다(ready):
+    """가두되 일은 되게 해야 한다 — conda 파이썬·GPU·프로젝트."""
+    import sys
+
+    argv = SB.command([], project_root=ready, bwrap=STATE["bwrap"])[:-1]
+    out = inside(
+        argv,
+        f'{sys.executable} -c "import sys; print(\'파이썬\', sys.version_info[0])" ; '
+        f'ls "{ready}" >/dev/null && echo 프로젝트 ; '
+        f'nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1',
+    )
+    assert "파이썬 3" in out, out
+    assert "프로젝트" in out, out
+
+
+@needs_bwrap
+def test_홈_안의_캐시는_다시_열린다(ready, tmp_path):
+    """캐시 기본값이 `~/lab-cache` 다. 홈을 가린 뒤 다시 열려야 한다."""
+    import os as _os
+
+    from app.runner import cache as C
+
+    cache = _os.path.join(_os.path.expanduser("~"), "lab-cache-시험")
+    _os.makedirs(cache, exist_ok=True)
+    try:
+        argv = SB.command([], project_root=ready, cache_dir=cache, bwrap=STATE["bwrap"])[:-1]
+        out = inside(argv, f'echo 안녕 > "{cache}/표식" && cat "{cache}/표식"')
+        assert "안녕" in out, out
+        assert _os.path.exists(_os.path.join(cache, "표식"))  # 호스트에 남는다
+    finally:
+        for name in ("표식",):
+            try:
+                _os.remove(_os.path.join(cache, name))
+            except OSError:
+                pass
+        try:
+            _os.rmdir(cache)
+        except OSError:
+            pass

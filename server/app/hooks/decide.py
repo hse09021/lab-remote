@@ -109,12 +109,22 @@ def decide(finding: Finding, ctx: Ctx) -> Decision:
             ASK(M.with_guard(M.unparsed(str(finding.target))), **base), ctx, label
         )
 
+    # --- 프로젝트 밖 읽기 ---------------------------------------------------
+    # 네트워크가 열려 있으니 **읽힌 건 곧 나갈 수 있다.** 대화형은 그대로
+    # 두고(①의 동작), 헤드리스에서는 승인을 받는다.
+    if action == "readOutside":
+        if not ctx.headless:
+            return DEFER(**base)
+        return _maybe_headless(
+            ASK(M.with_guard(M.read_outside(str(finding.target))), **base), ctx, label
+        )
+
     # --- 허용 목록에 있는 명령 (헤드리스 전용) ------------------------------
     # 실측: 헤드리스에서 `defer` 는 통과가 아니라 **정지**다(tool_deferred).
     # `ls` 조차 아무것도 못 하고 끝난다. 그래서 아는 명령은 allow 를 준다.
     # 대화형에서는 defer 가 정상 동작하므로 그대로 둔다 — 훅이 함부로 allow 를
     # 주지 않는다는 이 모듈의 원칙을 헤드리스에서만 접는다.
-    if action == "bashAllowed":
+    if action in ("bashAllowed", "readAllowed", "toolAllowed"):
         if ctx.headless:
             return ALLOW(**base)
         return DEFER(**base)

@@ -116,14 +116,47 @@ def test_프로젝트_설정이_우회_모드면_빨강(project, project_root, f
     assert doctor.permission_mode_check(project_root, "hook-sandbox")["ok"] is False
 
 
-def test_이미_있는_값은_안_바꾼다(project, project_root):
+def test_이미_있는_defaultMode_는_안_바꾼다(project, project_root):
+    """사람이 고른 모드를 되돌리지 않는다. 다른 키도 그대로 둔다."""
     os.makedirs(os.path.join(project_root, ".claude"), exist_ok=True)
     with open(policy.claude_settings_path(project_root), "w", encoding="utf-8") as fh:
         json.dump({"permissions": {"defaultMode": "plan"}, "나의키": 1}, fh)
     info = policy.ensure_permission_mode(project_root)
-    assert info["changed"] is False and info["mode"] == "plan"
+    assert info["mode"] == "plan"
     with open(info["path"], encoding="utf-8") as fh:
-        assert json.load(fh)["나의키"] == 1
+        data = json.load(fh)
+    assert data["나의키"] == 1
+    # ②에서 더하는 키는 새로 들어간다
+    assert data["permissions"]["blockReadsOutsideWorkingDirectories"] is True
+
+
+def test_두_번_불러도_안_바뀐다(project, project_root):
+    os.makedirs(os.path.join(project_root, ".claude"), exist_ok=True)
+    policy.ensure_permission_mode(project_root)
+    again = policy.ensure_permission_mode(project_root)
+    assert again["changed"] is False
+
+
+def test_프로젝트_밖_읽기_쓰기를_막는_설정을_박는다(project, project_root):
+    """홈의 자격 증명을 경로 하나하나 적지 않고 통째로 막는다 (실측 확인)."""
+    os.makedirs(os.path.join(project_root, ".claude"), exist_ok=True)
+    info = policy.ensure_permission_mode(project_root)
+    with open(info["path"], encoding="utf-8") as fh:
+        perms = json.load(fh)["permissions"]
+    assert perms["blockReadsOutsideWorkingDirectories"] is True
+    assert perms["blockWritesOutsideWorkingDirectories"] is True
+    assert perms["blockReadsExemptPaths"] == []
+
+
+def test_사람이_끈_설정은_되살리지_않는다(project, project_root):
+    """읽어야 할 바깥 경로가 있어서 끈 것일 수 있다. 되돌리면 싸움이 된다."""
+    os.makedirs(os.path.join(project_root, ".claude"), exist_ok=True)
+    with open(policy.claude_settings_path(project_root), "w", encoding="utf-8") as fh:
+        json.dump({"permissions": {"defaultMode": "default",
+                                   "blockReadsOutsideWorkingDirectories": False}}, fh)
+    info = policy.ensure_permission_mode(project_root)
+    with open(info["path"], encoding="utf-8") as fh:
+        assert json.load(fh)["permissions"]["blockReadsOutsideWorkingDirectories"] is False
 
 
 def test_다른_키는_그대로_둔다(project, project_root):

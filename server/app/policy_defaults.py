@@ -30,6 +30,7 @@ __all__ = [
     "SECRET_FILES",
     "SECRET_EXEMPT",
     "DENY_COMMANDS",
+    "RUNNER_DEFAULTS",
     "default_policy",
 ]
 
@@ -204,15 +205,62 @@ def HARD_PROTECTED() -> list[str]:
 #: 비밀 값이 든 파일. **읽기까지** 막는다 (그 밖의 프로젝트 밖 읽기는 허용).
 #: 실제 비밀은 프로젝트 폴더 **밖** `~/.config/labremote/<프로젝트>.env` 에 둔다
 #: — 재귀 읽기(`grep -r`)는 훅이 못 막으므로 위치 규칙이 1차 방어다.
+#:
+#: 홈의 자격 증명을 전부 넣었다. 네트워크가 열려 있으니 **읽히면 곧 나간다** —
+#: SSH 키 하나로 저장소가, AWS 자격 증명 하나로 계정이 열린다. 학습 샌드박스는
+#: 홈을 통째로 가리지만(`runner/sandbox.home_dirs`), 훅은 Claude 의 **도구
+#: 호출**을 막는 자리라 따로 적어야 한다.
 SECRET_FILES = [
     "~/.claude/.credentials.json",
     "~/.config/labremote/**",
     "**/.env",
     "**/.env.*",
+    # SSH·GPG — 키 하나로 저장소와 서버가 열린다
+    "~/.ssh/**",
+    "~/.gnupg/**",
+    # 자격 증명 파일
+    "~/.git-credentials",
+    "~/.netrc",
+    "~/.pypirc",
+    "~/.npmrc",
+    "~/.aws/**",
+    "~/.azure/**",
+    "~/.config/gcloud/**",
+    "~/.kube/config",
+    "~/.docker/config.json",
+    "~/.kaggle/**",
+    "~/.config/gh/**",
+    "~/.config/hub",
+    "~/.huggingface/**",
+    "~/.cache/huggingface/token",
+    "~/.netrc.gpg",
+    # 브라우저·편집기 프로필 — 저장된 비밀번호와 세션 쿠키가 있다
+    "~/.mozilla/**",
+    "~/.config/google-chrome/**",
+    "~/.config/chromium/**",
+    "~/.config/BraveSoftware/**",
+    "~/.config/Code/**",
+    "~/.config/Code - OSS/**",
+    "~/.vscode/**",
+    # 셸 기록 — 붙여 넣은 토큰이 그대로 남아 있다
+    "~/.bash_history",
+    "~/.zsh_history",
+    "~/.python_history",
+    "~/.psql_history",
+    "~/.mysql_history",
 ]
 
 #: 비밀이 아닌 것. 변수 **이름**만 적어 커밋하는 파일이라 읽을 수 있어야 한다.
-SECRET_EXEMPT = ["**/.env.example", "**/.env.sample", "**/.env.template"]
+#: SSH 공개키와 `known_hosts` 는 비밀이 아니다 — git 원격을 쓰려면 봐야 한다.
+SECRET_EXEMPT = [
+    "**/.env.example",
+    "**/.env.sample",
+    "**/.env.template",
+    "~/.ssh/*.pub",
+    "~/.ssh/known_hosts",
+    "~/.ssh/known_hosts.old",
+    "~/.ssh/config",
+]
 
 #: 이름만으로 막는 명령. **AI 가 ②를 되돌리지 못하게 하는 1차 자물쇠다.**
 #:
@@ -272,6 +320,17 @@ BASH_DEFAULTS = {
     "entrypoints": [],
 }
 
+RUNNER_DEFAULTS = {
+    # `~/.config/labremote/config.toml` 의 `[tokens]` 중 **학습에 넣어 줄 이름**.
+    # 기본은 비어 있다 — 아무것도 주입하지 않는다.
+    #
+    # ⚠ 학습 코드는 AI 가 쓴 코드다. 환경 변수는 `os.environ` 한 줄이면 보인다.
+    # 샌드박스는 파일을 가려 주지만 환경 변수는 못 가린다. 그래서 여기 적는 건
+    # **읽기 전용·최소 권한 토큰만** 이어야 한다.
+    # [학습에 필요한 토큰 이름 — 비어 있음. 예: HF_TOKEN, WANDB_API_KEY]
+    "injectTokens": [],
+}
+
 HEADLESS_DEFAULTS = {
     # 실측(2026-11-04): `claude -p` 의 ask 는 사람에게 가지 않고 10초 안에
     # 자동 거부된다. 기다려 주지 않으므로 사유를 붙여 우리가 먼저 막고,
@@ -324,6 +383,11 @@ def default_policy(name: str = "", root: str = "") -> dict:
             # 허용한다(보호는 비밀이 아니라 강제로 하고 있고, 템플릿은 이미
             # 저장소에 공개돼 있다). docs/operations.md 에 근거를 적어 뒀다.
             "allowOutsideRead": True,
+            # 헤드리스에서 **승인 없이 읽어도 되는** 뿌리. 기본은 프로젝트뿐이고
+            # 여기 적은 것이 더해진다. conda 환경이나 공용 데이터셋을 Claude 가
+            # 읽어야 하면 적어 주세요.
+            # [읽기 허용 뿌리 — 비어 있음. 예: ~/miniconda3, ~/datasets]
+            "readAllowRoots": [],
             # 코드의 SECRET_FILES 에 **더하는** 목록. 빼지는 못한다.
             # [웹훅·API 키 파일을 다른 곳에 둔다면 여기에]
             "secretFilesExtra": [],
@@ -339,6 +403,7 @@ def default_policy(name: str = "", root: str = "") -> dict:
         },
         "bash": dict(BASH_DEFAULTS),
         "headless": dict(HEADLESS_DEFAULTS),
+        "runner": dict(RUNNER_DEFAULTS),
         "logPath": L.LOOP_LAYOUT["approval_log"],
         "eventLogPath": L.LOOP_LAYOUT["hook_events"],
         "updatedAt": _now(),

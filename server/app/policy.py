@@ -101,6 +101,11 @@ class Policy:
         return self.data.get("headless") or {}
 
     @property
+    def runner(self) -> dict:
+        """실행기 설정. 옛 판에는 없어서 빈 dict 로 떨어진다."""
+        return self.data.get("runner") or {}
+
+    @property
     def locks(self) -> dict:
         return self.data.get("locks") or {}
 
@@ -286,6 +291,22 @@ def ensure_permission_mode(root: str, mode: str = D.DEFAULT_PERMISSION_MODE) -> 
     `.claude/**` 는 `selfProtect` 라 AI 가 되돌릴 수 없다.
 
     이미 값이 있으면 **건드리지 않는다.** 다른 키도 그대로 둔다 (병합).
+
+    같이 박는 것 (실측 2026-11-04):
+
+        permissions.blockReadsOutsideWorkingDirectories = true
+        permissions.blockWritesOutsideWorkingDirectories = true
+
+    홈의 자격 증명(`~/.ssh`·`~/.aws`·브라우저 프로필·`~/.bash_history` …)을
+    **경로를 하나하나 적지 않고** 통째로 막는다. 네트워크가 열려 있으니 읽힌 건
+    곧 나갈 수 있다. 실측에서 거절 메시지가 이렇게 나왔다:
+
+        /etc/hostname is outside <프로젝트>; the
+        permissions.blockReadsOutsideWorkingDirectories setting blocks reads
+        outside the working directories
+
+    읽어야 할 바깥 경로가 있으면 `permissions.blockReadsExemptPaths` 에
+    적는다(`.claude/**` 는 selfProtect 라 사람만 고칠 수 있다).
     """
     path = claude_settings_path(root)
     data = {}
@@ -301,13 +322,23 @@ def ensure_permission_mode(root: str, mode: str = D.DEFAULT_PERMISSION_MODE) -> 
     if not isinstance(perms, dict):
         perms = {}
     before = perms.get("defaultMode")
-    if before:
+    changed = False
+    if not before:
+        perms["defaultMode"] = mode
+        changed = True
+    for key in ("blockReadsOutsideWorkingDirectories", "blockWritesOutsideWorkingDirectories"):
+        if key not in perms:
+            perms[key] = True
+            changed = True
+    if "blockReadsExemptPaths" not in perms:
+        # [읽어야 할 바깥 경로 — 비어 있음. 예: ~/miniconda3, ~/datasets]
+        perms["blockReadsExemptPaths"] = []
+        changed = True
+    if not changed:
         return {"path": path, "changed": False, "mode": str(before)}
-
-    perms["defaultMode"] = mode
     data["permissions"] = perms
     registry.write_json(path, data)
-    return {"path": path, "changed": True, "mode": mode}
+    return {"path": path, "changed": True, "mode": str(perms["defaultMode"])}
 
 
 def migrate(name: str) -> dict:

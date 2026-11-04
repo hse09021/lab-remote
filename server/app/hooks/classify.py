@@ -42,6 +42,7 @@ __all__ = [
     "Finding",
     "Ctx",
     "classify_event",
+    "read_allow_roots",
     "classify_path",
     "target_paths",
     "is_device_sink",
@@ -99,9 +100,13 @@ NET_TOOLS = ("WebFetch", "WebSearch")
 #  다만 쓰기 가능한 MCP 도구를 불러올 수는 있으므로 MCP 구멍 안내에 함께 적는다.
 READ_ONLY_TOOLS = ("Read", "Glob", "Grep", "ToolSearch", "TodoWrite")
 
-#: 읽기 도구 중 **비밀 파일만** 보는 것. 그 밖의 읽기는 건드리지 않는다.
-#  Read 는 file_path, Grep 은 path 를 쓴다.
-SECRET_READ_TOOLS = {"Read": WRITE_PATH_KEYS, "Grep": ("path", "file_path")}
+#: 경로를 받는 읽기 도구. 비밀 파일을 막고, **프로젝트 안인지**도 본다.
+#  Read 는 file_path, Grep·Glob 은 path 를 쓴다.
+SECRET_READ_TOOLS = {
+    "Read": WRITE_PATH_KEYS,
+    "Grep": ("path", "file_path"),
+    "Glob": ("path", "file_path"),
+}
 
 #: 쓰기 대상으로 보지 않는 장치 파일. **정확한 이름만** 본다 —
 #  `/dev/shm/x` 는 진짜 쓸 수 있는 폴더라 계속 막아야 한다.
@@ -361,6 +366,26 @@ def classify_path(
     return out
 
 
+def read_allow_roots(ctx: Ctx) -> list[str]:
+    """읽어도 되는 뿌리. 프로젝트 + 정책이 **더한** 목록.
+
+    기본은 프로젝트뿐이다. conda 환경이나 데이터셋을 Claude 가 읽어야 하면
+    정책의 `paths.readAllowRoots` 에 적는다 — 정책은 프로젝트 밖이라 AI 가
+    못 고친다.
+    """
+    extra = ctx.paths_cfg.get("readAllowRoots") or []
+    out = [ctx.root]
+    for item in extra:
+        text = str(item).strip()
+        if text and not text.startswith("["):
+            out.append(paths.real(text))
+    return out
+
+
+def _read_allowed(target: str, ctx: Ctx) -> bool:
+    return any(paths.is_inside(paths.real(root), target) for root in read_allow_roots(ctx))
+
+
 def classify_event(event: dict, ctx: Ctx) -> list[Finding]:
     """PreToolUse 이벤트 하나를 Finding 목록으로."""
     tool = str(event.get("tool_name") or "")
@@ -386,14 +411,25 @@ def classify_event(event: dict, ctx: Ctx) -> list[Finding]:
         return found
 
     if tool in SECRET_READ_TOOLS:
-        # 읽기는 막지 않는다 — **비밀 파일만** 본다. 그 밖은 판정하지 않는다.
+        # 비밀 파일은 읽기까지 막는다. 그 밖은 **어디를 읽는지**로 가른다.
         raw = pick(tool_input, SECRET_READ_TOOLS[tool])
         if not raw:
-            return []
+            # 경로 없이 부른 것 (`Grep` 의 기본 경로 = cwd)
+            return [Finding("toolAllowed", target=tool)]
         target = paths.safe_resolve(str(raw), ctx.cwd)
         if is_secret(target, ctx):
             return [Finding("secret", target=target, detail=f"{tool} · {raw}")]
-        return []
+        if _read_allowed(target, ctx):
+            return [
+                Finding(
+                    "readAllowed",
+                    rel=paths.rel_or_none(ctx.root, target),
+                    target=target,
+                )
+            ]
+        # 프로젝트 밖 읽기. 대화형은 그대로 두고(defer) 헤드리스는 승인을 받는다
+        # — 네트워크가 열려 있으니 읽힌 건 곧 나갈 수 있다.
+        return [Finding("readOutside", target=target, detail=f"{tool} · {raw}")]
 
     if tool == "Bash":
         from . import bashparse
@@ -407,5 +443,11 @@ def classify_event(event: dict, ctx: Ctx) -> list[Finding]:
     if tool in NET_TOOLS:
         return [Finding("net", target=str(pick(tool_input, URL_KEYS) or ""))]
 
-    # 읽기 전용이거나 모르는 도구 -> 판정하지 않는다 (defer)
-    return []
+    if tool in READ_ONLY_TOOLS:
+        # 경로를 안 받는 읽기·기록 도구 (`TodoWrite`·`ToolSearch`…)
+        return [Finding("toolAllowed", target=tool)]
+
+    # **모르는 도구.** 대화형은 Claude Code 승인 흐름에 맡기고(defer), 헤드리스는
+    # 승인을 받는다. 헤드리스에서 defer 는 통과가 아니라 **정지**라서,
+    # "모르는 건 조용히 지나간다" 가 아니라 "모르는 건 멈춘다" 로 둔다.
+    return [Finding("unclassified", target=tool, detail="모르는 도구")]

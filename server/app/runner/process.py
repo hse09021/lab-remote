@@ -42,6 +42,7 @@ __all__ = [
     "LaunchError",
     "inner_argv",
     "build_argv",
+    "inject_tokens",
     "launch",
     "wait",
     "terminate_group",
@@ -128,7 +129,33 @@ def build_argv(spec: RunSpec, *, use_sandbox: bool = True, **sandbox_kw) -> list
     return sandbox_mod.command(wrapped, project_root=spec.root, **sandbox_kw)
 
 
-def build_env(spec: RunSpec, *, cache_dir: str = "") -> dict[str, str]:
+def inject_tokens(policy) -> dict[str, str]:
+    """정책이 허락한 토큰만 `~/.config/labremote/config.toml` 에서 가져온다.
+
+    **기본은 아무것도 주입하지 않는다.** 정책의 `runner.injectTokens` 에 이름을
+    적어야 그 이름만 들어간다.
+
+    ⚠ 학습 코드는 AI 가 쓴 코드고, 환경 변수는 `os.environ` 한 줄이면 보인다.
+    샌드박스는 파일을 가려 주지만 환경 변수는 못 가린다. 그래서 **읽기 전용·
+    최소 권한 토큰만** 쓴다 (`docs/operations.md`).
+    """
+    from .. import config as config_mod
+
+    allowed = []
+    if policy is not None:
+        allowed = (getattr(policy, "runner", {}) or {}).get("injectTokens") or []
+    wanted = {str(name).strip() for name in allowed if str(name).strip()}
+    if not wanted:
+        return {}
+    have = config_mod.tokens()
+    out = {name: have[name] for name in sorted(wanted) if name in have}
+    # 끼워 넣는 변수는 토큰으로도 못 들어온다.
+    from .spec import ENV_MANAGED, ENV_NEVER
+
+    return {k: v for k, v in out.items() if k not in ENV_NEVER and k not in ENV_MANAGED}
+
+
+def build_env(spec: RunSpec, *, cache_dir: str = "", policy=None) -> dict[str, str]:
     """학습이 받을 환경 변수.
 
     순서가 의미를 가진다 — **캐시 값이 맨 마지막이라 이긴다.** `run.json` 이
@@ -137,6 +164,7 @@ def build_env(spec: RunSpec, *, cache_dir: str = "") -> dict[str, str]:
     """
     out = {k: os.environ[k] for k in ENV_KEEP if k in os.environ}
     out.setdefault("PYTHONUNBUFFERED", "1")  # 로그 꼬리가 실시간으로 보이게
+    out.update(inject_tokens(policy))  # 정책이 허락한 이름만
     out.update(spec.env)  # spec 이 이미 envAllow 로 걸렀다
     if cache_dir:
         out.update(cache_mod.env_for(cache_dir))
@@ -252,7 +280,7 @@ def launch(
             sandbox_kw.setdefault("cache_dir", cache)
 
     argv = build_argv(spec, use_sandbox=use_sandbox, **sandbox_kw)
-    env = build_env(spec, cache_dir=cache)
+    env = build_env(spec, cache_dir=cache, policy=policy)
     mode = "ab" if append_log else "wb"
     try:
         log_fh = open(spec.log_path, mode)

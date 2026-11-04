@@ -229,15 +229,18 @@ def test_WebFetch_는_net(ctx, real_event):
     assert found[0].target == "https://example.com"
 
 
-def test_읽기_전용_도구는_판정하지_않는다(ctx, real_event):
-    """ToolSearch 는 도구 스키마만 불러온다. matcher 에도 넣지 않는다."""
-    for fragment in ("PreToolUse-ToolSearch", "232018-048377-PreToolUse-Read"):
-        assert classify.classify_event(real_event(fragment), ctx) == []
+def test_읽기_전용_도구는_통과_표식을_받는다(ctx, real_event):
+    """②에서 바뀐 것: 헤드리스에서 `defer` 는 통과가 아니라 **정지**다.
+    그래서 "판정 안 함" 이 아니라 "통과시켜도 되는 것" 이라고 말해야 한다."""
+    found = classify.classify_event(real_event("PreToolUse-ToolSearch"), ctx)
+    assert actions(found) == ["toolAllowed"]
     assert "ToolSearch" in classify.READ_ONLY_TOOLS
 
 
-def test_모르는_도구는_판정하지_않는다(ctx):
-    assert classify.classify_event({"tool_name": "처음보는도구", "tool_input": {}}, ctx) == []
+def test_모르는_도구는_승인_대상(ctx):
+    """대화형은 defer 로 그대로 두고, 헤드리스는 멈춘다 — 조용히 지나가지 않게."""
+    found = classify.classify_event({"tool_name": "처음보는도구", "tool_input": {}}, ctx)
+    assert actions(found) == ["unclassified"]
 
 
 def test_Bash_에_command_가_없으면_차단(ctx):
@@ -299,12 +302,23 @@ def test_런타임_폴더를_옮겨도_따라간다(ctx, monkeypatch, tmp_path):
 # --- 비밀 파일 --------------------------------------------------------------
 
 
-def test_Read_는_비밀_파일만_본다(ctx, project_root):
-    """읽기를 전면 차단하면 소음만 커진다. 비밀 파일만 막는다."""
+def test_Read_는_비밀_파일을_막고_어디를_읽는지_가른다(ctx, project_root):
+    """비밀은 막고, 프로젝트 안은 통과, 밖은 (헤드리스에서) 승인 대상."""
     open(os.path.join(project_root, ".env"), "w").close()
     assert actions(one(ctx, "Read", {"file_path": f"{project_root}/.env"})) == ["secret"]
-    assert one(ctx, "Read", {"file_path": f"{project_root}/src/train.py"}) == []
-    assert one(ctx, "Read", {"file_path": "/etc/hosts"}) == []
+    assert actions(one(ctx, "Read", {"file_path": f"{project_root}/src/train.py"})) == [
+        "readAllowed"
+    ]
+    assert actions(one(ctx, "Read", {"file_path": "/etc/hosts"})) == ["readOutside"]
+
+
+def test_정책으로_읽기_허용_뿌리를_더할_수_있다(ctx, tmp_path):
+    outside = tmp_path / "자료"
+    outside.mkdir()
+    target = {"file_path": str(outside / "표본.csv")}
+    assert actions(one(ctx, "Read", target)) == ["readOutside"]
+    ctx.policy.data["paths"]["readAllowRoots"] = [str(outside)]
+    assert actions(one(ctx, "Read", target)) == ["readAllowed"]
 
 
 def test_Grep_의_대상이_비밀_파일이면_차단(ctx, project_root):
@@ -312,7 +326,18 @@ def test_Grep_의_대상이_비밀_파일이면_차단(ctx, project_root):
         "secret"
     ]
     # 폴더를 훑는 재귀 읽기는 못 막는다 (문서화된 한계)
-    assert one(ctx, "Grep", {"pattern": "KEY", "path": project_root}) == []
+    assert actions(one(ctx, "Grep", {"pattern": "KEY", "path": project_root})) == ["readAllowed"]
+
+
+def test_Glob_도_비밀을_막는다(ctx, project_root):
+    """`Glob` 으로 `~/.ssh` 를 훑는 길을 막는다."""
+    assert actions(one(ctx, "Glob", {"pattern": "*", "path": os.path.expanduser("~/.ssh")})) == [
+        "secret"
+    ]
+
+
+def test_경로_없이_부른_읽기_도구는_통과(ctx):
+    assert actions(one(ctx, "Grep", {"pattern": "KEY"})) == ["toolAllowed"]
 
 
 def test_비밀_파일_쓰기도_차단(ctx, project_root):
@@ -321,7 +346,9 @@ def test_비밀_파일_쓰기도_차단(ctx, project_root):
 
 def test_예시_파일은_비밀이_아니다(ctx, project_root):
     for rel in (".env.example", ".env.sample", ".env.template"):
-        assert one(ctx, "Read", {"file_path": f"{project_root}/{rel}"}) == []
+        assert actions(one(ctx, "Read", {"file_path": f"{project_root}/{rel}"})) == [
+            "readAllowed"
+        ]
 
 
 def test_프로젝트_밖_비밀도_차단(ctx):

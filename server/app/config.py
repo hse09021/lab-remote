@@ -23,6 +23,7 @@ __all__ = [
     "config_dir",
     "config_path",
     "load",
+    "tokens",
     "discord_webhook",
     "cooldown_sec",
     "grant_key_path",
@@ -118,6 +119,35 @@ def cooldown_sec(kind: str) -> int:
     if isinstance(value, int) and value >= 0:
         return value
     return COOLDOWN_DEFAULTS.get(kind, 300)
+
+
+def tokens() -> dict[str, str]:
+    """`[tokens]` 절. 학습에 꼭 필요한 토큰만 둔다.
+
+        [tokens]
+        HF_TOKEN = "hf_..."          # 읽기 전용 토큰만
+        WANDB_API_KEY = "..."
+
+    ⚠ **AI 가 쓴 학습 코드가 이 값을 읽을 수 있다는 전제로 둔다.** 학습
+    프로세스의 환경 변수로 들어가므로 `os.environ` 한 줄이면 보인다. 샌드박스는
+    파일을 가려 주지만 환경 변수는 가려 주지 않는다 — 가리면 학습이 모델을
+    못 내려받는다.
+
+    그래서 **읽기 전용·최소 권한 토큰만** 쓴다. 쓰기 권한이 있는 토큰을 넣으면
+    AI 가 저장소나 모델 허브에 쓸 수 있다.
+
+    기본은 **아무것도 주입하지 않는다.** 정책의 `runner.injectTokens` 에 이름을
+    적어야 그 이름만 들어간다.
+    """
+    section = _section(load(), "tokens")
+    out: dict[str, str] = {}
+    for name, value in section.items():
+        if isinstance(value, bool) or value is None:
+            continue
+        text = str(value).strip()
+        if text and not text.startswith("["):  # 자리표시는 건너뛴다
+            out[str(name)] = text
+    return out
 
 
 # --- 1회용 허가 서명 키 -----------------------------------------------------
