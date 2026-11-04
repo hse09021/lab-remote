@@ -149,7 +149,34 @@ labremote tools --probe hook-sandbox # 도구 목록 다시 재고 기록
 재기 전까지 **헤드리스 루프는 멈춥니다**(`labremote doctor` 가 ⚠ 로 알려
 줍니다). 대화형(`labremote claude`)은 막지 않습니다.
 
-## 5. 웹훅 (Discord 알림)
+## 5. 허가 서명 키 (승인에 **꼭** 필요해요)
+
+```bash
+labremote keys init
+```
+
+승인(`labremote approvals approve`)은 1회용 허가를 **HMAC 으로 서명**합니다.
+키가 없으면 서명 검증이 전부 거짓이 되어 **헤드리스 승인이 아예 안 됩니다** —
+훅이 허가를 무시하고 그대로 막습니다(fail-closed). 승인 대기열 전체가 멈춥니다.
+
+- 32바이트 랜덤, **권한 0600** 으로 만듭니다. 만들 때부터 0600 입니다 — 쓰고
+  나서 `chmod` 하면 그 사이가 열립니다.
+- **이미 있으면 덮어쓰지 않습니다.** 키를 바꾸면 아직 안 쓴 허가가 전부
+  무효가 됩니다. 권한만 고치려면 `labremote keys init --fix-mode`.
+- **키 값은 화면에 찍지 않습니다.** `labremote keys show` 는 경로·권한·길이만
+  보여 줍니다.
+- 이 폴더(`~/.config/labremote/**`)는 훅의 `SECRET_FILES` 라 **Claude 가
+  읽기까지 막힙니다.**
+- 백업하지 마세요. 잃으면 다시 만들면 되고, 새 키는 **아직 안 쓴 허가만**
+  무효로 합니다.
+
+확인: `labremote doctor` 의 `허가 서명 키` 가 ✔.
+
+> `labremote service install`(8단계)이 이 일을 하기로 했었지만, 그 명령은
+> systemd 유닛까지 건드립니다. 키만 필요할 때 그걸 돌릴 이유가 없어서
+> 명령을 따로 뒀습니다.
+
+## 6. 웹훅 (Discord 알림)
 
 ```bash
 mkdir -p ~/.config/labremote
@@ -161,11 +188,16 @@ chmod 600 ~/.config/labremote/config.toml
 ```
 
 `~/.config/labremote/**` 는 이미 훅의 `SECRET_FILES` 라 Claude 가 **읽기까지
-막힙니다.** 웹훅 주소와 허가 서명 키를 둘 자리로 맞춤입니다.
+막힙니다.** 웹훅 주소와 허가 서명 키(위 5번)를 둘 자리로 맞춤입니다.
+
+> ⚠ **실측 2026-11-05**: Discord 는 파이썬 `urllib` 의 기본 User-Agent 를
+> **403 으로 막습니다**(같은 URL 에 `curl` 은 204). 그래서 `app/notify.py` 가
+> `User-Agent: lab.remote-notifier/1.0` 을 고정으로 붙입니다. 이걸 모르면
+> "웹훅은 넣었는데 알림이 한 건도 안 오는" 조용한 실패가 됩니다.
 
 ---
 
-## 6. [미작성 — 7·8단계에서 채웁니다]
+## 7. [미작성 — 7·8단계에서 채웁니다]
 
 - `loginctl enable-linger` 와 systemd 사용자 서비스 (8단계)
 - GPU 드라이버 불일치 해결 (재부팅) 과 nvidia 자동 업데이트 제외

@@ -155,6 +155,7 @@
       "logs/Decision_log.md",
       "logs/Failures.md",
       "README.md",
+      "state/Install_request.json",
       "experiments/*/result.csv",
       "experiments/*/analysis.md"
     ],

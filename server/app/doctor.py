@@ -299,6 +299,49 @@ SHELL_FILES = ("~/.bashrc", "~/.zshrc", "~/.bash_aliases", "~/.profile")
 SHELL_MARK = "labremote claude"
 
 
+def grant_key_check() -> Check:
+    """🔑 허가 서명 키가 있고 **남이 못 읽는가.**
+
+    없으면 `config.grant_key()` 가 `None` 이고 `grants.verify` 가 전부 거짓이
+    되어 **헤드리스 승인이 아예 안 된다** — 훅이 허가를 무시하고 그대로
+    막는다(fail-closed). 승인 대기열 전체가 멈춘다.
+
+    ⚠ 이게 `doctor` 에 **없었다**(S9 e2e 가 잡았다). 사람이 `approve` 를
+    돌려서 실패할 때까지 알 수 없었고, 그때의 안내는 **없는 명령**
+    (`labremote service install` — 8단계)을 가리켰다.
+
+    `✘` 인 이유: 한 명령으로 고쳐지고(`labremote keys init`), 고치면 바로
+    사라진다. 권한이 넓은 것도 `✘` 다 — 키가 새면 AI 가 쓴 코드가 허가를
+    위조할 수 있다.
+    """
+    from . import config
+
+    path = config.grant_key_path()
+    mode = config.mode_of(path)
+    if mode is None:
+        return Check(
+            False,
+            "허가 서명 키",
+            f"없어요: {path} · 헤드리스 승인이 안 돼요",
+            hint="labremote keys init 로 만들어 주세요 (그 명령만 돌리면 돼요).",
+        )
+    if not config.is_private(path):
+        return Check(
+            False,
+            "허가 서명 키",
+            f"권한이 넓어요: {oct(mode)[2:]} · 남이 읽으면 허가를 위조할 수 있어요",
+            hint="labremote keys init --fix-mode 로 0600 으로 고쳐 주세요.",
+        )
+    if not config.grant_key():
+        return Check(
+            False,
+            "허가 서명 키",
+            f"비어 있어요: {path}",
+            hint="지우고 labremote keys init 로 다시 만들어 주세요.",
+        )
+    return Check(True, "허가 서명 키", f"{path} · 권한 {oct(mode)[2:]}")
+
+
 def audit_check(root: str, name: str = "", pol=None) -> Check:
     """승인 기록이 **진본과 같은가.**
 
@@ -601,6 +644,8 @@ def run() -> dict:
         # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
         checks.append(cache_check(root, pol))
 
+    # 허가 서명 키 — 없으면 헤드리스 승인이 아예 안 된다
+    checks.append(grant_key_check())
     # 사용자 설정에 sandbox 가 있으면 이 PC 의 모든 세션이 갇힌다
     checks.append(user_sandbox_check())
     # Claude Code 판이 바뀌면 도구 이름이 바뀔 수 있다 (⚠ · 루프는 멈춘다)

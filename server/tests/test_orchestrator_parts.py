@@ -79,14 +79,14 @@ def test_못_읽는_마감은_멈추지_않는다(ready, conn):
 def open_request(project, request_id="toolu_1", **kw):
     payload = {
         "tool": "Bash",
-        "action": "패키지 설치",
-        "actionKey": "pkg",
-        "actions": [{"action": "pkg", "name": "패키지 설치"}],
-        "request": "pip install peft",
-        "reason": "패키지 설치는 승인이 필요해요",
-        "fingerprint": grants.fingerprint("Bash", {"command": "pip install peft"}),
+        "action": "파일 삭제",
+        "actionKey": "del",
+        "actions": [{"action": "del", "name": "파일 삭제"}],
+        "request": "rm -rf src/옛것",
+        "reason": "파일 삭제는 승인이 필요해요",
+        "fingerprint": grants.fingerprint("Bash", {"command": "rm -rf src/옛것"}),
         "looseKey": grants.loose_key("Bash", None),
-        "toolSummary": {"command": "pip install peft"},
+        "toolSummary": {"command": "rm -rf src/옛것"},
         "sessionId": "0f0c",
     }
     payload.update(kw)
@@ -98,19 +98,18 @@ def test_요청을_DB_로_거울한다(ready, conn):
     open_request("hook-sandbox")
     rows = AP.sync(conn, "hook-sandbox")
     assert len(rows) == 1
-    assert rows[0]["action_key"] == "pkg"
+    assert rows[0]["action_key"] == "del"
     assert AP.pending(conn, "hook-sandbox")[0]["request_id"] == "toolu_1"
 
 
-def test_같은_요청이_또_오면_횟수만_올라간다(ready, conn):
+def test_거울을_여러_번_불러도_반복으로_안_본다(ready, conn):
+    """⚠ 전에는 `sync` 횟수가 그대로 `attempts` 였다 — S9 e2e 가 잡았다."""
     open_request("hook-sandbox")
-    AP.sync(conn, "hook-sandbox")
-    AP.sync(conn, "hook-sandbox")
+    for _ in range(5):
+        AP.sync(conn, "hook-sandbox")
     row = APS.by_request(conn, "hook-sandbox", "toolu_1")
-    assert row["attempts"] == 2
+    assert row["attempts"] == 1
     assert AP.too_many(row) is False
-    AP.sync(conn, "hook-sandbox")
-    assert AP.too_many(APS.by_request(conn, "hook-sandbox", "toolu_1")) is True
 
 
 def test_승인하면_훅이_쓸_수_있는_허가가_나온다(ready, conn, grant_key):
@@ -120,17 +119,17 @@ def test_승인하면_훅이_쓸_수_있는_허가가_나온다(ready, conn, gra
     grant = AP.approve(conn, "hook-sandbox", "toolu_1", note="확인했어요")
 
     assert grant["fingerprint"] == payload["fingerprint"]
-    assert grant["actions"] == ["pkg"]
+    assert grant["actions"] == ["del"]
     # 훅이 같은 호출에서 실제로 소비할 수 있어야 한다
     used = grants.consume(
         "hook-sandbox",
         # 요청 파일의 sessionId 가 허가에 들어가고, 훅은 **그 세션에서만** 쓴다
         event={
             "tool_name": "Bash",
-            "tool_input": {"command": "pip install peft"},
+            "tool_input": {"command": "rm -rf src/옛것"},
             "session_id": "0f0c",
         },
-        needs=[("pkg", None)],
+        needs=[("del", None)],
     )
     assert used and used["grantId"] == grant["grantId"]
     assert APS.by_request(conn, "hook-sandbox", "toolu_1")["state"] == "approved"
@@ -143,13 +142,13 @@ def test_한_호출에_승인이_둘_필요하면_둘_다_연다(ready, conn, gr
         "toolu_2",
         request=command,
         actionKey="net",
-        actions=[{"action": "net", "name": "네트워크 접근"}, {"action": "pkg", "name": "패키지 설치"}],
+        actions=[{"action": "net", "name": "네트워크 접근"}, {"action": "del", "name": "파일 삭제"}],
         fingerprint=grants.fingerprint("Bash", {"command": command}),
         toolSummary={"command": command},
     )
     AP.sync(conn, "hook-sandbox")
     grant = AP.approve(conn, "hook-sandbox", "toolu_2")
-    assert sorted(grant["actions"]) == ["net", "pkg"]
+    assert sorted(grant["actions"]) == ["del", "net"]
     used = grants.consume(
         "hook-sandbox",
         # 허가는 **그 세션에서만** 먹는다(S3). 요청 파일의 sessionId 가
@@ -159,7 +158,7 @@ def test_한_호출에_승인이_둘_필요하면_둘_다_연다(ready, conn, gr
             "tool_input": {"command": command},
             "session_id": "0f0c",
         },
-        needs=[("net", None), ("pkg", None)],
+        needs=[("net", None), ("del", None)],
     )
     assert used is not None
 

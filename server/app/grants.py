@@ -55,6 +55,8 @@ from . import config, registry
 
 __all__ = [
     "LOCKED_ACTIONS",
+    "NO_GRANT_ACTIONS",
+    "NO_GRANT_REASON",
     "DEFAULT_TTL_SEC",
     "GrantError",
     "fingerprint",
@@ -86,6 +88,35 @@ LOCKED_ACTIONS = frozenset(
         "policy-error",
         "hook-error",
     }
+)
+
+#: 🔑 **승인해도 아무 일이 안 일어나는** 행동. 허가를 **만들지 않는다.**
+#:
+#: S1 의 M3: Claude 의 Bash 로 `pip install` 을 돌리면 conda 환경이 프로젝트
+#: 폴더 밖이라 샌드박스가 쓰기를 **버린다.** `pip` 에는 성공으로 보이고 실제로는
+#: 아무 일도 안 난다.
+#:
+#: 그래서 허가를 내주면 **최악의 조합**이 된다 — 사람이 승인했고, 승인 로그에
+#: `허용 · 1회용 승인` 이 남고, **설치는 안 된다.** 기록이 거짓이 된다.
+#:
+#: 설치는 T6 의 경로로만 한다 — Claude 가 `state/Install_request.json` 을 쓰고,
+#: 사람이 `labremote installs approve` 하고, **오케스트레이터가 샌드박스
+#: 밖에서** 설치한다.
+#:
+#: ⚠ 막는 자리는 `issue()` 가 아니라 **`orchestrator/approvals.approve()`** 다.
+#: 거기가 "사람이 승인했다" 를 능력으로 바꾸는 **유일한 production 호출처**이고
+#: (`tests/test_grants.py` 가 그걸 고정한다), `issue()` 는 저수준 원시 함수로
+#: 둔다. 새 호출처가 생기면 그 시험이 깨져서 결정을 강제한다.
+NO_GRANT_ACTIONS = frozenset({"pkg"})
+
+#: 위 행동을 승인하려 할 때 보여 줄 말. CLI·목록이 같은 문구를 쓴다.
+NO_GRANT_REASON = (
+    "패키지 설치는 승인으로 열지 않아요 — Claude 의 Bash 에서는 conda 환경이 "
+    "프로젝트 폴더 밖이라 샌드박스가 쓰기를 버려요(M3). 허가를 내주면 승인 "
+    "로그에 '허용' 만 남고 실제로는 안 깔려요. 설치는 "
+    "state/Install_request.json 에 요청을 남기고 `labremote installs approve` "
+    "로 해 주세요 — 오케스트레이터가 샌드박스 밖에서 깔아요. "
+    "이 요청은 거절(deny)만 할 수 있어요."
 )
 
 #: 기본 만료 **10분**. 전에는 30분이었다.
@@ -291,7 +322,7 @@ def issue(
     if not key:
         raise GrantError(
             "허가 서명 키가 없어요: " + config.grant_key_path() + " · "
-            "labremote service install 로 만들어 주세요."
+            "labremote keys init 로 만들어 주세요 (그 명령만 돌리면 돼요)."
         )
 
     now = _now()
