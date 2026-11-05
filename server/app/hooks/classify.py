@@ -191,6 +191,10 @@ class Ctx:
     #: Claude Bash 샌드박스가 **실제로** 켜져 있나. 기본은 꺼짐으로 본다 —
     #: 모르면 코드 실행(`pytest` 등)을 열지 않는다 (fail-closed).
     sandbox: bool = False
+    #: Claude Bash 샌드박스의 유닉스 소켓 차단을 **사람이 확인했나**
+    #: (`policy.socket_verification`). 기본은 거짓 — 확인 전에는 헤드리스
+    #: 코드 실행을 승인으로 돌린다.
+    socket_verified: bool = False
 
     @property
     def paths_cfg(self) -> dict:

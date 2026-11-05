@@ -30,6 +30,7 @@ from ..store import loops as LP
 __all__ = [
     "Verdict", "limits_of", "check_loop", "check_train", "read_config",
     "entrypoint_gap",
+    "sync_policy_entrypoints",
 ]
 
 #: 종료 조건 이름 -> 사람이 읽는 말
@@ -149,6 +150,13 @@ def entrypoint_gap(root: str, config: dict | None = None) -> str:
 def check_loop(conn, project: str, root: str, *, now: datetime | None = None) -> Verdict:
     """루프를 한 번 더 돌려도 되나."""
     now = now or datetime.now().astimezone()
+    # 🔑 훅이 보는 entrypoint 사본을 **루프 상태와 무관하게** 매 바퀴 맞춘다.
+    # 훅은 YAML 을 못 읽어서 정책의 `bash.entrypoints` 를 보는데, 이걸 채우는
+    # 곳이 없었다 (실측 2026-11-05: `[]`) — `trainrun` 규칙이 한 번도 안
+    # 걸렸다. 멈춘 루프에서도 맞춰야 사람이 여는 대화형 세션이 같은 걸 본다.
+    synced = sync_policy_entrypoints(project, read_config(root))
+    if synced.get("error"):
+        return _no("정책에 실행 스크립트 목록을 못 옮겼어요: " + synced["error"])
     loop = LP.ensure(conn, project)
     if loop.get("paused"):
         return _no(f"사람이 멈춰 뒀어요: {loop.get('paused_reason') or '사유 없음'}")
@@ -185,6 +193,7 @@ def check_loop(conn, project: str, root: str, *, now: datetime | None = None) ->
     if missing:
         return _no(missing, stop=True)
 
+
     limits = limits_of(config)
 
     # 🔑 **"실행 횟수" 는 실제로 돌아간 실험의 수다** (실측 2026-11-05).
@@ -215,6 +224,26 @@ def check_loop(conn, project: str, root: str, *, now: datetime | None = None) ->
     if "deadline" in limits and _past_deadline(limits["deadline"], now):
         return _no(f"{LIMIT_NAMES['deadline']}이 지났어요: {limits['deadline']}", stop=True)
     return _ok()
+
+
+def sync_policy_entrypoints(project: str, config: dict) -> dict:
+    """`Config.yaml` 의 `run.entrypoints` → 정책 `bash.entrypoints`.
+
+    `{"changed", "entrypoints", "error"}`. 정책은 `server/data/` 아래라 AI 가
+    못 고친다. `Config.yaml` 은 실험 중에 잠겨 있다.
+    """
+    from .. import policy as policy_mod
+    from ..runner import spec as spec_mod
+
+    listed = spec_mod.entrypoints_of(config)
+    try:
+        pol = policy_mod.load(project)
+        changed = policy_mod.sync_entrypoints(pol, listed)
+        if changed:
+            policy_mod.save(pol)
+    except Exception as exc:  # 정책을 못 쓰면 루프를 시작하지 않는다
+        return {"changed": False, "entrypoints": listed, "error": str(exc)[:200]}
+    return {"changed": changed, "entrypoints": listed, "error": ""}
 
 
 def check_train(root: str, *, cache_dir: str = "", config: dict | None = None) -> Verdict:

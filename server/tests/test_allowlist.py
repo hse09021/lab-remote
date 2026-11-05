@@ -100,11 +100,26 @@ def test_pytest_는_샌드박스가_꺼져_있으면_승인_대상(ctx):
     assert headless(ctx, "pytest -q") == "deny"
 
 
-def test_pytest_는_샌드박스가_켜져_있으면_통과(ctx, sandboxed):
+def test_pytest_는_샌드박스가_켜져도_소켓_확인_전이면_승인_대상(ctx, sandboxed):
+    """2단계 조건 4: 샌드박스가 **실제로 막는 게 확인돼야** allow.
+
+    Claude Bash 샌드박스의 유닉스 소켓 차단은 사람이 확인하기 전까지
+    미확인이다(S9). 그래서 샌드박스가 켜져 있어도 헤드리스 코드 실행은
+    승인으로 간다.
+    """
     from app import policy
 
     ctx.sandbox = policy.sandbox_state(sandboxed)["ok"]
     assert ctx.sandbox is True
+    assert ctx.socket_verified is False  # 기본은 미확인 (fail-closed)
+    assert headless(ctx, "pytest -q") == "deny"
+
+
+def test_pytest_는_샌드박스와_소켓_확인이_둘_다_있어야_통과(ctx, sandboxed):
+    from app import policy
+
+    ctx.sandbox = policy.sandbox_state(sandboxed)["ok"]
+    ctx.socket_verified = True
     assert headless(ctx, "pytest -q") == "allow"
 
 

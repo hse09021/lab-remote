@@ -243,6 +243,95 @@ def load(name: str) -> Policy:
     return _validate(name, data, path)
 
 
+#: 정책의 `sandbox` 절. 없으면 **미확인**으로 본다 (fail-closed).
+SANDBOX_SECTION = "sandbox"
+
+
+def _recorded_claude_version() -> str:
+    """`labremote tools` 가 기록한 Claude Code 판. 못 읽으면 빈 문자열.
+
+    `server/data/agent/claude_version.json` — AI 가 못 쓰는 곳이다.
+    표준 라이브러리만 쓴다 (훅 경로).
+    """
+    path = os.path.join(registry.data_dir(), "agent", "claude_version.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return ""
+    return str((data or {}).get("version") or "") if isinstance(data, dict) else ""
+
+
+def socket_verification(policy) -> dict:
+    """Claude Bash 샌드박스의 유닉스 소켓 차단을 **사람이 확인했나.**
+
+    `{"verified", "reason", "for", "current", "at", "by", "note"}`
+
+    확인은 **Claude Code 판에 묶인다.** 근거가 번들의 동작이라 판이 바뀌면
+    다시 확인해야 한다 — 기록된 판과 확인한 판이 다르면 미확인으로 본다.
+    """
+    data = getattr(policy, "data", None) or {}
+    section = data.get(SANDBOX_SECTION) if isinstance(data, dict) else None
+    section = section if isinstance(section, dict) else {}
+    current = _recorded_claude_version()
+    out = {
+        "verified": False,
+        "reason": "",
+        "for": str(section.get("verifiedFor") or ""),
+        "current": current,
+        "at": str(section.get("verifiedAt") or ""),
+        "by": str(section.get("verifiedBy") or ""),
+        "note": str(section.get("note") or ""),
+    }
+    if section.get("socketVerified") is not True:
+        out["reason"] = "사람이 아직 확인하지 않았어요"
+        return out
+    if not current:
+        out["reason"] = "Claude Code 판 기록이 없어요 (labremote tools)"
+        return out
+    if out["for"] != current:
+        out["reason"] = f"{out['for'] or '[판 없음]'} 에서 확인했는데 지금 판은 {current} 예요"
+        return out
+    out["verified"] = True
+    return out
+
+
+def set_socket_verified(policy, *, on: bool, note: str = "", by: str = "cli") -> dict:
+    """사람이 켜고 끈다. 켤 때는 **지금 기록된 판**에 묶는다."""
+    section = policy.data.setdefault(SANDBOX_SECTION, {})
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    if on:
+        version = _recorded_claude_version()
+        if not version:
+            raise PolicyError("Claude Code 판 기록이 없어요 — labremote tools 를 먼저 돌려 주세요")
+        section.update({
+            "socketVerified": True, "verifiedFor": version,
+            "verifiedAt": now, "verifiedBy": by, "note": note,
+        })
+    else:
+        section.update({
+            "socketVerified": False, "verifiedAt": now, "verifiedBy": by, "note": note,
+        })
+    return socket_verification(policy)
+
+
+def sync_entrypoints(policy, listed) -> bool:
+    """`Config.yaml` 의 `run.entrypoints` 를 정책 `bash.entrypoints` 로 옮긴다.
+
+    훅은 YAML 을 못 읽어서(표준 라이브러리만) 정책의 사본을 본다. 그런데
+    **이 사본을 채우는 곳이 없었다** — 실측 2026-11-05 에 `[]` 였고,
+    entrypoint 직접 실행을 막는 `trainrun` 규칙이 한 번도 안 걸렸다.
+    바뀌었으면 참.
+    """
+    want = sorted({str(x).strip() for x in (listed or []) if str(x).strip()})
+    bash = policy.data.setdefault("bash", {})
+    have = sorted({str(x).strip() for x in (bash.get("entrypoints") or []) if str(x).strip()})
+    if want == have:
+        return False
+    bash["entrypoints"] = want
+    return True
+
+
 def save(policy: Policy) -> None:
     bad = conflicting_writable_roots(policy)
     if bad:

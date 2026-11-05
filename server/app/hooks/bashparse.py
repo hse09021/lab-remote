@@ -39,6 +39,7 @@ __all__ = [
     "secret_findings",
     "is_allowlisted",
     "ALLOW_IF_SANDBOXED",
+    "CODE_RUNNERS",
     "allowlisted_segments",
 ]
 
@@ -145,6 +146,24 @@ ALLOW_PLAIN = {
 #: **정책 파일**까지 읽혔다. 켜져 있으면 둘 다 `FileNotFoundError` 다.
 #: 꺼져 있으면 `ask` 로 떨어져 사람이 본다.
 ALLOW_IF_SANDBOXED = {"pytest"}
+
+#: AI 가 쓴 코드를 돌리는 인터프리터·러너.
+#:
+#: 헤드리스에서 이것들은 **소켓 차단이 사람에게 확인될 때까지**
+#: (`ctx.socket_verified`) 권한 단계와 무관하게 `coderun`(승인) 이다.
+#: `bash.allowExtra` 로 더해도 확인 전에는 허용 목록에 안 든다 — 스위치는
+#: 하나뿐이다.
+CODE_RUNNERS = {
+    "python", "python3", "pytest", "py.test", "node", "deno", "bun",
+    "perl", "ruby", "Rscript", "julia", "bash", "sh", "zsh", "dash",
+}
+
+
+def _code_gated(ctx) -> bool:
+    """헤드리스이고 소켓 차단이 아직 확인되지 않았나."""
+    return bool(getattr(ctx, "headless", False)) and not bool(
+        getattr(ctx, "socket_verified", False)
+    )
 
 #: `git` 에서 읽기만 하는 하위명령
 GIT_READONLY = {"status", "log", "diff", "show", "branch", "rev-parse"}
@@ -650,7 +669,10 @@ ALLOW_CONDITIONAL = {
 def allow_extra(ctx: Ctx) -> set[str]:
     """정책이 **더한** 명령. 기본 목록을 줄이지는 못한다."""
     extra = (getattr(ctx.policy, "bash", {}) or {}).get("allowExtra") or []
-    return {str(x).strip() for x in extra if str(x).strip()}
+    out = {str(x).strip() for x in extra if str(x).strip()}
+    if _code_gated(ctx):
+        out -= CODE_RUNNERS  # 확인 전에는 인터프리터를 허용 목록으로 못 연다
+    return out
 
 
 def _targets_inside(argv: list[str], ctx: Ctx) -> bool:
@@ -686,8 +708,10 @@ def is_allowlisted(segment: str, argv: list[str], ctx: Ctx) -> bool:
         if target not in SINK_PATHS:
             return False
     name = os.path.basename(argv[0])
-    if name in ALLOW_IF_SANDBOXED and not getattr(ctx, "sandbox", False):
-        # 샌드박스가 꺼져 있으면 AI 가 쓴 코드가 그대로 돈다. 사람이 본다.
+    if name in ALLOW_IF_SANDBOXED and not (
+        getattr(ctx, "sandbox", False) and getattr(ctx, "socket_verified", False)
+    ):
+        # 샌드박스가 꺼져 있거나 소켓 차단이 확인 전이면 사람이 본다.
         return False
     if (
         name not in ALLOW_CONDITIONAL
@@ -875,6 +899,11 @@ def argv_to_findings(argv: list[str], ctx: Ctx) -> list[Finding]:
                 module = ""
             if os.path.basename(module) in PKG_CMDS:
                 return [Finding("pkg", target=" ".join(argv[:5]))]
+        if _code_gated(ctx):
+            return [Finding("coderun", target=" ".join(argv[:4]))]
+
+    if name in ("pytest", "py.test") and _code_gated(ctx):
+        return [Finding("coderun", target=" ".join(argv[:4]))]
 
     if name in NET_CMDS:
         return [Finding("net", target=" ".join(argv[:3]))]

@@ -161,6 +161,15 @@ def decide(finding: Finding, ctx: Ctx) -> Decision:
         # 대화형은 사람이 보고 있다. 승인창을 띄운다.
         return ASK(M.with_guard(M.trainrun_interactive(str(finding.target))), **base)
 
+    # --- 코드 실행: 소켓 차단 확인 전이면 **정책보다 앞에서** 승인으로 ---------
+    #
+    # 잠금은 아니다 — 사람이 그 명령 하나를 보고 승인할 수 있다(1회용 허가).
+    if action == "coderun":
+        return _maybe_headless(
+            ASK(M.with_guard(M.coderun_unverified(str(finding.target), ctx.name)), **base),
+            ctx, label,
+        )
+
     # --- 정책이 정하는 것 ---------------------------------------------------
     permission = ctx.policy.resolve(action)
     what = finding.rel or finding.target or ""

@@ -1030,6 +1030,85 @@ def _cost(value, known: int) -> str:
     return f"${value:.4f}"
 
 
+def cmd_sandbox_check(args) -> int:
+    """🔌 Claude Bash 샌드박스가 소켓 필터를 붙였는지 **디버그 로그로** 본다.
+
+    무해한 `ls` 하나를 실제 런처로 띄운다(토큰을 조금 써요). 스위치는
+    **안 켠다** — 결과를 보고 사람이 `policy-socket-verified` 로 켠다.
+    """
+    from datetime import datetime
+
+    from .agent import sandboxcheck
+
+    if not registry.root_of(args.name):
+        print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.name}", file=sys.stderr)
+        return 2
+    print("Claude 를 한 번 띄워 `ls` 만 실행해요 (탐침 아님 · 토큰을 조금 써요)…")
+    got = sandboxcheck.run(args.name)
+    if args.json:
+        print(json.dumps(got, ensure_ascii=False, indent=2, default=str))
+        return 0
+    mark = {"on": "✔", "off": "✘", "unknown": "?"}[got["verdict"]]
+    print(f"{mark} {got['reason']}")
+    for item in got.get("wrapped") or []:
+        print(f"   감싼 명령의 제약: {item}")
+    if got.get("lines"):
+        print("   근거 줄:")
+        for line in got["lines"][:12]:
+            print(f"     {line[:160]}")
+    print(f"   디버그 로그 (0600): {got.get('log') or '[없음]'}")
+    print()
+    if got["verdict"] == "on":
+        print("  결과가 맞아 보이면 사람이 켜 주세요:")
+        print(f"    labremote policy-socket-verified {args.name} --on --note \"sandbox-check {datetime.now().date()} · seccomp(unix-block) 확인\"")
+    else:
+        print("  켜지 마세요. 헤드리스 코드 실행은 계속 승인으로 가요.")
+    return 0
+
+
+def cmd_policy_socket_verified(args) -> int:
+    """🔌 Claude Bash 샌드박스의 소켓 차단을 **사람이** 확인했다고 적는다.
+
+    켜면 지금 기록된 Claude Code 판에 묶인다 — 판이 바뀌면 저절로 미확인이 된다.
+    """
+    from . import db as db_mod
+    from . import policy as policy_mod
+    from .store import events as E
+
+    if not registry.root_of(args.project):
+        print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.project}", file=sys.stderr)
+        return 2
+    pol = policy_mod.load(args.project)
+    if not args.on and not args.off:
+        got = policy_mod.socket_verification(pol)
+        print(("✔ 확인됨 · " if got["verified"] else "⚠ 미확인 · ") + (got["reason"] or f"{got['for']} · {got['at'][:10]} · {got['note']}"))
+        return 0
+    if args.on and not (args.note or "").strip():
+        print("✘ --on 에는 --note 로 무엇을 보고 켰는지 적어 주세요 (예: sandbox-check 결과)", file=sys.stderr)
+        return 2
+    try:
+        got = policy_mod.set_socket_verified(pol, on=bool(args.on), note=args.note or "")
+        policy_mod.save(pol)
+    except policy_mod.PolicyError as exc:
+        print(f"✘ {exc}", file=sys.stderr)
+        return 2
+    with db_mod.open_db() as conn:
+        E.add(
+            conn, args.project, "정책",
+            ("소켓 차단 확인을 켰어요" if args.on else "소켓 차단 확인을 껐어요")
+            + f" · {got['for'] or got['current']} · {args.note or ''}".rstrip(" ·"),
+            tone="attention",
+        )
+        conn.commit()
+    if args.on:
+        print(f"✔ 켰어요 · Claude Code {got['for']} 에 묶었어요")
+        print("  헤드리스 코드 실행(python·pytest)이 권한 단계대로 돌아가요.")
+        print("  판이 바뀌면 저절로 다시 미확인이 돼요.")
+    else:
+        print("✔ 껐어요 · 헤드리스 코드 실행은 다시 승인으로 가요")
+    return 0
+
+
 def cmd_commands(args) -> int:
     """📮 ③(웹)이 보내는 명령을 **손으로도** 넣고 볼 수 있게.
 
@@ -1730,6 +1809,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="더할 명령 이름 (여러 번 쓸 수 있어요). 없으면 지금 목록만 보여 줘요",
     )
     p.set_defaults(func=cmd_policy_allow_extra)
+
+    p = sub.add_parser(
+        "sandbox-check",
+        help="Claude Bash 샌드박스가 소켓 필터를 붙였는지 디버그 로그로 봐요 (ls 하나)",
+    )
+    p.add_argument("name")
+    p.set_defaults(func=cmd_sandbox_check)
+
+    p = sub.add_parser(
+        "policy-socket-verified",
+        help="Claude Bash 소켓 차단을 사람이 확인했다고 적어요 (켜야 코드 실행이 열려요)",
+    )
+    p.add_argument("project")
+    p.add_argument("--on", action="store_true")
+    p.add_argument("--off", action="store_true")
+    p.add_argument("--note", default="", help="무엇을 보고 켰는지")
+    p.set_defaults(func=cmd_policy_socket_verified)
 
     p = sub.add_parser(
         "commands",
