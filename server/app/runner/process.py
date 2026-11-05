@@ -87,6 +87,21 @@ ENV_KEEP = (
 )
 
 
+#: `systemd-run --user` **만** 쓰는 변수. 학습은 못 보게 바로 지운다.
+#:
+#: 🔑 왜 따로 두나 (실측 2026-11-05): `scope_available()` 은 오케스트레이터의
+#: 환경(`os.environ`)으로 탐침을 돌려 **성공**했는데, 실제 학습은 `ENV_KEEP`
+#: 화이트리스트만 받아서 그 안에 버스 주소가 없었다. 그래서 학습이
+#: `Failed to connect to bus: No medium found` 로 **즉사**했다 — exit 1,
+#: `result.csv` 없음, 그리고 멈춘 자리는 C(기록 누락)로 보고돼서 원인이
+#: 한 칸 뒤로 밀렸다.
+#:
+#: 학습 코드는 AI 가 쓴 코드다. 세션 버스가 보이면 사용자 서비스를 띄우거나
+#: 멈출 수 있고 그건 샌드박스가 못 가린다(소켓은 파일 경계 밖의 통로다).
+#: 그래서 `systemd-run` 에게만 주고 **셸 첫 줄에서 unset** 한다.
+SCOPE_ENV_KEEP = ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS")
+
+
 class LaunchError(RuntimeError):
     """띄우지 못했을 때. `blocked` 로 두고 알린다."""
 
@@ -161,21 +176,28 @@ def scope_name(spec: RunSpec) -> str:
 NO_SCOPE_ENV = "LAB_NO_SCOPE"
 
 
-def scope_available() -> bool:
+def scope_available(env: dict | None = None) -> bool:
     """`systemd-run --user --scope` 를 **실제로 띄워 보고** 판정한다.
 
     설정만 보고 믿지 않는다. user systemd·dbus 가 없는 환경(컨테이너·cron)
     에서는 안 된다.
+
+    🔑 **학습이 받을 환경으로 잰다.** `env` 를 안 주면 `os.environ` 으로
+    재는데, 그건 오케스트레이터의 환경이고 학습은 화이트리스트만 받는다.
+    둘이 다르면 탐침은 성공하고 학습은 버스를 못 찾아 즉사한다 — 실제로
+    그렇게 한 바퀴가 날아갔다 (2026-11-05).
     """
-    if os.environ.get(NO_SCOPE_ENV) == "1":
+    source = os.environ if env is None else env
+    if source.get(NO_SCOPE_ENV) == "1" or os.environ.get(NO_SCOPE_ENV) == "1":
         return False
-    binary = shutil.which("systemd-run")
+    binary = shutil.which("systemd-run", path=source.get("PATH") or os.defpath)
     if not binary:
         return False
     try:
         done = subprocess.run(
             [binary, "--user", "--scope", "--quiet", "--", "/bin/true"],
             capture_output=True, text=True, timeout=20,
+            env=None if env is None else dict(env),
         )
     except (OSError, subprocess.SubprocessError):
         return False
@@ -220,7 +242,12 @@ def build_argv(
     만드는 자리이고, scope 는 "어디에 담나" 라서 실제로 띄우는 `launch()` 가
     정한다. 그래야 argv 를 보는 시험이 systemd 에 매이지 않는다.
     """
-    script = '"$@"; printf %s "$?" > ' + shlex.quote(spec.exit_code_path)
+    # scope 를 띄우느라 물려준 버스 주소는 **학습이 보기 전에** 지운다.
+    drop = " ".join(SCOPE_ENV_KEEP)
+    script = (
+        f"unset {drop}; "
+        '"$@"; printf %s "$?" > ' + shlex.quote(spec.exit_code_path)
+    )
     wrapped = ["/bin/sh", "-c", script, "labremote-train", *inner_argv(spec)]
     if use_sandbox:
         sandbox_kw.setdefault("extra_ro", spec.data_paths)
@@ -380,9 +407,14 @@ def launch(
 
     # 🔑 학습을 **자기 cgroup** 에 담는다 (`systemd-run --user --scope`).
     # 못 쓰면 조용히 빼고 돈다 — 그때는 유닛의 `KillMode=process` 가 지킨다.
-    scoped = scope_available()
-    argv = build_argv(spec, use_sandbox=use_sandbox, use_scope=scoped, **sandbox_kw)
     env = build_env(spec, cache_dir=cache, policy=policy)
+    probe_env = dict(env)
+    probe_env.update({k: os.environ[k] for k in SCOPE_ENV_KEEP if k in os.environ})
+    scoped = scope_available(probe_env)
+    if scoped:
+        # `systemd-run` 이 쓸 것만 더한다. 셸 첫 줄이 바로 지운다.
+        env = probe_env
+    argv = build_argv(spec, use_sandbox=use_sandbox, use_scope=scoped, **sandbox_kw)
     mode = "ab" if append_log else "wb"
     try:
         log_fh = open(spec.log_path, mode)

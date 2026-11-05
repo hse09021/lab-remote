@@ -117,8 +117,12 @@ def test_인자가_argv_로_그대로_들어간다(ready):
     argv = P.build_argv(spec, use_sandbox=False)
     assert "`whoami`" in argv  # 한 토큰으로 들어간다
     assert argv[0] == "/bin/sh" and argv[1] == "-c"
-    # 셸 스크립트는 `"$@"` 뿐이다 — 인자를 문자열에 끼워 넣지 않는다
-    assert argv[2].startswith('"$@";')
+    # 셸 스크립트는 `"$@"` 뿐이다 — 인자를 문자열에 끼워 넣지 않는다.
+    # 앞에 붙는 건 scope 전용 변수를 지우는 `unset` 한 줄뿐이다.
+    assert argv[2].startswith(
+        "unset " + " ".join(P.SCOPE_ENV_KEEP) + '; "$@";'
+    )
+    assert argv[2].count('"$@"') == 1
 
 
 # --- 타임아웃 ------------------------------------------------------------------
@@ -268,3 +272,59 @@ def test_실험_ID_에_경로_조각은_못_들어온다(ready):
         with pytest.raises(S.SpecError):
             S.check_experiment_id(bad)
     assert S.check_experiment_id("EXP-001") == "EXP-001"
+
+
+# --- scope 를 띄우는 환경 ----------------------------------------------------------
+
+
+def test_탐침은_학습이_받을_환경으로_잰다(ready, monkeypatch):
+    """실측 2026-11-05: 탐침은 `os.environ` 으로 **성공**했는데 학습은
+    `ENV_KEEP` 화이트리스트만 받아 버스 주소가 없었다. 그래서 학습이
+    `Failed to connect to bus` 로 즉사하고 한 바퀴가 날아갔다.
+    """
+    seen = {}
+
+    def fake_run(argv, **kw):
+        seen["env"] = kw.get("env")
+
+        class Done:
+            returncode = 0
+
+        return Done()
+
+    monkeypatch.delenv(P.NO_SCOPE_ENV, raising=False)  # 시험 기본값은 scope 끔
+    monkeypatch.setattr(P.shutil, "which", lambda name, path=None: "/usr/bin/systemd-run")
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+
+    assert P.scope_available({"PATH": "/usr/bin", "ONLY": "이것만"}) is True
+    assert seen["env"] == {"PATH": "/usr/bin", "ONLY": "이것만"}
+
+
+def test_scope_환경은_학습에_새지_않는다(ready, monkeypatch):
+    """`systemd-run` 에게만 주고 셸 첫 줄에서 지운다.
+
+    학습은 AI 가 쓴 코드다. 세션 버스가 보이면 사용자 서비스를 띄우거나
+    멈출 수 있고, 그건 파일 경계를 지키는 샌드박스가 못 가린다.
+    """
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/1000/bus")
+    monkeypatch.setenv("XDG_RUNTIME_DIR", "/run/user/1000")
+
+    # 1) 화이트리스트에는 **없다** — scope 를 안 쓰면 아예 안 물려준다
+    spec = run_spec(ready)
+    env = P.build_env(spec)
+    assert "DBUS_SESSION_BUS_ADDRESS" not in env
+    assert "XDG_RUNTIME_DIR" not in env
+
+    # 2) 셸이 첫 줄에서 지운다 — scope 로 들어와도 학습은 못 본다
+    argv = P.build_argv(spec, use_sandbox=False)
+    assert argv[2].startswith("unset XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS; ")
+
+
+def test_scope_를_쓸_때만_버스를_물려준다(ready, monkeypatch):
+    spec = run_spec(ready)
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/1000/bus")
+    monkeypatch.setattr(P, "scope_available", lambda env=None: False)
+    launched = P.launch(spec, use_sandbox=False, cache_dir="")
+    P.wait(launched, timeout_sec=30, grace_sec=1, poll_sec=0.05)
+    assert launched.scope == ""
+    assert "systemd-run" not in launched.argv

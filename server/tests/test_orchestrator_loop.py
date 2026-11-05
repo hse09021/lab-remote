@@ -12,7 +12,7 @@ import pytest
 
 from app import loopstate, registry, runstate
 from app.orchestrator import gitflow, guards
-from app.orchestrator.__main__ import once
+from app.orchestrator.__main__ import once, stop_reason
 from app.orchestrator.loop import next_experiment_id, update_order
 from app.orchestrator.runner_ctx import LoopCtx
 from app.runner import process as process_mod
@@ -250,11 +250,13 @@ def test_안_돌아간_실험은_실행_횟수에_안_센다(conn, ready, fake):
     """
     write_config(ready, entrypoints=["src/train.py"], limits="  max_runs: 2\n")
 
-    # 두 바퀴를 설계에서 날린다
+    # 두 바퀴를 설계에서 날린다 (번호는 되쓰니 행은 하나다)
     fake.on_plan = lambda root, prompt: "설계만 하고 run.json 을 안 썼어요"
     for _ in range(2):
         assert once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))["stoppedAt"] == "plan"
-    assert [e["state"] for e in X.listing(conn, "hook-sandbox")] == ["stopped", "stopped"]
+    assert [(e["exp_id"], e["state"]) for e in X.listing(conn, "hook-sandbox")] == [
+        ("EXP-001", "stopped")
+    ]
 
     # 그래도 **돌 수 있어야 한다**
     fake.on_plan = plan_writes_run_json
@@ -395,14 +397,48 @@ def test_run_json_이_없으면_설계에서_멈춘다(conn, ready, fake):
     assert blocked["blocked"] is True and "run.json 이 없어요" in blocked["reason"]
 
 
-def test_설계가_없으면_번호를_이어_가지_않는다(conn, ready, fake):
-    """`stopped` 번호를 다음 바퀴가 집어 가면 안 된다."""
+def test_설계가_멈춘_번호를_되쓴다(conn, ready, fake):
+    """멈출 때마다 번호가 하나씩 죽으면 안 된다.
+
+    실측 2026-11-05: EXP-003~007 다섯이 그렇게 죽었다. 브랜치만 남아서
+    Claude 가 매 바퀴 "이게 돌았는지 알 수 없다" 로 멈췄다.
+    """
+    from app.orchestrator.loop import reusable_numbers
+
     fake.on_plan = lambda root, prompt: "설계만 하고 run.json 을 안 썼어요"
+    first = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert first["steps"][0]["experimentId"] == "EXP-001"
+    assert reusable_numbers(conn, "hook-sandbox", ready) == ["EXP-001"]
+
+    # 같은 번호로 다시 설계한다 — 새 번호를 먹지 않는다
+    fake.on_plan = plan_writes_run_json
+    fake.on_review = review_writes_journal
+    second = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert second["ok"] is True, second
+    assert second["experimentId"] == "EXP-001", second
+
+    # 돌고 나면 되쓸 수 없다
+    assert reusable_numbers(conn, "hook-sandbox", ready) == []
+    assert once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))["experimentId"] == "EXP-002"
+
+
+def test_폴더가_생겼으면_번호를_되쓰지_않는다(conn, ready, fake):
+    """무언가 쓰인 폴더에 덮어쓰지 않는다. 번호는 그때만 넘어간다."""
+
+    def half(root, prompt):
+        exp_id = exp_id_of(prompt)
+        folder = os.path.join(root, "experiments", exp_id)
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, "config.yaml"), "w", encoding="utf-8") as fh:
+            fh.write("lr: 1e-4\n")
+        return "폴더만 만들고 run.json 은 못 썼어요"
+
+    fake.on_plan = half
     once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
 
     fake.on_plan = plan_writes_run_json
+    fake.on_review = review_writes_journal
     second = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
-    assert second["ok"] is True, second
     assert second["experimentId"] == "EXP-002", second
 
 
@@ -568,8 +604,13 @@ def test_번호_상황을_설계_프롬프트에_싣는다(conn, ready, fake):
     """
     from app.orchestrator.loop import numbering_note, unfinished_numbers
 
-    # 설계 없이 끝난 번호 하나를 만든다
-    fake.on_plan = lambda root, prompt: "설계만 하고 run.json 을 안 썼어요"
+    # 폴더만 생기고 명세가 없는 번호를 만든다 (되쓰지 않으므로 유령이 된다)
+    def half(root, prompt):
+        exp_id = exp_id_of(prompt)
+        os.makedirs(os.path.join(root, "experiments", exp_id), exist_ok=True)
+        return "폴더만 만들었어요"
+
+    fake.on_plan = half
     once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
     assert unfinished_numbers(conn, "hook-sandbox", ready) == ["EXP-001"]
 
@@ -578,6 +619,7 @@ def test_번호_상황을_설계_프롬프트에_싣는다(conn, ready, fake):
 
     # 다음 설계 프롬프트에 그 설명이 실린다
     fake.on_plan = plan_writes_run_json
+    fake.on_review = review_writes_journal
     once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
     designed = [c for c in fake.calls if "설계 (A)" in c["prompt"]][-1]
     assert "EXP-001" in designed["prompt"]
@@ -585,6 +627,22 @@ def test_번호_상황을_설계_프롬프트에_싣는다(conn, ready, fake):
 
     # 설계가 떨어진 번호는 **설명에서 빠진다** — 그건 어긋남이 아니다
     assert "EXP-002" not in numbering_note(conn, "hook-sandbox", ready)
+
+
+def test_지금_쓰는_번호는_설명에서_뺀다(conn, ready, fake):
+    """프롬프트가 자기 모순이 되면 Claude 가 번호를 못 고른다.
+
+    실측 2026-11-05: 위에서는 "`EXP-007/` 을 만들어 주세요", 아래에서는
+    "EXP-007 은 지금 와서 채우지 않아요" 였다. Claude 는 짐작하지 않고
+    **맞게** 멈췄고 한 바퀴가 날아갔다.
+    """
+    fake.on_plan = lambda root, prompt: "설계만 하고 run.json 을 안 썼어요"
+    once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+
+    second = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    designed = [c for c in fake.calls if "설계 (A)" in c["prompt"]][-1]
+    assert second["steps"][0]["experimentId"] == "EXP-001"
+    assert "설계가 시작되기 전에 멈춘 번호" not in designed["prompt"], designed["prompt"][-600:]
 
 
 def test_어긋남이_없으면_아무_말도_안_한다(conn, ready, fake):
@@ -622,3 +680,151 @@ def test_걸린_루프를_사람이_다시_열_수_있다(conn, ready, fake):
     write_config(ready, entrypoints=["src/train.py"], limits="  max_runs: 2\n")
     LP.resume(conn, "hook-sandbox")
     assert once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))["ok"] is True
+
+
+def test_되쓰기는_맨_끝_번호에만(conn, ready, fake):
+    """중간에 죽은 번호로 **되돌아가지 않는다.**
+
+    EXP-003 이 설계 전에 죽고 EXP-004 가 돌았으면, 다음은 EXP-005 다.
+    EXP-003 으로 돌아가면 번호가 거꾸로 가고 이미 돌아간 실험보다 작은
+    번호로 새 실험을 만드는 셈이 된다.
+    """
+    from app.orchestrator.loop import next_experiment_id, reusable_numbers
+
+    X.upsert(conn, "hook-sandbox", "EXP-003", state="stopped")  # 설계 전에 죽음
+    X.upsert(conn, "hook-sandbox", "EXP-004", state="done", started_at="2026-11-05T00:00:00+09:00")
+    assert reusable_numbers(conn, "hook-sandbox", ready) == ["EXP-003"]
+    assert next_experiment_id(conn, "hook-sandbox", ready) == "EXP-005"
+
+    # 맨 끝이 안 쓰였으면 **그건** 되쓴다
+    X.upsert(conn, "hook-sandbox", "EXP-005", state="stopped")
+    assert next_experiment_id(conn, "hook-sandbox", ready) == "EXP-005"
+
+
+def test_설계가_끝난_뒤_막힌_호출은_실행을_막지_않는다(conn, ready, fake, grant_key):
+    """실측 2026-11-05: Claude 가 `run.json` 을 다 쓰고 나서 **자기가**
+    확인하려고 `python -I -c "…json.load…"` 를 돌렸다. `python -c` 는 늘
+    `ask` 라 헤드리스에서 막혔고, 명세는 완전했는데 사람이 쓸모없는 승인을
+    눌러 줘야 루프가 움직였다.
+
+    `run.json` 은 보안 경계라 어차피 `runner/spec.py` 가 다시 다 본다.
+    """
+    from app import approval_log as A
+
+    def plan_then_block(root, prompt):
+        plan_writes_run_json(root, prompt)  # 설계는 **끝냈다**
+        make_request(root)  # 그 뒤에 막혔다
+        return "run.json 을 쓰고 확인하려다 막혔어요"
+
+    fake.on_plan = plan_then_block
+    fake.on_review = review_writes_journal
+
+    got = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert got["ok"] is True, got
+    assert got["experimentId"] == "EXP-001"
+
+    # 요청은 **닫히고 사유가 남는다** — 조용히 지나가지 않는다
+    assert A.list_requests("hook-sandbox") == []
+    rows = [r for r in E.recent(conn, "hook-sandbox", limit=50) if "설계가 이미 끝났어요" in r["text"]]
+    assert rows, [r["text"] for r in E.recent(conn, "hook-sandbox", limit=10)]
+
+
+def test_명세가_틀렸으면_그대로_승인을_기다린다(conn, ready, fake, grant_key):
+    """`run.json` 이 있어도 **우리 검증을 통과해야** 지나간다."""
+
+    def plan_bad_then_block(root, prompt):
+        exp_id = exp_id_of(prompt)
+        folder = os.path.join(root, "experiments", exp_id)
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, "run.json"), "w", encoding="utf-8") as fh:
+            json.dump({"entrypoint": "src/없는것.py", "args": []}, fh)
+        make_request(root)
+        return "명세가 틀렸고 막혔어요"
+
+    fake.on_plan = plan_bad_then_block
+    got = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert got["stoppedAt"] == "approval", got
+    assert "승인을 기다려요" in stop_reason(got)
+
+
+def test_설계가_다_된_뒤_남은_요청은_다음_바퀴를_막지_않는다(conn, ready, fake, grant_key):
+    """막힌 요청이 **지난 바퀴에서** 남은 경우도 같다.
+
+    실측 2026-11-05: `run.json` 은 다 써 놨는데 요청이 열려 있어서
+    `up --once` 가 매번 `멈춤 · approval` 로 끝났다. 승인을 눌러도 그 호출은
+    설계에 필요한 게 아니었다.
+    """
+    from app import approval_log as A
+
+    def plan_then_block(root, prompt):
+        plan_writes_run_json(root, prompt)
+        make_request(root)
+        return "run.json 을 쓰고 확인하려다 막혔어요"
+
+    fake.on_plan = plan_then_block
+    fake.on_review = review_writes_journal
+
+    # 1) 요청이 남은 채로 설계가 끝난다 (여기서도 이미 넘어간다)
+    assert once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))["ok"] is True
+
+    # 2) 요청을 손으로 다시 열어 둔다 — 지난 바퀴가 남긴 상황을 흉내 낸다
+    make_request(ready, request_id="toolu_2")
+    fake.on_plan = plan_writes_run_json
+
+    def half(root, prompt):
+        """다음 번호의 설계는 안 한다 — 열린 요청만 남아 있다."""
+        return "아무것도 안 했어요"
+
+    # EXP-002 를 설계해 두고 요청만 열어 둔 상태
+    exp2 = os.path.join(ready, "experiments", "EXP-002")
+    os.makedirs(exp2, exist_ok=True)
+    with open(os.path.join(exp2, "run.json"), "w", encoding="utf-8") as fh:
+        json.dump({"entrypoint": "src/train.py", "args": ["--out", exp2]}, fh)
+    X.upsert(conn, "hook-sandbox", "EXP-002", state="planned")
+    fake.on_plan = half
+
+    got = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert got["experimentId"] == "EXP-002", got
+    assert got["steps"][0]["stage"] == "plan"  # 설계 세션을 **안 띄웠다**
+    assert A.list_requests("hook-sandbox") == []
+
+
+def test_학습이_실패하면_result_csv_를_요구하지_않는다(ready):
+    """`result.csv` 는 학습이 쓰는 파일이다. 못 나왔으면 AI 가 만들 수 없고,
+    만들면 **지어낸 값**이다 (실측에서 AI 는 맞게 거절했다).
+    """
+    from app.orchestrator.loop import update_order
+
+    exp = os.path.join(ready, "experiments", "EXP-001")
+    os.makedirs(exp, exist_ok=True)
+    for path in (
+        os.path.join(exp, "analysis.md"),
+        os.path.join(ready, "logs", "Experiment_log.csv"),
+        os.path.join(ready, "logs", "Decision_log.md"),
+        os.path.join(ready, "logs", "Failures.md"),
+        os.path.join(ready, "state", "State.yaml"),
+    ):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("한 줄\n")
+
+    # 성공했다면 `result.csv` 가 있어야 한다
+    bad = update_order(ready, "EXP-001", trained_ok=True)
+    assert bad["ok"] is False and bad["missing"] == ["result.csv"]
+
+    # 실패했다면 요구하지 않는다 — 대신 `Failures.md` 를 본다
+    good = update_order(ready, "EXP-001", trained_ok=False)
+    assert good["ok"] is True, good
+    assert "result.csv" not in good["checked"]
+    assert "logs/Failures.md" in good["checked"]
+
+
+def test_실패했는데_Failures_를_안_쓰면_어긋난다(ready):
+    from app.orchestrator.loop import update_order
+
+    exp = os.path.join(ready, "experiments", "EXP-001")
+    os.makedirs(exp, exist_ok=True)
+    with open(os.path.join(exp, "analysis.md"), "w", encoding="utf-8") as fh:
+        fh.write("왜 실패했는지\n")
+    got = update_order(ready, "EXP-001", trained_ok=False)
+    assert "logs/Failures.md" in got["missing"]

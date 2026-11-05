@@ -9,8 +9,10 @@ systemd 사용자 서비스가 이걸 띄운다 (`labremote service install`).
 
 from __future__ import annotations
 
+import os
 import sys
 import time
+from datetime import datetime
 
 from .. import db, registry
 from ..store import loops as LP
@@ -19,6 +21,7 @@ from . import approvals as AP_ORCH
 from . import recovery as recovery_mod
 from .loop import (
     design_landed,
+    next_experiment_id,
     numbering_note,
     plan_step,
     resume_step,
@@ -28,7 +31,9 @@ from .loop import (
 )
 from .runner_ctx import LoopCtx
 
-__all__ = ["main", "once"]
+__all__ = [
+    "main", "once", "stop_reason", "line_for", "log_path", "say",
+]
 
 #: 한 바퀴 돌고 쉬는 시간
 IDLE_SEC = 10.0
@@ -103,6 +108,54 @@ def _preset_of(project: str) -> str:
         return "full"
 
 
+def _design_ready(project: str, root: str, exp_id: str) -> str:
+    """설계가 **우리 검증을 통과했나.** 통과하면 빈 문자열, 아니면 사유.
+
+    `run.json` 은 보안 경계라 **AI 의 확인을 믿지 않는다** — 어차피
+    `runner/spec.py` 가 다시 다 본다 (entrypoint 화이트리스트·args 가 문자열
+    배열인지·env 키·timeout). 그래서 AI 가 자기 명세를 확인하려다 막혀도
+    **우리는 판단할 재료가 이미 다 있다.**
+    """
+    from ..runner import spec as spec_mod
+
+    if not exp_id:
+        return "실험 번호가 없어요"
+    if not design_landed(root, exp_id):
+        return "run.json 이 없어요"
+    try:
+        spec_mod.load(project, root, exp_id)
+    except spec_mod.SpecError as exc:
+        return f"run.json 을 믿을 수 없어요: {exc}"
+    return ""
+
+
+def _advance_past_approval(conn, project: str, root: str, exp_id: str) -> bool:
+    """설계가 다 됐으면 **승인을 기다리지 않고** B 로 간다.
+
+    왜: 설계가 끝난 **뒤에** 막힌 호출은 설계에 필요한 게 아니었다. 실측
+    2026-11-05 에 Claude 가 `run.json` 을 다 쓰고 나서 그걸 **자기가**
+    확인하려고 `python -I -c "…json.load…"` 를 돌렸고, `python -c` 는 늘
+    `ask` 라 헤드리스에서 막혔다. 명세는 완전했는데 사람이 쓸모없는 승인을
+    눌러 줘야 루프가 움직였다.
+
+    그냥 지나가는 게 아니다 — **우리 검증을 통과했을 때만** 간다
+    (`_design_ready`). 닫는 이유는 `Approval_log.csv` 와 감사 진본에 남는다.
+    """
+    if _design_ready(project, root, exp_id):
+        return False
+    closed = 0
+    for row in waiting_approval(conn, project):
+        AP_ORCH.abandon(
+            conn, project, str(row.get("request_id") or ""),
+            reason=(
+                f"{exp_id} 설계가 이미 끝났어요 (run.json 이 검증을 통과했어요) · "
+                "설계 뒤에 막힌 호출이라 승인 없이 실행으로 넘어갔어요"
+            ),
+        )
+        closed += 1
+    return closed > 0
+
+
 def once(conn, project: str, root: str, **kw) -> dict:
     """루프 한 바퀴: A -> B -> C.
 
@@ -117,118 +170,109 @@ def once(conn, project: str, root: str, **kw) -> dict:
     # `launch.check_mode(headless=True, preset="manual")` 의 거부가 **한 번도
     # 안 돈다.** 대신 훅은 진짜 정책(`manual`)을 보고 `code`·`hparam` 까지
     # 전부 `ask` → 헤드리스 거절로 떨어뜨린다.
-    #
-    # 결과: 루프가 설계 세션을 쓰고, 실험 번호를 하나 먹고, 쓰기마다 승인
-    # 대기를 쌓고서야 멈춘다. 런처가 **처음에** 거부했어야 하는 조합이다.
     if "preset" not in kw:
         kw["preset"] = _preset_of(project)
     if "context" not in kw:
         # 번호 상황을 **우리가** 말해 준다. Claude 는 `lab.db` 를 못 읽어서
         # "planned 라는데 폴더가 없다" 를 혼자서는 풀 수 없다.
-        kw["context"] = numbering_note(conn, project, root)
+        #
+        # 이번에 쓸 번호는 **빼고** 말한다. 안 빼면 프롬프트가 자기 모순이다.
+        working = _resuming_experiment(conn, project, root) or next_experiment_id(
+            conn, project, root
+        )
+        kw["context"] = numbering_note(conn, project, root, exclude=[working])
     ctx = LoopCtx(project=project, root=root, **kw)
-    steps = []
+    steps: list[dict] = []
+    planned: dict | None = None
+
+    def stopped(stage: str, **extra) -> dict:
+        return {"ok": False, "steps": steps, "stoppedAt": stage, **extra}
 
     waiting = waiting_approval(conn, project)
     if waiting:
-        # **허가가 있을 때만** 다시 띄운다. 승인도 안 났는데 띄우면 같은
-        # 자리에서 또 막히고 사용량만 쓴다.
         item = waiting[0]
-        if not usable_grants(project, request=item):
-            # 🔑 **승인은 났는데 허가가 없다** = 재개가 이미 지나갔다.
+        if usable_grants(project, request=item):
+            # 사람이 승인했고 허가가 살아 있다 — **그 자리에서** 이어 간다.
+            session_id = str(
+                item.get("session_id") or (item.get("file") or {}).get("sessionId") or ""
+            )
+            request_id = str(item.get("request_id") or "")
+            steps.append(resume_step(ctx, conn, session_id, request=item))
+
+            # 🔑 재개했는데 요청이 그대로면 닫는다.
             #
-            # 승인 뒤 재개가 그 호출을 다시 안 하면 요청은 열린 채로 남고,
-            # 재개가 끝나며 허가는 지워진다(S3). 그 상태를 "대기" 로 두면
-            # 다음 바퀴마다 여기서 바로 멈추고 **사람이 또 승인해도 같은
-            # 자리로 돌아온다** — 풀릴 길이 없다 (실측 2026-11-05).
-            #
-            # 아직 승인 전(`open`)이면 **그대로 기다린다.** 그게 승인 대기의
-            # 본래 뜻이다.
-            if str(item.get("state") or "") == "approved":
+            # 재개가 끝나면서 허가는 지워진다(S3). 요청을 열어 두면 다음
+            # 바퀴는 "요청 열림 + 허가 없음" 이라 바로 멈추고, 사람이 또
+            # 승인해도 같은 자리로 돌아온다 — **풀릴 길이 없다.** 실측에서
+            # 재개한 세션이 도구를 한 번도 안 부르고 끝났다 (2026-11-05).
+            still = {
+                str(r.get("request_id") or "") for r in waiting_approval(conn, project)
+            }
+            if request_id and request_id in still:
+                AP_ORCH.abandon(
+                    conn, project, request_id,
+                    reason=(
+                        "재개가 끝났는데 요청이 그대로 열려 있어요 "
+                        "(같은 호출을 다시 안 했거나, 이제 허가 없이도 통과했어요)"
+                    ),
+                )
+                still.discard(request_id)
+            if still:
+                return stopped("approval", waiting=waiting_approval(conn, project))
+            exp_id = _resuming_experiment(conn, project, root)
+            if not exp_id:
+                return stopped(
+                    "resume",
+                    reason=(
+                        "이어 갔는데 설계가 안 끝났어요 (run.json 이 없어요) · "
+                        "다음 바퀴에서 같은 번호로 설계부터 가요"
+                    ),
+                )
+            planned = {"ok": True, "stage": "resume", "experimentId": exp_id}
+            steps.append(planned)
+        else:
+            # 허가가 없다. 세 갈래다.
+            ready_exp = _resuming_experiment(conn, project, root)
+            if ready_exp and _advance_past_approval(conn, project, root, ready_exp):
+                # (1) **설계는 이미 끝났다.** 승인을 기다릴 이유가 없다 —
+                #     설계 뒤에 막힌 호출이었다 (실측: AI 의 run.json 자기 검증).
+                planned = {"ok": True, "stage": "plan", "experimentId": ready_exp}
+                steps.append(planned)
+            elif str(item.get("state") or "") == "approved":
+                # (2) 승인은 났는데 허가가 지나갔다 = 재개가 이미 다녀갔다.
+                #     열어 두면 다음 바퀴마다 여기서 멈추고 풀릴 길이 없다.
                 AP_ORCH.abandon(
                     conn, project, str(item.get("request_id") or ""),
                     reason="승인했지만 허가가 이미 지나갔어요 (재개가 그 호출을 다시 안 했어요)",
                 )
-                waiting = waiting_approval(conn, project)
-                if waiting:
-                    return {
-                        "ok": False, "steps": steps,
-                        "stoppedAt": "approval", "waiting": waiting,
-                    }
-                item = None
+                left = waiting_approval(conn, project)
+                if left:
+                    return stopped("approval", waiting=left)
+                # planned 는 None — 아래에서 설계부터 평소대로 간다.
             else:
-                return {
-                    "ok": False, "steps": steps,
-                    "stoppedAt": "approval", "waiting": waiting,
-                }
-        if item is None:
-            # 막혀 있던 건을 닫았다. 설계부터 평소대로 간다.
-            planned = plan_step(ctx, conn)
-            steps.append(planned)
-            if planned.get("waiting"):
-                return {"ok": False, "steps": steps, "stoppedAt": "approval"}
-            if not planned.get("ok"):
-                return {"ok": False, "steps": steps, "stoppedAt": "plan"}
-            exp_id = planned["experimentId"]
-            trained = train_step(ctx, conn, exp_id)
-            steps.append(trained)
-            if trained.get("blocked"):
-                return {"ok": False, "steps": steps, "stoppedAt": "train"}
-            reviewed = review_step(ctx, conn, exp_id, trained.get("outcome"))
-            steps.append(reviewed)
-            return {
-                "ok": bool(reviewed.get("ok")),
-                "steps": steps,
-                "stoppedAt": None if reviewed.get("ok") else "review",
-                "experimentId": exp_id,
-            }
+                # (3) 아직 승인 전이다. **그대로 기다린다** — 그게 승인
+                #     대기의 본래 뜻이다.
+                return stopped("approval", waiting=waiting)
 
-        session_id = str(
-            item.get("session_id")
-            or (item.get("file") or {}).get("sessionId")
-            or ""
-        )
-        request_id = str(item.get("request_id") or "")
-        resumed = resume_step(ctx, conn, session_id, request=item)
-        steps.append(resumed)
-
-        # 🔑 재개했는데 **그 호출을 다시 안 했으면** 요청을 닫는다.
-        #
-        # 재개가 끝나면서 허가는 지워진다(S3). 그래서 요청을 열어 두면 다음
-        # 바퀴는 "요청 열림 + 허가 없음" 이라 바로 멈추고, 사람이 또 승인해도
-        # 같은 자리로 돌아온다 — **기다림이 풀릴 길이 없다.** 실측에서 재개한
-        # 세션이 도구를 한 번도 안 부르고 끝났다 (9단계 1번, 2026-11-05).
-        still = {str(r.get("request_id") or "") for r in waiting_approval(conn, project)}
-        if request_id and request_id in still:
-            AP_ORCH.abandon(
-                conn, project, request_id,
-                reason=(
-                    "재개가 끝났는데 요청이 그대로 열려 있어요 "
-                    "(같은 호출을 다시 안 했거나, 이제 허가 없이도 통과했어요)"
-                ),
-            )
-            still.discard(request_id)
-        if still:
-            return {"ok": False, "steps": steps, "stoppedAt": "approval"}
-        exp_id = _resuming_experiment(conn, project, root)
-        if not exp_id:
-            # 설계가 아직 안 끝났다. 다음 바퀴에서 설계부터 간다.
-            return {"ok": False, "steps": steps, "stoppedAt": "resume"}
-        planned = {"ok": True, "stage": "resume", "experimentId": exp_id}
-        steps.append(planned)
-    else:
+    if planned is None:
         planned = plan_step(ctx, conn)
         steps.append(planned)
         if planned.get("waiting"):
-            return {"ok": False, "steps": steps, "stoppedAt": "approval"}
+            moved = _advance_past_approval(
+                conn, project, root, str(planned.get("experimentId") or "")
+            )
+            if not moved:
+                return stopped("approval", waiting=planned.get("waiting"))
+            planned = dict(planned, ok=True, waiting=None)
+            steps[-1] = planned
         if not planned.get("ok"):
-            return {"ok": False, "steps": steps, "stoppedAt": "plan"}
+            return stopped("plan")
 
     exp_id = planned["experimentId"]
     trained = train_step(ctx, conn, exp_id)
     steps.append(trained)
     if trained.get("blocked"):
-        return {"ok": False, "steps": steps, "stoppedAt": "train"}
+        return stopped("train", experimentId=exp_id)
 
     reviewed = review_step(ctx, conn, exp_id, trained.get("outcome"))
     steps.append(reviewed)
@@ -240,6 +284,146 @@ def once(conn, project: str, root: str, **kw) -> dict:
     }
 
 
+#: 앞단 실행(`up --once`·`--foreground`)도 여기에 같이 남긴다.
+LOG_NAME = "orchestrator.log"
+
+
+def log_path() -> str:
+    return os.path.join(registry.data_dir(), "logs", LOG_NAME)
+
+
+def say(line: str) -> None:
+    """화면과 로그에 **같은 문장**을 남긴다.
+
+    systemd 는 `StandardOutput=append:` 로 로그를 받지만 앞단 실행은 터미널로
+    흘러가 버린다 — 그래서 나중에 원인을 찾을 수가 없었다 (실측 2026-11-05:
+    `orchestrator.log` 가 아예 없었다). **쓰기 실패가 루프를 멈추지는
+    않는다.**
+    """
+    print(line, flush=True)
+    stamp = datetime.now().astimezone().isoformat(timespec="seconds")
+    try:
+        path = log_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(f"{stamp} {line}\n")
+    except OSError:
+        pass
+
+
+def _skip_reason(state: dict) -> str:
+    if state.get("paused"):
+        return "사람이 멈춰 뒀어요: " + str(state.get("paused_reason") or "사유 없음")
+    if str(state.get("state") or "") in ("stopped", "done", "blocked"):
+        return (
+            f"루프 상태가 {state.get('state')} 예요: "
+            + str(state.get("stop_reason") or "사유 없음")
+            + " · `labremote queue resume <프로젝트>` 로 다시 열어요"
+        )
+    return ""
+
+
+def _field(obj, name: str):
+    """`outcome` 은 dataclass 일 수도 dict 일 수도 있다."""
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return obj.get(name)
+    return getattr(obj, name, None)
+
+
+def _join(head: str, tail: str) -> str:
+    return " · ".join(x for x in (head, tail) if x)
+
+
+def stop_reason(got: dict) -> str:
+    """한 바퀴의 결과에서 **멈춘 이유 한 줄**을 뽑는다.
+
+    `멈춤 · plan` 만 찍으면 사람이 로그를 뒤져야 안다 — 그게 이번 실측에서
+    실제로 일어났다. 사유는 이미 `steps` 안에 있는데 **화면에 안 나왔다.**
+    """
+    if got.get("ok"):
+        return ""
+    if got.get("reason"):
+        return str(got["reason"])
+
+    stage = got.get("stoppedAt")
+    steps = got.get("steps") or []
+
+    if stage == "approval":
+        waiting = got.get("waiting") or []
+        for step in reversed(steps):
+            if not waiting and step.get("waiting"):
+                waiting = step["waiting"]
+        if waiting:
+            first = waiting[0] or {}
+            action = str(first.get("action_key") or "").strip()
+            # `request` 는 사람이 읽는 짧은 줄이다 (전문은 `approvals show`).
+            what = str(first.get("request") or "").strip().replace("\n", " ")
+            if len(what) > 70:
+                what = what[:69] + "…"
+            bits = " · ".join(x for x in (action, what) if x)
+            tail = f": {bits}" if bits else ""
+            more = f" 외 {len(waiting) - 1}건" if len(waiting) > 1 else ""
+            return (
+                f"승인을 기다려요 ({len(waiting)}건){tail}{more} · "
+                "`labremote approvals list <프로젝트>`"
+            )
+        return "승인을 기다려요"
+
+    # 🔑 **학습이 실패했으면 그 말을 먼저 한다.**
+    #
+    # 실패해도 C(분석)는 돌린다 — 실패도 기록이다. 그런데 그러면 멈춘 자리가
+    # `review` 가 되고 사유도 "기록이 덜 갱신됐어요" 가 된다. 실측에서
+    # 진짜 원인(`systemd-run` 이 버스를 못 찾아 학습이 즉사)이 **한 칸 뒤로
+    # 밀려** 사람이 로그를 직접 뒤져야 했다.
+    head = ""
+    for step in steps:
+        # `ok` 가 **명시적으로 거짓**일 때만. 칸이 없는 걸 실패로 읽으면
+        # 사유를 지어내는 셈이다.
+        if step.get("stage") != "train" or step.get("ok") is not False:
+            continue
+        outcome = step.get("outcome")
+        state = _field(outcome, "state") or step.get("reason") or "실패"
+        code = _field(outcome, "exit_code")
+        bits = f"학습이 안 됐어요 ({state}"
+        if code is not None:
+            bits += f" · 종료코드 {code}"
+        exp = step.get("experimentId")
+        where = f"experiments/{exp}/output/train.log" if exp else "output/train.log"
+        head = bits + f") · {where} 를 보세요"
+        break
+
+    for step in reversed(steps):
+        if stage and step.get("stage") != stage:
+            continue
+        if step.get("reason"):
+            return _join(head, str(step["reason"]))
+        if step.get("disagree"):
+            said = step.get("saidSuccess")
+            numbers = step.get("numbers") or {}
+            return _join(
+                head,
+                f"AI 의 판정({said})과 result.csv 판정({numbers.get('success')})이 달라요",
+            )
+        order = step.get("updateOrder") or {}
+        if order and not order.get("ok"):
+            missing = ", ".join(str(x) for x in (order.get("missing") or [])) or "일부"
+            return _join(head, f"기록이 덜 갱신됐어요: {missing}")
+        break
+    return head
+
+
+def line_for(name: str, got: dict) -> str:
+    """사람이 보는 한 줄. `--once` 출력과 로그가 **같은 문장**을 쓴다."""
+    if got.get("ok"):
+        exp = got.get("experimentId")
+        return f"{name}: 완주" + (f" · {exp}" if exp else "")
+    why = stop_reason(got)
+    head = f"{name}: 멈춤 · {got.get('stoppedAt')}"
+    return head + (f" · {why}" if why else "")
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     rounds = None
@@ -249,18 +433,22 @@ def main(argv: list[str] | None = None) -> int:
     with db.open_db() as conn:
         report = recovery_mod.recover(conn)
         if report["notes"]:
-            print("복구:", " · ".join(report["notes"]))
+            say("복구: " + " · ".join(report["notes"]))
         while rounds is None or done < rounds:
             for root, name in sorted(registry.load().items()):
                 try:
                     approvals_mod.sync(conn, name)
                     state = LP.ensure(conn, name)
-                    if state.get("paused") or state.get("state") in ("stopped", "done", "blocked"):
+                    skipped = _skip_reason(state)
+                    if skipped:
+                        # 전에는 **아무 줄도 안 찍었다.** 사람은 왜 조용한지
+                        # 알 수 없었다.
+                        say(f"{name}: 안 돌았어요 · {skipped}")
                         continue
                     got = once(conn, name, root)
-                    print(f"{name}: {'완주' if got['ok'] else '멈춤 · ' + str(got['stoppedAt'])}")
+                    say(line_for(name, got))
                 except Exception as exc:  # 루프는 멈추지 않는다
-                    print(f"{name}: 한 바퀴가 실패했어요 — {type(exc).__name__}: {exc}")
+                    say(f"{name}: 한 바퀴가 실패했어요 — {type(exc).__name__}: {exc}")
             done += 1
             if rounds is not None and done >= rounds:
                 break

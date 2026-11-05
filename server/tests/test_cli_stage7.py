@@ -432,5 +432,5 @@ def test_scope_를_못_쓰면_조용히_빠진다(monkeypatch):
     monkeypatch.setenv(P.NO_SCOPE_ENV, "1")
     assert P.scope_available() is False
     monkeypatch.delenv(P.NO_SCOPE_ENV)
-    monkeypatch.setattr(P.shutil, "which", lambda name: None)
+    monkeypatch.setattr(P.shutil, "which", lambda name, path=None: None)
     assert P.scope_available() is False

@@ -21,6 +21,14 @@
 `result.csv` 의 열은 `templates/result_example.csv` 와 같아야 해요:
 `step,split,metric,value`.
 
+## 학습이 실패했으면 (종료 상태가 `done` 이 아니면)
+
+- **`result.csv` 를 만들지 마세요.** 학습이 쓰는 파일이에요. 안 나왔으면
+  없는 게 맞아요 — 지어낸 값보다 빈 자리가 나아요.
+- 대신 **`analysis.md` 와 `logs/Failures.md` 를 꼭 써 주세요.** 증상·원인·
+  해결을 적어 주세요. `output/train.log` 와 `output/exit_code` 가 근거예요.
+- 성공 기준 충족 여부는 `판정 불가` 라고 적어 주세요.
+
 ## 평가
 
 `docs/Evaluation.md` 의 지표와 성공 기준을 그대로 따라 주세요.
