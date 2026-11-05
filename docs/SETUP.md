@@ -197,11 +197,47 @@ chmod 600 ~/.config/labremote/config.toml
 
 ---
 
-## 7. [미작성 — 7·8단계에서 채웁니다]
+## 7. nvidia 자동 업데이트 제외 (드라이버가 저절로 올라가지 않게)
+
+우분투 자동 업데이트가 드라이버를 올리고 재부팅을 안 하면 커널·유저랜드 판이
+어긋나 **`nvidia-smi` 가 통째로 죽습니다**(`Failed to initialize NVML`).
+①의 실측 중 실제로 당했습니다 — 그러면 진짜 학습이 전부 실패합니다.
+
+`/etc/apt/apt.conf.d/52labremote-nvidia` 를 만들고(`sudo` 필요):
+
+```
+Unattended-Upgrade::Package-Blacklist {
+    "nvidia-";
+    "libnvidia-";
+    "cuda-";
+    "linux-image-";
+    "linux-headers-";
+    "linux-modules-";
+    "linux-objects-nvidia-";
+    "linux-signatures-nvidia-";
+};
+Unattended-Upgrade::Automatic-Reboot "false";
+```
+
+확인 (둘 다 하면 확실합니다):
+
+```bash
+apt-config dump | grep Package-Blacklist          # 적용값
+sudo unattended-upgrade --dry-run --debug 2>&1 | grep -i blacklist
+labremote doctor | grep nvidia                    # ✔ 8개 다 묶여 있어요
+```
+
+> `doctor` 는 **파일 이름이 아니라 `apt-config dump` 의 적용값**을 봅니다.
+> 설정이 여러 파일에 흩어지고 나중 파일이 앞을 덮으므로, 파일이 있는지로는
+> 알 수 없습니다.
+
+드라이버를 올릴 때는 **일부러** 올리고 **재부팅**하세요. 재부팅 전에는
+`labremote doctor` 의 `GPU 드라이버` 가 ✘ 이고 `guards` 가 `train` 작업을
+띄우지 않습니다 — 어차피 실패할 학습으로 GPU 시간을 버리지 않습니다.
+
+## 8. [미작성 — 8단계에서 채웁니다]
 
 - `loginctl enable-linger` 와 systemd 사용자 서비스 (8단계)
-- GPU 드라이버 불일치 해결 (재부팅) 과 nvidia 자동 업데이트 제외
-- 승인 대기열 CLI (`labremote approvals`) 사용법 (7단계)
 
 ---
 

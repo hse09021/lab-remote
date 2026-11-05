@@ -299,6 +299,263 @@ SHELL_FILES = ("~/.bashrc", "~/.zshrc", "~/.bash_aliases", "~/.profile")
 SHELL_MARK = "labremote claude"
 
 
+#: `apt-config dump` 에서 `Unattended-Upgrade::Package-Blacklist` 에 꼭 있어야
+#: 하는 접두사. 드라이버가 저절로 올라가고 재부팅이 안 되면 `nvidia-smi` 가
+#: 통째로 죽는다 — ①의 실측 중 실제로 당했다.
+NVIDIA_BLACKLIST = (
+    "nvidia-",
+    "libnvidia-",
+    "cuda-",
+    "linux-image-",
+    "linux-headers-",
+    "linux-modules-",
+    "linux-objects-nvidia-",
+    "linux-signatures-nvidia-",
+)
+
+
+def apt_blacklist() -> dict:
+    """`apt-config dump` 의 **적용값**을 읽는다. 파일 이름을 보지 않는다.
+
+    설정이 여러 파일에 흩어지고 나중 파일이 앞 파일을 덮으므로, 파일이
+    있는지로는 알 수 없다. `apt-config dump` 는 apt 자신이 해석한 결과다.
+
+    `{"ok", "entries", "autoReboot", "reason"}`. 던지지 않는다.
+    """
+    import subprocess
+
+    try:
+        done = subprocess.run(
+            ["apt-config", "dump"], capture_output=True, text=True, timeout=20
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"ok": False, "entries": [], "autoReboot": None, "reason": str(exc)}
+    if done.returncode != 0:
+        return {
+            "ok": False, "entries": [], "autoReboot": None,
+            "reason": (done.stderr or "").strip()[:160],
+        }
+
+    entries, auto = [], None
+    for line in (done.stdout or "").splitlines():
+        text = line.strip()
+        if text.startswith("Unattended-Upgrade::Package-Blacklist::"):
+            value = text.split('"', 1)[-1].rsplit('"', 1)[0]
+            if value:
+                entries.append(value)
+        elif text.startswith("Unattended-Upgrade::Automatic-Reboot "):
+            auto = text.split('"', 1)[-1].rsplit('"', 1)[0].lower()
+    return {"ok": True, "entries": entries, "autoReboot": auto, "reason": ""}
+
+
+def nvidia_hold_check() -> Check:
+    """nvidia 드라이버가 **저절로 올라가지 않게** 묶여 있나.
+
+    ①의 실측 중 당한 문제다 — 우분투 자동 업데이트가 드라이버를 올리고
+    재부팅을 안 하면 커널·유저랜드 판이 어긋나 `nvidia-smi` 가 죽는다.
+    그러면 진짜 학습이 전부 실패한다.
+
+    **`apt-config dump` 의 적용값**을 본다 — 파일 이름이 아니라. 설정이 여러
+    파일에 흩어지고 나중 파일이 앞을 덮으므로 파일 존재로는 알 수 없다.
+
+    `⚠` 인 이유: 묶여 있지 않아도 지금 당장은 돈다. 다음 업데이트에서
+    깨지는 종류라 종료코드를 바꾸지 않는다.
+    """
+    got = apt_blacklist()
+    if not got["ok"]:
+        return warn(
+            "nvidia 자동 업데이트 제외",
+            "apt-config 를 읽지 못했어요: " + str(got["reason"])[:120],
+            hint="우분투가 아닌 기계면 정상이에요.",
+        )
+    missing = [item for item in NVIDIA_BLACKLIST if item not in got["entries"]]
+    auto_reboot_on = got["autoReboot"] in ("true", "1", "yes")
+    if missing or auto_reboot_on:
+        detail = []
+        if missing:
+            detail.append("빠진 항목: " + ", ".join(missing))
+        if auto_reboot_on:
+            detail.append("Automatic-Reboot 가 켜져 있어요")
+        return warn(
+            "nvidia 자동 업데이트 제외",
+            " · ".join(detail)[:200],
+            hint=(
+                "드라이버가 저절로 올라가고 재부팅이 안 되면 nvidia-smi 가 "
+                "죽어요 (커널·유저랜드 판 불일치). docs/SETUP.md 를 봐 주세요."
+            ),
+        )
+    detail = f"{len(NVIDIA_BLACKLIST)}개 다 묶여 있어요"
+    if got["autoReboot"] is not None:
+        detail += f" · Automatic-Reboot {got['autoReboot']}"
+    return Check(True, "nvidia 자동 업데이트 제외", detail)
+
+
+def api_key_check() -> Check:
+    """`ANTHROPIC_API_KEY` 가 환경에 있으면 **경고.**
+
+    키가 섞이면 구독 한도가 아니라 **종량제로 과금**된다. 런처가
+    `ENV_STRIP` 으로 지우고(`agent/launch.py`) systemd 유닛에도 넣지 않지만,
+    사람이 셸에 export 해 두면 다른 자리에서 새어 들어갈 수 있다.
+    """
+    from .agent import launch as launch_mod
+
+    found = [name for name in launch_mod.ENV_STRIP if os.environ.get(name)]
+    if not found:
+        return Check(True, "추가 결제 차단", "ANTHROPIC_* 가 환경에 없어요")
+    return warn(
+        "추가 결제 차단",
+        "환경에 있어요: " + ", ".join(found),
+        hint=(
+            "런처가 지우고 띄우지만(ENV_STRIP), 셸에서 export 해 두면 다른 "
+            "자리에서 새어요. 구독만 쓰려면 지워 주세요."
+        ),
+    )
+
+
+def webhook_check() -> Check:
+    """웹훅 설정 파일 권한이 **0600** 인가. 주소는 읽지 않는다."""
+    from . import config, notify
+
+    path = config.config_path()
+    mode = config.mode_of(path)
+    has_env = bool(os.environ.get("LAB_DISCORD_WEBHOOK", "").strip())
+    if mode is None:
+        if has_env:
+            return Check(True, "웹훅 설정", "환경 변수로 들어와요 (파일 없음)")
+        return warn(
+            "웹훅 설정",
+            f"없어요: {path} · 알림이 안 가요",
+            hint="docs/SETUP.md 의 웹훅 단계를 해 주세요.",
+        )
+    if not config.is_private(path):
+        return Check(
+            False,
+            "웹훅 설정",
+            f"권한이 넓어요: {oct(mode)[2:]} · 남이 웹훅 주소를 읽을 수 있어요",
+            hint=f"chmod 600 {path}",
+        )
+    # 주소 자체는 **찍지 않는다** — 비어 있는지만 본다
+    if not notify.webhook_url():
+        return warn(
+            "웹훅 설정",
+            f"{path} 는 있는데 주소가 비어 있어요",
+            hint="[discord] webhook = \"…\" 을 채워 주세요.",
+        )
+    return Check(True, "웹훅 설정", f"{path} · 권한 {oct(mode)[2:]}")
+
+
+def schema_check() -> Check:
+    """`lab.db` 스키마 판이 이 코드가 아는 판인가."""
+    from . import db as db_mod
+
+    try:
+        with db_mod.open_db() as conn:
+            got = db_mod.version(conn)
+    except db_mod.DbError as exc:
+        return Check(False, "DB 스키마", str(exc)[:200],
+                     hint="코드를 올리거나 데이터를 백업하고 지워 주세요.")
+    except Exception as exc:  # pragma: no cover - DB 를 못 열는 환경
+        return warn("DB 스키마", f"못 읽었어요: {exc}")
+    if got == db_mod.SCHEMA_VERSION:
+        return Check(True, "DB 스키마", f"판 {got} · {db_mod.path()}")
+    return Check(
+        False,
+        "DB 스키마",
+        f"판 {got} · 코드는 판 {db_mod.SCHEMA_VERSION} 를 알아요",
+        hint="labremote doctor 를 다시 돌리면 이행돼요 (open_db 가 올려요).",
+    )
+
+
+def deny_commands_check(pol=None) -> Check:
+    """정책의 `bash.denyCommands` 에 **0-1 의 명령이 다** 들어 있나.
+
+    자기 승인 차단(`labremote`·`sqlite3`·`systemctl`·`pkill` …)과 격리 깨기
+    (`bwrap`·`unshare`·`docker` …)가 여기 있다. 정책 파일은 사람이 고칠 수
+    있어서(프로젝트 밖) 빠질 수 있다.
+    """
+    from . import policy_defaults as D
+
+    title = "금지 명령"
+    listed = set((getattr(pol, "bash", {}) or {}).get("denyCommands") or [])
+    if not listed:
+        return Check(False, title, "정책에 denyCommands 가 비어 있어요",
+                     hint="labremote policy migrate <이름> 으로 다시 써 주세요.")
+    missing = sorted(set(D.DENY_COMMANDS) - listed)
+    if missing:
+        return Check(
+            False,
+            title,
+            f"{len(missing)}개 빠졌어요: " + ", ".join(missing[:8]),
+            hint="labremote policy migrate <이름> 으로 다시 써 주세요.",
+        )
+    return Check(True, title, f"{len(listed)}개 다 있어요")
+
+
+def loop_state_check(root: str, name: str = "") -> Check:
+    """`state/Current.yaml` 과 서버 쪽 `runstate` 가 **같은 말을 하나.**
+
+    ①의 숙제였다 — 실측에서 둘이 어긋나(loop 0 vs EXP-002 running) Claude 가
+    잠금의 이유를 설명하지 못했다. `Current.yaml` 은 AI 가 못 고치는
+    근거 파일이므로(selfProtect) 서버 쪽과 어긋나면 그 근거가 깨진다.
+    """
+    from . import loopstate, runstate
+
+    title = f"루프 상태 정합 · {name}" if name else "루프 상태 정합"
+    live = runstate.load(name) if name else runstate.RunState()
+    current = loopstate.read_current(root)
+    if not current:
+        if getattr(live, "running", False):
+            return Check(
+                False, title,
+                "Current.yaml 이 없는데 서버는 실행 중이라고 해요",
+                hint="labremote run-state <이름> --idle 로 맞춰 주세요.",
+            )
+        return Check(True, title, "둘 다 안 돌고 있어요 (Current.yaml 아직 없음)")
+
+    said = bool(current.get("running"))
+    real = bool(getattr(live, "running", False))
+    exp_said = str(current.get("current_experiment") or "")
+    exp_real = str(getattr(live, "experiment_id", "") or "")
+    if said != real or (real and exp_said != exp_real):
+        return Check(
+            False,
+            title,
+            f"어긋나요 — Current.yaml: {exp_said or '없음'}/{said} · "
+            f"서버: {exp_real or '없음'}/{real}",
+            hint=(
+                "오케스트레이터가 둘을 같이 갱신해요(app/loopstate.py). "
+                "어긋났으면 labremote run-state <이름> 으로 맞춰 주세요."
+            ),
+        )
+    return Check(True, title, f"{exp_real or '안 돌고 있어요'} · 둘이 같아요")
+
+
+def leftover_requests_check(name: str) -> Check:
+    """`requests/` 에 닫히지 않은 승인 요청이 남아 있나. — ⚠ 다.
+
+    쌓이기만 하면 사람이 무엇을 승인해야 하는지 흐려진다. 오래된 것은
+    `labremote requests clear` 로 치운다.
+    """
+    from . import approval_log as A
+
+    title = f"승인 요청 잔여 · {name}" if name else "승인 요청 잔여"
+    try:
+        items = A.list_requests(name)
+    except Exception as exc:  # pragma: no cover
+        return warn(title, f"못 읽었어요: {exc}")
+    if not items:
+        return Check(True, title, "없어요")
+    return warn(
+        title,
+        f"{len(items)}건 남아 있어요: "
+        + ", ".join(str(i.get("requestId") or "")[:18] for i in items[:3]),
+        hint=(
+            f"labremote approvals list 로 보고, 오래된 것은 "
+            f"labremote requests clear {name} 로 치워 주세요."
+        ),
+    )
+
+
 def gpu_check() -> Check:
     """GPU 를 조회할 수 있나. — **⚠ 다** (실험 자체는 돌 수 있습니다).
 
@@ -728,12 +985,26 @@ def run() -> dict:
         checks.append(project_env_check(root, name))
         # 승인 기록 사본이 진본과 같은지
         checks.append(audit_check(root, name, pol))
+        # 정책의 금지 명령이 다 있는지 (자기 승인 차단·격리 깨기)
+        checks.append(deny_commands_check(pol))
+        # Current.yaml ↔ runstate 정합 (①의 숙제)
+        checks.append(loop_state_check(root, name))
+        # 닫히지 않은 승인 요청 (⚠)
+        checks.append(leftover_requests_check(name))
         # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
         checks.append(cache_check(root, pol))
 
     # GPU — 조회 실패는 ⚠ (가짜 학습은 돈다), 드라이버 불일치는 ✘
     checks.append(gpu_check())
     checks.append(gpu_driver_check())
+    # nvidia 가 저절로 올라가면 드라이버 판이 어긋난다 (apt 적용값으로 본다)
+    checks.append(nvidia_hold_check())
+    # 구독만 쓴다 — 키가 섞이면 종량제 과금이다
+    checks.append(api_key_check())
+    # 웹훅 설정 권한 (주소는 읽지 않는다)
+    checks.append(webhook_check())
+    # lab.db 스키마 판
+    checks.append(schema_check())
     # 허가 서명 키 — 없으면 헤드리스 승인이 아예 안 된다
     checks.append(grant_key_check())
     # 사용자 설정에 sandbox 가 있으면 이 PC 의 모든 세션이 갇힌다
