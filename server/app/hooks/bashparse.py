@@ -175,6 +175,10 @@ NET_CMDS = {"curl", "wget", "huggingface-cli", "hf", "gdown", "aria2c", "scp", "
 #: 실험을 띄우는 명령
 RUN_CMDS = {"python", "python3", "torchrun", "accelerate", "deepspeed", "sbatch", "srun"}
 
+#: 이 중에서 **학습을 띄우는 것 말고 쓸 데가 없는** 것들. `trainrun` 으로
+#: 분류해서 헤드리스에서는 프리셋과 무관하게 막는다 (`decide.decide`).
+LAUNCHER_CMDS = {"torchrun", "accelerate", "deepspeed", "sbatch", "srun"}
+
 #: 임의 코드를 문자열로 받는 인터프리터. 정적 분석이 불가능해서 승인으로 보낸다.
 CODE_FLAG_CMDS = {
     "python": "-c",
@@ -730,8 +734,10 @@ def argv_to_findings(argv: list[str], ctx: Ctx) -> list[Finding]:
 
     entrypoints = (getattr(ctx.policy, "bash", {}) or {}).get("entrypoints") or []
     if entrypoints and _is_entrypoint(argv, operands, entrypoints):
-        # 학습은 오케스트레이터가 띄운다. Claude 가 직접 돌리면 승인을 받는다.
-        return [Finding("newexp", target=" ".join(argv[:4]))]
+        # 🔑 `newexp` 가 아니라 `trainrun` 이다 — `full` 프리셋이 `newexp` 를
+        # 자동 허용하므로, 같이 두면 Claude 가 학습을 혼자 돌릴 수 있었다
+        # (GPU 이중 사용 · 10분 Bash · "학습은 오케스트레이터만" 붕괴).
+        return [Finding("trainrun", target=" ".join(argv[:4]))]
 
     if name in DELETE_CMDS:
         for item in operands:
@@ -819,12 +825,21 @@ def argv_to_findings(argv: list[str], ctx: Ctx) -> list[Finding]:
         return []
 
     if name in RUN_CMDS:
+        # 분산·큐 런처(`torchrun`·`accelerate`·`deepspeed`·`sbatch`·`srun`)는
+        # **학습을 띄우는 것 말고 쓸 데가 없다** → `trainrun`.
+        #
+        # `python x.py` 는 그대로 `newexp` 다. 분석 스크립트를 돌리는
+        # 정상 경로라서 여기까지 막으면 C 토막(분석)이 못 돈다. entrypoint
+        # 자체를 돌리는 꼴은 위에서 이미 `trainrun` 으로 걸렀다.
+        if name in LAUNCHER_CMDS:
+            return [Finding("trainrun", target=" ".join(argv[:4]))]
         if any(token.endswith(".py") for token in operands) or name != "python":
             return [Finding("newexp", target=" ".join(argv[:4]))]
         return []
 
     if name == "tmux" and any("train" in token for token in argv[1:]):
-        return [Finding("newexp", target=" ".join(argv[:4]))]
+        # tmux 로 학습을 떼어 놓는 꼴. 오케스트레이터 밖에서 도는 학습이다.
+        return [Finding("trainrun", target=" ".join(argv[:4]))]
 
     return []
 

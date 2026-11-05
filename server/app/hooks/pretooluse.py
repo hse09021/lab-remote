@@ -298,7 +298,13 @@ def _approval_embed(ctx, asked: list, request: str, decision: Decision) -> dict:
         title="승인이 필요해요",
         body=f"{len(asked)}가지 승인이 필요해요." if len(asked) > 1 else "",
         fields=fields,
-        footer="labremote approvals list 로 확인하고 approve 로 승인해 주세요.",
+        # 🔑 `show` 를 먼저 적는다 — **전문을 보고** 승인해야 한다.
+        # 알림은 길이 제한이 있어 잘릴 수 있고, 잘리면 임베드가 그 사실을
+        # 표시하지만(`embed.TRUNC_FIELD`) 전문은 `show` 에만 있다 (9단계 1번).
+        footer=(
+            "labremote approvals show <프로젝트> <요청ID> 로 **전문을 본 뒤** "
+            "approve 로 승인해 주세요. 목록은 approvals list 예요."
+        ),
     )
 
 

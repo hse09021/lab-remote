@@ -3,8 +3,14 @@
 # ⚠ 이 파일은 잠겨 있어요. 실험이 도는 중에는 바꿀 수 없어요.
 
 goal:
+  # result.csv 의 지표 이름과 **똑같이** 적어 주세요 (대소문자는 안 봐요).
+  # 비워 두면 loss 로 봐요.
   metric: "[주 지표]"
   threshold: "[임계값]"
+  # 작을수록 좋은 지표면 lower (loss), 클수록 좋으면 higher (accuracy).
+  # 안 적으면 lower 로 봐요. 모르는 값을 적으면 성공 판정을 접어요 —
+  # 방향이 뒤집히면 실패를 성공으로 읽어서, 그게 더 나빠요.
+  direction: lower
 
 limits:
   max_runs: "[최대 실행 횟수]"

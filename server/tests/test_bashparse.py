@@ -141,10 +141,33 @@ def test_gitRemoteAsNet_을_켜면_net(ctx):
 
 @pytest.mark.parametrize(
     "command",
-    ["python train.py", "VAR=1 nohup python train.py", "torchrun --nproc 2 train.py", "accelerate launch train.py"],
+    ["python train.py", "VAR=1 nohup python train.py"],
 )
 def test_새_실험(ctx, command):
+    """`python x.py` 는 `newexp` 그대로다 — 분석 스크립트를 돌리는 정상
+    경로라서 여기까지 막으면 C 토막(분석)이 못 돈다."""
     assert actions(ctx, command) == ["newexp"], command
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "torchrun --nproc 2 train.py",
+        "accelerate launch train.py",
+        "deepspeed train.py",
+        "sbatch run.sh",
+        "srun python train.py",
+        "tmux new -d 'python train.py'",
+    ],
+)
+def test_학습_런처는_trainrun(ctx, command):
+    """분산·큐 런처는 **학습을 띄우는 것 말고 쓸 데가 없다.**
+
+    `newexp` 에 두면 `full` 프리셋이 자동 허용해서 Claude 가 학습을 혼자
+    돌린다 — GPU 큐와 동시에 GPU 를 쓰고, 10분 넘는 Bash 문제가 다시 생기고,
+    `run.json` 검증·샌드박스·타임아웃이 전부 지나간다 (2026-11-05).
+    """
+    assert actions(ctx, command) == ["trainrun"], command
 
 
 # --- 해석 포기 --------------------------------------------------------------

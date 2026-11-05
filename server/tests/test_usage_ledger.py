@@ -256,3 +256,42 @@ def test_usage_명령이_등록_안_된_프로젝트를_거부한다(conn, capsy
     from app import cli
 
     assert cli.main(["usage", "없는-프로젝트"]) == 2
+
+
+# --- CLI 목록이 루프와 같은 말을 하나 --------------------------------------------
+
+
+def test_approvals_목록이_루프와_같은_기준을_쓴다(conn, project, project_root, capsys):
+    """전에는 CLI 가 DB 의 `state='open'` 을, 루프는 `requests/` 파일을 셌다.
+    둘이 어긋나면 CLI 는 "승인 2건" 을 보여 주는데 루프는 아무것도 기다리지
+    않는다 — 실제로 그 상태였다.
+    """
+    from app import cli
+    from app.store import approvals as AP
+
+    # 파일 없이 DB 행만 `open` 으로 넣는다 (지난 실행이 남긴 흔적)
+    AP.open_request(conn, "hook-sandbox", "toolu_유령", action_key="net", tool="WebFetch")
+    conn.commit()
+
+    capsys.readouterr()
+    assert cli.main(["approvals", "list", "hook-sandbox"]) == 0
+    out = capsys.readouterr().out
+    assert "기다리는 승인이 없어요" in out
+    assert "요청 파일이 없는 DB 행 1개" in out
+    assert "루프는 기다리지 않아요" in out
+    assert "toolu_유령" in out
+
+
+def test_approvals_목록이_파일_있는_건을_보여_준다(conn, project, project_root, capsys):
+    from app import approval_log as A
+    from app import cli
+
+    A.open_request("hook-sandbox", "toolu_살아있음", {
+        "tool": "WebFetch", "actionKey": "net", "request": "https://example.com",
+        "reason": "네트워크예요",
+    })
+    capsys.readouterr()
+    assert cli.main(["approvals", "list", "hook-sandbox"]) == 0
+    out = capsys.readouterr().out
+    assert "toolu_살아있음" in out
+    assert "요청 파일이 없는 DB 행" not in out

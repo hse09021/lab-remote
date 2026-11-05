@@ -613,6 +613,130 @@ def cmd_keys(args) -> int:
     return 0
 
 
+#: 한 줄에 넣을 글자 수. 터미널에서 접히지 않게.
+_WRAP = 92
+
+
+def _wrap(text: str, indent: str = "  ") -> list[str]:
+    """줄바꿈만 한다. **자르지 않는다.**"""
+    import textwrap
+
+    out = []
+    for line in str(text).splitlines() or [""]:
+        if not line:
+            out.append("")
+            continue
+        out += textwrap.wrap(
+            line, width=_WRAP, initial_indent=indent, subsequent_indent=indent + "  ",
+            break_long_words=True, break_on_hyphens=False, replace_whitespace=False,
+            drop_whitespace=False,
+        ) or [indent]
+    return out
+
+
+def _print_full_input(project: str, row: dict) -> None:
+    """🔑 **실행될 것을 끝까지** 보여 준다 (9단계 1번).
+
+    전에는 `내용` 한 줄이 200자에서 잘렸고, 잘림은 **저장할 때** 일어나서
+    전문이 아예 없었다. 무해한 앞부분 뒤에 무엇이 붙어 있는지 모르는 채로
+    승인하게 된다 — 못 본 뒷부분을 함께 허용하는 건 승인이 아니다.
+
+    전문의 출처는 `server/data/denials/` 다 (오케스트레이터가 자기 자식의 결과
+    JSON 에서 받아 둔 것). 없으면 **없다고 말한다.**
+    """
+    from . import denials as denials_mod
+
+    got = denials_mod.find(
+        project, str(row.get("request_id") or ""),
+        session_id=str(row.get("session_id") or ""),
+    )
+    print()
+    if not got:
+        print("실행될 내용  ✘ 전문을 못 찾았어요")
+        print(_SHORT_ONLY)
+        short = str(row.get("request") or "")
+        if short:
+            print()
+            print("  DB 에 남은 짧은 줄 (잘려 있어요):")
+            for line in _wrap(short, "    "):
+                print(line)
+        return
+
+    tool_input = got.get("input") or {}
+    segments = denials_mod.segments_of(row.get("tool") or "", tool_input)
+    command = tool_input.get("command")
+
+    if isinstance(command, str):
+        print(f"실행될 명령  전체 {len(command)}자 · 조각 {len(segments)}개"
+              "  (아래가 전문이에요 — 잘리지 않았어요)")
+        print()
+        for line in _wrap(command, "  "):
+            print(line)
+        if len(segments) > 1:
+            print()
+            print("  조각별로 (훅이 판정한 단위예요 · ; && || | 로 나눠요):")
+            for n, seg in enumerate(segments, 1):
+                lines = _wrap(seg, "        ")
+                print(f"    {n:>2}. {lines[0].strip()}")
+                for line in lines[1:]:
+                    print(line)
+    else:
+        print("실행될 내용  (아래가 전문이에요 — 잘리지 않았어요)")
+
+    rest = {k: v for k, v in tool_input.items() if k != "command"}
+    if rest:
+        print()
+        print("  나머지 입력:")
+        for key in sorted(rest):
+            value = rest[key]
+            # 파일 본문. **보여 준다** — 안 보면 `hparam`·`code` 승인이
+            # 추측이 된다. `lab.db` 에는 여전히 길이·해시만 들어간다.
+            if isinstance(value, dict) and value.get("body"):
+                note = "  ⚠ 상한까지만 보관했어요" if value.get("truncated") else ""
+                print(f"    {key}  파일 본문 전체 {value.get('len')}자"
+                      f" · sha256 {value.get('sha256')}{note}")
+                for line in _wrap(str(value.get("text") or ""), "      "):
+                    print(line)
+                continue
+            if isinstance(value, dict) and "sha256" in value:
+                print(f"    {key}  파일 본문 {value.get('len')}자"
+                      f" · sha256 {value.get('sha256')}  (본문을 보관하기 전 기록이에요)")
+                continue
+            text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+            print(f"    {key}  전체 {len(str(text))}자")
+            for line in _wrap(text, "      "):
+                print(line)
+    print()
+    print(f"  원본  {got.get('path')}  (0600 · 샌드박스에서 못 읽어요)")
+
+
+#: 전문이 없을 때의 설명. 조용히 짧은 줄만 보여 주면 안 된다.
+_SHORT_ONLY = """  이 요청은 전문을 보관하기 전에 생긴 거예요 (2026-11-05 이전).
+  되살릴 방법이 없어요 — 잘림이 저장할 때 일어났어요.
+  **보지 못한 명령은 승인하지 마세요.** 거절하고 루프를 다시 돌리면
+  그때부터는 전문이 남아요:
+      labremote approvals deny <프로젝트> <요청ID> --reason "전문을 못 봤어요"
+      labremote up --once"""
+
+
+def _print_orphans(orphans: list) -> None:
+    """DB 에만 `open` 으로 남은 행. **루프는 이걸 기다리지 않는다.**
+
+    요청 파일이 닫혔는데 DB 행이 남는 경우다 (훅이 소비했거나, DB 를 지우고
+    다시 만들었거나). 숨기면 `approvals list` 와 `doctor` 가 다른 말을 한다.
+    """
+    if not orphans:
+        return
+    print()
+    print(f"⚪ 요청 파일이 없는 DB 행 {len(orphans)}개 — 루프는 기다리지 않아요")
+    for row in orphans:
+        print(f"     [{row['id']}] {row['project']} · {row['request_id']}"
+              f" · {row.get('action_key')} · 열린 때 {row['opened_at']}")
+    print("     지난 실행이 남긴 흔적이에요. 승인·거절할 대상이 아니에요.")
+    name = orphans[0].get("project") or "<프로젝트>"
+    print(f"     정리하려면:  labremote approvals prune {name} --yes")
+
+
 def cmd_approvals(args) -> int:
     """🎟 승인 대기열 — 사람이 승인하는 자리.
 
@@ -628,31 +752,95 @@ def cmd_approvals(args) -> int:
 
     with db_mod.open_db() as conn:
         if args.action == "list":
-            rows = [
-                r for r in APS.pending(conn, args.name or None)
-                if r.get("action_key") != "install"
-            ]
+            # 🔑 **루프가 쓰는 것과 같은 함수**로 센다.
+            #
+            # 전에는 CLI 가 DB 의 `state='open'` 을 세고 루프는 `requests/`
+            # 파일을 셌다 — 둘이 어긋나면 CLI 가 "기다리는 승인 2건" 을
+            # 보여 주는데 루프는 아무것도 기다리지 않는다(실제로 그랬다:
+            # 파일은 닫혔고 DB 행만 `open` 으로 남아 있었다).
+            # 파일이 진실이고, 짝이 안 맞는 DB 행은 **따로** 보여 준다.
+            names = [args.name] if args.name else sorted(
+                set(registry.load().values())
+            )
+            rows, orphans = [], []
+            for name in names:
+                # 파일을 DB 로 거울해 둔다 — 루프의 `waiting_approval` 도
+                # `sync()` 뒤에 `pending()` 을 본다. 안 하면 파일만 있는
+                # 새 요청에 `id`·`열린 때` 가 없어 목록이 깨진다.
+                try:
+                    AP_ORCH.sync(conn, name)
+                    conn.commit()
+                except Exception:
+                    pass
+                live = {
+                    str(r.get("request_id") or ""): r
+                    for r in AP_ORCH.pending(conn, name)
+                }
+                rows += [
+                    r for r in live.values() if r.get("action_key") != "install"
+                ]
+                orphans += [
+                    r for r in AP_ORCH.orphans(conn, name)
+                    if r.get("action_key") != "install"
+                ]
             if args.json:
-                print(json.dumps(rows, ensure_ascii=False, indent=2))
+                print(json.dumps(
+                    {"pending": rows, "orphans": orphans},
+                    ensure_ascii=False, indent=2, default=str,
+                ))
                 return 0
             if not rows:
                 print("기다리는 승인이 없어요.")
+                _print_orphans(orphans)
                 return 0
             for row in rows:
                 mark = "📋" if row.get("source") == "denials" else "🪝"
-                print(f"{mark} [{row['id']}] {row['project']} · {row['request_id']}")
+                print(f"{mark} [{row.get('id', '?')}] {row.get('project') or args.name}"
+                      f" · {row['request_id']}")
                 print(f"     {row.get('action_key')} · {_shorten(str(row.get('request') or ''))}")
-                print(f"     열린 때 {row['opened_at']} · 횟수 {row['attempts']}"
-                      f" · 출처 {row.get('source')}")
+                print(f"     열린 때 {row.get('opened_at') or '[못 읽었어요]'}"
+                      f" · 횟수 {row.get('attempts', 0)} · 출처 {row.get('source')}")
                 if str(row.get("action_key") or "") in grants.NO_GRANT_ACTIONS:
                     # 승인해도 아무 일이 안 일어난다 (M3) — 기록만 거짓이 된다
                     print("     ⛔ 승인 불가 — 설치 요청 경로로 "
                           "(state/Install_request.json → labremote installs approve)")
                     print("        이 요청은 거절(deny)만 할 수 있어요")
+            _print_orphans(orphans)
             print()
             print("📋 = 결과 JSON 에서 만든 것 (지문을 우리가 계산) · 🪝 = 훅 파일에서 거울")
-            print(f"자세히:  labremote approvals show {rows[0]['project']} {rows[0]['request_id']}")
-            print(f"승인:    labremote approvals approve {rows[0]['project']} {rows[0]['request_id']}")
+            head = rows[0].get("project") or args.name or ""
+            print(f"자세히:  labremote approvals show {head} {rows[0]['request_id']}")
+            print(f"승인:    labremote approvals approve {head} {rows[0]['request_id']}")
+            return 0
+
+        if args.action == "prune":
+            if not args.name:
+                print("✘ 프로젝트 이름을 주세요", file=sys.stderr)
+                return 2
+            found = AP_ORCH.orphans(conn, args.name)
+            if not found:
+                print("정리할 것이 없어요 — 짝 없는 승인 행이 없어요.")
+                return 0
+            if not args.yes:
+                # 기본은 **보여 주기만** 한다. 승인 기록을 건드리는 일이라
+                # 사람이 한 번 더 말하게 둔다.
+                print(f"짝 없는 승인 행 {len(found)}개 — 요청 파일이 없어요")
+                for row in found:
+                    print(f"  [{row['id']}] {row['request_id']}"
+                          f" · {row.get('action_key')} · 열린 때 {row['opened_at']}")
+                print()
+                print("이 행들은 루프가 기다리지 않아요. 정리하면 `stale` 로 닫고")
+                print("승인 기록(logs/Approval_log.csv + 진본)에 사유를 남겨요.")
+                print(f"정리하려면:  labremote approvals prune {args.name} --yes"
+                      ' [--reason "…"]')
+                return 0
+            done = AP_ORCH.prune(conn, args.name, reason=args.reason or "")
+            conn.commit()
+            print(f"✔ {len(done)}개를 정리했어요 (`stale`)")
+            for row in done:
+                print(f"  [{row['id']}] {row['request_id']} · {row['note']}")
+            print()
+            print("승인 기록에 남겼어요 — logs/Approval_log.csv 와 진본 둘 다에요.")
             return 0
 
         if not args.name or not args.id:
@@ -672,7 +860,6 @@ def cmd_approvals(args) -> int:
             print(f"프로젝트   {row['project']}")
             print(f"도구      {row.get('tool')}")
             print(f"행동      {row.get('action_key')}")
-            print(f"내용      {row.get('request')}")
             print(f"지문      {row.get('fingerprint')}")
             print(f"출처      {row.get('source')}"
                   + ("  (오케스트레이터가 결과 JSON 에서 계산)"
@@ -684,8 +871,9 @@ def cmd_approvals(args) -> int:
                 print("⛔ 승인 불가")
                 for line in grants.NO_GRANT_REASON.split(". "):
                     print(f"  {line.strip()}")
-            if row.get("tool_summary"):
-                print(f"입력 요약  {row['tool_summary']}")
+            # 🔑 전문은 **DB 가 아니라** server/data/denials 에서 읽는다.
+            # DB 의 `request`·`tool_summary` 는 저장할 때 이미 잘려 있다.
+            _print_full_input(args.name, row)
             if row.get("reason"):
                 print()
                 print(f"{AP_ORCH.HOOK_REASON_LABEL}:")
@@ -1359,9 +1547,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_keys)
 
     p = sub.add_parser("approvals", help="승인 대기열 — 사람이 승인하는 자리")
-    p.add_argument("action", choices=["list", "show", "approve", "deny"])
+    p.add_argument(
+        "action", choices=["list", "show", "approve", "deny", "prune"]
+    )
     p.add_argument("name", nargs="?", help="프로젝트 이름")
     p.add_argument("id", nargs="?", help="요청 ID (tool_use_id)")
+    p.add_argument(
+        "--yes", action="store_true",
+        help="prune 과 함께 · 정말 정리해요 (기본은 보여 주기만)",
+    )
     p.add_argument("--ttl", help="허가 만료 (예: 10m · 2h · 600). 기본 10분")
     p.add_argument(
         "--loose",
