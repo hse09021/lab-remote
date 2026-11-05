@@ -17,6 +17,7 @@ __all__ = ["decide", "combine", "resolve"]
 
 #: 잠긴 항목에서 온 결정인지 (승인 로그 handledBy 에 쓴다)
 LOCK_ACTIONS = {
+    "trainrun",
     "outside",
     "prev",
     "stop",
@@ -144,6 +145,21 @@ def decide(finding: Finding, ctx: Ctx) -> Decision:
         return _maybe_headless(
             ASK(M.with_guard(M.unclassified(str(finding.target))), **base), ctx, label
         )
+
+    # --- 학습 직접 실행: **정책보다 앞에서** 판정한다 ----------------------
+    #
+    # `full` 프리셋은 `newexp` 를 자동 허용한다. entrypoint 직접 실행이
+    # `newexp` 였을 때는 그게 곧 "Claude 가 학습을 혼자 돌려도 된다" 였다.
+    # 그러면 GPU 큐와 동시에 GPU 를 쓰고, 10분 넘는 Bash 문제가 다시 생기고,
+    # `run.json` 검증·샌드박스·타임아웃·체크포인트가 전부 지나간다.
+    #
+    # 그래서 `ctx.policy.resolve()` 에 **닿지 않게** 여기서 끝낸다 —
+    # 권한 단계를 올려도 안 열린다.
+    if action == "trainrun":
+        if ctx.headless:
+            return DENY(M.with_guard(M.trainrun_headless(str(finding.target))), **base)
+        # 대화형은 사람이 보고 있다. 승인창을 띄운다.
+        return ASK(M.with_guard(M.trainrun_interactive(str(finding.target))), **base)
 
     # --- 정책이 정하는 것 ---------------------------------------------------
     permission = ctx.policy.resolve(action)

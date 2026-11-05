@@ -266,9 +266,17 @@ def is_hard_protected(target: str) -> bool:
 
 
 def secret_patterns(ctx: Ctx) -> list[str]:
-    """코드 목록 + 정책이 **더한** 목록. 빼지는 못한다."""
+    """코드 목록 + **런타임 경로** + 정책이 더한 목록. 빼지는 못한다.
+
+    런타임 경로는 `LAB_DATA_DIR` 를 따라 움직이는 것들이다
+    (`<data>/denials/**` — 승인 증거. 파일 본문까지 담겨 있다).
+    """
     extra = ctx.paths_cfg.get("secretFilesExtra") or []
-    return list(D.SECRET_FILES) + [str(p) for p in extra if p]
+    return (
+        list(D.SECRET_FILES)
+        + list(D.SECRET_RUNTIME())
+        + [str(p) for p in extra if p]
+    )
 
 
 def is_secret(target: str, ctx: Ctx) -> bool:

@@ -15,7 +15,12 @@ from . import row, rows
 
 __all__ = ["STATES", "open_request", "get", "by_request", "decide", "bump", "pending"]
 
-STATES = ("open", "approved", "denied", "expired", "consumed", "blocked")
+#: `stale` — 요청 파일이 사라졌는데 DB 행만 `open` 으로 남은 것을 **사람이**
+#: 정리한 상태다. `denied` 로 적으면 "사람이 거절했다" 는 거짓이 된다
+#: (거절은 판단이고, 이건 정리다). `labremote approvals prune` 이 쓴다.
+STATES = (
+    "open", "approved", "denied", "expired", "consumed", "blocked", "stale",
+)
 
 
 def open_request(

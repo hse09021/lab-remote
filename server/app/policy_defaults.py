@@ -181,6 +181,24 @@ def hard_protected_roots() -> list[str]:
     ]
 
 
+def SECRET_RUNTIME() -> list[str]:
+    """실행 때 경로가 정해지는 비밀 목록. `SECRET_FILES` 에 **더해** 쓴다.
+
+    왜 따로 두나: `SECRET_FILES` 는 `~` 로 시작하는 고정 glob 이고, 여기 것은
+    `LAB_DATA_DIR` 를 따라 움직인다.
+
+    `<data>/denials/**` — 결과 JSON 의 `permission_denials` 원본이다. 승인하는
+    사람이 명령 전문을 보려고 둔 파일이고(`app/denials.py`), 파일 본문까지
+    담는다. **쓰기는** `HARD_PROTECTED` 가 이미 막지만 **읽기**는 아무도 안
+    막고 있었다 — 샌드박스가 켜져 있으면 커널이 막아 주지만, 꺼지면 AI 가 쓴
+    코드가 자기 과거 명령과 파일 본문을 되읽을 수 있다. 명령줄에 토큰이 섞여
+    있던 경우가 특히 나쁘다. 그래서 훅에서도 막는다 (2026-11-05).
+    """
+    from . import registry
+
+    return [os.path.join(registry.data_dir(), "denials", "**")]
+
+
 def HARD_PROTECTED() -> list[str]:
     """권한 설정과 **무관하게** 항상 쓰기·삭제를 막는 절대 경로 glob.
 

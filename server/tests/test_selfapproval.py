@@ -145,11 +145,18 @@ def test_심볼릭_링크로_보호_경로를_끌어오는_것도_차단(ctx, pr
     assert verdict(ctx, command) == "deny"
 
 
-def test_entrypoint_직접_실행은_새_실험으로_분류(ctx):
-    """학습은 오케스트레이터가 띄운다. Claude 가 직접 돌리면 승인을 받는다."""
+def test_entrypoint_직접_실행은_trainrun(ctx):
+    """학습은 오케스트레이터가 띄운다.
+
+    `newexp` 가 아니라 **별도 분류**다 — `full` 프리셋이 `newexp` 를 자동
+    허용하므로 같이 두면 Claude 가 학습을 혼자 돌릴 수 있었다 (2026-11-05).
+    """
     ctx.policy.data["bash"]["entrypoints"] = ["src/train.py"]
-    assert "newexp" in actions(ctx, "bash src/train.py --lr 1e-4")
-    assert "newexp" in actions(ctx, "./src/train.py")
+    assert "trainrun" in actions(ctx, "bash src/train.py --lr 1e-4")
+    assert "trainrun" in actions(ctx, "./src/train.py")
+    # 래퍼로 감싸도 마찬가지다
+    assert "trainrun" in actions(ctx, "conda run -n hook-sandbox src/train.py")
+    assert "trainrun" in actions(ctx, "nohup python src/train.py &")
 
 
 def test_entrypoint_목록이_비어_있으면_평소대로(ctx):

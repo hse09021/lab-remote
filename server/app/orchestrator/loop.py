@@ -59,6 +59,8 @@ __all__ = [
     "resume_step",
     "waiting_approval",
     "update_order",
+    "DEFAULT_METRIC",
+    "DIRECTIONS",
 ]
 
 #: `EXP-007`
@@ -594,37 +596,109 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
 
 
 def _numbers(root: str, exp_id: str) -> dict:
-    """`result.csv` 에서 **직접** 읽은 값. AI 의 말과 대조할 근거다."""
+    """`result.csv` 에서 **직접** 읽은 값. AI 의 말과 대조할 근거다.
+
+    지표 이름·임계값·비교 방향은 **`Config.yaml` 의 `goal` 에서 읽는다.**
+    전에는 이름이 `"loss"` 로 박혀 있고 비교가 `<=` 로 박혀 있었다 —
+    `goal.metric: accuracy` 라고 적어도 `loss` 를 읽었고, 클수록 좋은 지표의
+    성공 판정이 **뒤집혀** 있었다. 둘 다 조용했다 (2026-11-05).
+    """
     path = os.path.join(root, L.experiments_dir(), exp_id, "result.csv")
     got = metrics_mod.read_result(path)
     rows = got["rows"]
-    series = metrics_mod.series_of(rows, "loss", "val") or metrics_mod.series_of(rows, "loss")
+    goal = _goal(root)
+    name = goal["metric"]
+    series = (
+        metrics_mod.series_of(rows, name, "val")
+        or metrics_mod.series_of(rows, name)
+    )
     value = next((r["value"] for r in reversed(series) if r["value"] is not None), None)
-    threshold = _threshold(root)
+    threshold = goal["threshold"]
     success = None
-    if value is not None and threshold is not None:
-        success = value <= threshold
+    if value is not None and threshold is not None and goal["direction"]:
+        success = (
+            value <= threshold if goal["direction"] == "lower" else value >= threshold
+        )
     return {
-        "metric": "loss" if series else None,
+        "metric": name if series else None,
         "value": value,
         "threshold": threshold,
+        "direction": goal["direction"],
+        "goalMetric": name,
         "success": success,
         "format": got["format"],
         "warnings": got["warnings"],
+        "notes": goal["notes"],
     }
 
 
-def _threshold(root: str):
-    """`Config.yaml` 의 `goal.threshold`. 자리표시면 `None`.
+#: 기본 지표 이름. `goal.metric` 이 비었거나 자리표시일 때.
+DEFAULT_METRIC = "loss"
+
+#: 비교 방향. `lower` = 작을수록 좋다 (loss), `higher` = 클수록 좋다 (accuracy).
+DIRECTIONS = {
+    "lower": ("lower", "min", "minimize", "작을수록", "낮을수록", "down"),
+    "higher": ("higher", "max", "maximize", "클수록", "높을수록", "up"),
+}
+
+
+def _direction(raw: str) -> tuple[str, str]:
+    """(`lower`|`higher`|`""`, 사유). 모르는 값은 **추측하지 않는다.**
+
+    틀린 방향으로 비교하면 실패를 성공으로 읽는다 — 그건 아무 판정도 안 하는
+    것보다 나쁘다. 그래서 모르면 비교를 **접고** 사유를 남긴다.
+    """
+    text = str(raw or "").strip().lower()
+    if not text or text.startswith("["):
+        return "lower", ""  # 안 적으면 작을수록 좋은 것으로 본다 (loss 가 기본)
+    for key, words in DIRECTIONS.items():
+        if text in words:
+            return key, ""
+    return "", (
+        f"goal.direction 을 못 읽었어요: {raw!r} · "
+        f"쓸 수 있는 값: lower (작을수록 좋음) · higher (클수록 좋음) — "
+        "성공 판정을 접었어요"
+    )
+
+
+def _goal(root: str) -> dict:
+    """`Config.yaml` 의 `goal` 절. 자리표시는 **없는 것**으로 본다.
 
     **`docs/Evaluation.md` 는 읽기만 한다** — 실행 중에는 잠겨 있다.
     """
     goal = guards.read_config(root).get("goal")
     goal = goal if isinstance(goal, dict) else {}
+    notes = []
+
+    name = str(goal.get("metric") or "").strip()
+    if not name or name.startswith("["):
+        name = DEFAULT_METRIC
+        notes.append(
+            f"goal.metric 이 비어 있어서 {DEFAULT_METRIC!r} 로 봤어요"
+        )
+
     text = str(goal.get("threshold") or "").strip()
-    if not text or text.startswith("["):
-        return None
-    try:
-        return float(text)
-    except ValueError:
-        return None
+    threshold = None
+    if text and not text.startswith("["):
+        try:
+            threshold = float(text)
+        except ValueError:
+            notes.append(f"goal.threshold 가 숫자가 아니에요: {text!r}")
+    else:
+        notes.append("goal.threshold 가 비어 있어서 성공 판정을 못 해요")
+
+    direction, why = _direction(goal.get("direction"))
+    if why:
+        notes.append(why)
+
+    return {
+        "metric": name,
+        "threshold": threshold,
+        "direction": direction,
+        "notes": notes,
+    }
+
+
+def _threshold(root: str):
+    """`Config.yaml` 의 `goal.threshold`. 자리표시면 `None`. (옛 이름)"""
+    return _goal(root)["threshold"]

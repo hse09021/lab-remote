@@ -78,6 +78,10 @@ __all__ = [
 #: 않는다. 여기 둔 건 두 번째 자물쇠다 — 판정 코드가 바뀌어도 안 열리게.
 LOCKED_ACTIONS = frozenset(
     {
+        # 학습 직접 실행. 헤드리스에서 `decide` 가 바로 DENY 하므로 `_ask` 를
+        # 지나가지도 않지만, 승인 CLI 가 거절하게 여기에도 둔다 — 결과 JSON 의
+        # `permission_denials` 로는 승인 행이 생기기 때문이다.
+        "trainrun",
         "outside",
         "selfProtect",
         "hardProtect",

@@ -46,6 +46,20 @@ def _resuming_experiment(conn, project: str) -> str:
     return ""
 
 
+def _preset_of(project: str) -> str:
+    """정책의 권한 단계. 못 읽으면 `full` 로 둔다 (지금까지의 기본값).
+
+    **지어내지 않는다** — 못 읽은 것과 `full` 을 구별할 길이 없으면 적어도
+    런처의 검사를 지나가게 둬서 다른 점검이 돌게 한다.
+    """
+    from .. import policy as policy_mod
+
+    try:
+        return str(policy_mod.load(project).effective_mode() or "full")
+    except Exception:
+        return "full"
+
+
 def once(conn, project: str, root: str, **kw) -> dict:
     """루프 한 바퀴: A -> B -> C.
 
@@ -53,6 +67,18 @@ def once(conn, project: str, root: str, **kw) -> dict:
     `--resume` 으로 이어 간다 (계획 6-1). 처음부터 다시 돌리면 사용량도
     쓰고, 이미 만든 실험 폴더가 둘이 된다.
     """
+    # 🔑 **프리셋은 정책에서 읽는다** (9단계 1번에서 드러난 구멍).
+    #
+    # `LoopCtx.preset` 의 기본값이 `"full"` 이라, 프로젝트가 수동제어여도
+    # 런처에는 `full` 이라고 말하고 있었다. 그러면
+    # `launch.check_mode(headless=True, preset="manual")` 의 거부가 **한 번도
+    # 안 돈다.** 대신 훅은 진짜 정책(`manual`)을 보고 `code`·`hparam` 까지
+    # 전부 `ask` → 헤드리스 거절로 떨어뜨린다.
+    #
+    # 결과: 루프가 설계 세션을 쓰고, 실험 번호를 하나 먹고, 쓰기마다 승인
+    # 대기를 쌓고서야 멈춘다. 런처가 **처음에** 거부했어야 하는 조합이다.
+    if "preset" not in kw:
+        kw["preset"] = _preset_of(project)
     ctx = LoopCtx(project=project, root=root, **kw)
     steps = []
 

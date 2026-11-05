@@ -38,6 +38,7 @@ LABELS = {
     "readOutside": "프로젝트 밖 읽기",
     "schema-unknown": "훅이 못 읽은 입력",
     "denied-command": "금지된 명령",
+    "trainrun": "학습 직접 실행",
 }
 
 
@@ -299,4 +300,36 @@ def bypass_attempt(rel: str, before: str, now: str) -> str:
     return (
         f"{rel}{josa(rel)} 조금 전 {before} 로 막힌 대상이에요. {now} 로 다시 "
         "시도하는 건 우회예요."
+    )
+
+#: 🔑 **학습은 오케스트레이터만 띄운다** — 헤드리스는 프리셋과 무관하게 거절.
+#:
+#: 왜 `newexp` 에서 떼어 냈나 (2026-11-05): `full` 프리셋은 `newexp` 를
+#: **자동 허용**한다. entrypoint 직접 실행이 `newexp` 였으니, `full` 에서는
+#: Claude 가 학습을 혼자 돌릴 수 있었다. 그러면 셋이 깨진다.
+#:
+#:   1. 오케스트레이터의 GPU 큐와 **동시에** GPU 를 쓴다
+#:      (`ux_jobs_running` 은 우리 큐만 지킨다 — 큐 밖의 프로세스는 못 막는다)
+#:   2. 10분 넘는 Bash 문제가 다시 생긴다 (①의 [미확인] (b))
+#:   3. "학습은 오케스트레이터만" 원칙이 깨진다 — `run.json` 검증도,
+#:      샌드박스도, 타임아웃도, 체크포인트 회수도 전부 지나간다
+#:
+#: 그래서 정책이 정하는 자리에 두지 않는다. 권한 단계를 올려도 안 열린다.
+def trainrun_headless(what: str) -> str:
+    return (
+        f"학습은 제가 직접 돌리지 않아요: {what} · "
+        "학습은 시스템(오케스트레이터)이 띄워요 — GPU 를 한 번에 하나만 쓰고, "
+        "타임아웃·체크포인트·샌드박스를 같이 걸어 줘요. "
+        "experiments/<실험 ID>/run.json 에 entrypoint 와 args 로 **명세만** "
+        "적어 주세요. 그러면 시스템이 돌리고 결과를 알려 줘요. "
+        "권한 단계와 무관하게 막혀 있어서 승인으로도 열리지 않아요."
+    )
+
+
+def trainrun_interactive(what: str) -> str:
+    return (
+        f"학습을 직접 돌리려고 해요: {what} · "
+        "보통은 run.json 에 명세만 쓰고 시스템이 띄워요. "
+        "그래야 GPU 를 한 번에 하나만 쓰고 타임아웃·체크포인트가 걸려요. "
+        "그래도 지금 직접 돌릴 거면 승인해 주세요."
     )

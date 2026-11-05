@@ -91,9 +91,31 @@ def sync_from_result(conn, project: str, result, *, job_id: int | None = None,
     > 안에서 쓰기가 실패한다(M1b). 남은 이유는 위의 것들이다.
     """
     from ..agent import result as result_mod
+    from .. import denials as denials_mod
+
+    raw = result_mod.denials(result)
+
+    # 🔑 **전문을 보관한다** (9단계 1번).
+    #
+    # DB 에는 목록용 짧은 줄만 들어가고 그 잘림이 **저장할 때** 일어난다 —
+    # 전에는 전문이 아예 사라져서, 사람이 `for f in … ; do cat …; ls; g…` 같이
+    # 잘린 화면을 보고 승인해야 했다. 못 본 뒷부분을 함께 허용하는 건
+    # 승인이 아니다. 파일 본문만 길이·해시로 줄이고 명령·경로·URL 은 그대로
+    # `server/data/denials/` 에 남긴다 (샌드박스에서 읽기·쓰기 다 실패한다).
+    try:
+        denials_mod.store(project, session_id or "unknown-session", raw)
+        denials_mod.prune(project)
+    except Exception as exc:
+        # 보관이 실패해도 승인 대기열은 열어야 한다. 대신 **그 사실을 남긴다** —
+        # 조용히 넘기면 `show` 가 "전문이 없어요" 라고만 말하고 이유를 모른다.
+        E.add(
+            conn, project, "승인",
+            f"거절 원본을 보관하지 못했어요 — approvals show 가 전문을 못 보여 줘요: {exc}",
+            tone="attention",
+        )
 
     out = []
-    for item in result_mod.denials(result):
+    for item in raw:
         request_id = item["toolUseId"]
         if not request_id:
             # id 가 없으면 같은 denial 을 가를 수 없다. 건너뛰고 기록한다.
@@ -187,6 +209,62 @@ def pending(conn, project: str) -> list[dict]:
         out.append({**row, "request_id": request_id, "file": item})
     return out
 
+
+
+def orphans(conn, project: str) -> list[dict]:
+    """DB 에만 `open` 으로 남은 행. **루프는 이걸 기다리지 않는다.**
+
+    `pending()` 은 요청 파일을 진실로 보므로, 파일이 닫혔는데 DB 행이 남으면
+    둘이 어긋난다. 그 상태에서 `approvals list` 는 "승인 2건" 을 보여 주고
+    루프는 아무것도 기다리지 않는다 (실제로 그랬다 — DB 를 지우고 다시 만든
+    뒤, 또는 훅이 허가를 소비한 뒤).
+    """
+    live = {str(r.get("request_id") or "") for r in pending(conn, project)}
+    return [
+        row for row in AP.pending(conn, project)
+        if str(row.get("request_id") or "") not in live
+    ]
+
+
+def prune(conn, project: str, *, reason: str = "", by: str = "cli") -> list[dict]:
+    """짝 없는 행을 `stale` 로 닫고 **감사 기록에 남긴다.**
+
+    조용히 지우지 않는다 — 승인 대기열에서 무언가 사라진 것은 사람이 나중에
+    "그때 그 요청 어떻게 됐지" 를 물을 수 있는 사건이다. 기록은
+    `logs/Approval_log.csv`(사람이 보는 사본)와
+    `server/data/audit/<프로젝트>.jsonl`(진본) **둘 다**에 남는다.
+    """
+    from .. import policy as policy_mod
+    from .. import registry
+
+    root = registry.root_of(project) or ""
+    try:
+        pol = policy_mod.load(project)
+    except Exception:
+        pol = None
+    csv_path = A.log_path(root, pol) if root else ""
+
+    note = reason.strip() or "요청 파일이 없어 사람이 정리했어요"
+    done = []
+    for row in orphans(conn, project):
+        request_id = str(row.get("request_id") or "")
+        AP.decide(conn, project, request_id, "stale", by=by)
+        if csv_path:
+            A.append_row(
+                csv_path,
+                action=f"정리 · {row.get('action_key') or '[미분류]'}",
+                request=str(row.get("request") or request_id),
+                result=f"정리 (요청 파일 없음) · {note}",
+                handled_by=f"사람 · approvals prune ({by})",
+                tool_use_id=request_id,
+                project=project,
+            )
+        E.add(
+            conn, project, "승인",
+            f"짝 없는 승인 행을 정리했어요: {request_id}", tone="info",
+        )
+        done.append({**row, "state": "stale", "note": note})
+    return done
 
 def too_many(row: dict) -> bool:
     return int(row.get("attempts") or 0) > MAX_ATTEMPTS

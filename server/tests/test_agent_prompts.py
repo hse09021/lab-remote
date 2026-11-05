@@ -36,7 +36,14 @@ def test_설계_프롬프트가_채워진다():
     text = P.render("loop_plan", {"loop_no": 3, "next_exp": "EXP-004", "context": "맥락"})
     assert "루프 3 회차" in text
     assert "experiments/EXP-004/" in text
-    assert "$" not in text
+    # 우리 자리표시가 **하나도** 남지 않았나.
+    #
+    # 전에는 "$ 가 아예 없다" 로 봤는데, 공통 꼬리에 셸 예시
+    # (`cat "$f"`·`$(…)`)가 들어가면서 그게 못 쓰는 단정이 됐다.
+    # 목적은 처음부터 **우리 템플릿 변수가 새지 않는 것**이었다.
+    for name in ("loop_no", "next_exp", "context"):
+        assert "$" + name not in text
+        assert "${" + name + "}" not in text
 
 
 def test_설계_프롬프트가_run_json_규약을_적는다():
@@ -107,3 +114,49 @@ def test_참고_프롬프트와_폴더가_다르다():
     import os
 
     assert P.prompts_dir().endswith(os.path.join("prompts", "loop"))
+
+
+# --- 공통 꼬리 ------------------------------------------------------------------
+
+
+def test_네_프롬프트_전부에_도구_규칙이_붙는다():
+    """9단계 1번 실측: 첫 설계 세션이 `for f in …; do cat "$f"; done` 으로
+    참고 문서를 읽으려 했고, `bashparse` 가 `for` 를 몰라 `unclassified` →
+    헤드리스 거부가 됐다. **읽기만 하는 명령 때문에** 루프가 첫 걸음에서
+    멈췄다. 판정을 넓히는 대신 프롬프트로 푼다.
+    """
+    from app.agent import prompts
+
+    values = {
+        "loop_plan": {"loop_no": 1, "next_exp": "EXP-003", "context": ""},
+        "loop_review": None,
+        "resume_after_approval": None,
+        "fill_missing_journal": None,
+    }
+    for name in prompts.PROMPTS:
+        body = prompts.read(name) + prompts.COMMON_RULES
+        assert "`Read` 도구로 읽어 주세요" in body, name
+        assert "for" in prompts.COMMON_RULES
+
+
+def test_공통_꼬리의_달러가_자리표시로_새지_않는다():
+    """`$f` 를 그대로 두면 `Template.substitute` 가 `KeyError: 'f'` 로 죽어
+    **프롬프트를 못 만들고 루프가 멈춘다.** 실제로 그랬다."""
+    from app.agent import prompts
+
+    out = prompts.render(
+        "loop_plan", {"loop_no": 2, "next_exp": "EXP-004", "context": "맥락"}
+    )
+    # 렌더 결과에는 **달러 하나**로 보여야 한다 (Claude 가 읽는 글이니까)
+    assert 'cat "$f"' in out
+    assert 'cat "$$f"' not in out
+    assert "$(…)" in out
+
+
+def test_모든_프롬프트가_렌더된다():
+    """꼬리를 붙이고도 네 개가 다 렌더돼야 한다."""
+    from app.agent import prompts
+
+    assert prompts.render("loop_plan", {
+        "loop_no": 1, "next_exp": "EXP-001", "context": ""
+    })
