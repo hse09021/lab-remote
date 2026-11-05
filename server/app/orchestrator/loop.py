@@ -601,7 +601,7 @@ def _claude(
     # 승인한 뒤 **오케스트레이터가 샌드박스 밖에서** 한다 (M3: Claude 의
     # Bash 로는 조용히 실패한다).
     try:
-        installs_mod.sync(conn, ctx.project, ctx.root)
+        installs_mod.sync(conn, ctx.project, ctx.root, session_id=session_id)
     except Exception:
         # 설치 요청 처리가 루프를 멈추지 않는다.
         pass

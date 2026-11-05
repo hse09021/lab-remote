@@ -33,7 +33,8 @@ import sqlite3
 from .. import db
 from . import rows
 
-__all__ = ["record", "listing", "by_loop", "totals", "approvals_by_action"]
+__all__ = ["record", "listing", "by_loop", "totals",
+    "resumed_after", "approvals_by_action"]
 
 #: 결과 JSON 의 `usage` 안 키 → 우리 열 이름. 이름이 판마다 흔들리므로
 #: 여러 후보를 본다 (없으면 `None` 으로 남기고 지어내지 않는다).
@@ -145,6 +146,23 @@ _SUMS = (
     "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens",
     "cost_usd",
 )
+
+
+def resumed_after(conn, project: str, session_id: str, since: str) -> bool:
+    """그 세션을 `since` 뒤에 **이어 간 적이 있나.**
+
+    설치 승인에는 요청 파일이 없다(훅이 만든 게 아니다). 그래서 "이미
+    이어 갔다" 를 적어 둘 자리가 없는데, 장부에 이미 다 있다 — 같은
+    `session_id` 로 `resumed=1` 인 호출이 결정 시각 뒤에 있으면 이어 간 거다.
+    """
+    if not session_id or not since:
+        return False
+    found = conn.execute(
+        "SELECT 1 FROM agent_calls WHERE project=? AND session_id=? "
+        "AND resumed=1 AND at>=? LIMIT 1",
+        (project, session_id, since),
+    ).fetchone()
+    return found is not None
 
 
 def totals(calls: list[dict]) -> dict:

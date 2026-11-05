@@ -18,6 +18,7 @@ from .. import db, registry
 from ..store import loops as LP
 from . import approvals as approvals_mod
 from . import approvals as AP_ORCH
+from . import installs as installs_mod
 from . import recovery as recovery_mod
 from .loop import (
     UsageWait,
@@ -206,7 +207,48 @@ def _once(conn, project: str, root: str, **kw) -> dict:
     def stopped(stage: str, **extra) -> dict:
         return {"ok": False, "steps": steps, "stoppedAt": stage, **extra}
 
-    waiting = waiting_approval(conn, project)
+    # 📦 **설치 승인부터 본다.**
+    #
+    # 설치가 끝났으면 그걸 기다리던 세션을 이어 간다 (프롬프트가
+    # `Install_result.json` 을 읽게 한다). 아직 승인을 안 했으면 **설계
+    # 세션을 띄우지 않는다** — Claude 는 같은 요청을 또 쓸 뿐이고 사용량만
+    # 쓴다. 이 연결이 통째로 없었다 (실측 2026-11-05).
+    settled = installs_mod.resumable(conn, project)
+    if settled:
+        row = settled[0]
+        steps.append(
+            resume_step(
+                ctx, conn, str(row.get("session_id") or ""),
+                request={
+                    "request": str(row.get("request") or ""),
+                    "action_key": "설치 요청",
+                },
+            )
+        )
+        left = waiting_approval(conn, project)
+        if left:
+            return stopped("approval", waiting=left)
+        exp_id = _resuming_experiment(conn, project, root)
+        if exp_id:
+            planned = {"ok": True, "stage": "resume", "experimentId": exp_id}
+            steps.append(planned)
+
+    if planned is None:
+        open_installs = installs_mod.pending(conn, project)
+        if open_installs:
+            names = ", ".join(
+                str(r.get("request") or "") for r in open_installs[:3]
+            )
+            return stopped(
+                "install",
+                waiting=open_installs,
+                reason=(
+                    f"설치 승인을 기다려요 ({len(open_installs)}건): {names} · "
+                    "`labremote installs list <프로젝트>`"
+                ),
+            )
+
+    waiting = waiting_approval(conn, project) if planned is None else []
     if waiting:
         item = waiting[0]
         if usable_grants(project, request=item):
