@@ -832,6 +832,264 @@ def cmd_git_backups(args) -> int:
     return 0
 
 
+def cmd_up(args) -> int:
+    """▶ 오케스트레이터 루프를 **터미널에서** 띄운다 (systemd 없이).
+
+    개발·검증용이다. 8단계의 systemd 유닛과 **같은 루프**를 돈다 —
+    `app/orchestrator/__main__.main()` 하나뿐이다.
+    """
+    from .orchestrator import __main__ as loop_main
+
+    argv = []
+    if args.once:
+        argv.append("--once")
+    if not args.foreground and not args.once:
+        print("⚠ 지금은 앞단(foreground)으로만 돌려요 — 뒤로 보내려면 8단계의")
+        print("  systemd 유닛을 쓰거나 `labremote up --foreground &` 로 해 주세요.")
+        print()
+    print("루프를 띄워요. 멈추려면 Ctrl-C.")
+    try:
+        return loop_main.main(argv)
+    except KeyboardInterrupt:
+        print()
+        print("멈췄어요. 돌고 있던 학습은 안 죽어요 (start_new_session).")
+        return 0
+
+
+def cmd_queue(args) -> int:
+    """📋 작업 큐. 루프가 집어 가는 일 목록."""
+    from . import db as db_mod
+    from .store import jobs as J
+    from .store import loops as LP
+
+    with db_mod.open_db() as conn:
+        if args.action == "list":
+            states = tuple(args.state) if args.state else None
+            rows = J.listing(conn, args.name or None, states, limit=args.limit)
+            if args.json:
+                print(json.dumps(rows, ensure_ascii=False, indent=2))
+                return 0
+            if not rows:
+                print("큐가 비어 있어요.")
+                return 0
+            for row in rows:
+                mark = {"running": "▶", "queued": "·", "done": "✔",
+                        "failed": "✘", "timeout": "✘", "blocked": "⛔",
+                        "cancelled": "—", "waiting_approval": "⏸",
+                        "leased": "·"}.get(row["state"], "?")
+                exp = row.get("experiment_id") or "-"
+                print(f"{mark} [{row['id']}] {row['project']} · {row['kind']} · {exp}"
+                      f" · {row['state']}")
+                if row.get("error"):
+                    print(f"      {_shorten(str(row['error']))}")
+            return 0
+
+        if not args.name:
+            print("✘ 프로젝트 이름을 주세요", file=sys.stderr)
+            return 2
+
+        if args.action == "add":
+            root = registry.root_of(args.name)
+            if not root:
+                print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.name}", file=sys.stderr)
+                return 2
+            kind = "plan" if args.dummy else (args.kind or "plan")
+            job_id = J.add(
+                conn, args.name, kind,
+                payload={"dummy": True} if args.dummy else None,
+            )
+            conn.commit()
+            print(f"✔ 작업을 넣었어요: [{job_id}] {kind}")
+            if args.dummy:
+                print("  가짜 학습으로 한 바퀴 돌려요. `labremote up --once` 로 띄워 주세요.")
+            return 0
+
+        if args.action == "pause":
+            LP.pause(conn, args.name, reason=args.reason or "사람이 멈췄어요")
+            print(f"✔ 루프를 멈췄어요: {args.name}")
+            print("  돌고 있는 학습은 건드리지 않아요. 다음 작업부터 멈춰요.")
+            return 0
+
+        if args.action == "resume":
+            LP.resume(conn, args.name)
+            print(f"✔ 루프를 다시 열었어요: {args.name}")
+            return 0
+
+        # cancel
+        if args.id is None:
+            print("✘ 취소할 작업 번호를 주세요", file=sys.stderr)
+            return 2
+        try:
+            J.cancel(conn, args.id, error=args.reason or "사람이 취소했어요")
+            conn.commit()
+        except Exception as exc:
+            print(f"✘ {exc}", file=sys.stderr)
+            return 2
+        print(f"✔ 취소했어요: [{args.id}]")
+        return 0
+
+
+def cmd_monitor(args) -> int:
+    """📈 GPU·호스트·로그를 읽어 스냅샷으로."""
+    from . import db as db_mod
+    from .monitor import daemon, snapshot
+
+    if args.action == "once":
+        from .monitor import gpu as gpu_mod
+        from .monitor import host as host_mod
+
+        # CPU 는 **두 표본의 차분**이다 (psutil 없이 /proc/stat 으로 잰다).
+        # 한 번만 읽으면 `None` 이 나온다 — 짧게 두 번 읽는다.
+        before = host_mod.cpu_times()
+        with db_mod.open_db() as conn:
+            got = daemon.tick(conn, host_before=before)
+        gpu = gpu_mod.probe()
+        host = host_mod.probe(".", before=before)
+        if args.json:
+            print(json.dumps(
+                {"tick": got, "gpu": gpu, "host": host}, ensure_ascii=False, indent=2
+            ))
+            return 0
+
+        devices = gpu.get("devices") or []
+        if devices:
+            for d in devices:
+                print(f"GPU    {d.get('name')} · {d.get('utilPct')}% · "
+                      f"{d.get('memUsedMb')}/{d.get('memTotalMb')}MB · {d.get('tempC')}°C")
+        else:
+            print(f"GPU    조회 불가 — {gpu.get('reason') or '사유 없음'}")
+        memory = host.get("memory") or {}
+        disk = host.get("disk") or {}
+        print(f"호스트  CPU {host.get('cpuPct')}% · RAM {memory.get('pct')}%"
+              f" · 디스크 여유 {disk.get('freeGb')}GB")
+        if got["wrote"]:
+            print("스냅샷  " + ", ".join(got["wrote"]))
+            for name in got["wrote"]:
+                print(f"       {snapshot.status_path(name)}")
+        else:
+            print("스냅샷  쓴 게 없어요 (등록된 프로젝트가 없나요?)")
+        for problem in got["problems"]:
+            print(f"⚠ {problem}")
+        return 1 if got["problems"] else 0
+
+    # status
+    rows = []
+    for root, name in sorted(registry.load().items()):
+        path = snapshot.status_path(name)
+        row = {"project": name, "path": path, "exists": os.path.exists(path)}
+        if row["exists"]:
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    data = json.load(fh)
+                row["generatedAt"] = data.get("generatedAt")
+                row["loopLabel"] = (data.get("dashboard") or {}).get("loopLabel")
+            except (OSError, ValueError) as exc:
+                row["error"] = str(exc)
+        rows.append(row)
+    if args.json:
+        print(json.dumps(rows, ensure_ascii=False, indent=2))
+        return 0
+    if not rows:
+        print("등록된 프로젝트가 없어요.")
+        return 0
+    for row in rows:
+        if not row["exists"]:
+            print(f"· {row['project']} · 스냅샷이 아직 없어요 "
+                  "(labremote monitor once 로 한 번 찍어 주세요)")
+            continue
+        print(f"✔ {row['project']} · {row.get('loopLabel') or '-'}"
+              f" · {row.get('generatedAt')}")
+        print(f"     {row['path']}")
+    return 0
+
+
+def cmd_notify(args) -> int:
+    """🔔 웹훅을 한 번 쏴 본다. **주소는 찍지 않는다.**"""
+    from . import db as db_mod
+    from . import notify, notifier
+
+    if not notify.webhook_url():
+        print("✘ 웹훅 주소가 없어요", file=sys.stderr)
+        print(f"  {config_hint()}", file=sys.stderr)
+        return 2
+    with db_mod.open_db() as conn:
+        got = notifier.send(
+            conn,
+            "test",
+            project=args.name or "",
+            subject=f"test-{int(__import__('time').time())}",
+            title="알림이 닿았어요",
+            body="`labremote notify test` 로 보낸 시험 알림이에요.",
+            fields=[
+                ("보낸 쪽", notify.USER_AGENT),
+                ("확인할 것", "사유 전문이 잘리지 않고 오는지"),
+            ],
+        )
+    if not got.get("ok"):
+        print(f"✘ 못 보냈어요: {got.get('reason') or got}", file=sys.stderr)
+        if got.get("httpStatus") == 403:
+            print("  403 이면 웹훅 URL 이 틀렸거나 지워졌을 수 있어요.", file=sys.stderr)
+        return 2
+    print(f"✔ 보냈어요 (상태 {got.get('httpStatus')})")
+    if got.get("suppressed"):
+        print("  방금 같은 알림을 보내서 이번 건은 눌렸어요 (중복 제거).")
+    return 0
+
+
+def config_hint() -> str:
+    from . import config
+
+    return f"docs/SETUP.md 의 웹훅 단계를 봐 주세요: {config.config_path()}"
+
+
+def cmd_service(args) -> int:
+    """⚙️ systemd 사용자 유닛을 **렌더**한다. 활성화는 사람이 한다.
+
+    `enable`·`linger` 는 사람의 세션 설정이고, `enable --now` 는 **루프를
+    실제로 띄운다** — 그건 사람이 "이제 돌려라" 라고 말하는 순간이어야 한다.
+    """
+    from .service import units
+
+    if args.action == "install":
+        if args.dry_run:
+            for name in sorted(units.UNITS):
+                print(f"--- {units.unit_path(name)} ---")
+                print(units.render(name))
+            return 0
+        got = units.install()
+        print(f"✔ 유닛을 썼어요: {got['dir']}")
+        for path in got["written"]:
+            mark = "바뀜" if path in got["changed"] else "그대로"
+            print(f"  {os.path.basename(path)}  ({mark})")
+        print()
+        print("활성화는 **사람이** 해 주세요 (sudo 는 필요 없어요):")
+        for line in units.enable_commands():
+            print(f"  {line}")
+        print()
+        print("8단계에서 실제 재부팅까지 확인해요.")
+        return 0
+
+    # status
+    got = units.status()
+    if args.json:
+        print(json.dumps(got, ensure_ascii=False, indent=2))
+        return 0
+    if not got["systemctl"]:
+        print("systemctl 이 없어요 — systemd 가 아닌 환경이에요.")
+        return 1
+    linger = got["linger"]
+    print("linger   " + ("켜져 있어요" if linger else
+                         "꺼져 있어요 ⚠ 로그아웃하면 서비스가 죽어요" if linger is False
+                         else "못 읽었어요"))
+    for name, row in sorted(got["units"].items()):
+        print(f"{name}")
+        print(f"  유닛 파일  {'있어요' if row['file'] else '없어요 (labremote service install)'}")
+        print(f"  enabled   {row.get('enabled')}")
+        print(f"  active    {row.get('active')}")
+    bad = [n for n, r in got["units"].items() if not r["file"]]
+    return 1 if (bad or linger is False) else 0
+
+
 def cmd_doctor(args) -> int:
     report = doctor.run()
     if args.json:
@@ -941,6 +1199,37 @@ def build_parser() -> argparse.ArgumentParser:
     # 먹거나 `--bare` 를 모르는 인자로 거부한다.
     p.set_defaults(extra=[])
     p.set_defaults(func=cmd_claude)
+
+    p = sub.add_parser("up", help="오케스트레이터 루프를 터미널에서 띄워요")
+    p.add_argument("--foreground", action="store_true", help="앞단에서 돌려요 (기본)")
+    p.add_argument("--once", action="store_true", help="한 바퀴만 돌고 끝내요")
+    p.set_defaults(func=cmd_up)
+
+    p = sub.add_parser("queue", help="작업 큐 보기·넣기·멈춤·취소")
+    p.add_argument("action", choices=["list", "add", "pause", "resume", "cancel"])
+    p.add_argument("name", nargs="?", help="프로젝트 이름")
+    p.add_argument("id", nargs="?", type=int, help="cancel 할 작업 번호")
+    p.add_argument("--kind", choices=["plan", "train", "review", "resume", "journal_fix"],
+                   help="add 할 작업 종류 (기본 plan)")
+    p.add_argument("--dummy", action="store_true", help="가짜 학습으로 한 바퀴 (9단계 검증 1번)")
+    p.add_argument("--state", action="append", help="list 를 상태로 걸러요 (여러 번)")
+    p.add_argument("--limit", type=int, default=20, help="list 개수 (기본 20)")
+    p.add_argument("--reason", help="pause·cancel 사유")
+    p.set_defaults(func=cmd_queue)
+
+    p = sub.add_parser("monitor", help="GPU·호스트·로그 스냅샷")
+    p.add_argument("action", choices=["once", "status"])
+    p.set_defaults(func=cmd_monitor)
+
+    p = sub.add_parser("notify", help="알림 시험 (주소는 안 찍어요)")
+    p.add_argument("action", choices=["test"])
+    p.add_argument("name", nargs="?", help="프로젝트 이름 (선택)")
+    p.set_defaults(func=cmd_notify)
+
+    p = sub.add_parser("service", help="systemd 사용자 유닛 렌더 (활성화는 사람이)")
+    p.add_argument("action", choices=["install", "status"])
+    p.add_argument("--dry-run", action="store_true", help="쓰지 않고 내용만 보여 줘요")
+    p.set_defaults(func=cmd_service)
 
     p = sub.add_parser("keys", help="허가 서명 키 만들기·점검 (승인에 필요해요)")
     p.add_argument("action", nargs="?", choices=["init", "show"], default="show")

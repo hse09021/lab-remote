@@ -3684,3 +3684,82 @@ conda run -n <환경> python -m pip install torch \
 > 순환은 이번 턴에 고쳤으니(오케스트레이터가 지웁니다) 더 생기지 않습니다.
 
 `labremote doctor` → **✘ 0개 · ⚠ 0개 · ✔ 38개**
+
+---
+
+# 🖥 7단계 (2) — CLI 다섯 (2026-11-05)
+
+| 명령 | 하는 일 |
+|---|---|
+| `up [--once] [--foreground]` | 오케스트레이터 루프를 터미널에서. **8단계의 유닛과 같은 루프**(`app.orchestrator.main`) |
+| `queue {list,add,pause,resume,cancel}` | 작업 큐. `add --dummy` 가 9단계 검증표 1번 |
+| `monitor {once,status}` | GPU·호스트·로그를 읽어 스냅샷 / 스냅샷 상태 |
+| `notify test` | 웹훅을 한 번 쏴 봄. **주소는 안 찍음** |
+| `service {install,status}` | systemd 유닛 **렌더**. 활성화는 사람이 |
+
+## `service` 는 렌더까지만 합니다
+
+`systemctl --user enable` 과 `loginctl enable-linger` 는 **사람의 세션
+설정**이고(규칙 0), `enable --now` 는 **루프를 실제로 띄웁니다** — 그건 사람이
+"이제 돌려라" 라고 말하는 순간이어야 합니다.
+
+```
+✔ 유닛을 썼어요: ~/.config/systemd/user
+  labremote-monitor.service  (바뀜)
+  labremote-orchestrator.service  (바뀜)
+
+활성화는 **사람이** 해 주세요 (sudo 는 필요 없어요):
+  loginctl enable-linger hse09021
+  systemctl --user daemon-reload
+  systemctl --user enable --now labremote-monitor labremote-orchestrator
+```
+
+시험이 `subprocess.run` 을 터뜨려 놓고 **아무 명령도 안 돌리는 것**을
+확인합니다. `--dry-run` 은 쓰지도 않고 내용만 보여 줍니다.
+
+### 유닛에 못박아 둔 것
+
+| | 왜 |
+|---|---|
+| `Environment=ANTHROPIC*` **없음** | 키가 섞이면 구독이 아니라 종량제 과금 |
+| `DISABLE_AUTOUPDATER=1`·`DISABLE_UPDATES=1` | 판이 올라가면 도구 이름이 바뀌어 방어에 틈이 생깁니다(S5b) |
+| `KillMode=mixed` | 학습은 `start_new_session` 으로 떼어 놔서 유닛을 멈춰도 **안 죽습니다** — 몇 시간 돌던 학습을 재시작으로 잃지 않습니다 |
+| `Restart=always` · `RestartSec=10` | 죽으면 다시 뜨고 복구가 이어받습니다 |
+
+### 🔑 `PATH` 는 지금 셸을 베끼지 않습니다
+
+처음엔 `os.environ["PATH"]` 를 그대로 넣었는데, 거기에 **VS Code 서버
+경로**(`/home/…/.vscode-server/cli/servers/Stable-261c84cb…/`)가 섞여
+있었습니다 — 그 폴더는 판이 바뀌면 없어집니다. 재부팅 뒤 유닛이 조용히
+`claude` 를 못 찾는 종류의 실패입니다.
+
+고정으로 둡니다: `<파이썬의 bin>` → `~/.local/bin`(`claude`) → 표준 폴더.
+중복도 지웁니다. 시험이 `vscode-server` 가 없고 중복이 없는 것을 봅니다.
+
+## `monitor once` — CPU 는 두 표본의 차분입니다
+
+`psutil` 없이 `/proc/stat` 으로 재므로 **한 번만 읽으면 `None`** 입니다.
+처음에 `CPU None%` 가 나와서 짧게 두 번 읽도록 고쳤습니다.
+
+```
+GPU    NVIDIA GeForce RTX 5080 · 0.0% · 15.0/16303.0MB · 34.0°C
+호스트  CPU 3.5% · RAM 9.5% · 디스크 여유 274.2GB
+스냅샷  hook-sandbox
+       <server>/data/status/hook-sandbox.json
+```
+
+`daemon.tick()` 의 반환은 `{wrote, problems, sample}` 입니다 — GPU·호스트
+값은 거기 없어서 `monitor once` 가 따로 읽습니다(표본은 `tick` 이 DB 에 쌓습니다).
+
+## `up` 은 유닛과 **같은 루프**입니다
+
+`app/orchestrator/__main__.main()` 하나뿐입니다. 진실이 둘이 되지 않게
+시험이 "`up` 이 그 모듈을 쓰고, 유닛의 `ExecStart` 도 같은 모듈" 을 봅니다.
+`Ctrl-C` 는 곱게 받고 *"돌고 있던 학습은 안 죽어요"* 를 알려 줍니다.
+
+## `notify test` 는 주소를 안 찍습니다
+
+웹훅 주소는 비밀입니다(`~/.config/labremote/**` 는 훅의 `SECRET_FILES`).
+보냈는지와 상태 코드만 보여 주고, 403 이면 *"URL 이 틀렸거나 지워졌을 수
+있어요"* 를 덧붙입니다 — S9 에서 실제로 당한 경우입니다(그때는 User-Agent
+탓이었지만).
