@@ -3763,3 +3763,88 @@ GPU    NVIDIA GeForce RTX 5080 · 0.0% · 15.0/16303.0MB · 34.0°C
 보냈는지와 상태 코드만 보여 주고, 403 이면 *"URL 이 틀렸거나 지워졌을 수
 있어요"* 를 덧붙입니다 — S9 에서 실제로 당한 경우입니다(그때는 User-Agent
 탓이었지만).
+
+---
+
+# 🧵 학습이 오케스트레이터 재시작에 **안 죽게** (2026-11-05)
+
+## 전제가 틀렸습니다
+
+`runner/process.py` 와 유닛 주석에 이렇게 적어 뒀습니다.
+
+> *"학습은 `start_new_session=True` 로 떼어 놔서 유닛을 멈춰도 안 죽어요."*
+
+**틀렸습니다.** `setsid` 는 **세션만** 떼고 **cgroup 은 그대로 둡니다.**
+실측(2026-11-05):
+
+```
+내 cgroup:          /user.slice/user-1000.slice/session-4.scope
+setsid 자식 cgroup:  /user.slice/user-1000.slice/session-4.scope   ← 같다
+자식 SID: 411635   내 SID: 411632                                  ← 세션만 다르다
+```
+
+systemd 의 **`KillMode=mixed`** 는 메인 프로세스가 끝난 뒤 **cgroup 에 남은
+것들에 SIGKILL** 을 보냅니다. 그대로였다면 `systemctl --user restart
+labremote-orchestrator` 한 번에 **몇 시간 돌던 학습이 같이 죽었습니다.**
+
+## 두 겹으로 고쳤습니다
+
+| 겹 | 무엇 | 왜 |
+|---|---|---|
+| **1차** | 학습을 **자기 cgroup** 에 담습니다 — `systemd-run --user --scope --unit=labremote-train-<프로젝트>-<EXP>` | 유닛과 **아예 다른 자리**라 `KillMode` 와 무관합니다 |
+| **2차** | 유닛을 **`KillMode=process`** 로 | scope 를 못 쓰는 환경(user systemd 없음)에서도 남은 프로세스를 죽이지 않습니다 |
+
+### 왜 scope 를 골랐나 (비교)
+
+| | `KillMode=process` 만 | **scope + `KillMode=process`** |
+|---|---|---|
+| 재시작에 살아남나 | 네 | 네 |
+| 의존성 | 없음 | user systemd·dbus (실측: 됩니다) |
+| 상태 확인 | `ps`·`/proc` 뒤지기 | **`systemctl --user status labremote-train-…scope`** |
+| 끝내기 | `killpg`(우리가 손자까지 챙겨야) | **`systemctl --user stop <이름>.scope`** (cgroup 전체) |
+| 자원 | 직접 셈 | `Memory: 760.0K (peak: 1020.0K)` · `CPU: 2ms` 를 systemd 가 줌 |
+| 같은 실험 두 번 띄우기 | 막는 장치 없음 | **`systemd-run` 이 이름 충돌로 거절** |
+
+scope 쪽이 **상태·종료·중복 방지**를 전부 공짜로 줍니다. 그래서 1차로 쓰고,
+`KillMode=process` 를 안전망으로 둡니다 — 둘 중 하나만으로도 학습이 삽니다.
+
+실측으로 cgroup 분리를 확인했습니다.
+
+```
+systemd-run --user --scope --unit=labremote-train-probe --collect -- sh -c 'cat /proc/self/cgroup'
+→ 0::/user.slice/user-1000.slice/user@1000.service/app.slice/labremote-train-probe.scope
+```
+
+### 못 쓰면 조용히 빠집니다
+
+`scope_available()` 이 **실제로 띄워 보고** 정합니다(설정만 보고 믿지
+않습니다). user systemd 가 없는 환경(컨테이너·cron)에서는 빠지고, 그때는
+`KillMode=process` 가 지킵니다. `LAB_NO_SCOPE=1` 로 끌 수 있고 시험은 항상
+끕니다(transient 유닛을 기계에 남기지 않으려고).
+
+`build_argv` 는 **기본으로 scope 를 안 붙입니다** — 거기는 "무엇을 돌리나" 를
+만드는 자리이고 scope 는 "어디에 담나" 라서, 실제로 띄우는 `launch()` 가
+정합니다. 그래야 argv 를 보는 시험이 systemd 에 매이지 않습니다.
+
+### 8단계에서 확인할 것
+
+가짜 학습 중 `systemctl --user restart labremote-orchestrator` → 학습이
+살아남고 복구가 이어받는지. **두 겹을 따로** 봅니다 — scope 켠 채로 한 번,
+`LAB_NO_SCOPE=1` 로 scope 를 끄고 한 번.
+
+> 남은 숙제: 복구가 scope 이름으로도 생존을 보게 하기
+> (`systemctl --user is-active <이름>.scope`). 지금은 `pid` + starttime +
+> `exit_code` 로 판정하고 그것만으로도 동작합니다.
+
+---
+
+## 🔔 `notify test` 의 성공 판정이 뒤집혀 있었습니다
+
+`notifier.send` 는 **`sent`·`status`** 를 돌려주는데 CLI 가 `ok`·`httpStatus`
+를 봤습니다. 그래서 **Discord 에는 204 로 잘 갔는데 화면엔
+`✘ 못 보냈어요: {'sent': True, 'status': 204, …}`** 가 떴습니다.
+
+사람이 직접 돌려 보고 잡았습니다 — 제 시험은 `notifier.send` 를 가로채서
+가짜 값을 돌려줬기 때문에 **칸 이름이 틀린 걸 못 봤습니다.** 그래서 이제
+시험이 세 경우를 다 봅니다(보냄·실패·중복 제거로 눌림) **그리고** 진짜
+`notifier.send` 의 반환에 `sent` 가 있고 `ok` 가 **없다**는 것까지 고정합니다.

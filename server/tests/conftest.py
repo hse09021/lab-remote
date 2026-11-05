@@ -48,6 +48,19 @@ def isolated_cache(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_systemd_scope(monkeypatch):
+    """시험에서는 학습을 systemd scope 에 담지 않는다.
+
+    실제 운영은 `systemd-run --user --scope` 로 학습을 **자기 cgroup** 에
+    담는다(유닛 재시작에 안 죽게). 시험이 그걸 쓰면 user systemd 에 매이고,
+    transient 유닛이 기계에 남는다.
+    """
+    from app.runner import process as process_mod
+
+    monkeypatch.setenv(process_mod.NO_SCOPE_ENV, "1")
+
+
+@pytest.fixture(autouse=True)
 def pinned_claude_version(isolated_data, monkeypatch):
     """Claude Code 판을 고정하고 **기록해 둔다.**
 
