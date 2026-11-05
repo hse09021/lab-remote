@@ -3598,3 +3598,43 @@ version`·`No space left`·`Temporary failure in name resolution` 다섯만
 제목은 `embed.py` 가 `· {project}` 를 붙이는데 호출부도 붙여서 겹쳤습니다.
 사유는 `with_guard` 의 `NO_WORKAROUND` 와 `headless_ask` 의 꼬리가 같은 문장을
 반복했습니다 — 이미 있으면 안 붙입니다.
+
+## ⚠ torch 는 설치 경로로 깔 수 없습니다 — 사람이 깝니다 (10단계)
+
+RTX 5080 은 **Blackwell(sm_120)** 이라 맞는 CUDA 빌드가 필요하고(cu128 이상),
+그 빌드는 PyPI 기본 인덱스에 없어 **`--index-url`** 로 받아야 합니다.
+
+T6 의 설치 경로는 `--index-url`·`--extra-index-url`·`--find-links` 를
+**거부합니다**(`pkgspec.BAD_SUBSTRINGS`). 일부러 그렇습니다 — 인덱스를 바꿀 수
+있으면 **어디서 받는지를 AI 가 정하게** 되고, 그건 "휠만 받는다" 를
+무의미하게 만듭니다.
+
+**그래서 torch 는 사람이 직접 깝니다. 설치 경로를 넓히지 않습니다.**
+
+```bash
+conda run -n <환경> python -m pip install torch \
+  --index-url https://download.pytorch.org/whl/cu128   # 정확한 cu 버전은 10단계 실측
+```
+
+`doctor` 는 **설치 여부가 아니라 동작**을 봅니다 — `pip list` 에 torch 가 있는
+것은 아무 보장이 아닙니다. 아키텍처가 안 맞으면 `import` 는 되고 `.cuda()`
+에서 죽습니다.
+
+| 판정 | 조건 |
+|---|---|
+| ✔ | `torch.cuda.is_available()` 이 참이고 장치의 `get_device_capability()`(5080 은 `(12, 0)`)가 `get_arch_list()` 에 **들어 있다** |
+| ✘ | `available` 이 거짓 (CPU 빌드거나 드라이버 불일치) |
+| ✘ | `capability` 가 `archList` 에 **없다** — 조용히 안 돌거나 학습 중에 죽습니다 |
+| ⚠ | torch 가 아예 없음 (가짜 학습만 할 거면 정상) |
+
+작은 순수 파이썬 패키지는 T6 경로로 충분합니다 (`tqdm` e2e 로 확인).
+무거운 것·인덱스가 필요한 것만 사람이 깝니다.
+
+> ℹ️ **드라이버 상태 갱신 (2026-11-05)**: ①의 실측 때는 커널 NVRM 595.84 vs
+> 유저랜드 595.99.02 로 어긋나 `nvidia-smi` 가 `Failed to initialize NVML`
+> 이었습니다. **지금은 풀렸습니다** — 둘 다 `595.99.02` 이고 `nvidia-smi` 가
+> `NVIDIA GeForce RTX 5080, 595.99.02` 를 돌려줍니다. 이 문서의 옛 절에
+> "지금 이 기계가 그 상태" 라고 적힌 곳은 **그때의 상태**입니다.
+>
+> 우분투 자동 업데이트가 드라이버를 올리고 재부팅을 안 하면 다시 그렇게
+> 되므로 감지는 그대로 필요합니다.

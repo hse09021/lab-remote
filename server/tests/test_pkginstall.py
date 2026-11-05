@@ -434,3 +434,50 @@ def test_require_made_는_없는_환경을_거절한다():
     with pytest.raises(condaenv.EnvRefused) as exc:
         condaenv.require_made("not-made-yet")
     assert "docs/SETUP.md" in str(exc.value)
+
+
+def test_깔리면_오케스트레이터가_요청_파일을_지운다(asked, conn, monkeypatch):
+    """🔑 프롬프트가 Claude 에게 "요청 파일은 지워 주세요" 라고 했는데
+    **삭제는 `del` → ask** 였다 — 쓰기 쪽과 같은 순환이었다(S9 e2e 가 잡았다).
+
+    요청 파일의 수명은 시스템의 일이다: 요청은 AI 가 쓰고 **소비는 우리가**
+    한다. 안 지우면 다음 루프에서 같은 요청이 또 열린다.
+    """
+    monkeypatch.setattr(I.notifier, "send", lambda *a, **k: {"ok": True})
+    opened = I.sync(conn, "hook-sandbox", asked)["opened"]
+    assert os.path.exists(I.request_path(asked))
+
+    got = I.approve(conn, "hook-sandbox", opened, runner=_ok_runner)
+
+    assert got["ok"] is True
+    assert not os.path.exists(I.request_path(asked)), "깔렸으면 지워야 해요"
+    payload = json.loads(open(I.result_path(asked), encoding="utf-8").read())
+    assert payload["state"] == "installed" and payload["requestRemoved"] is True
+    assert "시스템이 지웠어요" in payload["hint"]
+    # 다음 루프에서 같은 요청이 또 열리지 않는다
+    assert I.sync(conn, "hook-sandbox", asked)["opened"] is None
+
+
+def test_실패하면_요청_파일을_남긴다(asked, conn, monkeypatch):
+    """사람이 고칠 수 있게 둔다 — 지우면 무엇을 요청했는지 사라진다."""
+    monkeypatch.setattr(I.notifier, "send", lambda *a, **k: {"ok": True})
+    opened = I.sync(conn, "hook-sandbox", asked)["opened"]
+
+    def fail(argv, **kw):
+        return subprocess.CompletedProcess(argv, 1, "", "ERROR: no matching distribution")
+
+    got = I.approve(conn, "hook-sandbox", opened, runner=fail)
+    assert got["ok"] is False
+    assert os.path.exists(I.request_path(asked))
+    payload = json.loads(open(I.result_path(asked), encoding="utf-8").read())
+    assert payload["state"] == "failed" and payload["requestRemoved"] is False
+
+
+def test_프롬프트가_지우라고_하지_않는다():
+    """프롬프트와 코드가 어긋나면 Claude 가 못 할 일을 시킨다."""
+    from app.agent import prompts
+
+    body = prompts.render("resume_after_approval",
+                          {"request": "x", "actions": "y", "context": "z"})
+    assert "시스템이 지웠어요" in body
+    assert "요청 파일(`state/Install_request.json`)은 지워 주세요" not in body

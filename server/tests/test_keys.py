@@ -139,3 +139,106 @@ def test_오류_안내가_있는_명령을_가리킨다(project, project_root, i
     # 그 명령이 실제로 있다
     parser = cli.build_parser()
     assert parser.parse_args(["keys", "init"]).func is cli.cmd_keys
+
+
+# --- 🩺 계획에 적힌 doctor 점검이 **실제로 다 있나** -------------------------
+
+
+def test_계획에_적힌_점검이_전부_run_에_붙어_있다():
+    """🔑 `grant_key` 와 GPU 가 **아예 빠져 있었다.**
+
+    함수는 있는데(`monitor/gpu.probe`) `doctor` 가 부르지 않거나, 계획에만
+    적혀 있고 구현이 없는 경우다. 둘 다 "기록은 있는데 안 돈다" 는 같은
+    종류의 거짓이다 — S5b·S9 와 같은 가족이다.
+
+    새 점검을 더할 때 이 목록도 같이 늘린다. **②의 범위**만 본다 —
+    7·8단계 것(linger·유닛·DB 스키마 판 …)은 그 단계에서 더한다.
+    """
+    import inspect
+
+    from app import doctor as d
+
+    run_src = inspect.getsource(d.run)
+    must = [
+        "permission_mode_check",   # 권한 기본 모드
+        "sandbox_check",           # 학습 샌드박스 (bwrap + apparmor)
+        "bash_sandbox_check",      # Bash 샌드박스 설정
+        "project_settings_check",  # 프로젝트 설정 정본 (M6)
+        "git_anchor_check",        # git 기록 앵커 (T5)
+        "project_env_check",       # 실험 conda 환경 (.pth)
+        "audit_check",             # 승인 기록 진본 (S7)
+        "cache_check",             # 공용 캐시
+        "grant_key_check",         # 허가 서명 키 (S9 가 빠진 것을 잡았다)
+        "gpu_check",               # GPU 조회 (⚠)
+        "gpu_driver_check",        # 드라이버 불일치·재부팅 대기
+        "claude_version_check",    # Claude Code 판 (S5c)
+        "user_sandbox_check",      # 사용자 설정에 sandbox
+        "shell_guard_check",       # 셸 보호 함수 (⚠)
+    ]
+    missing = [name for name in must if f"{name}(" not in run_src]
+    assert missing == [], missing
+
+
+def test_정의한_점검_함수가_전부_불린다():
+    """정의만 하고 안 부르면 **있는 척**이 된다."""
+    import inspect
+
+    from app import doctor as d
+
+    run_src = inspect.getsource(d.run)
+    defined = [
+        n for n in dir(d)
+        if n.endswith("_check") and inspect.isfunction(getattr(d, n))
+    ]
+    assert defined, "점검 함수를 못 찾았어요"
+    unused = [n for n in defined if f"{n}(" not in run_src]
+    assert unused == [], unused
+
+
+def test_GPU_조회_실패는_경고다(monkeypatch):
+    """실패가 **정상 경로**다 — 가짜 학습은 돈다(spec: ② 검증은 가짜 학습부터)."""
+    from app import doctor as d
+    from app.monitor import gpu
+
+    monkeypatch.setattr(
+        gpu, "probe",
+        lambda: {"available": False, "reason": "Driver/library version mismatch", "devices": []},
+    )
+    got = d.gpu_check()
+    assert got["level"] == "warn"
+    assert "조회 불가" in got["detail"]
+
+
+def test_드라이버_불일치는_거부다(monkeypatch):
+    """재부팅 전에는 학습이 실패한다 — guards 가 train 을 안 띄운다."""
+    from app import doctor as d
+    from app.monitor import gpu
+
+    monkeypatch.setattr(
+        gpu, "driver_state",
+        lambda: {"ok": False, "kernel": "595.84", "userland": "595.99.02",
+                 "mismatch": True, "reason": ""},
+    )
+    got = d.gpu_driver_check()
+    assert got["level"] == "bad"
+    assert "595.84" in got["detail"] and "595.99.02" in got["detail"]
+    assert "재부팅" in got["hint"]
+
+
+def test_nvidia_재부팅_대기는_경고다(monkeypatch):
+    """아직 안 깨졌지만 곧 깨진다 — 미리 알린다."""
+    from app import doctor as d
+    from app.monitor import gpu
+
+    monkeypatch.setattr(
+        gpu, "driver_state",
+        lambda: {"ok": True, "kernel": "595.99.02", "userland": "595.99.02",
+                 "mismatch": False, "reason": ""},
+    )
+    monkeypatch.setattr(
+        gpu, "reboot_pending",
+        lambda: {"pending": True, "packages": ["nvidia-driver-595"],
+                 "nvidia": ["nvidia-driver-595"]},
+    )
+    got = d.gpu_driver_check()
+    assert got["level"] == "warn" and "nvidia" in got["detail"]

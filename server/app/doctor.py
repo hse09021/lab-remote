@@ -299,6 +299,93 @@ SHELL_FILES = ("~/.bashrc", "~/.zshrc", "~/.bash_aliases", "~/.profile")
 SHELL_MARK = "labremote claude"
 
 
+def gpu_check() -> Check:
+    """GPU 를 조회할 수 있나. — **⚠ 다** (실험 자체는 돌 수 있습니다).
+
+    `monitor/gpu.probe()` 는 실패를 **정상 경로**로 돌려줍니다(예외를 던지지
+    않습니다). 조회가 안 되면 대시보드에 "조회 불가" 로 나가고 가짜 학습은
+    그대로 돕니다 — 그래서 ⚠ 입니다.
+
+    ⚠ 이게 `doctor` 에 **없었습니다**(계획 7단계에 "GPU 조회(⚠)" 로 적혀
+    있었는데 빠졌습니다). `monitor/gpu.py` 에 함수는 다 있었고 `doctor` 가
+    부르지 않았습니다 — `grant_key` 와 같은 종류의 빠짐입니다.
+    """
+    from .monitor import gpu
+
+    got = gpu.probe()
+    if got.get("available"):
+        devices = got.get("devices") or []
+        head = devices[0] if devices else {}
+        detail = f"{len(devices)}개"
+        if head.get("name"):
+            detail += f" · {head['name']}"
+        if head.get("memoryTotalMb"):
+            detail += f" · {head['memoryTotalMb']}MB"
+        return Check(True, "GPU", detail)
+    return warn(
+        "GPU",
+        "조회 불가: " + str(got.get("reason") or "사유 없음")[:140],
+        hint=(
+            "가짜 학습은 돌 수 있어요. 진짜 학습은 안 돼요 — "
+            "아래 'GPU 드라이버' 줄을 봐 주세요."
+        ),
+    )
+
+
+def gpu_driver_check() -> Check:
+    """커널 드라이버와 유저랜드 드라이버의 판이 **같은가.**
+
+    ①의 실측 중 실제로 당한 문제입니다 — 우분투 자동 업데이트가 드라이버를
+    올리고 재부팅을 안 하면 `nvidia-smi` 가 통째로 죽습니다
+    (`Failed to initialize NVML`).
+
+    | 판정 | 조건 |
+    |---|---|
+    | ✘ | 판이 **다르다** — 재부팅 전에는 학습이 실패합니다 |
+    | ⚠ | 재부팅 대기 목록에 **nvidia** 가 있다 — 아직 안 깨졌지만 곧 깨집니다 |
+    | ✔ | 같다 |
+
+    `guards.check_train` 이 불일치면 `train` 작업을 **시작하지 않습니다** —
+    어차피 실패할 학습으로 GPU 시간과 사용량을 버리지 않습니다.
+    """
+    from .monitor import gpu
+
+    state = gpu.driver_state()
+    kernel = str(state.get("kernel") or "?")
+    user = str(state.get("userland") or "?")
+    if state.get("mismatch"):
+        return Check(
+            False,
+            "GPU 드라이버",
+            f"판이 달라요 — 커널 {kernel} · 유저랜드 {user}",
+            hint=(
+                "재부팅이 필요해요. 그 전에는 실험을 시작하면 실패해요 "
+                "(guards 가 train 작업을 안 띄워요)."
+            ),
+        )
+    pending = gpu.reboot_pending()
+    if pending.get("nvidia"):
+        return warn(
+            "GPU 드라이버",
+            f"{kernel} · 재부팅 대기에 nvidia 가 있어요: "
+            + ", ".join(pending["nvidia"])[:80],
+            hint=(
+                "아직 안 깨졌지만 다음 재부팅 전까지 `nvidia-smi` 가 죽을 수 "
+                "있어요. 지금 재부팅해 두는 게 안전해요."
+            ),
+        )
+    if not state.get("ok"):
+        return warn(
+            "GPU 드라이버",
+            "판을 못 읽었어요: " + str(state.get("reason") or "")[:120],
+            hint="nvidia 드라이버가 없는 기계면 정상이에요.",
+        )
+    detail = f"{kernel} (커널·유저랜드 같아요)"
+    if pending.get("pending"):
+        detail += " · 재부팅 대기 있음 (nvidia 는 아님)"
+    return Check(True, "GPU 드라이버", detail)
+
+
 def grant_key_check() -> Check:
     """🔑 허가 서명 키가 있고 **남이 못 읽는가.**
 
@@ -644,6 +731,9 @@ def run() -> dict:
         # 공용 캐시 — 샌드박스 안에서 쓸 수 있는 유일한 바깥
         checks.append(cache_check(root, pol))
 
+    # GPU — 조회 실패는 ⚠ (가짜 학습은 돈다), 드라이버 불일치는 ✘
+    checks.append(gpu_check())
+    checks.append(gpu_driver_check())
     # 허가 서명 키 — 없으면 헤드리스 승인이 아예 안 된다
     checks.append(grant_key_check())
     # 사용자 설정에 sandbox 가 있으면 이 PC 의 모든 세션이 갇힌다
