@@ -31,6 +31,7 @@ import os
 from .. import loop_layout as L
 from .. import notifier, paths, registry
 from ..runner import condaenv, pkginstall, pkgspec
+from ..store import agent_calls as AC
 from ..store import approvals as AP
 from ..store import events as E
 
@@ -41,6 +42,8 @@ __all__ = [
     "read_request",
     "sync",
     "pending",
+    "resumable",
+    "SETTLED",
     "approve",
     "deny",
     "write_result",
@@ -88,11 +91,22 @@ def _request_id(fingerprint: str) -> str:
     return f"install:{fingerprint.split(':', 1)[-1][:16]}"
 
 
-def sync(conn, project: str, root: str, *, job_id: int | None = None) -> dict:
+def sync(
+    conn,
+    project: str,
+    root: str,
+    *,
+    job_id: int | None = None,
+    session_id: str = "",
+) -> dict:
     """세션이 끝난 뒤 요청 파일을 보고 승인 대기를 연다.
 
     같은 지문이 이미 열려 있으면 **새로 열지 않는다**(횟수만 올린다) —
     루프가 돌 때마다 같은 요청으로 알림이 쏟아지면 안 된다.
+
+    🔑 **누가 요청했는지 적어 둔다** (`session_id`). 안 적으면 설치가 끝난
+    뒤에 **이어 갈 세션을 알 수 없다** — 실측에서 이 칸이 비어 있어서,
+    사람이 승인해도 막혔던 세션은 버려지고 다음 바퀴가 설계부터 다시 했다.
     """
     got = read_request(root)
     if not got["found"]:
@@ -109,6 +123,12 @@ def sync(conn, project: str, root: str, *, job_id: int | None = None) -> dict:
     existing = AP.by_request(conn, project, request_id)
     if existing and existing["state"] == "open":
         AP.bump(conn, project, request_id)
+        if session_id and not (existing.get("session_id") or ""):
+            # 세션 칸이 비어 있던 옛 행도 이어 갈 수 있게 채운다.
+            conn.execute(
+                "UPDATE approvals SET session_id=? WHERE id=?",
+                (session_id, existing["id"]),
+            )
         return {"ok": True, "opened": existing["id"], "reason": "이미 열려 있어요"}
     if existing and existing["state"] in ("approved", "denied"):
         # 이미 결정된 요청이다. 결과 파일이 그대로 남아 있으면 AI 가 다시
@@ -121,6 +141,7 @@ def sync(conn, project: str, root: str, *, job_id: int | None = None) -> dict:
         project=project,
         request_id=request_id,
         job_id=job_id,
+        session_id=session_id,
         tool="Install",
         action_key=ACTION,
         rel=L.LOOP_LAYOUT["install_request"],
@@ -157,6 +178,41 @@ def sync(conn, project: str, root: str, *, job_id: int | None = None) -> dict:
 def pending(conn, project: str | None = None) -> list[dict]:
     """열려 있는 설치 승인만."""
     return [a for a in AP.pending(conn, project) if a.get("action_key") == ACTION]
+
+
+#: 설치가 **끝난** 상태 (깔렸든 실패했든). 둘 다 AI 에게 알려 줘야 한다 —
+#: 실패를 모르면 같은 요청을 또 쓴다.
+SETTLED = ("consumed", "blocked")
+
+
+def resumable(conn, project: str) -> list[dict]:
+    """설치가 끝났는데 **그걸 기다리던 세션을 아직 안 이어 간** 건.
+
+    🔑 이 연결이 없었다 (실측 2026-11-05). `installs.pending()` 은 있었지만
+    `once()` 가 **한 번도 안 봤고**, 설치 결과를 프롬프트에 싣는 자리도
+    없었다. 그래서 사람이 승인해서 설치가 끝나도 막혔던 세션을 안 이어 가고,
+    다음 바퀴가 **설계부터 다시** 했다 — 세션 하나와 그때까지 읽은 맥락이
+    통째로 버려진다. Claude 는 `Install_result.json` 이 있는 줄도 모른다.
+
+    `resume_after_approval` 프롬프트는 이미 그 파일을 읽으라고 적어 뒀다.
+    부르는 쪽만 없었다.
+    """
+    out: list[dict] = []
+    found = conn.execute(
+        "SELECT * FROM approvals WHERE project=? AND action_key=? "
+        "AND state IN (?, ?) AND COALESCE(session_id,'')<>'' "
+        "ORDER BY id ASC",
+        (project, ACTION, *SETTLED),
+    ).fetchall()
+    for raw in found:
+        row = dict(raw)
+        decided = str(row.get("decided_at") or "")
+        if not decided:
+            continue
+        if AC.resumed_after(conn, project, str(row["session_id"]), decided):
+            continue
+        out.append(row)
+    return out
 
 
 def approve(
