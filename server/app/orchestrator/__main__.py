@@ -18,6 +18,7 @@ from .. import db, registry
 from ..store import loops as LP
 from . import approvals as approvals_mod
 from . import approvals as AP_ORCH
+from . import commands as commands_mod
 from . import installs as installs_mod
 from . import recovery as recovery_mod
 from .loop import (
@@ -495,6 +496,20 @@ def main(argv: list[str] | None = None) -> int:
         if report["notes"]:
             say("복구: " + " · ".join(report["notes"]))
         while rounds is None or done < rounds:
+            # 📮 **웹이 보낸 명령을 먼저 집는다.**
+            #
+            # `store/commands.py` 는 다 만들어져 있었는데 집어가는 쪽이
+            # 없었다 (실측 2026-11-05) — 웹이 `pause_loop` 을 INSERT 해도
+            # 아무 일도 안 일어났다. 맨 앞에서 집어야 `pause_loop` 이
+            # **이번 바퀴부터** 먹는다.
+            for item in commands_mod.drain(conn):
+                got = item.get("result") or {}
+                mark = "✔" if got.get("ok") else "✘"
+                say(
+                    f"{item.get('project') or '-'}: 명령 {mark} {item.get('kind')}"
+                    f" · {got.get('note') or ''}"
+                )
+
             for root, name in sorted(registry.load().items()):
                 try:
                     approvals_mod.sync(conn, name)

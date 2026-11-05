@@ -1030,6 +1030,59 @@ def _cost(value, known: int) -> str:
     return f"${value:.4f}"
 
 
+def cmd_commands(args) -> int:
+    """📮 ③(웹)이 보내는 명령을 **손으로도** 넣고 볼 수 있게.
+
+    웹이 없을 때 이 경로를 사람이 확인할 수 있어야 한다. 넣는 종류는
+    `store/commands.KINDS` 로 고정이라 임의 문자열이 들어가지 않는다.
+    """
+    from . import db as db_mod
+    from .store import commands as C
+
+    with db_mod.open_db() as conn:
+        if args.action == "list":
+            items = C.pending(conn)
+            if args.json:
+                print(json.dumps(items, ensure_ascii=False, indent=2, default=str))
+                return 0
+            if not items:
+                print("기다리는 명령이 없어요.")
+                return 0
+            for item in items:
+                print(
+                    f"[{item['id']}] {item.get('project') or '-'} · {item['kind']}"
+                    f"  (넣은 때 {item.get('created_at')})"
+                )
+            print()
+            print("  오케스트레이터가 다음 바퀴에 집어가요 (`labremote up --once`).")
+            return 0
+
+        # push
+        if not args.kind:
+            print("✘ 명령 종류를 주세요: " + ", ".join(C.KINDS), file=sys.stderr)
+            return 2
+        payload = None
+        if args.payload:
+            try:
+                payload = json.loads(args.payload)
+            except ValueError as exc:
+                print(f"✘ --payload 가 JSON 이 아니에요: {exc}", file=sys.stderr)
+                return 2
+            if not isinstance(payload, dict):
+                print("✘ --payload 는 JSON 객체여야 해요", file=sys.stderr)
+                return 2
+        try:
+            command_id = C.push(conn, args.kind, project=args.name, payload=payload)
+        except ValueError as exc:
+            print(f"✘ {exc}", file=sys.stderr)
+            return 2
+        conn.commit()
+
+    print(f"✔ 명령을 넣었어요: [{command_id}] {args.kind} · {args.name}")
+    print("  오케스트레이터가 다음 바퀴에 집어가요 (`labremote up --once`).")
+    return 0
+
+
 def cmd_usage(args) -> int:
     """📊 루프 1회당 **승인 요청 건수(행동 유형별)와 Claude 사용량·시간**.
 
@@ -1677,6 +1730,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="더할 명령 이름 (여러 번 쓸 수 있어요). 없으면 지금 목록만 보여 줘요",
     )
     p.set_defaults(func=cmd_policy_allow_extra)
+
+    p = sub.add_parser(
+        "commands",
+        help="웹이 보내는 명령을 손으로 넣고 봐요 (일시정지·재개·중단)",
+    )
+    p.add_argument("action", choices=["list", "push"])
+    p.add_argument("name", nargs="?", default=None, help="프로젝트 이름")
+    p.add_argument(
+        "kind", nargs="?", default=None,
+        help="명령 종류 (pause_loop · resume_loop · stop_experiment · "
+             "cancel_job · queue_experiment · reload_policy)",
+    )
+    p.add_argument("--payload", default="", help='JSON 객체 (예: \'{"reason":"밥"}\')')
+    p.set_defaults(func=cmd_commands)
 
     p = sub.add_parser(
         "usage",
