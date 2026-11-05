@@ -155,3 +155,17 @@ def test_State_yaml_이_다른_실험을_가리키면_보고한다(registered):
     assert any("State.yaml" in p for p in result["problems"])
     # AI 가 쓰는 파일이라 막지는 않는다 — 보고만 한다.
     assert result["stateYaml"]["currentExperiment"] == "EXP-002"
+
+
+def test_상대_경로_루트를_거절한다(project, project_root):
+    """`Current.yaml` 은 "지금 어느 실험이 도는지" 의 **유일한 근거**다.
+    상대 경로가 들어오면 지금 폴더 밑에 하나 더 만들고 프로젝트 쪽은 낡은
+    채로 남는다 — 실제로 `server/hook-sandbox/state/Current.yaml` 이 그렇게
+    생겼다.
+    """
+    import pytest
+
+    from app import loopstate
+
+    with pytest.raises(ValueError, match="절대 경로"):
+        loopstate.write_current("hook-sandbox", "hook-sandbox")

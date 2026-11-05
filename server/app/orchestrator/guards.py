@@ -27,7 +27,10 @@ from ..monitor import metrics as metrics_mod
 from ..store import experiments as X
 from ..store import loops as LP
 
-__all__ = ["Verdict", "limits_of", "check_loop", "check_train", "read_config"]
+__all__ = [
+    "Verdict", "limits_of", "check_loop", "check_train", "read_config",
+    "entrypoint_gap",
+]
 
 #: 종료 조건 이름 -> 사람이 읽는 말
 LIMIT_NAMES = {
@@ -112,6 +115,37 @@ def _past_deadline(deadline: str, now: datetime) -> bool:
         return False  # 못 읽는 마감은 **없는 것**으로 본다 (틀리게 멈추지 않게)
 
 
+def entrypoint_gap(root: str, config: dict | None = None) -> str:
+    """돌릴 수 있는 스크립트가 없으면 **사람이 읽을 사유**, 있으면 빈 문자열.
+
+    `Config.yaml` 은 사람의 파일이고 실험이 도는 중에는 잠긴다 — 그래서
+    코드가 채워 주지 않고 **무엇을 적어야 하는지** 알려 준다.
+    """
+    from ..runner import spec as spec_mod
+
+    cfg = config if config is not None else read_config(root)
+    listed = spec_mod.entrypoints_of(cfg)
+    if not listed:
+        head = (
+            "specifications/Config.yaml 에 돌릴 수 있는 스크립트가 없어요"
+            if isinstance(cfg.get("run"), dict)
+            else "specifications/Config.yaml 에 run: 절이 없어요 (옛 템플릿이에요)"
+        )
+        return (
+            head
+            + " · run.entrypoints 에 학습 스크립트를 적어 주세요"
+            + " (labremote doctor 가 붙여 넣을 내용을 알려 줘요)"
+        )
+    gone = [rel for rel in listed if not os.path.exists(os.path.join(root, rel))]
+    if gone:
+        return (
+            "run.entrypoints 에 적힌 스크립트가 없어요: "
+            + ", ".join(gone)
+            + " · 파일을 두거나 목록에서 빼 주세요"
+        )
+    return ""
+
+
 def check_loop(conn, project: str, root: str, *, now: datetime | None = None) -> Verdict:
     """루프를 한 번 더 돌려도 되나."""
     now = now or datetime.now().astimezone()
@@ -140,7 +174,18 @@ def check_loop(conn, project: str, root: str, *, now: datetime | None = None) ->
     if not seen["ok"]:
         return _no(audit.describe(seen).splitlines()[0] + " · labremote audit 로 보세요")
 
-    limits = limits_of(read_config(root))
+    config = read_config(root)
+
+    # 🔑 **Claude 를 띄우기 전에** 돌릴 수 있는 스크립트가 있는지 본다.
+    #
+    # 없으면 A(설계)는 정상으로 끝나고 B(실행)에서 `run.json 을 믿을 수
+    # 없어요` 로 죽는다 — 설계 한 세션을 **버리고** 나서야 알게 된다.
+    # `run:` 절이 통째로 없는 옛 프로젝트가 실제로 있었다(hook-sandbox).
+    missing = entrypoint_gap(root, config)
+    if missing:
+        return _no(missing, stop=True)
+
+    limits = limits_of(config)
     done = [e for e in X.listing(conn, project) if e.get("state") in ("done", "failed", "stopped")]
 
     if "max_runs" in limits and len(done) >= limits["max_runs"]:

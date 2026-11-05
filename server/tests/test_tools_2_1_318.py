@@ -22,6 +22,8 @@
 
 import pytest
 
+from conftest import write_runnable_config
+
 from app.agent import launch as L
 from app.hooks import classify as C
 from app.hooks import decide as D
@@ -140,6 +142,7 @@ def test_끄는_목록이_판정_가능한_도구를_안_끈다():
 
 
 def test_판이_같으면_루프가_돈다(conn, project, project_root):
+    write_runnable_config(project_root)
     from app.agent import version as version_mod
     from app.orchestrator import guards
 

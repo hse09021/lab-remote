@@ -371,3 +371,70 @@ def test_백업_실패가_루프를_멈추지_않는다(repo, conn, monkeypatch)
     monkeypatch.setattr(B, "backup_dir", lambda project: "/proc/못쓰는곳")
     got = B.create(repo, PROJECT)
     assert got["ok"] is False and got["path"] == ""
+
+
+def test_scope_안에서도_bwrap_격리가_유지된다(tmp_path, monkeypatch):
+    """🔑 순서가 `systemd-run --scope -- bwrap … -- 명령` 이라 **바깥쪽**이
+    scope 다. 격리는 안쪽 bwrap 이 하므로 그대로 유지돼야 한다.
+
+    실측 2026-11-05 (진짜 systemd-run + 진짜 bwrap):
+
+        cgroup: …/app.slice/labremote-train-hook-sandbox-EXP-SCOPE.scope
+        쓰기 실패  .claude/settings.json · .git/config · logs/Approval_log.csv
+        쓰기 성공  src/ok.txt                         ← 의도대로
+        읽기 실패  ~/.ssh/known_hosts · grant_key
+        server/data 목록: []  읽기 실패 lab.db        ← 빈 tmpfs
+        쓰기 성공(프로그램 기준) server/data/침입.txt → **호스트에 안 남음**
+
+    ⚠ `ls <빈 tmpfs>` 는 **성공한다**(빈 목록을 돌려준다) — 처음에 그걸로
+    재서 "읽기 성공" 으로 잘못 봤다. 폴더가 아니라 **파일**로 재야 한다.
+    """
+    import shutil
+    import subprocess
+
+    from app.runner import process as P
+    from app.runner.spec import RunSpec
+
+    # conftest 가 시험에서 scope 를 끄지만, **이 시험은 scope 를 봐야 한다**
+    monkeypatch.delenv(P.NO_SCOPE_ENV, raising=False)
+    if not shutil.which("systemd-run") or not shutil.which("bwrap"):
+        pytest.skip("systemd-run 또는 bwrap 이 없어요")
+    if not P.scope_available():
+        pytest.skip("systemd-run --user --scope 를 못 써요")
+
+    root = tmp_path / "proj"
+    for rel in (".claude", ".git", "logs", "src", "out"):
+        (root / rel).mkdir(parents=True)
+    (root / ".claude" / "settings.json").write_text("orig", encoding="utf-8")
+    (root / ".git" / "config").write_text("orig", encoding="utf-8")
+    probe = root / "src" / "probe.sh"
+    probe.write_text(
+        "#!/bin/sh\n"
+        'echo "cg=$(cat /proc/self/cgroup)"\n'
+        'echo pwned > .claude/settings.json 2>/dev/null && echo W_CLAUDE || echo NO_CLAUDE\n'
+        'echo pwned > .git/config 2>/dev/null && echo W_GIT || echo NO_GIT\n'
+        'echo pwned > src/ok.txt 2>/dev/null && echo W_SRC || echo NO_SRC\n'
+        'head -c 4 ~/.ssh/known_hosts >/dev/null 2>&1 && echo R_SSH || echo NO_SSH\n',
+        encoding="utf-8",
+    )
+    probe.chmod(0o755)
+
+    spec = RunSpec(project="hook-sandbox", root=str(root),
+                   experiment_id="EXP-SCOPETEST",
+                   entrypoint="src/probe.sh", entrypoint_abs=str(probe))
+    done = subprocess.run(
+        P.build_argv(spec, use_sandbox=True, use_scope=True),
+        capture_output=True, text=True, cwd=str(root), timeout=180,
+    )
+    out = done.stdout or done.stderr
+
+    # scope 의 cgroup 안이다
+    assert "labremote-train-hook-sandbox-EXP-SCOPETEST.scope" in out, out
+    # 보호 파일은 못 쓴다
+    assert "NO_CLAUDE" in out and "NO_GIT" in out, out
+    assert (root / ".claude" / "settings.json").read_text(encoding="utf-8") == "orig"
+    assert (root / ".git" / "config").read_text(encoding="utf-8") == "orig"
+    # 프로젝트 안은 쓴다
+    assert "W_SRC" in out, out
+    # 홈의 자격 증명은 못 읽는다
+    assert "NO_SSH" in out, out

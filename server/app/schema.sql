@@ -227,3 +227,40 @@ CREATE TABLE IF NOT EXISTS anchors (
   at         TEXT NOT NULL,
   PRIMARY KEY (project, kind, key)
 );
+
+-- 📊 Claude 호출 한 건 — **사용량과 시간**.
+--
+-- 왜 DB 에 남기나: 9단계 검증표가 "루프 1회당 승인 요청 건수와 Claude
+-- 사용량·시간" 을 요구한다. `result.parse` 가 이미 `usage`·`total_cost_usd`·
+-- `num_turns` 를 읽는데 **아무 데도 안 남기고 버렸다** — 루프가 끝나면
+-- 그 숫자를 되살릴 방법이 없었다.
+--
+-- 벽시계 시간은 **오케스트레이터가 직접 잰다**(`time.monotonic`). 결과 JSON 의
+-- `duration_ms` 는 세션 안쪽 시간이라 프로세스 띄우는 시간이 빠진다 — 둘 다 적는다.
+--
+-- `loop_no` 는 호출 시점의 `loop_state.loop_no` 다. 승인 요청은
+-- `approvals.session_id` 로 이 표에 붙여 루프별로 센다.
+CREATE TABLE IF NOT EXISTS agent_calls (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  project      TEXT NOT NULL,
+  loop_no      INTEGER,
+  stage        TEXT NOT NULL,          -- plan | review | resume | journal_fix | probe
+  session_id   TEXT,
+  resumed      INTEGER NOT NULL DEFAULT 0,
+  model        TEXT,
+  ok           INTEGER,
+  stop_reason  TEXT,
+  num_turns    INTEGER,
+  wall_ms      INTEGER,                -- 우리가 잰 벽시계
+  session_ms   INTEGER,                -- 결과 JSON 의 duration_ms
+  input_tokens         INTEGER,
+  output_tokens        INTEGER,
+  cache_read_tokens    INTEGER,
+  cache_write_tokens   INTEGER,
+  cost_usd     REAL,
+  denials      INTEGER NOT NULL DEFAULT 0,
+  at           TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_agent_calls_loop ON agent_calls(project, loop_no, id);
+CREATE INDEX IF NOT EXISTS ix_agent_calls_session ON agent_calls(session_id);

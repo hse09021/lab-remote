@@ -104,6 +104,23 @@ def project_root(tmp_path):
     return os.path.realpath(str(root))
 
 
+def write_runnable_config(root, *, entrypoint="src/train.py", extra=""):
+    """`check_loop` 가 통과하는 최소 `Config.yaml`.
+
+    9단계부터 **돌릴 수 있는 스크립트가 없으면 루프를 시작하지 않는다** —
+    설계 세션 하나를 버리고 나서야 실패하던 것을 앞으로 당겼다. 그래서
+    `check_loop` 가 통과해야 하는 시험은 `run.entrypoints` 를 적어야 한다.
+    """
+    os.makedirs(os.path.join(root, "specifications"), exist_ok=True)
+    os.makedirs(os.path.dirname(os.path.join(root, entrypoint)) or root, exist_ok=True)
+    open(os.path.join(root, entrypoint), "a").close()
+    path = os.path.join(root, "specifications", "Config.yaml")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write((extra.rstrip("\n") + "\n") if extra else "")
+        fh.write("run:\n  entrypoints: [" + entrypoint + "]\n")
+    return path
+
+
 @pytest.fixture()
 def project(project_root):
     """등록까지 끝난 프로젝트. 훅 판정 테스트의 기본 픽스처."""

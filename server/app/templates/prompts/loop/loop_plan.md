@@ -30,6 +30,9 @@
 - `entrypoint` 는 `Config.yaml` 의 목록에 **있는 것만** 돼요.
 - `args` 는 **문자열 배열**이에요. 한 문자열로 적으면 거절돼요.
 - `command` 같은 자유 문자열은 받지 않아요.
+- 학습은 **프로젝트 루트에서** 돌아요. 그래서 경로를 넘길 때는 루트 기준으로
+  적어 주세요 — 산출물은 `experiments/$next_exp/` 아래로요
+  (예: `"args": ["--out", "experiments/$next_exp"]`).
 - 환경 변수는 `Config.yaml` 의 `run.envAllow` 에 이름이 있는 것만요.
   캐시 변수(`HF_HOME`·`TMPDIR` …)는 시스템이 정해요.
 

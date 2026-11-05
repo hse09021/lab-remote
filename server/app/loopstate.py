@@ -123,6 +123,15 @@ def write_current(name: str, root: str | None = None, *, loop_no: int | None = N
     target_root = root or registry.root_of(name)
     if not target_root:
         raise ValueError(f"프로젝트 루트를 알 수 없어요: {name!r}")
+    # 🔑 상대 경로를 거절한다. `Current.yaml` 은 "지금 어느 실험이 도는지" 의
+    # **유일한 근거**인데, 상대 경로가 들어오면 지금 폴더 밑에 조용히 하나 더
+    # 만들어 놓고 프로젝트 쪽은 낡은 채로 남는다 (실제로 `server/hook-sandbox/
+    # state/Current.yaml` 이 그렇게 생겼다 — 손으로 부른 자리였다).
+    if not os.path.isabs(target_root):
+        raise ValueError(
+            f"프로젝트 루트는 절대 경로여야 해요: {target_root!r} · "
+            f"registry.root_of({name!r}) 의 값을 넘겨 주세요"
+        )
     state = runstate.load(name)
     started = list(state.started or [])
     data = {
