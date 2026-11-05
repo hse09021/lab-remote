@@ -1274,8 +1274,15 @@ def cmd_queue(args) -> int:
             return 0
 
         if args.action == "resume":
+            before = LP.get(conn, args.name) or {}
+            was = str(before.get("state") or "")
+            reason = str(before.get("stop_reason") or "")
             LP.resume(conn, args.name)
+            conn.commit()
             print(f"✔ 루프를 다시 열었어요: {args.name}")
+            if was in LP.LATCHED:
+                print(f"  걸쇠도 풀었어요 ({was}" + (f" · {reason}" if reason else "") + ")")
+                print("  종료 조건은 다음 바퀴에서 **다시** 재요 — 아직 닿아 있으면 또 멈춰요.")
             return 0
 
         # cancel

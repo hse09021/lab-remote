@@ -152,6 +152,21 @@ GIT_READONLY = {"status", "log", "diff", "show", "branch", "rev-parse"}
 #: `git branch` 에 붙어도 되는 옵션 (목록 보기만). `-d`·`-m` 은 고치는 것이다.
 GIT_BRANCH_OPTS = {"-a", "-r", "-v", "-vv", "--list", "--all", "--remotes", "--verbose"}
 
+#: 하위명령 **앞**에 와도 되는 전역 옵션. 값을 안 받는 것.
+#:
+#: 화이트리스트인 이유: `git` 의 전역 옵션에는 `-c core.pager=…`·
+#: `--git-dir`·`--work-tree`·`--exec-path` 처럼 **무엇이 실행되고 어느
+#: 저장소를 보는지를 바꾸는 것**이 섞여 있다. 모르는 것은 허용 목록에서
+#: 빠진다(→ `ask`).
+GIT_SAFE_GLOBALS = {
+    "-P", "--no-pager", "--no-replace-objects", "--literal-pathspecs",
+    "--no-optional-locks", "--bare",
+}
+
+#: 값을 하나 받는 안전한 전역 옵션. 값은 **피연산자로 남겨** 경로 검사를
+#: 그대로 지나가게 한다 (`git -C <프로젝트 밖>` 은 거기서 걸린다).
+GIT_SAFE_GLOBALS_WITH_VALUE = {"-C"}
+
 #: 리다이렉트를 허용하는 대상. 버리는 곳만.
 SINK_PATHS = {"/dev/null", "/dev/stderr", "/dev/stdout"}
 
@@ -551,16 +566,39 @@ def _allow_find(argv: list[str]) -> bool:
 
 
 def _allow_git(argv: list[str]) -> bool:
-    """읽기 하위명령만. `branch` 는 목록 보기 옵션만."""
-    subs = [t for t in argv[1:] if not t.startswith("-")]
-    if not subs or subs[0] not in GIT_READONLY:
+    """읽기 하위명령만. `branch` 는 목록 보기 옵션만.
+
+    🔑 **하위명령 앞의 전역 옵션을 건너뛴다** (실측 2026-11-05).
+
+    전에는 `argv[1:]` 의 첫 비옵션을 하위명령으로 봤다. `git -C <경로> diff`
+    는 그 자리가 **경로**라서 `GIT_READONLY` 에 없고, 순수 읽기 명령이
+    `unclassified` → `ask` → 헤드리스 거부로 떨어졌다. 설계 세션이 자기
+    저장소의 `diff` 를 보려다 승인 대기로 멈췄다 — `nice -n 10` 이 옵션
+    인자를 안 건너뛰어 뚫렸던 것과 **같은 종류**다.
+
+    건너뛰는 것은 화이트리스트뿐이다. `-c`·`--git-dir`·`--work-tree`·
+    `--exec-path` 는 **허용하지 않는다** — 무엇이 실행되고 어느 저장소를
+    보는지를 바꾼다.
+    """
+    rest = list(argv[1:])
+    while rest and rest[0].startswith("-"):
+        head = rest.pop(0)
+        if head in GIT_SAFE_GLOBALS:
+            continue
+        if head in GIT_SAFE_GLOBALS_WITH_VALUE:
+            if not rest:
+                return False  # 값이 빠졌다 — 무엇을 가리키는지 모른다
+            rest.pop(0)
+            continue
+        if head.split("=", 1)[0] in GIT_SAFE_GLOBALS_WITH_VALUE:
+            continue  # `-C=경로` 꼴
+        return False  # 모르는 전역 옵션
+
+    if not rest or rest[0] not in GIT_READONLY:
         return False
-    if subs[0] == "branch":
-        return all(
-            t in GIT_BRANCH_OPTS
-            for t in argv[1:]
-            if t.startswith("-")
-        )
+    sub = rest[0]
+    if sub == "branch":
+        return all(t in GIT_BRANCH_OPTS for t in rest[1:] if t.startswith("-"))
     return True
 
 

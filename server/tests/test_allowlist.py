@@ -223,6 +223,13 @@ def test_버리는_곳으로_가는_리다이렉트는_예외(ctx, command):
         "git checkout main",
         "git branch -d exp-001",
         "git branch -m 새이름",
+        # 전역 옵션은 **화이트리스트만** 건너뛴다. 이 셋은 무엇이 실행되고
+        # 어느 저장소를 보는지를 바꾼다.
+        "git -c core.pager=sh status",
+        "git --exec-path=/tmp status",
+        "git --git-dir=/tmp/x.git log",
+        "git --work-tree=/tmp status",
+        "git -C",  # 값이 빠졌다 — 무엇을 가리키는지 모른다
         "sed -i 's/a/b/' 메모.txt",
         "sort -o 결과.txt README.md",
     ],
@@ -236,6 +243,13 @@ def test_위험_옵션은_허용_목록에서_빠진다(ctx, command):
     [
         "find . -name '*.py' -type f",
         "git branch --list",
+        # `git -C <경로> diff` 는 **순수 읽기**인데 하위명령 앞의 전역
+        # 옵션을 안 건너뛰어 `unclassified` 로 떨어졌다 — 설계 세션이
+        # 자기 저장소 diff 를 보려다 승인 대기로 멈췄다 (실측 2026-11-05).
+        "git -C . diff",
+        "git -C . status --porcelain",
+        "git --no-pager log --oneline -5",
+        "git -P -C . show HEAD",
         "grep -n 패턴 src",
         "sort -r README.md",
         # `grep -i` 는 **대소문자를 안 가리는 것**이다 (읽기 전용).

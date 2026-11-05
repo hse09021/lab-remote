@@ -186,15 +186,27 @@ def check_loop(conn, project: str, root: str, *, now: datetime | None = None) ->
         return _no(missing, stop=True)
 
     limits = limits_of(config)
-    done = [e for e in X.listing(conn, project) if e.get("state") in ("done", "failed", "stopped")]
 
-    if "max_runs" in limits and len(done) >= limits["max_runs"]:
+    # 🔑 **"실행 횟수" 는 실제로 돌아간 실험의 수다** (실측 2026-11-05).
+    #
+    # 전에는 `done`·`failed`·`stopped` 상태를 세었다. 그런데 설계가 멈추면
+    # (승인 대기·자기 거절·명세 누락) 번호는 잡히고 상태만 그 셋 중 하나가
+    # 된다 — **학습은 한 번도 안 돌았는데 연구 예산이 깎인다.**
+    # 실제로 네 바퀴가 그렇게 날아가고 `max_runs: 3` 에 닿아 루프가 멈췄다.
+    #
+    # `started_at` 은 `set_state(..., "running")` 만 찍는다 = 학습을 **띄웠다.**
+    # 그게 "한 번 돌았다" 의 유일한 근거다.
+    ran = [e for e in X.listing(conn, project, limit=1000) if e.get("started_at")]
+
+    if "max_runs" in limits and len(ran) >= limits["max_runs"]:
         return _no(
-            f"{LIMIT_NAMES['max_runs']}에 닿았어요: {len(done)}/{int(limits['max_runs'])}회",
+            f"{LIMIT_NAMES['max_runs']}에 닿았어요: {len(ran)}/{int(limits['max_runs'])}회",
             stop=True,
         )
     if "gpu_hours" in limits:
-        used = sum(int(e.get("gpu_sec") or 0) for e in X.listing(conn, project)) / 3600.0
+        used = sum(
+            int(e.get("gpu_sec") or 0) for e in X.listing(conn, project, limit=1000)
+        ) / 3600.0
         if used >= limits["gpu_hours"]:
             return _no(
                 f"{LIMIT_NAMES['gpu_hours']}을 다 썼어요: {used:.1f}/{limits['gpu_hours']}시간",

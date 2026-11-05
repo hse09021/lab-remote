@@ -12,7 +12,10 @@ import sqlite3
 from .. import db
 from . import row, rows
 
-__all__ = ["STATES", "ensure", "get", "set_state", "pause", "resume", "bump_loop", "listing"]
+__all__ = [
+    "STATES", "LATCHED", "ensure", "get", "set_state", "pause", "resume",
+    "bump_loop", "listing",
+]
 
 STATES = (
     "idle",
@@ -73,18 +76,43 @@ def pause(conn: sqlite3.Connection, project: str, *, reason: str, until: str | N
     return get(conn, project)  # type: ignore[return-value]
 
 
+#: 종료 조건에 닿아 **걸려 있는** 상태. 기다려서는 풀리지 않는다.
+LATCHED = ("stopped", "done")
+
+
 def resume(conn: sqlite3.Connection, project: str) -> dict:
+    """사람이 루프를 다시 연다 — **멈춤과 걸림을 둘 다** 푼다.
+
+    `pause` 만 풀면 종료 조건에 닿아 `stopped` 가 된 루프는 영원히 안 돈다
+    (`guards.check_loop` 가 `state` 를 보고 `stop=True` 로 바로 되돌린다).
+    `Config.yaml` 의 `max_runs` 를 올려도 마찬가지다 — 사람에게 출구가
+    없었다 (실측 2026-11-05).
+
+    **판정을 무르는 게 아니다.** 걸쇠만 풀고 `idle` 로 되돌리면 다음 바퀴가
+    종료 조건을 **다시** 재고, 아직 닿아 있으면 그대로 또 멈춘다.
+    """
     ensure(conn, project)
     conn.execute(
         "UPDATE loop_state SET paused=0, paused_reason=NULL, paused_until=NULL, "
         "updated_at=? WHERE project=?",
         (db.now(), project),
     )
+    current = get(conn, project) or {}
+    if str(current.get("state") or "") in LATCHED:
+        conn.execute(
+            "UPDATE loop_state SET state='idle', stop_reason=NULL, updated_at=? "
+            "WHERE project=?",
+            (db.now(), project),
+        )
     return get(conn, project)  # type: ignore[return-value]
 
 
 def bump_loop(conn: sqlite3.Connection, project: str) -> int:
-    """루프 회차를 1 올린다. 종료 조건 `max_runs` 가 이 값을 본다."""
+    """루프 회차를 1 올린다. **사람이 읽는 숫자**다 ("루프 3회차").
+
+    종료 조건은 이 값을 **보지 않는다** — `max_runs` 는 실제로 돌아간 실험의
+    수를 센다(`guards.check_loop`). 설계에서 멈춘 바퀴도 회차는 올라가니까.
+    """
     ensure(conn, project)
     conn.execute(
         "UPDATE loop_state SET loop_no=loop_no+1, updated_at=? WHERE project=?",
