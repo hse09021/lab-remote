@@ -57,19 +57,25 @@ def test_디스크가_부족하면_안_띄운다(ready, monkeypatch):
     assert got.ok is False and "디스크" in got["reason"]
 
 
-def test_자리표시_마감은_없는_것으로_본다(ready, conn):
-    path = os.path.join(ready, "specifications", "Config.yaml")
+#: 마감 시험용 Config.yaml. `run:` 절은 **있어야** 한다 — 없으면
+#: `check_loop` 가 "돌릴 수 있는 스크립트가 없어요" 로 먼저 멈춘다(9단계).
+def write_limits(root, body):
+    path = os.path.join(root, "specifications", "Config.yaml")
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    os.makedirs(os.path.join(root, "src"), exist_ok=True)
+    open(os.path.join(root, "src", "train.py"), "a").close()
     with open(path, "w", encoding="utf-8") as fh:
-        fh.write('limits:\n  deadline: "[마감]"\n')
+        fh.write(body + "\nrun:\n  entrypoints: [src/train.py]\n")
+
+
+def test_자리표시_마감은_없는_것으로_본다(ready, conn):
+    write_limits(ready, 'limits:\n  deadline: "[마감]"')
     assert guards.check_loop(conn, "hook-sandbox", ready).ok is True
 
 
 def test_못_읽는_마감은_멈추지_않는다(ready, conn):
     """틀리게 멈추는 것보다 안 멈추는 쪽이 낫다 — 다른 조건이 또 막는다."""
-    path = os.path.join(ready, "specifications", "Config.yaml")
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write('limits:\n  deadline: "다음 주쯤"\n')
+    write_limits(ready, 'limits:\n  deadline: "다음 주쯤"')
     assert guards.check_loop(conn, "hook-sandbox", ready).ok is True
 
 

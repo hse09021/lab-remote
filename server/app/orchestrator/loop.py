@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from datetime import datetime
 
 from .. import approval_log as A
@@ -37,6 +38,7 @@ from ..monitor import metrics as metrics_mod
 from ..runner import cache as cache_mod
 from ..runner import process as process_mod
 from ..runner import spec as spec_mod
+from ..store import agent_calls as AC
 from ..store import events as E
 from ..store import experiments as X
 from ..store import jobs as J
@@ -122,7 +124,9 @@ def resume_step(ctx, conn, session_id: str, *, request: dict | None = None) -> d
         },
     )
     LP.set_state(conn, ctx.project, "planning")
-    got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=True)
+    got = _claude(
+        ctx, conn, prompt=prompt, session_id=session_id, resume=True, stage="resume"
+    )
 
     # 🔑 **재개한 세션이 끝난 뒤** 허가 파일을 지운다 (S3).
     #
@@ -306,7 +310,9 @@ def guard_project(ctx, conn, *, when: str, block: bool = True) -> dict:
     return got
 
 
-def _claude(ctx, conn, *, prompt: str, session_id: str, resume: bool) -> dict:
+def _claude(
+    ctx, conn, *, prompt: str, session_id: str, resume: bool, stage: str = ""
+) -> dict:
     """Claude 를 한 번 띄운다. `ctx.runner` 가 실제 실행을 맡는다."""
     run = launch_mod.AgentRun(
         project=ctx.project,
@@ -319,7 +325,25 @@ def _claude(ctx, conn, *, prompt: str, session_id: str, resume: bool) -> dict:
         cache_dir=ctx.cache_dir,
     )
     made = launch_mod.plan(run, preset=ctx.preset)
+    began = time.monotonic()
     got = ctx.runner(made)
+    wall_ms = int((time.monotonic() - began) * 1000)
+
+    # 📊 사용량과 시간을 **버리지 않는다.** `result.parse` 가 읽어 둔 숫자를
+    # 루프가 끝나면 되살릴 수 없었다 (9단계 검증표가 루프 1회당 사용량을
+    # 요구한다). 기록이 실패해도 루프는 계속 간다.
+    try:
+        state = LP.get(conn, ctx.project) or {}
+        AC.record(
+            conn, ctx.project, stage,
+            got,
+            loop_no=state.get("loop_no"),
+            session_id=session_id,
+            resumed=resume,
+            wall_ms=wall_ms,
+        )
+    except Exception:
+        pass
 
     # 🔑 승인 내용과 지문은 **자기 자식의 결과 JSON** 에서 만든다 (원칙 (나)).
     # 훅의 요청 파일보다 먼저 이걸 본다 — 본문이 여기에만 있어서 지문을
@@ -386,7 +410,9 @@ def plan_step(ctx, conn) -> dict:
         "loop_plan",
         {"loop_no": loop_no, "next_exp": exp_id, "context": ctx.context},
     )
-    got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=False)
+    got = _claude(
+        ctx, conn, prompt=prompt, session_id=session_id, resume=False, stage="plan"
+    )
     X.upsert(conn, ctx.project, exp_id, state="planned", branch=gitflow.branch_name(exp_id))
 
     # 훅이 막아 둔 요청이 있으면 거기서 멈춘다. 사람이 승인하면 **이어 간다.**
@@ -501,7 +527,9 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
             "context": ctx.context,
         },
     )
-    got = _claude(ctx, conn, prompt=prompt, session_id=session_id, resume=False)
+    got = _claude(
+        ctx, conn, prompt=prompt, session_id=session_id, resume=False, stage="review"
+    )
 
     report = report_mod.parse(str(got.get("text") or ""))
     said = report_mod.success_of(report)

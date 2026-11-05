@@ -292,6 +292,54 @@ def project_env_check(root: str, name: str = "") -> Check:
     )
 
 
+#: `run:` 절이 없는 옛 프로젝트에 **붙여 넣을 내용.** 생성기 템플릿
+#: (`templates/project/specifications/Config.yaml.tmpl`)의 `run:` 절과 같은
+#: 모양이어야 한다 — `tests/test_doctor_stage9.py` 가 대조한다.
+RUN_BLOCK_HINT = """specifications/Config.yaml 끝에 붙여 주세요 (실험이 멈춰 있을 때만 바꿀 수 있어요):
+
+run:
+  entrypoints: [src/fake_train.py]
+  envAllow: []
+  dataPaths: []
+  resumeArg: --resume-from
+  timeoutSec: 21600
+  graceSec: 120"""
+
+
+def entrypoint_check(root: str, name: str = "") -> Check:
+    """돌릴 수 있는 학습 스크립트가 있나.
+
+    **없으면 루프가 설계 세션 하나를 버리고 나서야 실패한다** — `run:` 절이
+    통째로 없는 옛 프로젝트가 실제로 있었다(`hook-sandbox`, 9단계). 그래서
+    `guards.check_loop` 가 미리 막고, 여기서는 **붙여 넣을 내용**을 알려 준다.
+    """
+    from .orchestrator import guards
+
+    title = f"실험 실행 명세 · {name}" if name else "실험 실행 명세"
+    try:
+        config = guards.read_config(root)
+    except Exception as exc:  # pragma: no cover - read_config 는 삼킨다
+        return Check(False, title, f"Config.yaml 을 읽을 수 없어요: {exc}")
+
+    gap = guards.entrypoint_gap(root, config)
+    if not gap:
+        from .runner import spec as spec_mod
+
+        listed = spec_mod.entrypoints_of(config)
+        return Check(True, title, "돌릴 수 있는 스크립트: " + ", ".join(listed))
+
+    # ⚠ 와 ✘ 를 가른다.
+    #
+    # `run:` 절은 있는데 목록이 비어 있으면 **갓 만든 프로젝트**다 — 사람이
+    # 아직 학습 스크립트를 안 썼을 뿐이고 설치가 깨진 게 아니다. ✘ 로 두면
+    # `labremote init-project` 직후 `doctor` 가 "고칠 수 없는 ✘" 를 띄운다.
+    #
+    # 절이 통째로 없으면(옛 템플릿) 또는 적힌 파일이 없으면 ✘ 다 — 둘 다
+    # 사람이 고쳐야 하는 어긋남이다.
+    fresh = isinstance(config.get("run"), dict) and "돌릴 수 있는 스크립트가 없어요" in gap
+    return Check(False, title, gap, hint=RUN_BLOCK_HINT, level="warn" if fresh else "bad")
+
+
 #: 셸 함수를 찾아볼 파일
 SHELL_FILES = ("~/.bashrc", "~/.zshrc", "~/.bash_aliases", "~/.profile")
 
@@ -983,6 +1031,7 @@ def run() -> dict:
         checks.append(git_anchor_check(root, name))
         # 실험 conda 환경이 우리 환경이 아닌지 (.pth 자동 실행)
         checks.append(project_env_check(root, name))
+        checks.append(entrypoint_check(root, name))
         # 승인 기록 사본이 진본과 같은지
         checks.append(audit_check(root, name, pol))
         # 정책의 금지 명령이 다 있는지 (자기 승인 차단·격리 깨기)

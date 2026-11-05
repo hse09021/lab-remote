@@ -34,7 +34,7 @@ __all__ = [
 ]
 
 #: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS` 에 줄을 더한다.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 #: 판을 올리는 SQL. `{이전 판: SQL 문자열}` — 판 1 은 schema.sql 통째다.
 MIGRATIONS: dict[int, str] = {
@@ -45,6 +45,33 @@ MIGRATIONS: dict[int, str] = {
     #   source='hook'     훅의 요청 파일에서 거울한 것 (참고용)
     # tool_summary 는 **본문 없는** 요약이다 (길이·해시). 비밀이 섞일 수 있어
     # 원본 tool_input 은 DB 에 넣지 않는다.
+    # 판 3 -> 4 · Claude 호출의 사용량·시간 (9단계 검증표가 요구한다).
+    #   `result.parse` 가 읽던 usage·cost·num_turns 를 버리지 않고 남긴다.
+    3: """
+CREATE TABLE IF NOT EXISTS agent_calls (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  project      TEXT NOT NULL,
+  loop_no      INTEGER,
+  stage        TEXT NOT NULL,
+  session_id   TEXT,
+  resumed      INTEGER NOT NULL DEFAULT 0,
+  model        TEXT,
+  ok           INTEGER,
+  stop_reason  TEXT,
+  num_turns    INTEGER,
+  wall_ms      INTEGER,
+  session_ms   INTEGER,
+  input_tokens         INTEGER,
+  output_tokens        INTEGER,
+  cache_read_tokens    INTEGER,
+  cache_write_tokens   INTEGER,
+  cost_usd     REAL,
+  denials      INTEGER NOT NULL DEFAULT 0,
+  at           TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_agent_calls_loop ON agent_calls(project, loop_no, id);
+CREATE INDEX IF NOT EXISTS ix_agent_calls_session ON agent_calls(session_id);
+""",
     2: """
 ALTER TABLE approvals ADD COLUMN source TEXT NOT NULL DEFAULT 'hook';
 ALTER TABLE approvals ADD COLUMN tool_summary TEXT;

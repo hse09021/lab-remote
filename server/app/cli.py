@@ -789,6 +789,113 @@ def cmd_audit(args) -> int:
     return 1
 
 
+#: 행동 유형의 한국어 이름. `hooks/messages` 와 같은 어휘를 쓴다.
+_ACTION_NAMES = {
+    "code": "코드",
+    "hparam": "하이퍼파라미터",
+    "pkg": "패키지 설치",
+    "install": "패키지 설치(요청 경로)",
+    "del": "삭제",
+    "newexp": "새 실험",
+    "net": "네트워크",
+    "prev": "이전 실험 폴더",
+    "stop": "종료 조건·평가 기준",
+    "outside": "프로젝트 밖",
+    "suspicious": "분석 불가",
+    "unparsed": "해석 못 한 명령",
+}
+
+
+def _ms(value) -> str:
+    if not isinstance(value, (int, float)):
+        return "[못 읽었어요]"
+    if value < 1000:
+        return f"{int(value)}ms"
+    if value < 60_000:
+        return f"{value / 1000:.1f}초"
+    return f"{int(value // 60_000)}분 {int(value % 60_000 // 1000)}초"
+
+
+def _tok(value) -> str:
+    if not isinstance(value, (int, float)):
+        return "—"
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.2f}M"
+    if value >= 1000:
+        return f"{value / 1000:.1f}k"
+    return str(int(value))
+
+
+def _cost(value, known: int) -> str:
+    if not isinstance(value, (int, float)) or not known:
+        return "[못 읽었어요]"
+    return f"${value:.4f}"
+
+
+def cmd_usage(args) -> int:
+    """📊 루프 1회당 **승인 요청 건수(행동 유형별)와 Claude 사용량·시간**.
+
+    9단계 검증표가 요구하는 모양이다. 출처는 `agent_calls` 표 — 오케스트레이터가
+    **자기 자식의 결과 JSON** 에서 읽어 `lab.db` 에 적은 것이다(AI 가 못 쓴다).
+    """
+    from . import db as db_mod
+    from .store import agent_calls as AC
+
+    if not registry.root_of(args.name):
+        print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.name}", file=sys.stderr)
+        return 2
+
+    with db_mod.open_db() as conn:
+        loops = AC.by_loop(conn, args.name, limit=args.limit)
+        calls = AC.listing(conn, args.name, limit=2000)
+
+    if args.json:
+        print(json.dumps(
+            {"project": args.name, "loops": loops, "totals": AC.totals(calls)},
+            ensure_ascii=False, indent=2, default=str,
+        ))
+        return 0
+
+    if not loops:
+        print(f"아직 Claude 를 띄운 기록이 없어요: {args.name}")
+        print("  루프를 한 바퀴 돌리면 생겨요:  labremote up --once")
+        return 0
+
+    for item in loops:
+        no = item["loopNo"]
+        head = f"루프 {no}회차" if no is not None else "루프 밖 (탐침 등)"
+        use = item["usage"]
+        print(f"■ {head}   {item['at'] or ''}")
+        print(f"   Claude 호출 {use['calls']}건 · {' → '.join(item['stages'])}")
+        print(f"   벽시계 {_ms(use['wall_ms'])} (세션 안쪽 {_ms(use['session_ms'])})"
+              f" · 턴 {use['num_turns'] if use['num_turnsKnown'] else '[못 읽었어요]'}")
+        print(
+            "   토큰  입력 " + _tok(use["input_tokens"])
+            + " · 출력 " + _tok(use["output_tokens"])
+            + " · 캐시읽기 " + _tok(use["cache_read_tokens"])
+            + " · 캐시쓰기 " + _tok(use["cache_write_tokens"])
+        )
+        print(f"   비용  {_cost(use['cost_usd'], use['cost_usdKnown'])}"
+              "   (구독이면 과금이 아니라 **환산값**이에요)")
+        appr = dict(item["approvals"])
+        total = appr.pop("_total", 0)
+        if not total:
+            print("   승인 요청 없음")
+        else:
+            print(f"   승인 요청 {total}건 (행동 유형별)")
+            for action in sorted(appr):
+                states = appr[action]
+                detail = " · ".join(f"{k} {v}" for k, v in sorted(states.items()))
+                name = _ACTION_NAMES.get(action, action)
+                print(f"      {name} ({action})  {detail}")
+        print()
+
+    use = AC.totals(calls)
+    print(f"합계  Claude 호출 {use['calls']}건 · 벽시계 {_ms(use['wall_ms'])}"
+          f" · 비용 {_cost(use['cost_usd'], use['cost_usdKnown'])}")
+    return 0
+
+
 def cmd_git_backups(args) -> int:
     """`git bundle` 백업 목록. 복구는 사람이 손으로 한다 (되돌릴 수 없어서)."""
     from .git import bundle as bundle_mod
@@ -1264,6 +1371,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--note", help="승인 메모")
     p.add_argument("--reason", help="거절 사유")
     p.set_defaults(func=cmd_approvals)
+
+    p = sub.add_parser(
+        "usage",
+        help="루프 1회당 승인 요청 건수와 Claude 사용량·시간 (9단계 검증표)",
+    )
+    p.add_argument("name")
+    p.add_argument("--limit", type=int, default=20, help="보여 줄 루프 수 (기본 20)")
+    p.set_defaults(func=cmd_usage)
 
     p = sub.add_parser(
         "audit", help="승인 기록 진본과 사본 대조 (사본이 바뀌면 루프가 멈춰요)"

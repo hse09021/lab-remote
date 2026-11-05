@@ -24,6 +24,8 @@ import os
 
 import pytest
 
+from conftest import write_runnable_config
+
 from app import approval_log as A
 from app import audit
 
@@ -208,6 +210,7 @@ def test_깨진_줄은_건너뛴다(project_root, csv_path):
 
 
 def test_루프_시작_전에_막는다(project, project_root, conn, csv_path):
+    write_runnable_config(project_root)
     from app.orchestrator import guards
 
     _three(csv_path)
