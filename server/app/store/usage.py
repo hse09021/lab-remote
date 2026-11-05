@@ -15,7 +15,10 @@ import sqlite3
 from .. import db
 from . import row, rows
 
-__all__ = ["record", "latest", "open_wait", "mark_resumed", "mark_notified", "recent"]
+__all__ = [
+    "record", "latest", "open_wait", "mark_resumed", "resume_all",
+    "mark_notified", "recent",
+]
 
 
 def record(
@@ -64,6 +67,21 @@ def mark_resumed(conn: sqlite3.Connection, usage_id: int) -> dict | None:
     return row(
         conn.execute("SELECT * FROM usage_limits WHERE id=?", (usage_id,)).fetchone()
     )
+
+
+def resume_all(conn: sqlite3.Connection, project: str | None = None) -> int:
+    """그 프로젝트의 **열린 대기를 모두** 닫는다. 닫은 개수를 돌려준다.
+
+    🔑 하나만 닫으면 안 된다. 30분마다 다시 해 보고 또 실패하면 행이 하나씩
+    쌓이는데, 풀렸을 때 한 행만 닫으면 `open_wait` 이 **다음 행**을 내놓아서
+    루프는 계속 "기다리는 중" 으로 본다 — 풀렸는데도 안 돈다.
+    """
+    sql = "UPDATE usage_limits SET resumed_at=? WHERE resumed_at IS NULL"
+    args: list = [db.now()]
+    if project:
+        sql += " AND project=?"
+        args.append(project)
+    return int(conn.execute(sql, args).rowcount or 0)
 
 
 def mark_notified(conn: sqlite3.Connection, usage_id: int) -> None:
