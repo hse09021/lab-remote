@@ -53,6 +53,9 @@ from . import gitflow, guards, projectguard
 __all__ = [
     "EXP_RE",
     "next_experiment_id",
+    "design_landed",
+    "unfinished_numbers",
+    "numbering_note",
     "plan_step",
     "train_step",
     "review_step",
@@ -96,6 +99,75 @@ def next_experiment_id(conn, project: str, root: str) -> str:
         if found:
             highest = max(highest, int(found.group(1)))
     return f"EXP-{highest + 1:03d}"
+
+
+def design_landed(root: str, exp_id: str) -> bool:
+    """설계가 **실제로 떨어졌나.**
+
+    `run.json` 이 있는지만 본다 — B 토막이 돌 수 있는 유일한 조건이고,
+    AI 의 말이 아니라 파일이 근거다.
+    """
+    return os.path.isfile(
+        os.path.join(root, L.experiments_dir(), exp_id, "run.json")
+    )
+
+
+def unfinished_numbers(conn, project: str, root: str) -> list[str]:
+    """**번호만 잡히고 설계가 없는** 실험 번호.
+
+    설계 세션이 승인 대기나 자기 거절로 끝나면 번호와 브랜치는 이미 생겨
+    있다. 그걸 `planned` 로 적어 두면 두 가지가 깨진다.
+
+    * `_resuming_experiment` 가 그 번호를 "이어 갈 실험" 으로 집어 간다 —
+      `run.json` 이 없으니 B 토막이 바로 실패한다.
+    * 다음 설계 세션이 *"003~005 는 planned 라는데 폴더가 없다"* 를 보고
+      **무엇이 진실인지 알 수 없어 멈춘다** (실측 2026-11-05).
+    """
+    seen: dict[str, str] = {}
+    for row in X.listing(conn, project, limit=1000):
+        exp_id = str(row.get("exp_id") or "")
+        if EXP_RE.match(exp_id):
+            seen[exp_id] = str(row.get("state") or "")
+
+    # **브랜치도 센다.** Claude 가 보는 건 DB 가 아니라 `git branch` 다
+    # (`lab.db` 는 막혀 있다). 설계가 멈추면 브랜치만 남으므로, 설명해
+    # 주지 않으면 거기서 어긋남을 발견하고 또 멈춘다.
+    try:
+        for name in ops_mod.branches(root):
+            tail = str(name).strip().lower()
+            if not tail.startswith(gitflow.BRANCH_PREFIX):
+                continue
+            exp_id = f"EXP-{tail[len(gitflow.BRANCH_PREFIX):]}"
+            if EXP_RE.match(exp_id):
+                seen.setdefault(exp_id, "")
+    except (ops_mod.GitError, ops_mod.GitRefused):
+        pass  # git 저장소가 아니거나 믿을 수 없으면 브랜치는 세지 않는다
+
+    return sorted(
+        exp_id
+        for exp_id, state in seen.items()
+        if state != "running" and not design_landed(root, exp_id)
+    )
+
+
+def numbering_note(conn, project: str, root: str) -> str:
+    """번호 상황을 **사람 말로** 적어 설계 프롬프트에 싣는다.
+
+    Claude 가 번호 어긋남을 스스로 조사할 길이 없다 — DB 는 못 읽고
+    (`lab.db` 는 막혀 있다) 브랜치만으로는 돌았는지 알 수 없다. 그래서
+    **우리가 말해 준다.** 모르는 걸 추측하게 두면 멈추거나 지어낸다.
+    """
+    left = unfinished_numbers(conn, project, root)
+    if not left:
+        return ""
+    shown = ", ".join(left)
+    return (
+        f"- 번호 {shown} 는 **설계가 시작되기 전에 멈춘 번호**예요 "
+        f"(폴더도 `run.json` 도 없어요). 돌아간 실험이 아니라서 비교 대상이 "
+        f"아니고, 지금 와서 그 번호를 채우지 않아요. 브랜치만 남아 있어요.\n"
+        f"- 결과가 있는 실험만 보세요 — `{L.experiments_dir()}/` 에 폴더가 "
+        f"있는 것들이에요.\n"
+    )
 
 
 def waiting_approval(conn, project: str) -> list[dict]:
@@ -415,7 +487,19 @@ def plan_step(ctx, conn) -> dict:
     got = _claude(
         ctx, conn, prompt=prompt, session_id=session_id, resume=False, stage="plan"
     )
-    X.upsert(conn, ctx.project, exp_id, state="planned", branch=gitflow.branch_name(exp_id))
+    # 🔑 **설계가 떨어졌을 때만 `planned`** 이다 (실측 2026-11-05).
+    #
+    # 전에는 세션이 무엇을 했든 `planned` 로 적었다. 승인 대기나 자기
+    # 거절로 끝나면 폴더도 `run.json` 도 없는 번호가 `planned` 로 남아,
+    # `_resuming_experiment` 가 그걸 집어 가고(→ B 가 바로 실패) 다음 설계
+    # 세션은 *"planned 라는데 폴더가 없다"* 로 멈췄다.
+    landed = design_landed(ctx.root, exp_id)
+    X.upsert(
+        conn, ctx.project, exp_id,
+        state="planned" if landed else "stopped",
+        branch=gitflow.branch_name(exp_id),
+        report=None if landed else "설계 전에 멈췄어요 (run.json 이 없어요)",
+    )
 
     # 훅이 막아 둔 요청이 있으면 거기서 멈춘다. 사람이 승인하면 **이어 간다.**
     waiting = waiting_approval(conn, ctx.project)
@@ -433,6 +517,24 @@ def plan_step(ctx, conn) -> dict:
             "sessionId": session_id,
             "waiting": waiting,
             "reason": f"승인을 기다려요 ({len(waiting)}건)",
+            "result": got,
+        }
+
+    if not landed:
+        # 세션은 끝났는데 명세가 없다. **다음 토막으로 넘기지 않는다** —
+        # `run.json` 없이 B 를 부르면 `SpecError` 로 실패 기록만 남는다.
+        E.add(
+            conn, ctx.project, "설계",
+            f"{exp_id} 는 설계 없이 끝났어요 (run.json 이 없어요)",
+            tone="attention", ref=exp_id,
+        )
+        return {
+            "ok": False,
+            "stage": "plan",
+            "experimentId": exp_id,
+            "loopNo": loop_no,
+            "sessionId": session_id,
+            "reason": "설계가 없어요 (run.json 을 안 썼어요)",
             "result": got,
         }
 

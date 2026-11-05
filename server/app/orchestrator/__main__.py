@@ -17,7 +17,15 @@ from ..store import loops as LP
 from . import approvals as approvals_mod
 from . import approvals as AP_ORCH
 from . import recovery as recovery_mod
-from .loop import plan_step, resume_step, review_step, train_step, waiting_approval
+from .loop import (
+    design_landed,
+    numbering_note,
+    plan_step,
+    resume_step,
+    review_step,
+    train_step,
+    waiting_approval,
+)
 from .runner_ctx import LoopCtx
 
 __all__ = ["main", "once"]
@@ -51,13 +59,33 @@ def usable_grants(project: str, *, request: dict | None = None) -> list[dict]:
     return picked
 
 
-def _resuming_experiment(conn, project: str) -> str:
-    """이어 갈 실험 — 설계만 끝난 가장 최근 것."""
+#: 이어 갈 수 없는 상태 — 이미 돌았거나 돌고 있는 것.
+DONE_STATES = ("done", "failed", "running")
+
+
+def _resuming_experiment(conn, project: str, root: str) -> str:
+    """이어 갈 실험 — 설계가 **실제로 떨어진** 가장 최근 것.
+
+    **`run.json` 이 근거다.** DB 의 `state` 만으로는 둘 다 틀린다.
+
+    * `planned` 인데 `run.json` 이 없을 수 있다 — 설계 전에 멈춘 번호다.
+      그걸 집어 가면 B 토막이 `SpecError` 로 바로 실패하고 실패 기록만
+      하나 더 남는다 (실측 2026-11-05: EXP-003~005 가 그 상태였다).
+    * `stopped` 인데 `run.json` 이 **있을** 수 있다 — 설계가 승인 대기로
+      끊겼다가 재개가 명세까지 써 준 경우다. 이건 이어 가야 한다.
+
+    찾았으면 `planned` 로 되돌려 둔다. 이제 사실과 맞는다.
+    """
     from ..store import experiments as X
 
     for row in X.listing(conn, project):
-        if row.get("state") == "planned":
-            return row["exp_id"]
+        exp_id = str(row.get("exp_id") or "")
+        if str(row.get("state") or "") in DONE_STATES:
+            continue
+        if design_landed(root, exp_id):
+            if row.get("state") != "planned":
+                X.upsert(conn, project, exp_id, state="planned", report=None)
+            return exp_id
     return ""
 
 
@@ -94,6 +122,10 @@ def once(conn, project: str, root: str, **kw) -> dict:
     # 대기를 쌓고서야 멈춘다. 런처가 **처음에** 거부했어야 하는 조합이다.
     if "preset" not in kw:
         kw["preset"] = _preset_of(project)
+    if "context" not in kw:
+        # 번호 상황을 **우리가** 말해 준다. Claude 는 `lab.db` 를 못 읽어서
+        # "planned 라는데 폴더가 없다" 를 혼자서는 풀 수 없다.
+        kw["context"] = numbering_note(conn, project, root)
     ctx = LoopCtx(project=project, root=root, **kw)
     steps = []
 
@@ -170,12 +202,15 @@ def once(conn, project: str, root: str, **kw) -> dict:
         if request_id and request_id in still:
             AP_ORCH.abandon(
                 conn, project, request_id,
-                reason="재개했는데 같은 호출을 다시 하지 않았어요",
+                reason=(
+                    "재개가 끝났는데 요청이 그대로 열려 있어요 "
+                    "(같은 호출을 다시 안 했거나, 이제 허가 없이도 통과했어요)"
+                ),
             )
             still.discard(request_id)
         if still:
             return {"ok": False, "steps": steps, "stoppedAt": "approval"}
-        exp_id = _resuming_experiment(conn, project)
+        exp_id = _resuming_experiment(conn, project, root)
         if not exp_id:
             # 설계가 아직 안 끝났다. 다음 바퀴에서 설계부터 간다.
             return {"ok": False, "steps": steps, "stoppedAt": "resume"}

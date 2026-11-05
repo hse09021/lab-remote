@@ -241,6 +241,35 @@ def test_최대_실행_횟수에_닿으면_멈춘다(conn, ready, fake):
     assert LP.get(conn, "hook-sandbox")["state"] == "stopped"
 
 
+def test_안_돌아간_실험은_실행_횟수에_안_센다(conn, ready, fake):
+    """설계가 멈춘 번호가 **연구 예산을 깎으면 안 된다.**
+
+    실측 2026-11-05: 네 바퀴가 설계에서 멈췄고(프리셋 구멍·교착·자기 거절)
+    학습은 한 번도 안 돌았는데 `max_runs: 3` 에 닿아 루프가 멈췄다. 상태만
+    보고 세면 그렇게 된다 — `started_at` (= 학습을 띄웠다) 을 본다.
+    """
+    write_config(ready, entrypoints=["src/train.py"], limits="  max_runs: 2\n")
+
+    # 두 바퀴를 설계에서 날린다
+    fake.on_plan = lambda root, prompt: "설계만 하고 run.json 을 안 썼어요"
+    for _ in range(2):
+        assert once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))["stoppedAt"] == "plan"
+    assert [e["state"] for e in X.listing(conn, "hook-sandbox")] == ["stopped", "stopped"]
+
+    # 그래도 **돌 수 있어야 한다**
+    fake.on_plan = plan_writes_run_json
+    fake.on_review = review_writes_journal
+    third = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert third["ok"] is True, third
+
+    # 진짜로 돌아간 것만 센다 — 두 번째 실행까지는 되고 세 번째에서 멈춘다
+    fourth = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert fourth["ok"] is True, fourth
+    fifth = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert fifth["stoppedAt"] == "plan"
+    assert "최대 실행 횟수에 닿았어요: 2/2회" in fifth["steps"][0]["reason"]
+
+
 def test_GPU_시간을_다_쓰면_멈춘다(conn, ready, fake):
     """누적치를 본다 — 가짜 학습은 금방 끝나니 쓴 시간을 손으로 채워 넣는다."""
     write_config(ready, entrypoints=["src/train.py"], limits="  gpu_hours: 1\n")
@@ -338,11 +367,43 @@ def test_허락_안_된_entrypoint_면_안_돌린다(conn, ready, fake):
     assert X.get(conn, "hook-sandbox", "EXP-001")["state"] == "failed"
 
 
-def test_run_json_이_없으면_안_돌린다(conn, ready, fake):
+def test_run_json_이_없으면_설계에서_멈춘다(conn, ready, fake):
+    """설계가 없으면 **B 를 부르지 않는다.**
+
+    전에는 `train` 까지 가서 `SpecError` 로 멈췄다. 그러면 작업 행이 하나
+    생기고 실험이 `failed` 로 적히는데, **돌아간 적이 없는 실험**이다.
+    그 가짜 기록이 다음 설계 세션을 멈춰 세웠다 (실측 2026-11-05).
+    """
+    from app.store import experiments as X
+
     fake.on_plan = lambda root, prompt: "설계만 하고 run.json 을 안 썼어요"
     got = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
-    assert got["ok"] is False and got["stoppedAt"] == "train"
-    assert "run.json 이 없어요" in got["steps"][1]["reason"]
+    assert got["ok"] is False and got["stoppedAt"] == "plan", got
+    assert "설계가 없어요" in got["steps"][0]["reason"]
+
+    # 번호는 `planned` 로 남지 않는다 — 폴더도 명세도 없으니까.
+    row = X.get(conn, "hook-sandbox", "EXP-001")
+    assert row["state"] == "stopped", row
+    assert "run.json" in (row["report"] or "")
+
+    # B 토막은 **그래도** 거절한다 (경계는 그대로다)
+    from app.orchestrator.loop import train_step
+    from app.orchestrator.runner_ctx import LoopCtx
+
+    ctx = LoopCtx(project="hook-sandbox", root=ready, **ctx_for(ready, fake))
+    blocked = train_step(ctx, conn, "EXP-001")
+    assert blocked["blocked"] is True and "run.json 이 없어요" in blocked["reason"]
+
+
+def test_설계가_없으면_번호를_이어_가지_않는다(conn, ready, fake):
+    """`stopped` 번호를 다음 바퀴가 집어 가면 안 된다."""
+    fake.on_plan = lambda root, prompt: "설계만 하고 run.json 을 안 썼어요"
+    once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+
+    fake.on_plan = plan_writes_run_json
+    second = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert second["ok"] is True, second
+    assert second["experimentId"] == "EXP-002", second
 
 
 # --- 띄우는 인자 ------------------------------------------------------------------
@@ -492,3 +553,72 @@ def test_같은_요청이_반복되면_루프를_멈춘다(conn, ready, fake, mo
     assert row["attempts"] > AP.MAX_ATTEMPTS
     assert AP.too_many(row) is True
     assert LP.ensure(conn, "hook-sandbox")["state"] == "blocked"
+
+
+# --- 번호만 잡히고 설계가 없는 실험 ------------------------------------------------
+
+
+def test_번호_상황을_설계_프롬프트에_싣는다(conn, ready, fake):
+    """Claude 는 `lab.db` 를 못 읽는다. **우리가 말해 줘야** 한다.
+
+    실측 2026-11-05: DB 에 `EXP-003~005 planned` 가 있고 폴더는 EXP-002 까지만
+    있었다. 설계 세션은 *"무엇이 진실인지 알 수 없다"* 며 아무것도 만들지
+    않고 멈췄다. 맞는 판단이었고, 그래서 어긋남 자체를 없애고 **남는 건
+    설명해 준다.**
+    """
+    from app.orchestrator.loop import numbering_note, unfinished_numbers
+
+    # 설계 없이 끝난 번호 하나를 만든다
+    fake.on_plan = lambda root, prompt: "설계만 하고 run.json 을 안 썼어요"
+    once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert unfinished_numbers(conn, "hook-sandbox", ready) == ["EXP-001"]
+
+    note = numbering_note(conn, "hook-sandbox", ready)
+    assert "EXP-001" in note and "설계가 시작되기 전에 멈춘 번호" in note
+
+    # 다음 설계 프롬프트에 그 설명이 실린다
+    fake.on_plan = plan_writes_run_json
+    once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    designed = [c for c in fake.calls if "설계 (A)" in c["prompt"]][-1]
+    assert "EXP-001" in designed["prompt"]
+    assert "설계가 시작되기 전에 멈춘 번호" in designed["prompt"]
+
+    # 설계가 떨어진 번호는 **설명에서 빠진다** — 그건 어긋남이 아니다
+    assert "EXP-002" not in numbering_note(conn, "hook-sandbox", ready)
+
+
+def test_어긋남이_없으면_아무_말도_안_한다(conn, ready, fake):
+    """할 말이 없을 때 빈 문단을 넣지 않는다."""
+    from app.orchestrator.loop import numbering_note
+
+    fake.on_plan = plan_writes_run_json
+    fake.on_review = review_writes_journal
+    once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert numbering_note(conn, "hook-sandbox", ready) == ""
+
+
+def test_걸린_루프를_사람이_다시_열_수_있다(conn, ready, fake):
+    """종료 조건에 닿으면 `stopped` 로 걸린다. **출구가 있어야 한다.**
+
+    실측 2026-11-05: `max_runs` 에 닿아 `stopped` 가 되면 `queue resume` 은
+    `paused` 만 풀어서 루프가 영원히 안 돌았다. `Config.yaml` 을 고쳐도
+    `check_loop` 가 `state` 를 보고 바로 되돌렸다.
+    """
+    write_config(ready, entrypoints=["src/train.py"], limits="  max_runs: 1\n")
+    fake.on_plan = plan_writes_run_json
+    fake.on_review = review_writes_journal
+    assert once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))["ok"] is True
+    assert once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))["stoppedAt"] == "plan"
+    assert LP.get(conn, "hook-sandbox")["state"] == "stopped"
+
+    # 걸쇠만 풀면 **판정은 그대로다** — 조건이 아직 닿아 있으니 또 멈춘다
+    LP.resume(conn, "hook-sandbox")
+    assert LP.get(conn, "hook-sandbox")["state"] == "idle"
+    again = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert again["stoppedAt"] == "plan"
+    assert "최대 실행 횟수" in again["steps"][0]["reason"]
+
+    # 조건을 사람이 늘리면 **이제 돈다**
+    write_config(ready, entrypoints=["src/train.py"], limits="  max_runs: 2\n")
+    LP.resume(conn, "hook-sandbox")
+    assert once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))["ok"] is True
