@@ -353,9 +353,43 @@ def sandbox_block(root: str, *, cache_dir: str = "", conda_roots=(), domains=())
         "filesystem": {
             "allowWrite": sorted(dict.fromkeys(write)),
             "allowRead": sorted(dict.fromkeys(read)),
+            # 🔑 **소켓으로 나가는 통로를 명시로 막는다** (실측 2026-11-05).
+            #
+            # `allowRead` 화이트리스트는 **파일 읽기** 축이다. 세션 버스
+            # (`/run/user/<uid>/bus`) 나 ssh-agent 소켓은 world-rw 라
+            # 화이트리스트에 없어도 `connect` 가 될 수 있고, 붙으면
+            # `systemd --user` 로 샌드박스 밖에서 명령을 돌릴 수 있다.
+            # `denyRead` 로 그 폴더를 가린다 — 학습 bwrap 의 tmpfs 와 같은
+            # 목적이다.
+            #
+            # ⚠ Claude Bash 샌드박스가 `denyRead` 로 소켓까지 가리는지는
+            # 아직 못 박았다(게이트가 탐침 명령을 막고, Claude 가 탈출
+            # 스크립트를 옳게 거절했다). 그래서 이건 **겹 방어**다 — 훅이
+            # `systemd-run` 을 denyCommands 로 이미 막고(`python -c` 는
+            # ask→거부), 남는 건 `python <프로젝트 스크립트>` 가 코드로
+            # 직접 붙는 길뿐이다. `docs/operations.md` 에 한계로 적는다.
+            "denyRead": _sandbox_deny_read(),
         },
         "network": {"allowedDomains": sorted(dict.fromkeys(list(domains) or list(SANDBOX_DOMAINS)))},
     }
+
+
+def _sandbox_deny_read() -> list[str]:
+    """소켓·자격 증명이 있는 곳. **connect 통로**를 가린다."""
+    out: list[str] = []
+    try:
+        uid = os.getuid()
+    except AttributeError:  # pragma: no cover
+        uid = None
+    env_dir = os.environ.get("XDG_RUNTIME_DIR") or ""
+    if env_dir:
+        out.append(paths.real(env_dir))
+    if uid is not None:
+        out.append(f"/run/user/{uid}")
+    home = os.path.expanduser("~")
+    for rel in (".ssh", ".gnupg", ".config/labremote", ".claude"):
+        out.append(os.path.join(home, rel))
+    return sorted(dict.fromkeys(p for p in out if p and p != os.sep))
 
 
 def sandbox_state(root: str) -> dict:
