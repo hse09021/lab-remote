@@ -45,6 +45,7 @@ __all__ = [
     "conda_roots",
     "secret_paths",
     "other_project_paths",
+    "runtime_dirs",
     "hidden_paths",
     "command",
     "protected_inside",
@@ -130,10 +131,55 @@ def other_project_paths(project_root: str) -> list[str]:
     return sorted(dict.fromkeys(out))
 
 
+def runtime_dirs() -> list[str]:
+    """사용자 세션 런타임 폴더 — **소켓으로 밖에 나가는 통로**다.
+
+    🔑 왜 가려야 하나 (실측 2026-11-05). `/run/user/<uid>/bus` 는
+    `srw-rw-rw-` 인 유닉스 소켓이다. 학습 코드에서 `DBUS_SESSION_BUS_ADDRESS`
+    를 지워도 **경로가 늘 같아서 코드가 직접 connect** 할 수 있다. `--ro-bind`
+    는 파일 내용 읽기를 막을 뿐 소켓 connect 를 막지 않는다. 붙으면
+    `systemd --user` 에 transient unit 을 시켜 **샌드박스 밖에서 사용자
+    권한으로** 명령을 돌릴 수 있다 — 격리가 통째로 무의미해진다.
+
+    같은 폴더의 `gnupg`·`keyring`·`ssh-agent` 소켓도 같다 — 키 **파일**을
+    못 읽어도 그 소켓으로 **서명**을 시킬 수 있다.
+
+    그래서 런타임 폴더를 통째로 `--tmpfs` 로 덮는다. 학습은 이 소켓들이
+    필요 없다 (GPU 는 `/dev`, conda·네트워크는 그대로다). `systemd-run`
+    scope 는 bwrap **바깥**이라 영향받지 않는다.
+
+    ⚠ 남는 구멍: **추상(abstract) 유닉스 소켓**은 파일시스템에 없어서
+    `--tmpfs` 로 못 가린다. 네트워크 네임스페이스를 끊으면(`--unshare-net`)
+    막히지만 학습이 데이터셋·모델을 받아야 해서 네트워크는 열어 둔다.
+    경로 소켓(dbus·ssh-agent·gpg)은 전부 파일이라 이 가림으로 닫힌다.
+    `docs/operations.md` 에 한계로 적는다.
+    """
+    out: list[str] = []
+    env_dir = os.environ.get("XDG_RUNTIME_DIR") or ""
+    if env_dir:
+        real = paths.real(env_dir)
+        if real and os.path.isdir(real):
+            out.append(real)
+    try:
+        uid = os.getuid()
+    except AttributeError:  # pragma: no cover - 윈도에는 없다
+        uid = None
+    if uid is not None:
+        guess = f"/run/user/{uid}"
+        real = paths.real(guess)
+        if real and os.path.isdir(real) and real not in out:
+            out.append(real)
+    return sorted(dict.fromkeys(out))
+
+
 def hidden_paths(project_root: str) -> list[str]:
     """샌드박스가 가릴 경로 전부 (`--tmpfs` 는 없는 경로에 실패한다)."""
     return sorted(
-        dict.fromkeys(secret_paths(project_root) + other_project_paths(project_root))
+        dict.fromkeys(
+            secret_paths(project_root)
+            + other_project_paths(project_root)
+            + runtime_dirs()
+        )
     )
 
 

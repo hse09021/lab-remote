@@ -119,9 +119,12 @@ def test_인자가_argv_로_그대로_들어간다(ready):
     assert argv[0] == "/bin/sh" and argv[1] == "-c"
     # 셸 스크립트는 `"$@"` 뿐이다 — 인자를 문자열에 끼워 넣지 않는다.
     # 앞에 붙는 건 scope 전용 변수를 지우는 `unset` 한 줄뿐이다.
-    assert argv[2].startswith(
-        "unset " + " ".join(P.SCOPE_ENV_KEEP) + '; "$@";'
-    )
+    # 앞머리는 소켓·버스 주소 변수를 지우는 `unset` 한 줄이다.
+    head = argv[2].split('; "$@";', 1)[0]
+    assert head.startswith("unset ")
+    for name in P.SCOPE_ENV_KEEP:
+        assert name in head
+    assert "SSH_AUTH_SOCK" in head and "DBUS_SESSION_BUS_ADDRESS" in head
     assert argv[2].count('"$@"') == 1
 
 
@@ -317,7 +320,9 @@ def test_scope_환경은_학습에_새지_않는다(ready, monkeypatch):
 
     # 2) 셸이 첫 줄에서 지운다 — scope 로 들어와도 학습은 못 본다
     argv = P.build_argv(spec, use_sandbox=False)
-    assert argv[2].startswith("unset XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS; ")
+    head = argv[2].split('; "$@";', 1)[0]
+    assert head.startswith("unset ")
+    assert "XDG_RUNTIME_DIR" in head and "DBUS_SESSION_BUS_ADDRESS" in head
 
 
 def test_scope_를_쓸_때만_버스를_물려준다(ready, monkeypatch):

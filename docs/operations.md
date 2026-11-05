@@ -3848,3 +3848,68 @@ systemd-run --user --scope --unit=labremote-train-probe --collect -- sh -c 'cat 
 가짜 값을 돌려줬기 때문에 **칸 이름이 틀린 걸 못 봤습니다.** 그래서 이제
 시험이 세 경우를 다 봅니다(보냄·실패·중복 제거로 눌림) **그리고** 진짜
 `notifier.send` 의 반환에 `sent` 가 있고 `ok` 가 **없다**는 것까지 고정합니다.
+
+# 🔌 세션 소켓 탈출 — 샌드박스가 못 가리던 통로 (2026-11-05 S9)
+
+## 무엇이었나
+
+`(가)` 수정(scope 가 버스를 찾게)이 **버스 주소 변수만** 지웠는데, 그걸로는
+부족했습니다. `/run/user/<uid>/bus` 는 `srw-rw-rw-` 인 유닉스 소켓이라
+
+- 학습 코드에서 `DBUS_SESSION_BUS_ADDRESS` 를 지워도 **경로가 늘 같아서**
+  `socket.connect('/run/user/1000/bus')` 로 직접 붙습니다.
+- `--ro-bind / /` 는 파일 **읽기**만 막습니다. 소켓 **connect** 는 안 막습니다.
+- 붙으면 `systemd --user` 에 transient unit 을 시켜 **샌드박스 밖에서 사용자
+  권한으로** 명령을 돌립니다 (전체 우회).
+- 같은 폴더의 `gnupg`·`keyring`·`ssh-agent` 소켓도 같습니다 — 키 **파일**을
+  못 읽어도 그 소켓으로 **서명**을 시킵니다.
+
+실측으로 재현했습니다: 샌드박스 **없이** 프로브를 돌리면 `connect: True`,
+`systemd-run --user … touch ~/표식` 성공, 표식이 **실제 홈에** 생겼습니다.
+
+## 학습 bwrap — 막았고 실측으로 확인했습니다
+
+`runner/sandbox.runtime_dirs()` 가 `XDG_RUNTIME_DIR` 와 `/run/user/<uid>` 를
+`--tmpfs` 로 통째로 덮습니다. `--tmpfs /tmp` 는 전부터 있어서 `/tmp` 의
+`.X11-unix`·`ssh-*` 소켓도 이미 가려집니다. 환경에서도 `SSH_AUTH_SOCK`·
+`SSH_AGENT_PID`·`GPG_AGENT_INFO`·`DBUS_*`·`XDG_RUNTIME_DIR` 를 지웁니다
+(`process.ENV_STRIP` + `ENV_STRIP_PREFIXES`; `build_env` 는 어차피
+화이트리스트라 두 겹입니다). `systemd-run` scope 는 bwrap **바깥**이라 영향
+없습니다.
+
+실측(2026-11-05): 같은 프로브를 학습 bwrap 안에서 돌리면
+`busExists: False` · `connect: False` · `systemd-run` 실패 · 표식 **안 생김**.
+`tests/test_runner_sandbox.py::test_샌드박스_안에서_세션_버스에_못_붙는다` 로
+고정했습니다 (버스가 없는 환경이면 skip).
+
+## Claude Bash 샌드박스 — denyRead 를 넣었지만 **탈출로는 못 박았습니다**
+
+`policy.sandbox_block` 의 `filesystem.denyRead` 에 `/run/user/<uid>`·`~/.ssh`·
+`~/.gnupg`·`~/.config/labremote`·`~/.claude` 를 넣었습니다. Claude Code
+2.1.318 이 그 키를 **받아들이고 세션이 정상으로 떴습니다**(`SANDBOX_OK: True`).
+
+그런데 `denyRead` 가 소켓 **connect** 까지 막는지는 **확인하지 못했습니다**:
+
+1. 격리 세션에서 `ls /run/user/1000` 는 **게이트**가 막습니다 (프로젝트 밖
+   경로 → `unclassified` → 헤드리스 거부).
+2. 소켓 connect 를 하는 프로브(`python src/…`)는 **Claude 가 옳게 거절**
+   했습니다 — `CLAUDE.md`·안전 규칙대로 "샌드박스 경계를 탐색·우회하려는
+   코드" 라며 실행을 멈췄습니다. 그 거절을 우회하지 않았습니다.
+
+**그래서 겹 방어로 둡니다** (규칙 0 — 추측하지 않고 실측만 적습니다):
+
+| 층 | 세션 버스 탈출에 대해 |
+|---|---|
+| 훅 게이트 | `systemd-run`·`systemctl`·`loginctl` 이 `denyCommands` 라 Bash 로는 애초에 못 부릅니다. `python -c` 는 `ask`→헤드리스 거부 |
+| `denyRead` | `/run/user/<uid>` 를 넣었습니다. 소켓 masking 효과는 **미확인** |
+| Claude 자신 | 탈출 스크립트를 두 번 다 거절했습니다 |
+
+**남는 구멍**: `python <프로젝트 스크립트>`(허용 목록에 있음)가 코드로 직접
+소켓에 붙는 길. 학습 bwrap 쪽은 이 길을 tmpfs 로 막았고, Claude Bash 쪽은
+`denyRead` 로 **막으려 했으나 실측으로 못 박았습니다.** 진짜로 닫혔는지
+확인하려면 Claude 의 거절을 우회하지 않는 다른 측정 방법이 필요합니다.
+
+**남는 구멍 2 (양쪽 공통)**: **추상(abstract) 유닉스 소켓**은 파일시스템에
+없어서 `--tmpfs`·`denyRead` 로 못 가립니다. 네트워크 네임스페이스를 끊으면
+(`--unshare-net`) 막히지만 학습이 데이터셋·모델을 받아야 해서 네트워크는 열어
+둡니다. dbus·ssh-agent·gpg 는 전부 **경로** 소켓이라 이 가림으로 닫힙니다.

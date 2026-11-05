@@ -72,7 +72,25 @@ __all__ = [
 POLL_SEC = 0.1
 
 #: 환경에서 **반드시 지우는** 것. 구독으로만 돌린다 (추가 결제 금지).
-ENV_STRIP = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
+#: 학습에 **절대** 물려주지 않는 변수.
+#:
+#: `build_env` 는 어차피 화이트리스트(`ENV_KEEP`)라 이것들은 애초에 안
+#: 들어간다. 그래도 **이름으로 한 번 더** 지운다 — 누가 `ENV_KEEP` 에
+#: 더하거나 scope 경로로 새어도 걸러지게.
+#:
+#: 소켓 주소 변수(아래 둘째 줄)가 중요하다. 소켓 자체는 bwrap 의 tmpfs 가
+#: 가리지만(`sandbox.runtime_dirs`), 주소 변수까지 지워 두 겹으로 막는다 —
+#: `DBUS_*`·`SSH_AUTH_SOCK`·`GPG_AGENT_INFO` 가 있으면 "여기 붙어라" 를
+#: 알려 주는 셈이다.
+ENV_STRIP = (
+    "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN",
+    "SSH_AUTH_SOCK", "SSH_AGENT_PID", "GPG_AGENT_INFO", "GPG_TTY",
+    "DBUS_SESSION_BUS_ADDRESS", "DBUS_SYSTEM_BUS_ADDRESS",
+    "XDG_RUNTIME_DIR",
+)
+
+#: `DBUS_` 로 시작하는 건 전부 지운다 (`DBUS_STARTER_ADDRESS` 등).
+ENV_STRIP_PREFIXES = ("DBUS_",)
 
 #: 학습에 물려주는 기본 환경. 나머지는 지운다 — 오케스트레이터의 환경이
 #: 그대로 새면 `LAB_*` 로 우리 폴더 위치까지 알려 주는 셈이다.
@@ -243,7 +261,11 @@ def build_argv(
     정한다. 그래야 argv 를 보는 시험이 systemd 에 매이지 않는다.
     """
     # scope 를 띄우느라 물려준 버스 주소는 **학습이 보기 전에** 지운다.
-    drop = " ".join(SCOPE_ENV_KEEP)
+    # 소켓 주소 변수도 같이 — 소켓은 tmpfs 가 가리지만 주소까지 지워 둔다.
+    drop = " ".join(dict.fromkeys(list(SCOPE_ENV_KEEP) + [
+        "SSH_AUTH_SOCK", "SSH_AGENT_PID", "GPG_AGENT_INFO",
+        "DBUS_SESSION_BUS_ADDRESS", "DBUS_SYSTEM_BUS_ADDRESS",
+    ]))
     script = (
         f"unset {drop}; "
         '"$@"; printf %s "$?" > ' + shlex.quote(spec.exit_code_path)
@@ -296,6 +318,9 @@ def build_env(spec: RunSpec, *, cache_dir: str = "", policy=None) -> dict[str, s
         out.update(cache_mod.env_for(cache_dir))
     for name in ENV_STRIP:
         out.pop(name, None)
+    for name in list(out):
+        if any(name.startswith(pre) for pre in ENV_STRIP_PREFIXES):
+            out.pop(name, None)
     return out
 
 

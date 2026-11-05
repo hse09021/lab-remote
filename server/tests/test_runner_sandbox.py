@@ -307,3 +307,94 @@ def test_홈_안의_캐시는_다시_열린다(ready, tmp_path):
             _os.rmdir(cache)
         except OSError:
             pass
+
+
+# --- 세션 소켓 탈출 (실측 2026-11-05) --------------------------------------------
+#
+# /run/user/<uid>/bus 는 world-rw 유닉스 소켓이다. 학습 코드에서
+# DBUS_SESSION_BUS_ADDRESS 를 지워도 경로가 늘 같아서 직접 connect 할 수 있고,
+# 붙으면 systemd --user 로 샌드박스 **밖에서** 명령을 돌린다 — 전체 우회.
+# --ro-bind 는 소켓 connect 를 막지 않으므로 런타임 폴더를 --tmpfs 로 가린다.
+
+
+def test_런타임_폴더가_가림_목록에_든다(ready, monkeypatch):
+    monkeypatch.setenv("XDG_RUNTIME_DIR", "/run/user/1000")
+    monkeypatch.setattr(os, "getuid", lambda: 1000, raising=False)
+    # 폴더가 실제로 있어야 --tmpfs 가 붙는다
+    if not os.path.isdir("/run/user/1000"):
+        pytest.skip("/run/user/1000 이 없어요")
+    dirs = SB.runtime_dirs()
+    assert "/run/user/1000" in dirs
+    assert "/run/user/1000" in SB.hidden_paths(ready)
+
+
+def test_런타임_폴더를_tmpfs_로_덮는다(ready):
+    if not os.path.isdir("/run/user/%d" % os.getuid()):
+        pytest.skip("런타임 폴더가 없어요")
+    argv = SB.command(["/bin/true"], project_root=ready, bwrap="/usr/bin/bwrap")
+    run_dir = "/run/user/%d" % os.getuid()
+    # --tmpfs <런타임 폴더> 가 들어 있다
+    pairs = list(zip(argv, argv[1:]))
+    assert ("--tmpfs", run_dir) in pairs, argv
+
+
+def test_소켓_주소_변수는_학습에_안_간다(ready, monkeypatch):
+    monkeypatch.setenv("SSH_AUTH_SOCK", "/run/user/1000/ssh-agent.sock")
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/1000/bus")
+    monkeypatch.setenv("GPG_AGENT_INFO", "/run/user/1000/gnupg/S.gpg-agent")
+    monkeypatch.setenv("DBUS_STARTER_ADDRESS", "unix:path=/run/user/1000/bus")
+    spec = spec_for(ready)
+    env = P.build_env(spec)
+    for name in ("SSH_AUTH_SOCK", "DBUS_SESSION_BUS_ADDRESS", "GPG_AGENT_INFO",
+                 "DBUS_STARTER_ADDRESS", "XDG_RUNTIME_DIR"):
+        assert name not in env, name
+
+
+@needs_bwrap
+def test_샌드박스_안에서_세션_버스에_못_붙는다(ready):
+    """🔑 탈출 재현 테스트. 버스에 붙어 표식을 만들면 실패다.
+
+    버스 소켓이 없는 환경이면 건너뛴다 (CI 등).
+    """
+    uid = os.getuid()
+    bus = (os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{uid}") + "/bus"
+    if not os.path.exists(bus):
+        pytest.skip("세션 버스가 없어요")
+
+    marker = os.path.join(os.path.expanduser("~"), f"labremote-bus-escape-{os.getpid()}.tmp")
+    probe = os.path.join(ready, "src", "_bus_escape.py")
+    out_file = os.path.join(ready, "experiments", "EXP-001", "bus_result.json")
+    with open(probe, "w", encoding="utf-8") as fh:
+        fh.write(
+            "import json,os,socket,subprocess,sys\n"
+            "uid=os.getuid()\n"
+            "bus=(os.environ.get('XDG_RUNTIME_DIR') or f'/run/user/{uid}')+'/bus'\n"
+            "r={'busExists':os.path.exists(bus)}\n"
+            "try:\n"
+            " s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);s.settimeout(2)\n"
+            " s.connect(bus);r['connect']=True;s.close()\n"
+            "except OSError as e:\n r['connect']=False\n"
+            "try:\n"
+            " d=subprocess.run(['systemd-run','--user','--quiet','--wait','--collect','--','/bin/touch',sys.argv[1]],capture_output=True,timeout=15)\n"
+            " r['systemdRc']=d.returncode\n"
+            "except Exception as e:\n r['systemdRc']=str(e)[:40]\n"
+            "r['marker']=os.path.exists(sys.argv[1])\n"
+            "open(sys.argv[2],'w').write(json.dumps(r))\n"
+        )
+    try:
+        inner = ["/usr/bin/env", "python3", "src/_bus_escape.py", marker, out_file]
+        cmd = SB.command(inner, project_root=ready, bwrap="/usr/bin/bwrap")
+        import subprocess
+        subprocess.run(cmd, cwd=ready, stdin=subprocess.DEVNULL,
+                       capture_output=True, timeout=60)
+        got = json.load(open(out_file, encoding="utf-8"))
+        assert got["busExists"] is False, "버스 소켓이 가려지지 않았어요"
+        assert got["connect"] is False, "버스에 붙었어요 — 탈출 가능"
+        assert got["marker"] is False, "샌드박스 밖에서 표식이 생겼어요 — 탈출됨"
+        assert not os.path.exists(marker)
+    finally:
+        for path in (probe, out_file, marker):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
