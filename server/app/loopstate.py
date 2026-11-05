@@ -30,6 +30,7 @@ __all__ = [
     "read_current",
     "write_current",
     "set_running",
+    "set_reviewing",
     "set_idle",
     "consistency",
 ]
@@ -161,6 +162,18 @@ def set_running(
 ) -> str:
     """실험을 시작한다 — runstate 와 `Current.yaml` 을 **같이** 쓴다."""
     runstate.set_running(name, experiment_id, pid=pid)
+    return write_current(name, root, loop_no=loop_no)
+
+
+def set_reviewing(
+    name: str,
+    experiment_id: str,
+    *,
+    root: str | None = None,
+    loop_no: int | None = None,
+) -> str:
+    """학습이 끝나고 **분석이 도는 중** — `runstate` 와 거울을 같이 쓴다."""
+    runstate.set_reviewing(name, experiment_id)
     return write_current(name, root, loop_no=loop_no)
 
 
