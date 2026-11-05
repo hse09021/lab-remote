@@ -53,6 +53,7 @@ from . import gitflow, guards, projectguard
 __all__ = [
     "EXP_RE",
     "next_experiment_id",
+    "reusable_numbers",
     "design_landed",
     "unfinished_numbers",
     "numbering_note",
@@ -79,8 +80,46 @@ UPDATE_ORDER = (
 )
 
 
+def reusable_numbers(conn, project: str, root: str) -> list[str]:
+    """배정만 되고 **한 번도 시작되지 않은** 번호. 되써도 되는 것.
+
+    설계 세션이 멈추면(승인 대기·자기 거절) 번호와 브랜치는 이미 생겼는데
+    학습은 안 돌았다. 그 번호를 버리고 다음 번호로 넘어가면 **멈출 때마다
+    번호가 하나씩 죽는다** — 실측에서 EXP-003~007 다섯이 그렇게 죽었고,
+    브랜치만 남아 Claude 가 매번 "이게 돌았는지 알 수 없다" 로 멈췄다.
+
+    되쓰는 조건은 셋 다 만족할 때만이다. 하나라도 걸리면 손대지 않는다.
+
+    * `started_at` 이 없다 = 학습을 띄운 적이 없다
+    * `runstate.started` 에 없다 = 잠금이 걸린 적이 없다
+    * 실험 폴더가 **아예 없다** = 아무것도 안 쓰였다
+    """
+    from .. import runstate
+
+    started = set(runstate.load(project).started or [])
+    out: list[str] = []
+    for row in X.listing(conn, project, limit=1000):
+        exp_id = str(row.get("exp_id") or "")
+        if not EXP_RE.match(exp_id) or exp_id in started:
+            continue
+        if row.get("started_at") or str(row.get("state") or "") in ("running", "done"):
+            continue
+        if os.path.isdir(os.path.join(root, L.experiments_dir(), exp_id)):
+            continue
+        out.append(exp_id)
+    return sorted(out)
+
+
 def next_experiment_id(conn, project: str, root: str) -> str:
-    """다음 실험 번호. **한 번이라도 시작된 번호는 다시 쓰지 않는다.**"""
+    """다음 실험 번호. **한 번이라도 시작된 번호는 다시 쓰지 않는다.**
+
+    **맨 끝 번호가 안 쓰였으면 그걸 되쓴다.** 설계가 멈출 때마다 번호를
+    버리면 멈춘 횟수만큼 번호가 죽는다 (실측: EXP-003~007 다섯).
+
+    되쓰기는 **맨 끝 번호에만** 적용한다. 중간에 죽은 번호로 되돌아가면
+    번호가 거꾸로 가고, 이미 돌아간 실험보다 작은 번호로 새 실험을 만드는
+    셈이 된다. 그 번호들은 그대로 두고 `numbering_note` 가 설명한다.
+    """
     used = {e["exp_id"] for e in X.listing(conn, project, limit=1000)}
     try:
         used |= {
@@ -98,6 +137,10 @@ def next_experiment_id(conn, project: str, root: str) -> str:
         found = EXP_RE.match(name)
         if found:
             highest = max(highest, int(found.group(1)))
+
+    top = f"EXP-{highest:03d}"
+    if highest and top in reusable_numbers(conn, project, root):
+        return top
     return f"EXP-{highest + 1:03d}"
 
 
@@ -150,14 +193,20 @@ def unfinished_numbers(conn, project: str, root: str) -> list[str]:
     )
 
 
-def numbering_note(conn, project: str, root: str) -> str:
+def numbering_note(conn, project: str, root: str, *, exclude: object = ()) -> str:
     """번호 상황을 **사람 말로** 적어 설계 프롬프트에 싣는다.
 
     Claude 가 번호 어긋남을 스스로 조사할 길이 없다 — DB 는 못 읽고
     (`lab.db` 는 막혀 있다) 브랜치만으로는 돌았는지 알 수 없다. 그래서
     **우리가 말해 준다.** 모르는 걸 추측하게 두면 멈추거나 지어낸다.
     """
-    left = unfinished_numbers(conn, project, root)
+    # 🔑 **지금 쓰는 번호는 빼야 한다** (실측 2026-11-05).
+    #
+    # 안 빼면 프롬프트가 자기 모순이 된다 — 위에서는 "`EXP-007/` 을 만들어
+    # 주세요", 아래에서는 "EXP-007 은 지금 와서 채우지 않아요". Claude 는
+    # 번호를 짐작하지 않고 **맞게** 멈췄다.
+    skip = {str(x) for x in (exclude or ())}
+    left = [x for x in unfinished_numbers(conn, project, root) if x not in skip]
     if not left:
         return ""
     shown = ", ".join(left)
@@ -593,19 +642,33 @@ def train_step(ctx, conn, exp_id: str) -> dict:
     }
 
 
-def update_order(root: str, exp_id: str) -> dict:
-    """PDF 9쪽 Update Order 7개가 실제로 갱신됐는가.
+def update_order(root: str, exp_id: str, *, trained_ok: bool = True) -> dict:
+    """PDF 9쪽 Update Order 가 실제로 갱신됐는가.
 
     **AI 가 "기록했어요" 라고 적어도 파일을 직접 본다.**
+
+    🔑 **학습이 실패했으면 요구가 달라진다** (실측 2026-11-05).
+
+    `result.csv` 는 학습이 쓰는 파일이다. 학습이 아무것도 못 내놨으면 AI 는
+    그걸 만들 수 없고, **만들면 지어낸 값**이다 — 실측에서 AI 는 맞게
+    거절했다(*"값을 지어내지 않음"*). 그런데 검수는 `result.csv` 가 없다고
+    매번 어긋났다. 실패한 실험은 **영원히 검수를 못 지나간다.**
+
+    그래서 실패했을 때는 `result.csv` 를 빼고 `Failures.md` 를 요구한다 —
+    같은 실패를 두 번 하지 않는 게 실패 때의 기록 의무다 (spec III).
     """
     exp_dir = os.path.join(root, L.experiments_dir(), exp_id)
     wanted = {
-        "result.csv": os.path.join(exp_dir, "result.csv"),
         "analysis.md": os.path.join(exp_dir, "analysis.md"),
         L.LOOP_LAYOUT["experiment_log"]: os.path.join(root, L.LOOP_LAYOUT["experiment_log"]),
         L.LOOP_LAYOUT["decision_log"]: os.path.join(root, L.LOOP_LAYOUT["decision_log"]),
         L.LOOP_LAYOUT["state"]: os.path.join(root, L.LOOP_LAYOUT["state"]),
     }
+    if trained_ok:
+        wanted["result.csv"] = os.path.join(exp_dir, "result.csv")
+    else:
+        failures = L.LOOP_LAYOUT["failures"]
+        wanted[failures] = os.path.join(root, failures)
     missing = []
     for name, path in wanted.items():
         try:
@@ -638,14 +701,15 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
     report = report_mod.parse(str(got.get("text") or ""))
     said = report_mod.success_of(report)
     numbers = _numbers(ctx.root, exp_id)
-    order = update_order(ctx.root, exp_id)
+    trained_ok = getattr(outcome, "state", "") == "done"
+    order = update_order(ctx.root, exp_id, trained_ok=trained_ok)
 
     disagree = said is not None and numbers["success"] is not None and said != numbers["success"]
     X.upsert(
         conn,
         ctx.project,
         exp_id,
-        state="done" if getattr(outcome, "state", "") == "done" else "failed",
+        state="done" if trained_ok else "failed",
         report=str(report["fields"].get("result") or "")[:500],
         metric_name=numbers.get("metric"),
         metric_value=numbers.get("value"),
