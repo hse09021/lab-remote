@@ -25,9 +25,11 @@
 
 - **`ANTHROPIC_API_KEY` 를 넣지 않습니다.** 키가 섞이면 구독이 아니라 종량제
   과금입니다(`agent/launch.ENV_STRIP` 가 한 번 더 지웁니다).
-- `KillMode=mixed` — 학습은 `start_new_session=True` 로 떼어 놔서 유닛을
-  멈춰도 **안 죽습니다.** 몇 시간 돌던 학습을 재시작으로 잃지 않으려는
-  것입니다.
+- **`KillMode=process`** — 학습을 살려 두는 두 겹 중 2차입니다.
+  `mixed` 는 메인 프로세스 종료 뒤 **cgroup 에 남은 것들에 SIGKILL** 을
+  보냅니다. `start_new_session=True` 는 세션만 떼고 **cgroup 은 그대로
+  둡니다**(실측) — 그대로였다면 `restart` 한 번에 학습이 같이 죽었습니다.
+  1차는 학습을 **자기 cgroup**(`systemd-run --user --scope`)에 담는 것입니다.
 - `Restart=always` + `RestartSec=10` — 죽으면 다시 뜨고, 복구가 이어받습니다.
 - `DISABLE_AUTOUPDATER=1` — 도구 이름이 바뀌면 방어에 틈이 생깁니다(S5b).
 """
@@ -76,9 +78,17 @@ Environment=DISABLE_UPDATES=1
 ExecStart={python} -m {module}
 Restart=always
 RestartSec=10
-# 학습은 start_new_session 으로 떼어 놔서 유닛을 멈춰도 안 죽어요.
-# 몇 시간 돌던 학습을 재시작으로 잃지 않으려는 거예요.
-KillMode=mixed
+# 🔑 학습을 살려 두는 두 겹 중 2차예요.
+#
+# `KillMode=mixed` 는 메인 프로세스가 끝난 뒤 **cgroup 에 남은 것들에
+# SIGKILL** 을 보내요. `start_new_session=True`(setsid)는 세션만 떼고
+# **cgroup 은 그대로 두니까**(실측), 그대로였다면 `systemctl --user restart`
+# 한 번에 몇 시간 돌던 학습이 같이 죽어요.
+#
+# `process` 는 메인 프로세스만 끝내고 남은 건 건드리지 않아요.
+# 1차 방어는 학습을 자기 cgroup 에 담는 거예요
+# (`systemd-run --user --scope`, `runner/process.scope_prefix`).
+KillMode=process
 TimeoutStopSec=60
 StandardOutput=append:{log}
 StandardError=append:{log}

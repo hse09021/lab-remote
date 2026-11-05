@@ -277,3 +277,160 @@ def test_service_install_dry_run_은_안_쓴다(tmp_path, monkeypatch, capsys):
     assert run(["service", "install", "--dry-run"]) == 0
     assert "[Unit]" in capsys.readouterr().out
     assert not os.path.exists(units.unit_path("labremote-monitor"))
+
+
+def test_notify_test_가_성공을_성공으로_본다(isolated_data, isolated_config, monkeypatch, capsys):
+    """🔑 `notifier.send` 는 `sent`·`status` 를 돌려준다 — `ok`·`httpStatus` 가
+    아니다. 처음에 그걸 잘못 봐서 **204 로 잘 갔는데 화면엔 "✘ 못 보냈어요"**
+    가 떴다. 사람이 직접 돌려 보고 잡았다.
+    """
+    from app import notifier
+
+    monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.com/api/webhooks/a/b")
+    monkeypatch.setattr(
+        notifier, "send",
+        lambda *a, **k: {"sent": True, "status": 204, "id": 1, "dedupeKey": "x"},
+    )
+    assert run(["notify", "test"]) == 0
+    out = capsys.readouterr().out
+    assert "✔ 보냈어요 (상태 204)" in out
+    assert "못 보냈어요" not in out
+
+
+def test_notify_test_가_실패를_실패로_본다(isolated_data, isolated_config, monkeypatch, capsys):
+    from app import notifier
+
+    monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.com/api/webhooks/a/b")
+    monkeypatch.setattr(
+        notifier, "send",
+        lambda *a, **k: {"sent": False, "status": 403, "reason": "HTTP Error 403"},
+    )
+    assert run(["notify", "test"]) == 2
+    err = capsys.readouterr().err
+    assert "못 보냈어요" in err and "403" in err
+
+
+def test_notify_test_가_중복_제거를_실패로_안_본다(isolated_data, isolated_config, monkeypatch, capsys):
+    """같은 알림을 또 보내려 한 것은 **실패가 아니다.**"""
+    from app import notifier
+
+    monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.com/api/webhooks/a/b")
+    monkeypatch.setattr(
+        notifier, "send",
+        lambda *a, **k: {"sent": False, "suppressed": True, "dedupeKey": "k"},
+    )
+    assert run(["notify", "test"]) == 0
+    assert "눌렸어요" in capsys.readouterr().out
+
+
+def test_notifier_의_반환_칸_이름을_고정한다(isolated_data, isolated_config, monkeypatch):
+    """CLI 가 보는 칸 이름이 바뀌면 조용히 뒤집힌다 — 그걸 막는다."""
+    from app import notifier
+
+    monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.com/api/webhooks/a/b")
+    monkeypatch.setattr(
+        notifier, "_post",
+        lambda *a, **k: {"sent": True, "status": 204},
+        raising=False,
+    )
+    from app import db
+
+    with db.open_db() as conn:
+        got = notifier.send(conn, "test", title="x", body="y", subject="s1")
+    assert "sent" in got, got
+    assert "ok" not in got, "칸 이름이 바뀌었어요 — CLI 도 같이 고쳐 주세요"
+
+
+# --- 🔑 학습이 오케스트레이터 재시작에 안 죽나 -------------------------------
+
+
+def test_setsid_는_cgroup_을_안_바꾼다():
+    """실측(2026-11-05)으로 고정한다 — 이 전제가 틀렸다는 걸 사람이 잡았다.
+
+    세션 ID 는 떨어지지만 cgroup 은 그대로다. 그래서 오케스트레이터 유닛의
+    cgroup 안에 남고, `KillMode=mixed` 가 메인 프로세스 종료 뒤 남은 것들에
+    **SIGKILL** 을 보낸다 — `systemctl --user restart` 한 번에 몇 시간 돌던
+    학습이 같이 죽는다.
+    """
+    import os
+    import subprocess
+    import time
+
+    mine = open(f"/proc/{os.getpid()}/cgroup").read().strip()
+    child = subprocess.Popen(["/bin/sh", "-c", "sleep 5"], start_new_session=True)
+    try:
+        time.sleep(0.3)
+        theirs = open(f"/proc/{child.pid}/cgroup").read().strip()
+        assert theirs == mine, "cgroup 이 달라졌어요 — 전제가 바뀌었어요"
+        # 세션은 떨어진다
+        assert os.getsid(child.pid) != os.getsid(os.getpid())
+    finally:
+        child.kill()
+        child.wait()
+
+
+def test_유닛이_KillMode_process_다(tmp_path, monkeypatch):
+    """`mixed` 였으면 남은 학습에 SIGKILL 이 간다. 2차 방어다."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    from app.service import units
+
+    for name in units.UNITS:
+        # 주석에도 `KillMode=mixed` 가 설명으로 나오니 **지시문만** 본다
+        directives = [
+            l.strip() for l in units.render(name).splitlines()
+            if l.strip().startswith("KillMode=")
+        ]
+        assert directives == ["KillMode=process"], directives
+
+
+def test_scope_이름이_프로젝트와_실험으로_정해진다():
+    """이름으로 상태 확인·종료·중복 방지가 된다."""
+    from app.runner import process as P
+    from app.runner.spec import RunSpec
+
+    spec = RunSpec(project="hook-sandbox", root="/x", experiment_id="EXP-007",
+                   entrypoint="t.py", entrypoint_abs="/x/t.py")
+    assert P.scope_name(spec) == "labremote-train-hook-sandbox-EXP-007"
+    # 이상한 글자는 걸러낸다 (유닛 이름에 쓸 수 없다)
+    odd = RunSpec(project="a b/c", root="/x", experiment_id="EXP-1;rm",
+                  entrypoint="t.py", entrypoint_abs="/x/t.py")
+    name = P.scope_name(odd)
+    assert all(c.isalnum() or c in "-_" for c in name), name
+
+
+def test_scope_접두사가_argv_앞에_붙는다():
+    from app.runner import process as P
+    from app.runner.spec import RunSpec
+
+    spec = RunSpec(project="p", root="/x", experiment_id="EXP-1",
+                   entrypoint="t.py", entrypoint_abs="/x/t.py")
+    plain = P.build_argv(spec, use_sandbox=False)
+    scoped = P.build_argv(spec, use_sandbox=False, use_scope=True)
+    assert scoped[0] == "systemd-run"
+    assert "--user" in scoped and "--scope" in scoped
+    assert f"--unit={P.scope_name(spec)}" in scoped
+    # 나머지는 그대로다
+    assert scoped[scoped.index("--") + 1:] == plain
+
+
+def test_build_argv_는_기본으로_scope_를_안_붙인다():
+    """`build_argv` 는 "무엇을 돌리나" 고 scope 는 "어디에 담나" 다 —
+    실제로 띄우는 `launch()` 가 정한다. 그래야 argv 시험이 systemd 에
+    매이지 않는다."""
+    from app.runner import process as P
+    from app.runner.spec import RunSpec
+
+    spec = RunSpec(project="p", root="/x", experiment_id="EXP-1",
+                   entrypoint="t.py", entrypoint_abs="/x/t.py")
+    assert P.build_argv(spec, use_sandbox=False)[0] != "systemd-run"
+
+
+def test_scope_를_못_쓰면_조용히_빠진다(monkeypatch):
+    """user systemd 가 없는 환경(컨테이너·cron). 그때는 KillMode=process 가 지킨다."""
+    from app.runner import process as P
+
+    monkeypatch.setenv(P.NO_SCOPE_ENV, "1")
+    assert P.scope_available() is False
+    monkeypatch.delenv(P.NO_SCOPE_ENV)
+    monkeypatch.setattr(P.shutil, "which", lambda name: None)
+    assert P.scope_available() is False

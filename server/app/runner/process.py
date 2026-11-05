@@ -4,7 +4,21 @@
 
 | 안 | 평가 |
 |---|---|
-| **`Popen(..., start_new_session=True)`** | **채택.** 의존성 0, 시험하기 쉽다. `setsid` 효과라 **오케스트레이터가 재시작돼도 학습이 안 죽는다.** 종료는 `killpg` 라 DataLoader worker 같은 **손자까지** 정리된다 |
+| **`Popen(..., start_new_session=True)`** | 의존성 0, 시험하기 쉽다. 종료는 `killpg` 라 DataLoader worker 같은 **손자까지** 정리된다 |
+
+> ⚠ **`start_new_session=True` 는 cgroup 을 바꾸지 않습니다** (실측
+> 2026-11-05). 세션 ID 는 떨어지지만(411635 ≠ 411632) cgroup 은 그대로라
+> **오케스트레이터 유닛의 cgroup 안에 남습니다.** systemd 의
+> `KillMode=mixed` 는 메인 프로세스가 끝난 뒤 cgroup 에 남은 것들에
+> **SIGKILL** 을 보내므로, 그대로였다면 `systemctl --user restart` 한 번에
+> 몇 시간 돌던 학습이 같이 죽었습니다.
+>
+> 두 겹으로 고쳤습니다.
+>
+> | 겹 | 무엇 |
+> |---|---|
+> | 1차 | **학습을 자기 cgroup(`systemd-run --user --scope`)에 띄웁니다** — 유닛과 아예 다른 자리라 `KillMode` 와 무관합니다. 이름(`labremote-train-<프로젝트>-<EXP>`)으로 상태·종료·중복 방지가 됩니다 |
+> | 2차 | 유닛을 **`KillMode=process`** 로 둡니다 — scope 를 못 쓰는 환경(user systemd 없음)에서도 남은 프로세스를 죽이지 않습니다 |
 | `nohup` | ✕ 프로세스 그룹 제어가 없어 손자가 남는다 |
 | `systemd-run --user` | ✕ 0단계 실측에서 경로 보호 속성이 전부 무효였다 |
 | tmux | ②에서는 안 쓴다. pid 추적이 흐려진다 |
@@ -25,6 +39,7 @@ from __future__ import annotations
 
 import os
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -85,6 +100,9 @@ class Launched:
     exit_code_path: str
     started_at: float
     starttime: int | None = None
+    #: 학습을 담은 transient scope 이름 (못 쓰면 빈 문자열).
+    #: `systemctl --user status <이름>.scope` 로 보고 `stop` 으로 끝낼 수 있다.
+    scope: str = ""
     proc: subprocess.Popen | None = field(default=None, repr=False)
 
 
@@ -124,14 +142,90 @@ def inner_argv(spec: RunSpec) -> list[str]:
     return [*inner, *spec.args]
 
 
-def build_argv(spec: RunSpec, *, use_sandbox: bool = True, **sandbox_kw) -> list[str]:
-    """실제로 `Popen` 에 넘길 argv. 셸은 종료코드를 남기는 용도로만 쓴다."""
+#: 학습을 담는 transient scope 이름. `systemctl --user status <이름>.scope` 로
+#: 보고, `systemctl --user stop` 으로 끝낼 수 있다.
+#:
+#: 같은 이름이 이미 돌고 있으면 `systemd-run` 이 **거절한다** — 같은 실험을
+#: 두 번 띄우는 사고가 덤으로 막힌다.
+def scope_name(spec: RunSpec) -> str:
+    import re as _re
+
+    def clean(text: str) -> str:
+        return _re.sub(r"[^A-Za-z0-9_-]", "-", str(text or ""))[:48] or "x"
+
+    return f"labremote-train-{clean(spec.project)}-{clean(spec.experiment_id)}"
+
+
+#: `1` 이면 scope 를 쓰지 않는다. 시험(`tests/conftest.py`)과 scope 가 말썽인
+#: 환경에서 쓴다. 그때는 유닛의 `KillMode=process` 가 학습을 지킨다.
+NO_SCOPE_ENV = "LAB_NO_SCOPE"
+
+
+def scope_available() -> bool:
+    """`systemd-run --user --scope` 를 **실제로 띄워 보고** 판정한다.
+
+    설정만 보고 믿지 않는다. user systemd·dbus 가 없는 환경(컨테이너·cron)
+    에서는 안 된다.
+    """
+    if os.environ.get(NO_SCOPE_ENV) == "1":
+        return False
+    binary = shutil.which("systemd-run")
+    if not binary:
+        return False
+    try:
+        done = subprocess.run(
+            [binary, "--user", "--scope", "--quiet", "--", "/bin/true"],
+            capture_output=True, text=True, timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return done.returncode == 0
+
+
+def scope_prefix(spec: RunSpec) -> list[str]:
+    """학습을 **자기 cgroup** 에 담는 접두사.
+
+    🔑 `start_new_session=True` 는 세션만 떼고 **cgroup 은 그대로 둔다**
+    (실측 2026-11-05: SID 는 달라지는데 `/proc/<pid>/cgroup` 이 같다).
+    그래서 오케스트레이터 유닛의 cgroup 안에 남고, `KillMode=mixed` 가
+    메인 프로세스 종료 뒤 남은 것들에 **SIGKILL** 을 보낸다 — 몇 시간 돌던
+    학습이 `systemctl --user restart` 한 번에 죽는다.
+
+    scope 는 `/user.slice/…/app.slice/<이름>.scope` 로 **아예 다른 자리**라
+    유닛의 `KillMode` 와 무관하다.
+    """
+    return [
+        "systemd-run",
+        "--user",
+        "--scope",
+        "--quiet",
+        f"--unit={scope_name(spec)}",
+        f"--description=lab.remote 학습 · {spec.project} · {spec.experiment_id}",
+        # scope 가 끝나면 cgroup 도 같이 사라진다
+        "--collect",
+        "--",
+    ]
+
+
+def build_argv(
+    spec: RunSpec,
+    *,
+    use_sandbox: bool = True,
+    use_scope: bool = False,
+    **sandbox_kw,
+) -> list[str]:
+    """실제로 `Popen` 에 넘길 argv. 셸은 종료코드를 남기는 용도로만 쓴다.
+
+    `use_scope` 는 **기본이 꺼짐**이다 — 이 함수는 "무엇을 돌리나" 를
+    만드는 자리이고, scope 는 "어디에 담나" 라서 실제로 띄우는 `launch()` 가
+    정한다. 그래야 argv 를 보는 시험이 systemd 에 매이지 않는다.
+    """
     script = '"$@"; printf %s "$?" > ' + shlex.quote(spec.exit_code_path)
     wrapped = ["/bin/sh", "-c", script, "labremote-train", *inner_argv(spec)]
-    if not use_sandbox:
-        return wrapped
-    sandbox_kw.setdefault("extra_ro", spec.data_paths)
-    return sandbox_mod.command(wrapped, project_root=spec.root, **sandbox_kw)
+    if use_sandbox:
+        sandbox_kw.setdefault("extra_ro", spec.data_paths)
+        wrapped = sandbox_mod.command(wrapped, project_root=spec.root, **sandbox_kw)
+    return (scope_prefix(spec) + wrapped) if use_scope else wrapped
 
 
 def inject_tokens(policy) -> dict[str, str]:
@@ -284,7 +378,10 @@ def launch(
         if use_sandbox:
             sandbox_kw.setdefault("cache_dir", cache)
 
-    argv = build_argv(spec, use_sandbox=use_sandbox, **sandbox_kw)
+    # 🔑 학습을 **자기 cgroup** 에 담는다 (`systemd-run --user --scope`).
+    # 못 쓰면 조용히 빼고 돈다 — 그때는 유닛의 `KillMode=process` 가 지킨다.
+    scoped = scope_available()
+    argv = build_argv(spec, use_sandbox=use_sandbox, use_scope=scoped, **sandbox_kw)
     env = build_env(spec, cache_dir=cache, policy=policy)
     mode = "ab" if append_log else "wb"
     try:
@@ -315,6 +412,7 @@ def launch(
     return Launched(
         pid=proc.pid,
         pgid=proc.pid,  # start_new_session 이라 세션 리더 = pgid
+        scope=scope_name(spec) if scoped else "",
         argv=argv,
         log_path=spec.log_path,
         exit_code_path=spec.exit_code_path,

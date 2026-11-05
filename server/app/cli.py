@@ -1025,14 +1025,25 @@ def cmd_notify(args) -> int:
                 ("확인할 것", "사유 전문이 잘리지 않고 오는지"),
             ],
         )
-    if not got.get("ok"):
-        print(f"✘ 못 보냈어요: {got.get('reason') or got}", file=sys.stderr)
-        if got.get("httpStatus") == 403:
-            print("  403 이면 웹훅 URL 이 틀렸거나 지워졌을 수 있어요.", file=sys.stderr)
-        return 2
-    print(f"✔ 보냈어요 (상태 {got.get('httpStatus')})")
+    # ⚠ `notifier.send` 는 `sent`·`status` 를 돌려준다 — `ok`·`httpStatus` 가
+    # 아니다. 처음에 그걸 잘못 봐서 **204 로 잘 갔는데 화면엔 "✘ 못 보냈어요"**
+    # 가 떴다. 사람이 직접 돌려 보고 잡았다.
     if got.get("suppressed"):
-        print("  방금 같은 알림을 보내서 이번 건은 눌렸어요 (중복 제거).")
+        print("· 방금 같은 알림을 보내서 이번 건은 눌렸어요 (중복 제거).")
+        print(f"  열쇠: {got.get('dedupeKey')}")
+        return 0
+    if not got.get("sent"):
+        print(f"✘ 못 보냈어요: {got.get('reason') or got.get('error') or got}",
+              file=sys.stderr)
+        if got.get("status") == 403:
+            print(
+                "  403 이면 웹훅 URL 이 틀렸거나 지워졌을 수 있어요. "
+                "(User-Agent 는 이미 고정으로 붙여요 — notify.USER_AGENT)",
+                file=sys.stderr,
+            )
+        return 2
+    print(f"✔ 보냈어요 (상태 {got.get('status')})")
+    print("  Discord 에서 사유 전문이 잘리지 않았는지 봐 주세요.")
     return 0
 
 
