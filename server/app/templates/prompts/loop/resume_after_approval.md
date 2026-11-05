@@ -17,7 +17,7 @@
 
 | `state` | 뜻 |
 |---|---|
-| `installed` | 깔렸어요. 요청 파일(`state/Install_request.json`)은 지워 주세요 |
+| `installed` | 깔렸어요. 요청 파일은 **시스템이 지웠어요** — 다시 쓰지 마세요 |
 | `failed` | 실패했어요. `reason` 을 보고 **다른 방법**을 찾아 주세요 |
 | `denied` | 사람이 거절했어요. 같은 요청을 다시 쓰지 마세요 |
 | `rejected` | 요청 형식이 틀렸어요. `reason` 을 보고 고쳐 주세요 |

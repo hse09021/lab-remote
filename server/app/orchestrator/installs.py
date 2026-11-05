@@ -325,14 +325,28 @@ def write_result(conn, project: str, root: str, approval_id: int, parsed: dict, 
         )
     except Exception:
         pass
+    # 🔑 깔렸으면 **오케스트레이터가** 요청 파일을 지운다.
+    #
+    # 전에는 프롬프트가 Claude 에게 "요청 파일은 지워 주세요" 라고 했는데,
+    # **삭제는 `del` → ask** 다 — 쓰기 쪽과 같은 순환이었다(S9 e2e 가 잡았다).
+    # 요청 파일의 수명은 시스템의 일이다: 요청은 AI 가 쓰고, 소비는 우리가 한다.
+    # 안 지우면 다음 루프에서 같은 요청이 또 열린다(`sync` 가 파일을 본다).
+    removed = False
+    if result["ok"]:
+        try:
+            os.unlink(request_path(root))
+            removed = True
+        except OSError:
+            removed = False
     _write(root, {
         "ok": bool(result["ok"]),
         "state": "installed" if result["ok"] else "failed",
         "packages": pkgspec.requirements(parsed),
         "exitCode": result["exitCode"],
         "reason": result["reason"][:2000],
+        "requestRemoved": removed,
         "hint": (
-            "설치됐어요. 요청 파일은 지워도 돼요."
+            "설치됐어요. 요청 파일은 시스템이 지웠어요 — 다시 쓰지 말아 주세요."
             if result["ok"]
             else "실패했어요. 다른 방법을 찾아 주세요 — 같은 요청을 다시 쓰지 말아 주세요."
         ),
