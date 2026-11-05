@@ -3913,3 +3913,92 @@ systemd-run --user --scope --unit=labremote-train-probe --collect -- sh -c 'cat 
 없어서 `--tmpfs`·`denyRead` 로 못 가립니다. 네트워크 네임스페이스를 끊으면
 (`--unshare-net`) 막히지만 학습이 데이터셋·모델을 받아야 해서 네트워크는 열어
 둡니다. dbus·ssh-agent·gpg 는 전부 **경로** 소켓이라 이 가림으로 닫힙니다.
+
+# 📖 Claude Bash 샌드박스의 유닉스 소켓 처리 — 2.1.318 번들 읽기 (2026-11-05 S9)
+
+탐침은 돌리지 않았습니다. 설치된 번들
+(`~/.local/share/claude/versions/2.1.318`, ELF standalone)을 `strings` 로
+읽었습니다. 아래 인용은 전부 그 번들의 문자열입니다.
+
+## 설정 키 — `sandbox.network.` 아래, Linux 는 전부-아니면-전무
+
+설정 스키마 설명 그대로:
+
+> `allowUnixSockets`: "macOS only: Unix socket paths to allow. **Ignored on Linux (seccomp cannot filter by path).**"
+>
+> `allowAllUnixSockets`: "If true, allow all Unix sockets (disables blocking on both platforms). On Linux this also unblocks VM sockets (AF_VSOCK)."
+
+→ **Linux 기본값은 차단**입니다(`allowAllUnixSockets` 미설정). 경로별 허용은
+Linux 에서 무시됩니다. 우리 `--settings` 는 두 키를 **안 씁니다.** 신뢰
+계층도 정해져 있습니다: "Unix socket paths allowed (allowUnixSockets), as
+enforced: … from managed, --settings and user settings only" — 프로젝트
+설정으로는 못 넓힙니다. 사용자 설정에는 `sandbox` 절이 없습니다(`doctor` ✔).
+
+## 막는 방식 — `socket(AF_UNIX, …)` 생성을 seccomp 로
+
+> "seccomp filter only blocks socket(AF_UNIX, ...), but on 32-bit x86, socketcall() can be used to bypass this."
+
+→ 경로가 아니라 **생성** 단계에서 막습니다. 그래서 파일시스템에 없는
+**추상 소켓까지** 막힙니다 — 학습 bwrap 의 tmpfs 가림보다 넓습니다.
+문서화된 예외: 32-bit x86 의 `socketcall()`.
+
+필터는 명령을 bwrap 으로 감쌀 때 붙고, 그 사실이 디버그 로그에 남습니다:
+
+> `if(Ht)Nt.push("seccomp(unix-block)");` … `It(\`[Sandbox Linux] Wrapped command with bwrap (${Nt.join(", ")} restrictions)\`)`
+
+## helper — standalone 빌드는 **자기 자신**을 쓴다
+
+> `function Ku(){return typeof Bun<"u"&&Bun.isStandaloneExecutable===!0}`
+>
+> `function tyr(){if(!w4())return;return{applyPath:\`/proc/self/fd/${Ude}\`,argv0:"apply-seccomp"}}`
+>
+> "sandbox: failed to open /proc/self/exe for the embedded apply-seccomp helper"
+
+→ 이 설치(standalone)에서는 claude 바이너리가 `/proc/self/exe` 로 자기를
+열어 **내장 apply-seccomp** 로 씁니다. 그 helper 의 C 문자열
+(`apply-seccomp: prctl(PR_SET_NO_NEW_PRIVS)`, `apply-seccomp: prctl(PR_SET_SECCOMP)`)
+도 같은 바이너리에 들어 있습니다. `/proc/self/exe` 를 못 열면 **던집니다**
+(fail-closed).
+
+## ⚠ 꺼지는 경로 — 경고만 내고 그냥 돈다
+
+> `"[Sandbox Linux] apply-seccomp binary not available - unix socket blocking disabled. Install @anthropic-ai/sandbox-runtime globally for full protection.",{level:"warn"}`
+>
+> `"[Sandbox Linux] Skipping seccomp filter - allowAllUnixSockets is enabled"`
+
+→ helper 를 못 찾으면 **fail-open** 입니다. `failIfUnavailable` 은 bwrap
+가용성을 보는 것이라 이 경우를 막지 않습니다(번들의 기기 도구 쪽은 같은
+상황을 `sandbox_seccomp_unavailable` 로 거절하지만 Bash 경로는 경고만).
+
+## 결론과 조치
+
+| 질문 | 번들이 말하는 것 |
+|---|---|
+| seccomp 로 AF_UNIX 생성 차단? | **예**, 설계상 기본값 |
+| 설정 키 | `sandbox.network.allowAllUnixSockets`(기본 미설정 = 차단) · `allowUnixSockets`(Linux 무시) |
+| 이 설치에서 helper | 내장 (`/proc/self/exe`, argv0 `apply-seccomp`) |
+| 못 붙으면 | 경고만 · **차단 해제된 채로 돈다** |
+
+**설계는 막는 쪽이지만, 이 머신에서 실제로 붙는지는 런타임 사실**이라
+번들로는 못 박습니다. 그래서
+
+- 헤드리스 코드 실행(`python <스크립트>`·`python -m …`·`pytest` 와
+  래퍼로 감싼 것)은 정책 `sandbox.socketVerified` 가 켜지기 전까지
+  **권한 단계와 무관하게 `coderun`(승인)** 입니다. 1회용 허가로 한 건씩
+  승인할 수 있습니다(잠금 아님). `bash.allowExtra` 의 인터프리터도 확인
+  전에는 무시합니다.
+- 확인은 **Claude Code 판에 묶입니다** — `labremote tools` 가 기록한 판이
+  바뀌면 저절로 미확인이 됩니다.
+- 확인 방법: `labremote sandbox-check <프로젝트>` 가 무해한 `ls` 하나를 실제
+  런처로 띄우고 `--debug-file` 의 위 줄들을 읽습니다. 스위치는 **사람이**
+  `labremote policy-socket-verified <프로젝트> --on --note "…"` 로 켭니다.
+- 남는 것: 32-bit `socketcall()` 예외(번들이 스스로 적은 한계).
+
+## 같이 드러난 것 — `trainrun` 이 실제로는 안 걸리고 있었습니다
+
+훅은 YAML 을 못 읽어서 정책의 `bash.entrypoints` 사본을 보는데, **이 사본을
+채우는 코드가 없었습니다**(기본 템플릿의 `[]` 뿐). 그래서 entrypoint 직접
+실행 차단(`trainrun`)이 라이브에서 한 번도 안 걸렸고, 헤드리스
+`python src/fake_train.py` 가 `newexp → allow` 였습니다. 시험은 정책을 직접
+채워서 통과했습니다. 이제 `guards.check_loop` 가 **루프 상태와 무관하게**
+바퀴마다 맞추고, `doctor` 가 어긋나면 ✘ 를 띄웁니다.

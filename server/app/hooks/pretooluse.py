@@ -51,6 +51,7 @@ def _ctx_from(event: dict):
         # 설정을 **매번 읽는다.** 사람이 꺼 두면 그 다음 호출부터 바로
         # 코드 실행이 닫힌다 (fail-closed).
         sandbox=bool(policy_mod.sandbox_state(root).get("ok")),
+        socket_verified=bool(policy_mod.socket_verification(pol).get("verified")),
     )
 
 

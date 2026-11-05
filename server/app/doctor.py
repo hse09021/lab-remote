@@ -340,6 +340,61 @@ def entrypoint_check(root: str, name: str = "") -> Check:
     return Check(False, title, gap, hint=RUN_BLOCK_HINT, level="warn" if fresh else "bad")
 
 
+def entrypoint_policy_check(root: str, name: str) -> Check:
+    """훅이 보는 entrypoint 사본(정책)이 `Config.yaml` 과 같은가.
+
+    다르면 `trainrun`(entrypoint 직접 실행 차단)이 **조용히 안 걸린다** —
+    실측 2026-11-05 에 정책 쪽이 `[]` 였다. 루프가 바퀴마다 맞추지만
+    루프를 안 돌린 사이의 어긋남은 여기서 본다.
+    """
+    from . import policy as policy_mod
+    from .orchestrator import guards
+    from .runner import spec as spec_mod
+
+    title = f"entrypoint 사본 · {name}"
+    want = sorted(spec_mod.entrypoints_of(guards.read_config(root)))
+    try:
+        have = sorted(policy_mod.load(name).bash.get("entrypoints") or [])
+    except Exception as exc:
+        return Check(False, title, f"정책을 읽을 수 없어요: {exc}")
+    if want == have:
+        return Check(True, title, "Config.yaml 과 같아요" + (f": {', '.join(want)}" if want else " (둘 다 비어 있어요)"))
+    return Check(
+        False, title,
+        f"정책 {have or '[]'} · Config.yaml {want or '[]'} — 학습 직접 실행 차단이 안 걸려요",
+        hint="루프를 한 바퀴 돌리면 맞춰져요 (labremote up --once)",
+        level="bad",
+    )
+
+
+def socket_check(name: str) -> Check:
+    """Claude Bash 샌드박스의 유닉스 소켓 차단을 사람이 확인했나.
+
+    확인 전이면 헤드리스 코드 실행(python·pytest)은 승인으로 간다 — 루프는
+    돌지만 분석 스크립트를 쓰는 바퀴는 멈춘다. 그래서 ✘ 가 아니라 ⚠ 다.
+    """
+    from . import policy as policy_mod
+
+    title = f"Claude Bash 소켓 차단 · {name}"
+    try:
+        got = policy_mod.socket_verification(policy_mod.load(name))
+    except Exception as exc:
+        return Check(False, title, f"정책을 읽을 수 없어요: {exc}", level="warn")
+    if got["verified"]:
+        bits = [f"{got['for']} 에서 사람이 확인했어요"]
+        if got["at"]:
+            bits.append(got["at"][:10])
+        if got["note"]:
+            bits.append(got["note"][:60])
+        return Check(True, title, " · ".join(bits))
+    return Check(
+        False, title,
+        f"미확인 — {got['reason']} · 헤드리스 코드 실행(python·pytest)은 승인으로 가요",
+        hint=f"labremote sandbox-check {name} → 결과를 보고 labremote policy-socket-verified {name} --on --note \"…\"",
+        level="warn",
+    )
+
+
 #: 셸 함수를 찾아볼 파일
 SHELL_FILES = ("~/.bashrc", "~/.zshrc", "~/.bash_aliases", "~/.profile")
 
@@ -1032,6 +1087,8 @@ def run() -> dict:
         # 실험 conda 환경이 우리 환경이 아닌지 (.pth 자동 실행)
         checks.append(project_env_check(root, name))
         checks.append(entrypoint_check(root, name))
+        checks.append(entrypoint_policy_check(root, name))
+        checks.append(socket_check(name))
         # 승인 기록 사본이 진본과 같은지
         checks.append(audit_check(root, name, pol))
         # 정책의 금지 명령이 다 있는지 (자기 승인 차단·격리 깨기)

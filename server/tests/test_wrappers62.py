@@ -155,7 +155,27 @@ def test_아는_명령은_래퍼로_감싸도_통과한다(ctx, sandboxed):
 
     ctx.headless = True
     ctx.sandbox = policy.sandbox_state(sandboxed)["ok"]
+    ctx.socket_verified = True  # 코드 실행 게이트는 따로 시험한다 (아래)
     for command in ("nice -n 10 ls -la", "conda run -n base pytest -q", "timeout 30 git status"):
         found = bashparse.classify_with_coverage(command, ctx)
         ctx.event = {"tool_name": "Bash", "tool_input": {"command": command}}
         assert D.resolve(found, ctx).kind == "allow", command
+
+
+def test_래퍼로_감싼_코드_실행도_소켓_확인_전엔_승인(ctx, sandboxed):
+    """`conda run`·`uv run`·`nice` 로 감싸도 안쪽이 다시 분류된다."""
+    from app import policy
+
+    ctx.headless = True
+    ctx.sandbox = policy.sandbox_state(sandboxed)["ok"]
+    ctx.socket_verified = False
+    for command in (
+        "conda run -n base pytest -q",
+        "uv run pytest",
+        "nice -n 10 python src/x.py",
+        "timeout 30 python3 -m mypkg",
+    ):
+        found = bashparse.classify_with_coverage(command, ctx)
+        assert "coderun" in {f.action for f in found}, command
+        ctx.event = {"tool_name": "Bash", "tool_input": {"command": command}}
+        assert D.resolve(found, ctx).kind != "allow", command

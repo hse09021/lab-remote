@@ -39,6 +39,7 @@ LABELS = {
     "schema-unknown": "훅이 못 읽은 입력",
     "denied-command": "금지된 명령",
     "trainrun": "학습 직접 실행",
+    "coderun": "코드 실행 (소켓 차단 확인 전)",
 }
 
 
@@ -323,6 +324,16 @@ def trainrun_headless(what: str) -> str:
         "experiments/<실험 ID>/run.json 에 entrypoint 와 args 로 **명세만** "
         "적어 주세요. 그러면 시스템이 돌리고 결과를 알려 줘요. "
         "권한 단계와 무관하게 막혀 있어서 승인으로도 열리지 않아요."
+    )
+
+
+def coderun_unverified(what: str, project: str = "<프로젝트>") -> str:
+    return (
+        f"코드 실행은 지금 승인이 필요해요: {what} · "
+        "Claude Bash 샌드박스가 유닉스 소켓을 막는지 사람이 아직 확인하지 않아서, "
+        "헤드리스에서는 권한 단계와 무관하게 사람이 한 번 보고 정해요. "
+        f"확인 절차: labremote sandbox-check {project} → 결과를 보고 "
+        f"labremote policy-socket-verified {project} --on --note \"…\""
     )
 
 
