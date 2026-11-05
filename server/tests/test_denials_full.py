@@ -486,3 +486,50 @@ def test_목록이_정리_명령을_알려_준다(conn, project, project_root, c
     cli.main(["approvals", "list", "hook-sandbox"])
     out = capsys.readouterr().out
     assert "approvals prune hook-sandbox --yes" in out
+
+
+# --- policy-allow-extra ----------------------------------------------------------
+
+
+def test_allow_extra_가_더하기만_한다(conn, project, project_root, capsys):
+    """기본 목록은 코드가 단일 출처다 — 정책으로 **줄이지는** 못한다.
+    그런데 그 목록에 손댈 명령이 없어서 쓸 수 없는 장치였다."""
+    from app import policy as policy_mod
+
+    capsys.readouterr()
+    assert cli.main(["policy-allow-extra", "hook-sandbox",
+                     "--add", "jq", "--add", "column"]) == 0
+    assert "2개를 더했어요" in capsys.readouterr().out
+    assert policy_mod.load("hook-sandbox").bash["allowExtra"] == ["jq", "column"]
+
+    # 또 더해도 중복이 안 쌓인다
+    assert cli.main(["policy-allow-extra", "hook-sandbox", "--add", "jq"]) == 0
+    assert policy_mod.load("hook-sandbox").bash["allowExtra"] == ["jq", "column"]
+
+
+def test_allow_extra_가_이름만_받는다(conn, project, project_root, capsys):
+    """경로·옵션이 들어가면 허용 목록이 의미를 잃는다."""
+    for bad in ["../rm", "rm -rf", "jq; sh", "/bin/sh", "RM"]:
+        capsys.readouterr()
+        assert cli.main(["policy-allow-extra", "hook-sandbox", "--add", bad]) == 2
+
+
+def test_allow_extra_가_정말_허용으로_이어진다(conn, ctx, project, project_root):
+    """더하기만 하고 판정이 안 바뀌면 거짓 초록불이다."""
+    from app import policy as policy_mod
+    from app.hooks import bashparse, decide as D
+
+    def headless(command):
+        found = bashparse.classify_with_coverage(command, ctx)
+        ctx.headless = True
+        ctx.event = {"tool_name": "Bash", "tool_input": {"command": command}}
+        return D.resolve(found, ctx).kind if found else "(분류 없음)"
+
+    assert headless("jq . run.json") != "allow"
+    cli.main(["policy-allow-extra", "hook-sandbox", "--add", "jq"])
+    ctx.policy = policy_mod.load("hook-sandbox")
+    assert headless("jq . run.json") == "allow"
+
+
+def test_allow_extra_가_등록_안_된_프로젝트를_거부한다(conn, capsys):
+    assert cli.main(["policy-allow-extra", "없는것", "--add", "jq"]) == 2

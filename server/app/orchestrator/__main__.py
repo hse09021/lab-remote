@@ -15,6 +15,7 @@ import time
 from .. import db, registry
 from ..store import loops as LP
 from . import approvals as approvals_mod
+from . import approvals as AP_ORCH
 from . import recovery as recovery_mod
 from .loop import plan_step, resume_step, review_step, train_step, waiting_approval
 from .runner_ctx import LoopCtx
@@ -25,15 +26,29 @@ __all__ = ["main", "once"]
 IDLE_SEC = 10.0
 
 
-def usable_grants(project: str) -> list[dict]:
-    """사람이 승인해 둔, 아직 안 쓴 허가."""
+def usable_grants(project: str, *, request: dict | None = None) -> list[dict]:
+    """사람이 승인해 둔, 아직 안 쓴 허가.
+
+    `request` 를 주면 **그 요청의 것만** 고른다. 전에는 아무 허가 하나라도
+    쓸 수 있으면 재개했다 — 다른 요청의 허가로 엉뚱한 세션을 이어 가는 길이다.
+    """
     from .. import grants as grants_mod
 
-    return [
+    out = [
         g
         for g in grants_mod.list_grants(project)
         if g.get("signatureOk") and not g.get("expired")
     ]
+    if not request:
+        return out
+    wanted_session = str(request.get("session_id") or "")
+    wanted_request = str(request.get("request_id") or "")
+    picked = [
+        g for g in out
+        if (not wanted_request or str(g.get("requestId") or "") == wanted_request)
+        or (not wanted_session or str(g.get("sessionId") or "") == wanted_session)
+    ]
+    return picked
 
 
 def _resuming_experiment(conn, project: str) -> str:
@@ -86,16 +101,79 @@ def once(conn, project: str, root: str, **kw) -> dict:
     if waiting:
         # **허가가 있을 때만** 다시 띄운다. 승인도 안 났는데 띄우면 같은
         # 자리에서 또 막히고 사용량만 쓴다.
-        if not usable_grants(project):
-            return {"ok": False, "steps": steps, "stoppedAt": "approval", "waiting": waiting}
+        item = waiting[0]
+        if not usable_grants(project, request=item):
+            # 🔑 **승인은 났는데 허가가 없다** = 재개가 이미 지나갔다.
+            #
+            # 승인 뒤 재개가 그 호출을 다시 안 하면 요청은 열린 채로 남고,
+            # 재개가 끝나며 허가는 지워진다(S3). 그 상태를 "대기" 로 두면
+            # 다음 바퀴마다 여기서 바로 멈추고 **사람이 또 승인해도 같은
+            # 자리로 돌아온다** — 풀릴 길이 없다 (실측 2026-11-05).
+            #
+            # 아직 승인 전(`open`)이면 **그대로 기다린다.** 그게 승인 대기의
+            # 본래 뜻이다.
+            if str(item.get("state") or "") == "approved":
+                AP_ORCH.abandon(
+                    conn, project, str(item.get("request_id") or ""),
+                    reason="승인했지만 허가가 이미 지나갔어요 (재개가 그 호출을 다시 안 했어요)",
+                )
+                waiting = waiting_approval(conn, project)
+                if waiting:
+                    return {
+                        "ok": False, "steps": steps,
+                        "stoppedAt": "approval", "waiting": waiting,
+                    }
+                item = None
+            else:
+                return {
+                    "ok": False, "steps": steps,
+                    "stoppedAt": "approval", "waiting": waiting,
+                }
+        if item is None:
+            # 막혀 있던 건을 닫았다. 설계부터 평소대로 간다.
+            planned = plan_step(ctx, conn)
+            steps.append(planned)
+            if planned.get("waiting"):
+                return {"ok": False, "steps": steps, "stoppedAt": "approval"}
+            if not planned.get("ok"):
+                return {"ok": False, "steps": steps, "stoppedAt": "plan"}
+            exp_id = planned["experimentId"]
+            trained = train_step(ctx, conn, exp_id)
+            steps.append(trained)
+            if trained.get("blocked"):
+                return {"ok": False, "steps": steps, "stoppedAt": "train"}
+            reviewed = review_step(ctx, conn, exp_id, trained.get("outcome"))
+            steps.append(reviewed)
+            return {
+                "ok": bool(reviewed.get("ok")),
+                "steps": steps,
+                "stoppedAt": None if reviewed.get("ok") else "review",
+                "experimentId": exp_id,
+            }
+
         session_id = str(
-            waiting[0].get("session_id")
-            or (waiting[0].get("file") or {}).get("sessionId")
+            item.get("session_id")
+            or (item.get("file") or {}).get("sessionId")
             or ""
         )
-        resumed = resume_step(ctx, conn, session_id, request=waiting[0])
+        request_id = str(item.get("request_id") or "")
+        resumed = resume_step(ctx, conn, session_id, request=item)
         steps.append(resumed)
-        if waiting_approval(conn, project):
+
+        # 🔑 재개했는데 **그 호출을 다시 안 했으면** 요청을 닫는다.
+        #
+        # 재개가 끝나면서 허가는 지워진다(S3). 그래서 요청을 열어 두면 다음
+        # 바퀴는 "요청 열림 + 허가 없음" 이라 바로 멈추고, 사람이 또 승인해도
+        # 같은 자리로 돌아온다 — **기다림이 풀릴 길이 없다.** 실측에서 재개한
+        # 세션이 도구를 한 번도 안 부르고 끝났다 (9단계 1번, 2026-11-05).
+        still = {str(r.get("request_id") or "") for r in waiting_approval(conn, project)}
+        if request_id and request_id in still:
+            AP_ORCH.abandon(
+                conn, project, request_id,
+                reason="재개했는데 같은 호출을 다시 하지 않았어요",
+            )
+            still.discard(request_id)
+        if still:
             return {"ok": False, "steps": steps, "stoppedAt": "approval"}
         exp_id = _resuming_experiment(conn, project)
         if not exp_id:
