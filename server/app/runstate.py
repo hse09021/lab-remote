@@ -20,7 +20,10 @@ from datetime import datetime
 
 from . import registry
 
-__all__ = ["RunState", "load", "set_running", "set_idle", "mark_started", "locked"]
+__all__ = [
+    "RunState", "load", "set_running", "set_reviewing", "set_idle",
+    "mark_started", "locked",
+]
 
 
 @dataclass
@@ -163,6 +166,32 @@ def _set_running(name: str, experiment_id: str, pid: int | None) -> None:
         },
         keep_started=False,
     )
+
+
+def set_reviewing(name: str, experiment_id: str) -> None:
+    """학습은 끝났고 **분석(C)이 도는 중**이다. `started` 는 지우지 않는다.
+
+    🔑 왜 따로 두나 (실측 2026-11-05). 전에는 학습이 끝나면 바로 `set_idle`
+    이었다. 그러면 `experimentId` 가 `None` 이 되어 **방금 끝난 실험이 "이전
+    실험" 이 된다** — C 가 자기 `analysis.md` 를 쓰려는데 `prev` 잠금에
+    걸려 승인 대기로 멈췄다. 그리고 `running` 이 거짓이 되니 `stop` 잠금도
+    풀려서, **결과를 본 뒤에 `docs/Evaluation.md` 를 고칠 수** 있었다 —
+    spec 이 금지하는 바로 그것이다.
+
+    그래서 분석이 끝날 때까지 "그 실험 안에 있다" 로 둔다. `pid` 는 비운다
+    (학습 프로세스는 정말로 끝났다) — `_alive(None)` 이 참이라 좀비로도
+    안 잡힌다.
+    """
+    with locked(name):
+        _write(
+            name,
+            {
+                "running": True,
+                "experimentId": experiment_id,
+                "pid": None,
+                "source": "cli",
+            },
+        )
 
 
 def set_idle(name: str) -> None:

@@ -63,6 +63,7 @@ __all__ = [
     "resume_step",
     "waiting_approval",
     "update_order",
+    "fill_journal",
     "DEFAULT_METRIC",
     "DIRECTIONS",
 ]
@@ -631,7 +632,9 @@ def train_step(ctx, conn, exp_id: str) -> dict:
         error=None if outcome.state == "done" else outcome.state,
     )
     X.upsert(conn, ctx.project, exp_id, gpu_sec=int(outcome.seconds))
-    loopstate.set_idle(ctx.project, root=ctx.root)
+    # 학습은 끝났지만 **아직 그 실험 안에 있다.** C 가 자기 폴더에 쓰고,
+    # 그때까지 `Config.yaml`·`Evaluation.md` 는 잠겨 있어야 한다.
+    loopstate.set_reviewing(ctx.project, exp_id, root=ctx.root)
     return {
         "ok": outcome.state == "done",
         "stage": "train",
@@ -640,6 +643,51 @@ def train_step(ctx, conn, exp_id: str) -> dict:
         "outcome": outcome,
         "spec": spec,
     }
+
+
+def fill_journal(ctx, conn, exp_id: str, session_id: str, order: dict, *, trained_ok: bool = True) -> dict:
+    """빠진 기록을 **한 번** 더 부탁한다 (`fill_missing_journal`).
+
+    🔑 이 프롬프트는 **정의만 돼 있고 아무도 안 불렀다** (실측 2026-11-05:
+    EXP-008 이 `analysis.md` 하나 빠져서 멈췄다). 계획에는 "빠지면
+    `--resume` 으로 `fill_missing_journal` **1회**" 라고 적혀 있었는데
+    연결이 없었다 — 그러면 사람이 직접 파일을 쓰거나 루프를 포기해야 한다.
+
+    **1회뿐이다.** 그래도 안 채우면 그대로 보고하고 사람을 부른다. 같은
+    부탁을 반복하면 사용량만 쓴다.
+
+    같은 세션을 `--resume` 으로 이어 간다 — 결과를 이미 본 세션이라 빠진
+    자리를 다시 설명할 필요가 없다.
+    """
+    missing = list(order.get("missing") or [])
+    if not missing:
+        return order
+    prompt = prompts_mod.render(
+        "fill_missing_journal",
+        {
+            "exp_id": exp_id,
+            "missing": "\n".join(f"- `{name}`" for name in missing),
+            "context": ctx.context,
+        },
+    )
+    _claude(
+        ctx, conn, prompt=prompt, session_id=session_id, resume=True, stage="journal_fix"
+    )
+    after = update_order(ctx.root, exp_id, trained_ok=trained_ok)
+    if after["ok"]:
+        E.add(
+            conn, ctx.project, "기록",
+            f"{exp_id} 의 빠진 기록을 채웠어요: {', '.join(missing)}",
+            ref=exp_id,
+        )
+    else:
+        E.add(
+            conn, ctx.project, "기록",
+            f"{exp_id} 의 기록이 아직 비어 있어요: {', '.join(after['missing'])}"
+            " (한 번 더 부탁했는데도요)",
+            tone="attention", ref=exp_id,
+        )
+    return after
 
 
 def update_order(root: str, exp_id: str, *, trained_ok: bool = True) -> dict:
@@ -680,7 +728,21 @@ def update_order(root: str, exp_id: str, *, trained_ok: bool = True) -> dict:
 
 
 def review_step(ctx, conn, exp_id: str, outcome) -> dict:
-    """C · 분석. 끝나고 **AI 의 말과 숫자를 대조한다.**"""
+    """C · 분석. 끝나고 **AI 의 말과 숫자를 대조한다.**
+
+    끝나면 **무슨 일이 있어도** 실행 표시를 내린다 — 안 내리면
+    `Config.yaml`·`Evaluation.md` 가 계속 잠겨 사람도 못 고친다.
+    """
+    try:
+        return _review(ctx, conn, exp_id, outcome)
+    finally:
+        try:
+            loopstate.set_idle(ctx.project, root=ctx.root)
+        except Exception:
+            pass
+
+
+def _review(ctx, conn, exp_id: str, outcome) -> dict:
     LP.set_state(conn, ctx.project, "reviewing")
     session_id = session_mod.new_id()
     prompt = prompts_mod.render(
@@ -703,6 +765,8 @@ def review_step(ctx, conn, exp_id: str, outcome) -> dict:
     numbers = _numbers(ctx.root, exp_id)
     trained_ok = getattr(outcome, "state", "") == "done"
     order = update_order(ctx.root, exp_id, trained_ok=trained_ok)
+    if not order["ok"]:
+        order = fill_journal(ctx, conn, exp_id, session_id, order, trained_ok=trained_ok)
 
     disagree = said is not None and numbers["success"] is not None and said != numbers["success"]
     X.upsert(

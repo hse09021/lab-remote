@@ -828,3 +828,85 @@ def test_실패했는데_Failures_를_안_쓰면_어긋난다(ready):
         fh.write("왜 실패했는지\n")
     got = update_order(ready, "EXP-001", trained_ok=False)
     assert "logs/Failures.md" in got["missing"]
+
+
+def test_빠진_기록을_한_번_더_부탁한다(conn, ready, fake):
+    """`fill_missing_journal` 은 **정의만 돼 있고 아무도 안 불렀다.**
+
+    실측 2026-11-05: EXP-008 이 `analysis.md` 하나 빠져서 멈췄다. 계획에는
+    "빠지면 `--resume` 으로 1회" 라고 적혀 있었는데 연결이 없었다.
+    """
+    asked = {"n": 0}
+
+    def review_but_forget(root, prompt):
+        """`analysis.md` 만 빼고 쓴다."""
+        exp_id = exp_id_of(prompt)
+        folder = os.path.join(root, "experiments", exp_id)
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, "result.csv"), "w", encoding="utf-8") as fh:
+            fh.write("step,split,metric,value\n1,val,loss,1.0\n")
+        for rel, text in (
+            ("logs/Experiment_log.csv", f"{exp_id},done\n"),
+            ("logs/Decision_log.md", f"- {exp_id}\n"),
+            ("state/State.yaml", f"current_experiment: {exp_id}\n"),
+        ):
+            path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+        return "## Final Report\n- 성공 기준 충족 여부: 충족\n"
+
+    def fill(root, prompt):
+        asked["n"] += 1
+        assert "analysis.md" in prompt, prompt
+        exp_id = exp_id_of(prompt)
+        with open(
+            os.path.join(root, "experiments", exp_id, "analysis.md"), "w", encoding="utf-8"
+        ) as fh:
+            fh.write("# 분석\n기준선이에요.\n")
+        return "빠진 것만 채웠어요"
+
+    fake.on_plan = plan_writes_run_json
+    fake.on_review = lambda root, prompt: (
+        fill(root, prompt) if "기록이 비어 있어요" in prompt else review_but_forget(root, prompt)
+    )
+
+    got = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert asked["n"] == 1, "빠진 기록을 안 물어봤어요"
+    assert got["steps"][-1]["updateOrder"]["ok"] is True, got["steps"][-1]["updateOrder"]
+    assert got["ok"] is True, got
+
+    # 같은 세션을 이어 간다 — 결과를 이미 본 세션이다
+    filled = [c for c in fake.calls if "기록이 비어 있어요" in c["prompt"]][0]
+    assert "--resume" in filled["argv"]
+
+
+def test_한_번_더_부탁해도_안_채우면_그대로_보고한다(conn, ready, fake):
+    """같은 부탁을 반복하면 사용량만 쓴다. **1회뿐이다.**"""
+    asked = {"n": 0}
+
+    def review_but_forget(root, prompt):
+        if "기록이 비어 있어요" in prompt:
+            asked["n"] += 1
+            return "못 채웠어요"
+        return review_writes_journal(root, prompt).replace("# 분석", "")
+
+    fake.on_plan = plan_writes_run_json
+    fake.on_review = review_but_forget
+
+    # analysis.md 를 아예 안 쓰게 만든다
+    def strip_analysis(root, prompt):
+        text = review_writes_journal(root, prompt)
+        os.remove(os.path.join(root, "experiments", exp_id_of(prompt), "analysis.md"))
+        return text
+
+    fake.on_review = lambda root, prompt: (
+        review_but_forget(root, prompt)
+        if "기록이 비어 있어요" in prompt
+        else strip_analysis(root, prompt)
+    )
+
+    got = once(conn, "hook-sandbox", ready, **ctx_for(ready, fake))
+    assert asked["n"] == 1
+    assert got["ok"] is False and got["stoppedAt"] == "review"
+    assert "analysis.md" in stop_reason(got)
