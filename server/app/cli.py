@@ -800,6 +800,16 @@ def cmd_approvals(args) -> int:
                 print(f"     {row.get('action_key')} · {_shorten(str(row.get('request') or ''))}")
                 print(f"     열린 때 {row.get('opened_at') or '[못 읽었어요]'}"
                       f" · 횟수 {row.get('attempts', 0)} · 출처 {row.get('source')}")
+                # 🔑 **승인됨**과 **승인 대기**는 생김새가 같다.
+                #
+                # `approve` 는 요청 파일을 닫지 않는다 — 훅이 허가를 소비할 때
+                # 닫는다. 그래서 승인 직후도 "파일 있음" 이고 목록에서 안
+                # 구별됐다. 사람이 "승인했는데 왜 아직 떠 있지" 로 막혔다
+                # (9단계 1번, 2026-11-05).
+                if str(row.get("state") or "") == "approved":
+                    print("     ✔ 승인됨 · 이어 가기 대기 — labremote up --once 로"
+                          " 이어 가요")
+                    print("        훅이 그 호출을 다시 받아 허가를 쓰면 닫혀요.")
                 if str(row.get("action_key") or "") in grants.NO_GRANT_ACTIONS:
                     # 승인해도 아무 일이 안 일어난다 (M3) — 기록만 거짓이 된다
                     print("     ⛔ 승인 불가 — 설치 요청 경로로 "
@@ -1081,6 +1091,64 @@ def cmd_usage(args) -> int:
     use = AC.totals(calls)
     print(f"합계  Claude 호출 {use['calls']}건 · 벽시계 {_ms(use['wall_ms'])}"
           f" · 비용 {_cost(use['cost_usd'], use['cost_usdKnown'])}")
+    return 0
+
+
+#: 허용 목록에 더할 수 있는 이름. **이름만** — 경로·옵션·따옴표는 안 된다.
+_SAFE_CMD_RE = __import__("re").compile(r"\A[a-z0-9][a-z0-9_.+-]{0,31}\Z")
+
+def cmd_policy_allow_extra(args) -> int:
+    """➕ 헤드리스 허용 목록에 **사람이** 명령을 더한다 (`bash.allowExtra`).
+
+    설계대로 **더하기만** 된다. 기본 목록은 코드가 단일 출처다 — AI 가 정책을
+    통해 목록을 넓히는 길을 막으려는 것이고, 정책 파일은 프로젝트 밖이라 AI 가
+    못 고친다. 그런데 **그 목록에 손댈 명령이 없어서** 쓸 수 없는 장치였다.
+
+    ⚠ 더하기 전에 한 번 보세요: 그 명령이 **파일을 쓰거나 다른 명령을 돌릴 수
+    있나.** 예를 들어 `awk` 는 `print > "파일"` 과 `system()` 이 있어서
+    읽기 전용이 아니에요.
+    """
+    from . import policy as policy_mod
+
+    if not registry.root_of(args.project):
+        print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.project}", file=sys.stderr)
+        return 2
+    try:
+        pol = policy_mod.load(args.project)
+    except Exception as exc:
+        print(f"✘ 정책을 읽지 못했어요: {exc}", file=sys.stderr)
+        return 2
+
+    bash = pol.data.setdefault("bash", {})
+    now = [str(x) for x in (bash.get("allowExtra") or [])]
+
+    if not args.add:
+        print(f"프로젝트  {args.project}")
+        print(f"정책 파일 {pol.path}")
+        print("더해 둔 명령  " + (", ".join(now) if now else "없어요"))
+        print()
+        print("기본 목록은 코드가 갖고 있어요 (여기서는 **더하기만** 돼요).")
+        print("더하려면:  labremote policy-allow-extra " + args.project
+              + " --add jq --add column")
+        return 0
+
+    bad = [n for n in args.add if not _SAFE_CMD_RE.match(n)]
+    if bad:
+        print(f"✘ 명령 이름으로 쓸 수 없어요: {', '.join(bad)}", file=sys.stderr)
+        print("  이름만 적어 주세요 (경로·옵션·따옴표는 안 돼요)", file=sys.stderr)
+        return 2
+
+    added = [n for n in args.add if n not in now]
+    bash["allowExtra"] = now + added
+    policy_mod.save(pol)
+    if added:
+        print(f"✔ {len(added)}개를 더했어요: {', '.join(added)}")
+    else:
+        print("이미 다 들어 있어요.")
+    print("더해 둔 명령  " + ", ".join(bash["allowExtra"]))
+    print()
+    print("조각 하나라도 모르면 전체가 승인 대기로 가요 — 복합 명령은")
+    print("모든 조각이 목록에 있어야 통과해요.")
     return 0
 
 
@@ -1565,6 +1633,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--note", help="승인 메모")
     p.add_argument("--reason", help="거절 사유")
     p.set_defaults(func=cmd_approvals)
+
+    p = sub.add_parser(
+        "policy-allow-extra",
+        help="헤드리스 허용 목록에 명령을 **더해요** (사람만 · 빼지는 못해요)",
+    )
+    p.add_argument("project")
+    p.add_argument(
+        "--add", action="append", default=[],
+        help="더할 명령 이름 (여러 번 쓸 수 있어요). 없으면 지금 목록만 보여 줘요",
+    )
+    p.set_defaults(func=cmd_policy_allow_extra)
 
     p = sub.add_parser(
         "usage",

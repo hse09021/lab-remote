@@ -223,7 +223,6 @@ def test_버리는_곳으로_가는_리다이렉트는_예외(ctx, command):
         "git checkout main",
         "git branch -d exp-001",
         "git branch -m 새이름",
-        "grep -i 패턴 README.md",
         "sed -i 's/a/b/' 메모.txt",
         "sort -o 결과.txt README.md",
     ],
@@ -234,10 +233,28 @@ def test_위험_옵션은_허용_목록에서_빠진다(ctx, command):
 
 @pytest.mark.parametrize(
     "command",
-    ["find . -name '*.py' -type f", "git branch --list", "grep -n 패턴 src", "sort -r README.md"],
+    [
+        "find . -name '*.py' -type f",
+        "git branch --list",
+        "grep -n 패턴 src",
+        "sort -r README.md",
+        # `grep -i` 는 **대소문자를 안 가리는 것**이다 (읽기 전용).
+        # `sed -i`(제자리 수정)와 같은 함수로 묶여 있어서 순수 읽기가
+        # 승인 대기로 떨어졌다 — 9단계 1번에서 루프가 거기서 멈췄다.
+        "grep -i 패턴 README.md",
+        "grep -n -i '패턴|다른것' logs/Approval_log.csv",
+        "fgrep -i 패턴 README.md",
+    ],
 )
 def test_안전한_옵션은_그대로_통과(ctx, command):
     assert headless(ctx, command) == "allow", command
+
+
+def test_sed_의_i_는_여전히_막힌다(ctx):
+    """`grep -i` 를 열었다고 `sed -i` 까지 열리면 안 된다."""
+    assert headless(ctx, "sed -i 's/a/b/' 메모.txt") != "allow"
+    assert headless(ctx, "sed --in-place 's/a/b/' 메모.txt") != "allow"
+    assert headless(ctx, "sed 's/a/b/' 메모.txt") == "allow"
 
 
 # --- 조건 5: 기본 목록은 코드에, 정책은 추가만 ---------------------------------

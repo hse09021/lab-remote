@@ -266,6 +266,75 @@ def prune(conn, project: str, *, reason: str = "", by: str = "cli") -> list[dict
         done.append({**row, "state": "stale", "note": note})
     return done
 
+
+#: 사람이 승인한 뒤 **몇 번까지** 재개로 기회를 주나.
+#:
+#: 1 이다. 승인은 "그 호출 하나" 에 대한 1회용이고, 재개한 세션이 끝나면
+#: 오케스트레이터가 허가 파일을 지운다(S3). 그래서 두 번째 재개에는 쓸
+#: 허가가 이미 없다 — 더 기다리는 건 기다리는 척일 뿐이다.
+MAX_RESUMES = 1
+
+
+def granted_waiting(conn, project: str) -> list[dict]:
+    """**승인은 났는데 아직 안 쓰인** 요청.
+
+    `approve` 는 요청 파일을 닫지 않는다 — 훅이 허가를 **소비할 때** 닫는다.
+    그래서 승인 직후의 상태는 "파일 있음 + DB `approved`" 이고, 그건
+    `pending()` 과 생김새가 같다. 사람이 보는 목록에서 둘을 가르려고 따로 센다.
+    """
+    return [
+        row for row in pending(conn, project)
+        if str(row.get("state") or "") == "approved"
+    ]
+
+
+def abandon(conn, project: str, request_id: str, *, reason: str) -> dict:
+    """재개했는데 **그 호출을 다시 안 한** 요청을 닫는다.
+
+    ## 왜 닫아야 하나 (2026-11-05, 9단계 1번에서 교착)
+
+    설계는 "재개하면 Claude 가 같은 도구·같은 입력으로 한 번 더 시도한다" 를
+    전제했다. 실측에서 **안 했다** — 재개한 세션이 도구를 한 번도 안 부르고
+    (`num_turns 2` · 훅 이벤트 0건) 말로만 끝냈다. 그러면
+
+      1. 훅이 허가를 소비하지 못해 **요청 파일이 안 닫힌다**
+      2. 재개가 끝나면서 허가는 지워진다 (S3 — 재개한 세션이 끝난 뒤)
+      3. 다음 `up --once` 는 "요청 열림 + 허가 없음" 이라 **바로 멈춘다**
+      4. 2·3이 영원히 반복된다. 사람이 또 승인해도 1로 돌아온다
+
+    기다림이 풀릴 길이 없으므로 **닫는 것이 유일하게 앞으로 가는 상태**다.
+    조용히 닫지 않는다 — 사람이 승인한 건이라 "그래서 어떻게 됐나" 에 답할 수
+    있어야 한다. 사본과 진본 **둘 다**에 남긴다.
+    """
+    from .. import policy as policy_mod
+    from .. import registry
+
+    row = AP.by_request(conn, project, request_id) or {}
+    A.close_request(project, request_id, result=f"안 쓰임 · {reason}")
+    AP.decide(conn, project, request_id, "expired", by="orchestrator")
+
+    root = registry.root_of(project) or ""
+    try:
+        pol = policy_mod.load(project)
+    except Exception:
+        pol = None
+    if root:
+        A.append_row(
+            A.log_path(root, pol),
+            action=f"승인 미사용 · {row.get('action_key') or '[미분류]'}",
+            request=str(row.get("request") or request_id),
+            result=f"승인했지만 다시 시도하지 않았어요 · {reason}",
+            handled_by="시스템 · 재개 뒤 정리",
+            tool_use_id=request_id,
+            project=project,
+        )
+    E.add(
+        conn, project, "승인",
+        f"승인을 안 쓰고 지나갔어요: {request_id} · {reason}",
+        tone="attention",
+    )
+    return {**row, "state": "expired", "reason": reason}
+
 def too_many(row: dict) -> bool:
     return int(row.get("attempts") or 0) > MAX_ATTEMPTS
 

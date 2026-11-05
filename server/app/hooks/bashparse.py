@@ -565,8 +565,30 @@ def _allow_git(argv: list[str]) -> bool:
 
 
 def _allow_no_inplace(argv: list[str]) -> bool:
-    """`grep`·`sed` 는 `-i` 가 없을 때만 (sed -i 는 제자리 수정이다)."""
+    """`sed` 는 `-i` 가 없을 때만 — `sed -i` 는 **제자리 수정**이다."""
     return "i" not in _short_flags(argv) and "--in-place" not in _long_flags(argv)
+
+
+def _allow_grep(argv: list[str]) -> bool:
+    """`grep` 은 쓰는 플래그가 없다 — 경로만 프로젝트 안이면 된다.
+
+    ⚠ 전에는 `sed` 와 **같은 함수**를 썼다. `-i` 하나로 둘을 같이 봤는데
+    뜻이 전혀 다르다.
+
+    | 명령 | `-i` |
+    |---|---|
+    | `sed -i` | 파일을 **제자리에서 고친다** (파괴적) |
+    | `grep -i` | 대소문자를 안 가린다 (읽기 전용) |
+
+    그래서 `grep -n -i "EXP-00[345]" logs/Approval_log.csv` 같은 **순수 읽기**가
+    `unclassified` 로 떨어져 승인 대기가 됐다 — 9단계 1번에서 루프가 거기서
+    멈췄다. 경로 검사(`_targets_inside`)는 그대로 지나간다.
+
+    `-r`·`-R` 재귀 읽기는 여기서 막지 않는다. `_targets_inside` 가 피연산자를
+    보고, 폴더 대상 재귀 읽기는 훅이 못 막는다는 **기존 한계**다
+    (`docs/operations.md` · `doctor` 가 매번 안내한다).
+    """
+    return True
 
 
 def _allow_sort(argv: list[str]) -> bool:
@@ -578,9 +600,10 @@ def _allow_sort(argv: list[str]) -> bool:
 ALLOW_CONDITIONAL = {
     "find": _allow_find,
     "git": _allow_git,
-    "grep": _allow_no_inplace,
-    "egrep": _allow_no_inplace,
-    "rgrep": _allow_no_inplace,
+    "grep": _allow_grep,
+    "egrep": _allow_grep,
+    "rgrep": _allow_grep,
+    "fgrep": _allow_grep,
     "sed": _allow_no_inplace,
     "sort": _allow_sort,
 }
