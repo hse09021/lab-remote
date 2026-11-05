@@ -40,17 +40,20 @@ from ..runner import process as process_mod
 from ..runner import spec as spec_mod
 from ..store import agent_calls as AC
 from ..store import events as E
+from ..store import usage as U_STORE
 from ..store import experiments as X
 from ..store import jobs as J
 from ..store import loops as LP
 from . import approvals as approvals_mod
 from . import installs as installs_mod
+from . import usage as usage_mod
 from ..git import anchor as anchor_mod
 from ..git import bundle as bundle_mod
 from ..git import ops as ops_mod
 from . import gitflow, guards, projectguard
 
 __all__ = [
+    "UsageWait",
     "EXP_RE",
     "next_experiment_id",
     "reusable_numbers",
@@ -434,10 +437,89 @@ def guard_project(ctx, conn, *, when: str, block: bool = True) -> dict:
     return got
 
 
+class UsageWait(Exception):
+    """사용량 한도로 **기다리는 중**이다. AI 세션을 띄우지 않는다.
+
+    🔑 `orchestrator/usage.py` 는 다 만들어져 있었는데 **아무도 안 불렀다**
+    (실측 2026-11-05: `record_failure`·`wait_state`·`resumed` 전부 미사용,
+    `loop_state` 의 `usage_limited` 도 라벨로만 있었다). 그러면 한도에
+    걸렸을 때 루프가 `IDLE_SEC`(10초)마다 Claude 를 다시 띄우고, 매번 실패
+    원문만 쌓이고 알림도 없다 — 자리를 비운 사이에 조용히 망가진다.
+
+    **학습은 건드리지 않는다** (spec V). 멈추는 건 AI 의 의사결정뿐이다.
+    """
+
+    def __init__(self, state: dict):
+        self.state = dict(state or {})
+        super().__init__(self.state.get("reason") or "사용량 한도로 기다려요")
+
+
+def _usage_reason(row: dict, *, first: bool = False) -> str:
+    resume_at = str((row or {}).get("resume_at") or "")[:19].replace("T", " ")
+    head = "응답이 막혀서 기다려요" if first else "아직 막혀 있어요"
+    tail = f" · 다음 시도 {resume_at}" if resume_at else ""
+    return f"{head} (추가 결제 없이 기다려요){tail}"
+
+
+def _usage_gate(ctx, conn) -> None:
+    """AI 세션을 띄우기 **전에** 본다. 기다리는 중이면 띄우지 않는다."""
+    state = usage_mod.wait_state(conn, ctx.project)
+    if not state["waiting"]:
+        return
+    row = state["row"] or {}
+    newest = state.get("newest") or row
+    if state["notify"]:
+        _usage_notify(ctx, conn, newest, first=True)
+    elif state["renotify"]:
+        _usage_notify(ctx, conn, newest, first=False)
+    if state["ready"]:
+        return  # 다시 해 볼 때가 됐다
+    LP.set_state(conn, ctx.project, "usage_limited")
+    raise UsageWait({"reason": _usage_reason(newest), "usageId": row.get("id")})
+
+
+def _usage_notify(ctx, conn, row: dict, *, first: bool) -> None:
+    """대기에 들어갈 때 **한 번만.** 오래 막혀 있으면 한 번 더."""
+    detected = str((row or {}).get("detected_by") or "backoff")
+    title = (
+        f"Claude 응답이 막혔어요 · {ctx.project}"
+        if first
+        else f"오래 막혀 있어요 · 한도가 아닐 수 있어요 · {ctx.project}"
+    )
+    body = (
+        "추가 결제 없이 기다려요. 돌고 있는 학습은 건드리지 않아요."
+        if first
+        else "인증 만료 같은 다른 오류일 수 있어요. `labremote usage` 로 원문을 보세요."
+    )
+    notifier.send(
+        conn,
+        "usage_limit",
+        project=ctx.project,
+        subject=notifier.subject_of("usage", f"{row.get('id')}:{'1' if first else '2'}"),
+        title=title,
+        body=body,
+        fields=[
+            ("감지 근거", "패턴 일치" if detected == "pattern" else "원인 구분 없이 백오프"),
+            ("다음 재시도", str((row or {}).get("resume_at") or "[미확인]")),
+            ("원문", "`labremote usage` · lab.db 의 usage_limits"),
+        ],
+    )
+    if first and row.get("id"):
+        try:
+            U_STORE.mark_notified(conn, int(row["id"]))
+        except Exception:
+            pass
+
+
 def _claude(
     ctx, conn, *, prompt: str, session_id: str, resume: bool, stage: str = ""
 ) -> dict:
-    """Claude 를 한 번 띄운다. `ctx.runner` 가 실제 실행을 맡는다."""
+    """Claude 를 한 번 띄운다. `ctx.runner` 가 실제 실행을 맡는다.
+
+    한도로 기다리는 중이면 **띄우지 않고** `UsageWait` 를 던진다. 실패하면
+    원문을 보관하고 대기에 들어간다 — 10초마다 다시 때리지 않는다.
+    """
+    _usage_gate(ctx, conn)
     run = launch_mod.AgentRun(
         project=ctx.project,
         root=ctx.root,
@@ -468,6 +550,38 @@ def _claude(
         )
     except Exception:
         pass
+
+    # 📉 **한도 판정.** 실패 원문은 어떤 경우에도 보관한다 — 나중에 실제로
+    # 한도에 걸리면 그 문구로 "한도 대기" 를 구분할 수 있다 (패턴은 코드에
+    # 박지 않고 `~/.config/labremote/usage_patterns.json` 에 둔다).
+    if got.get("ok"):
+        try:
+            if usage_mod.resumed(conn, ctx.project):
+                E.add(conn, ctx.project, "한도", "응답이 다시 와요 — 이어 가요", tone="good")
+                LP.set_state(conn, ctx.project, "planning")
+        except Exception:
+            pass
+    else:
+        hit = None
+        try:
+            hit = usage_mod.record_failure(conn, ctx.project, got)
+        except Exception:
+            pass
+        if hit:
+            E.add(
+                conn, ctx.project, "한도",
+                "Claude 응답이 막혔어요 (추가 결제 없이 기다려요) · 다음 시도 "
+                + str(hit.get("resumeAt") or "[미확인]"),
+                tone="attention",
+            )
+            LP.set_state(conn, ctx.project, "usage_limited")
+            state = usage_mod.wait_state(conn, ctx.project)
+            row = state.get("newest") or state["row"] or {}
+            if state["notify"]:
+                _usage_notify(ctx, conn, row, first=True)
+            raise UsageWait(
+                {"reason": _usage_reason(row, first=True), "usageId": hit.get("usageId")}
+            )
 
     # 🔑 승인 내용과 지문은 **자기 자식의 결과 JSON** 에서 만든다 (원칙 (나)).
     # 훅의 요청 파일보다 먼저 이걸 본다 — 본문이 여기에만 있어서 지문을

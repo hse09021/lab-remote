@@ -20,6 +20,7 @@ from . import approvals as approvals_mod
 from . import approvals as AP_ORCH
 from . import recovery as recovery_mod
 from .loop import (
+    UsageWait,
     design_landed,
     next_experiment_id,
     numbering_note,
@@ -162,7 +163,24 @@ def once(conn, project: str, root: str, **kw) -> dict:
     **대기 중이면 설계부터 다시 하지 않는다.** 승인이 난 그 자리에서
     `--resume` 으로 이어 간다 (계획 6-1). 처음부터 다시 돌리면 사용량도
     쓰고, 이미 만든 실험 폴더가 둘이 된다.
+
+    사용량 한도로 기다리는 중이면 **AI 세션을 띄우지 않는다.** 돌고 있는
+    학습은 건드리지 않는다 (spec V).
     """
+    try:
+        return _once(conn, project, root, **kw)
+    except UsageWait as waiting:
+        # 한도 대기는 **실패가 아니다.** 기다리면 풀린다. 루프를 멈추지
+        # 않고(상태만 `usage_limited`) 긴 간격으로 계속 다시 해 본다.
+        return {
+            "ok": False,
+            "steps": [],
+            "stoppedAt": "usage",
+            "reason": waiting.state.get("reason") or str(waiting),
+        }
+
+
+def _once(conn, project: str, root: str, **kw) -> dict:
     # 🔑 **프리셋은 정책에서 읽는다** (9단계 1번에서 드러난 구멍).
     #
     # `LoopCtx.preset` 의 기본값이 `"full"` 이라, 프로젝트가 수동제어여도

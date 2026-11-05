@@ -74,7 +74,18 @@ def wait_state(conn, project: str, *, now: datetime | None = None) -> dict:
 
     started = _when(row.get("at"), now)
     since = max(0.0, (now - started).total_seconds())
-    resume_at = _when(row.get("resume_at"), now)
+
+    # 🔑 **"언제부터" 와 "다음에 언제" 는 다른 행에서 읽는다.**
+    #
+    # `open_wait` 은 **가장 오래된** 미해결 행이다 — "몇 시간째 막혀 있나"
+    # (재알림)를 그 행으로 재야 하니까. 그런데 `ready` 를 같은 행으로 재면,
+    # 다시 해 보고 또 실패할 때마다 새 행이 생기는 동안 **첫 행의
+    # `resume_at` 은 계속 과거**다. 그러면 `ready` 가 늘 참이 되어 10초마다
+    # Claude 를 때린다 — 백오프가 통째로 무효다.
+    #
+    # 그래서 다음 시도 시각은 **가장 최근 실패**에서 읽는다.
+    newest = U.latest(conn, project) or row
+    resume_at = _when(newest.get("resume_at"), now)
     return {
         "waiting": True,
         # 다시 해 볼 때가 됐나
@@ -85,15 +96,24 @@ def wait_state(conn, project: str, *, now: datetime | None = None) -> dict:
         "renotify": since >= RENOTIFY_SEC,
         "sinceSec": since,
         "row": row,
+        #: 다음 시도 시각을 들고 있는 행 (사람에게 보여 줄 값)
+        "newest": newest,
     }
 
 
 def resumed(conn, project: str) -> dict | None:
-    """풀렸다. 대기를 닫는다."""
+    """풀렸다. **열린 대기를 전부** 닫는다.
+
+    30분마다 다시 해 보고 또 실패하면 행이 하나씩 쌓인다. 하나만 닫으면
+    `open_wait` 이 다음 행을 내놓아 풀렸는데도 계속 기다린다.
+    """
     row = U.open_wait(conn, project)
     if row is None:
         return None
-    return U.mark_resumed(conn, row["id"])
+    closed = U.resume_all(conn, project)
+    out = dict(row)
+    out["closed"] = closed
+    return out
 
 
 def _when(value, fallback: datetime) -> datetime:

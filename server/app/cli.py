@@ -1043,16 +1043,42 @@ def cmd_usage(args) -> int:
         print(f"✘ 등록된 실험 프로젝트가 아니에요: {args.name}", file=sys.stderr)
         return 2
 
+    from .orchestrator import usage as usage_mod
+
     with db_mod.open_db() as conn:
         loops = AC.by_loop(conn, args.name, limit=args.limit)
         calls = AC.listing(conn, args.name, limit=2000)
+        wait = usage_mod.wait_state(conn, args.name)
 
     if args.json:
         print(json.dumps(
-            {"project": args.name, "loops": loops, "totals": AC.totals(calls)},
+            {
+                "project": args.name,
+                "loops": loops,
+                "totals": AC.totals(calls),
+                "wait": wait,
+            },
             ensure_ascii=False, indent=2, default=str,
         ))
         return 0
+
+    if wait["waiting"]:
+        # 🔑 기다리는 중인 걸 **먼저** 보여 준다. 사용량 화면을 보는 이유가
+        # 보통 "왜 안 도나" 라서 그렇다.
+        newest = wait.get("newest") or wait["row"] or {}
+        hours = int(wait["sinceSec"] // 3600)
+        mins = int((wait["sinceSec"] % 3600) // 60)
+        print("⏳ Claude 응답이 막혀서 기다려요 (추가 결제 없이 기다려요)")
+        print(f"   막힌 때   {str(wait['row'].get('at') or '')[:19].replace('T', ' ')}"
+              f"  ({hours}시간 {mins}분째)")
+        print(f"   다음 시도 {str(newest.get('resume_at') or '[미확인]')[:19].replace('T', ' ')}")
+        print(f"   감지 근거 {'패턴 일치' if newest.get('detected_by') == 'pattern' else '원인 구분 없이 백오프'}"
+              f" · 종료코드 {newest.get('exit_code') if newest.get('exit_code') is not None else '[못 읽었어요]'}")
+        raw = str(newest.get("raw") or "").strip().splitlines()
+        if raw:
+            print(f"   실패 원문 {_shorten(raw[0], 70)}")
+        print("   돌고 있는 학습은 건드리지 않아요. 멈추는 건 AI 의 의사결정뿐이에요.")
+        print()
 
     if not loops:
         print(f"아직 Claude 를 띄운 기록이 없어요: {args.name}")
