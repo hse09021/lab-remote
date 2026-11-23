@@ -175,6 +175,8 @@ def scan() -> dict:
     for f in sorted(files):
         text = _read(f)
         meta, body = _front(text)
+        if meta.get("summary_of"):
+            continue  # lab.remote 가 만든 요약 파일 — 논문도 메모도 아니다
         rel = os.path.relpath(f, root).replace(os.sep, "/")
         stem = os.path.splitext(os.path.basename(f))[0]
         if paths.is_inside(paths.real(paper_dir), paths.real(f)):
@@ -230,6 +232,10 @@ def list_papers(*, trash: bool = False) -> list[dict]:
     status = settings().get("status") or {}
     hidden = _hidden()
     cols = _collections()
+    from . import summaries
+
+    made = set(summaries.load_all())
+    running = summaries.running_ids()
     out = []
     for p in scan()["papers"]:
         if (p["id"] in hidden) != trash:
@@ -243,7 +249,7 @@ def list_papers(*, trash: bool = False) -> list[dict]:
             "model": "",
             "status": status.get(p["id"], "todo"),
             "source": p["source"],
-            "summaryState": "done" if p["hasBody"] else "none",
+            "summaryState": "done" if p["id"] in made else "running" if p["id"] in running else "none",
             "access": _ago(p["mtime"]),
             "path": f"vault/{p['path']}",
             "hasPdf": p.get("hasPdf", False),
@@ -474,6 +480,14 @@ def add_pdf(filename: str, data: bytes) -> dict:
     note = _create(os.path.join(folder, f"{name}.md"), _note(meta, ""))
     stem = os.path.splitext(os.path.basename(note))[0]
     return {"id": stem, "created": True, "path": "vault/" + os.path.relpath(note, vault_path()).replace(os.sep, "/"), "pdf": True}
+
+
+def pdf_rel(pid: str) -> str:
+    """vault 안 PDF 의 상대 경로 (없으면 "")."""
+    try:
+        return os.path.relpath(pdf_of(pid), paths.real(vault_path())).replace(os.sep, "/")
+    except PapersError:
+        return ""
 
 
 def pdf_of(pid: str) -> str:

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from .. import annotations, library, papers
+from .. import annotations, library, papers, summaries
 
 router = APIRouter()
 
@@ -79,9 +79,9 @@ def graph():
     return papers.graph()
 
 
-@router.get("/papers/summary-md")
-def summaries():
-    """논문 노트 본문을 요약 MD 로 (읽기만)."""
+@router.get("/papers/notes")
+def notes():
+    """논문 노트 본문 (앞쪽 메타 제외, 읽기만) — 요약이 없을 때 보여 줄 것."""
     out = {}
     for p in papers.scan()["papers"]:
         try:
@@ -89,6 +89,53 @@ def summaries():
         except papers.PapersError:
             continue
     return out
+
+
+@router.get("/papers/summaries")
+def get_summaries():
+    """AI 요약 (만든 것만) — 정리된 보기."""
+    return {pid: {k: v for k, v in s.items() if not k.startswith("_")} for pid, s in summaries.load_all().items()}
+
+
+@router.get("/papers/summary-md")
+def summary_md():
+    """vault 의 요약 파일 MD (만든 것만)."""
+    out = {}
+    for pid in summaries.load_all():
+        md = summaries.markdown_of(pid)
+        if md is not None:
+            out[pid] = md
+    return out
+
+
+class SummaryMdBody(BaseModel):
+    markdown: str | None = None
+
+
+@router.put("/papers/{pid}/summary-md")
+def put_summary_md(pid: str, body: SummaryMdBody):
+    try:
+        return summaries.save_markdown(pid, body.markdown)
+    except summaries.SummaryError as exc:
+        return _bad(exc)
+
+
+class SummaryStart(BaseModel):
+    model: str = ""
+
+
+@router.post("/papers/{pid}/summary")
+async def start_summary(pid: str, body: SummaryStart):
+    """요약 만들기 — 시작만 하고 돌아온다. 화면이 GET 으로 물어본다."""
+    try:
+        return summaries.start(pid, model=body.model)
+    except summaries.SummaryError as exc:
+        return _bad(exc, 409)
+
+
+@router.get("/papers/{pid}/summary")
+def summary_job(pid: str):
+    return summaries.job(pid)
 
 
 @router.post("/papers/ask")

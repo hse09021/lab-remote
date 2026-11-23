@@ -67,7 +67,8 @@ def test_목록과_상태는_노트를_안_고친다(vault):
     assert lora["title"] == "LoRA: Low-Rank Adaptation"
     assert lora["authors"] == "Hu, Shen, Wallis et al. · 2021"
     assert lora["field"] == "효율적 학습" and lora["source"] == "arxiv-html"
-    assert lora["summaryState"] == "done" and rows["Transformer"]["summaryState"] == "none"
+    # 요약 상태는 AI 요약 기준 (노트 본문이 있어도 요약이 없으면 none)
+    assert lora["summaryState"] == "none" and rows["Transformer"]["summaryState"] == "none"
     assert lora["status"] == "todo"
     papers.set_status("LoRA", "reading")
     assert {p["id"]: p for p in papers.list_papers()}["LoRA"]["status"] == "reading"
@@ -106,7 +107,8 @@ def test_API(vault, tmp_path, project):
     assert len(client.get("/api/papers").json()) == 2
     assert client.patch("/api/papers/LoRA", json={"status": "done"}, headers=H).json()["status"] == "done"
     assert client.patch("/api/papers/LoRA", json={"status": "nope"}, headers=H).status_code == 400
-    assert "저랭크" in client.get("/api/papers/summary-md").json()["LoRA"]
+    assert "저랭크" in client.get("/api/papers/notes").json()["LoRA"]
+    assert client.get("/api/papers/summary-md").json() == {}
     g = client.get("/api/papers/graph").json()
     assert {n["kind"] for n in g["nodes"]} == {"paper", "note", "project"}
     # 프로젝트 설정의 papers 는 정리돼서 저장된다
@@ -344,3 +346,69 @@ def test_하이라이트_주석_서버_저장(tmp_path):
     # 되돌리기 — 같은 id · 시각으로
     assert client.post(base, json=made, headers=H).json()["id"] == made["id"]
     assert client.delete(f"{base}/없음", headers=H).status_code == 404
+
+
+# --- AI 요약 (vault 에 새 파일) ----------------------------------------------------
+
+
+def test_요약_만들기(vault, monkeypatch):
+    import asyncio
+
+    from app import summaries
+    from app.agents import claude as claude_mod
+
+    papers.set_vault(vault)
+    monkeypatch.setattr(claude_mod, "cli_path", lambda: "/usr/bin/true")
+    os.makedirs(os.path.join(vault, "Papers", "pdf"), exist_ok=True)
+    with open(os.path.join(vault, "Papers", "pdf", "LoRA.pdf"), "wb") as fh:
+        fh.write(b"%PDF-1.4 x")
+    note = os.path.join(vault, "Papers", "LoRA.md")
+    text = open(note, encoding="utf-8").read().replace("aliases: [LoRA]", "aliases: [LoRA]\npdf: Papers/pdf/LoRA.pdf")
+    open(note, "w", encoding="utf-8").write(text)
+    before = open(note, encoding="utf-8").read()
+    run = _fake_agent({
+        "lines": [{"text": "저랭크 어댑터", "page": 2}, {"text": "B", "page": 0}, {"text": "C", "page": 5}],
+        "field": "NLP", "baseModel": "GPT-3 175B", "code": "", "method": "ΔW = BA", "methodPage": 4,
+        "result": "파라미터 1/10000", "resultPage": 7, "limitation": "",
+    })
+
+    async def go():
+        assert summaries.start("LoRA", query_fn=run)["state"] == "running"
+        with pytest.raises(summaries.SummaryError):
+            summaries.start("LoRA", query_fn=run)
+        assert {p["id"]: p for p in papers.list_papers()}["LoRA"]["summaryState"] == "running"
+        for _ in range(50):
+            await asyncio.sleep(0.01)
+            if summaries.job("LoRA")["state"] != "running":
+                break
+        return summaries.job("LoRA")
+
+    assert asyncio.run(go())["state"] == "done", summaries.job("LoRA")
+    # 원래 노트는 그대로, 요약은 새 파일
+    assert open(note, encoding="utf-8").read() == before
+    md = open(os.path.join(vault, "Papers", "LoRA 요약.md"), encoding="utf-8").read()
+    assert 'summary_of: "[[LoRA]]"' in md and "1. 저랭크 어댑터 ([[Papers/pdf/LoRA.pdf#page=2|p.2]])" in md
+    assert "2. B (p.[쪽])" in md and "## Limitation" not in md
+    # 요약 파일은 논문으로 세지 않는다
+    assert "LoRA 요약" not in {p["id"] for p in papers.list_papers()}
+    s = summaries.load_all()["LoRA"]
+    assert s["lines"][0] == {"text": "저랭크 어댑터", "ref": "p.2"} and s["file"] == "LoRA.pdf"
+    assert {f["label"] for f in s["fields"]} == {"Field", "Base Model", "Paper URL"}
+    assert {p["id"]: p for p in papers.list_papers()}["LoRA"]["summaryState"] == "done"
+    # 수정은 요약 파일만, None 이면 되돌리기
+    summaries.save_markdown("LoRA", "고친 요약")
+    assert summaries.markdown_of("LoRA") == "고친 요약"
+    summaries.save_markdown("LoRA", None)
+    assert "summary_of" in summaries.markdown_of("LoRA")
+    assert open(note, encoding="utf-8").read() == before
+
+
+def test_같은_이름의_다른_파일은_덮지_않는다(vault, monkeypatch):
+    from app import summaries
+
+    papers.set_vault(vault)
+    other = os.path.join(vault, "Papers", "LoRA 요약.md")
+    open(other, "w", encoding="utf-8").write("내가 쓴 노트\n")
+    with pytest.raises(summaries.SummaryError):
+        summaries.save_markdown("LoRA", "x")
+    assert open(other, encoding="utf-8").read() == "내가 쓴 노트\n"

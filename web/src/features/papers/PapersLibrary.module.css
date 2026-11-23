@@ -314,3 +314,18 @@
   font-family: inherit;
   font-size: 13px;
 }
+
+.makeSummary {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.makeSummary:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}

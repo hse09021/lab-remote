@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 import time
 import uuid
@@ -75,55 +74,13 @@ def _prompt(question: str, history: list[dict], listing: list[dict]) -> str:
 
 
 async def _ask_agent(root: str, prompt: str, model: str, *, query_fn=None) -> tuple[dict, str]:
-    from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, PermissionResultAllow, PermissionResultDeny, ResultMessage
+    from .agents.readonly import ReadOnlyError, ask
 
-    from .agents.claude import SETTING_SOURCES, _scrub_env, cli_path
-
-    async def read_only(tool_name, _input, _ctx):
-        if tool_name in READ_TOOLS:
-            return PermissionResultAllow()
-        return PermissionResultDeny(message="라이브러리 질문은 읽기만 해요.")
-
-    _scrub_env()
-    if not cli_path():
-        raise AskError("Claude Code(claude)를 찾지 못했어요.")
-    options = ClaudeAgentOptions(
-        cli_path=cli_path(),
-        cwd=root,
-        setting_sources=SETTING_SOURCES,
-        permission_mode="plan",
-        tools=list(READ_TOOLS),
-        can_use_tool=read_only,
-        model=model or None,
-        max_turns=MAX_TURNS,
-        output_format={"type": "json_schema", "schema": SCHEMA},
-    )
-    run = query_fn
-    if run is None:
-        from claude_agent_sdk import ClaudeSDKClient
-
-        async def run(opts, text):
-            async with ClaudeSDKClient(options=opts) as client:
-                await client.query(text)
-                async for msg in client.receive_response():
-                    yield msg
-
-    result = None
-    used = ""
-    async for msg in run(options, prompt):
-        if isinstance(msg, AssistantMessage):
-            used = msg.model or used
-        elif isinstance(msg, ResultMessage):
-            result = msg
-    if result is None or result.is_error:
-        raise AskError("답을 끝내지 못했어요: " + "; ".join((result.errors or []) if result else [])[:300])
-    data = result.structured_output
-    if isinstance(data, str):
-        try:
-            data = json.loads(data)
-        except json.JSONDecodeError:
-            data = None
-    if not isinstance(data, dict) or not isinstance(data.get("answer"), str):
+    try:
+        data, used = await ask(root, prompt, SCHEMA, model=model, max_turns=MAX_TURNS, query_fn=query_fn)
+    except ReadOnlyError as exc:
+        raise AskError(str(exc)) from None
+    if not isinstance(data.get("answer"), str):
         raise AskError("정해진 모양(JSON)으로 답을 받지 못했어요.")
     return data, used
 

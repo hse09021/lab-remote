@@ -30,6 +30,9 @@ interface Props {
   onTabChange: (t: AiTab) => void
   reader: PaperReaderPayload
   summary: PaperSummary | undefined
+  /** 요약 만들기 (실제 API 일 때만) */
+  onMakeSummary?: () => void
+  summaryRunning?: boolean
   summaryView: SummaryView
   onSummaryViewChange: (v: SummaryView) => void
   mdDraft: string | null
@@ -59,6 +62,8 @@ export function AiPanel({
   onTabChange,
   reader,
   summary,
+  onMakeSummary,
+  summaryRunning = false,
   summaryView,
   onSummaryViewChange,
   mdDraft,
@@ -108,7 +113,15 @@ export function AiPanel({
               />
             </div>
           ) : (
-            <p className={s.todo}>아직 요약이 없어요.</p>
+            <div className={s.pad}>
+              <p className={s.todo}>{summaryRunning ? 'Claude 가 노트와 PDF 를 읽고 요약하는 중이에요… (1~2분)' : '아직 요약이 없어요.'}</p>
+              {onMakeSummary && !summaryRunning && (
+                <button type="button" className={s.makeSummary} onClick={onMakeSummary}>
+                  요약 만들기
+                </button>
+              )}
+              {onMakeSummary && <p className={s.todo}>vault 에 &lsquo;이름 요약.md&rsquo; 를 새로 만들어요. 원래 노트는 고치지 않아요.</p>}
+            </div>
           ))}
 
         {tab === 'chat' && (

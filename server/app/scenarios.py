@@ -143,6 +143,8 @@ async def _ask_agent(root: str, model: str, *, query_fn=None) -> tuple[dict, lis
     if not cli_path():
         raise ScenarioError("Claude Code(claude)를 찾지 못했어요.")
     options = ClaudeAgentOptions(
+        # PDF · 이미지를 읽으면 메시지 하나가 SDK 기본 상한(1MB)을 넘어요 (실측 2026-11-24)
+        max_buffer_size=32 * 1024 * 1024,
         cli_path=cli_path(),
         cwd=root,
         setting_sources=SETTING_SOURCES,

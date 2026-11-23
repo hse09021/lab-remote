@@ -25,7 +25,10 @@ const MUTATION_HEADER = { 'X-Lab-Remote': '1' }
  */
 const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers$/, ['GET']],
-  [/^\/papers\/(graph|vault|summary-md)$/, ['GET', 'PUT']],
+  [/^\/papers\/(graph|vault|summary-md|summaries|notes)$/, ['GET', 'PUT']],
+  // AI 요약 (누를 때만 · vault 에 새 파일) · 요약 MD 수정 (요약 파일만)
+  [/^\/papers\/[^/]+\/summary$/, ['GET', 'POST']],
+  [/^\/papers\/[^/]+\/summary-md$/, ['PUT']],
   [/^\/papers\/[^/]+$/, ['PATCH']],
   // 논문 추가 (vault 에 새 노트 · PDF) · PDF 내려받기
   [/^\/papers\/arxiv$/, ['POST']],

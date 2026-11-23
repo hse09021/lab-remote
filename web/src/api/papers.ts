@@ -1,4 +1,4 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiUrl, get, isMockPath, send, upload } from './client'
 import type {
   LibraryChat,
@@ -60,7 +60,7 @@ export function useSaveSummaryMd() {
 
   return useMutation({
     mutationFn: ({ id, markdown }: { id: string; markdown: string | null }) =>
-      send<unknown>('PUT', `/papers/${id}/summary-md`, { markdown }),
+      send<unknown>('PUT', `/papers/${encodeURIComponent(id)}/summary-md`, { markdown }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['papers', 'summary-md'] }),
   })
 }
@@ -263,4 +263,39 @@ export async function fetchBibtex(papers: Paper[]): Promise<string> {
   const res = await fetch(apiUrl(`/papers/bibtex?ids=${papers.map((p) => encodeURIComponent(p.id)).join(',')}`))
   if (!res.ok) throw new Error(`BibTeX 를 만들지 못했어요 (${res.status})`)
   return res.text()
+}
+
+/* ── AI 요약 (누를 때만 · vault 에 `<이름> 요약.md` 새 파일) ──────────────────── */
+
+/** 논문 노트 본문 (요약이 없을 때 보여 줄 것) */
+export const notesQuery = () =>
+  queryOptions({ queryKey: ['papers', 'notes'], queryFn: () => get<Record<string, string>>('/papers/notes') })
+
+export interface SummaryJob {
+  id: string
+  state: 'idle' | 'running' | 'done' | 'failed'
+  error: string
+}
+
+export function useMakeSummary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => send<SummaryJob>('POST', `/papers/${encodeURIComponent(id)}/summary`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers'] }),
+  })
+}
+
+/** 만드는 동안 3초마다 물어보고, 끝나면 목록 · 요약을 새로 받아요 */
+export function useSummaryJob(id: string, enabled: boolean) {
+  const qc = useQueryClient()
+  return useQuery({
+    queryKey: ['papers', 'summary-job', id],
+    queryFn: async () => {
+      const j = await get<SummaryJob>(`/papers/${encodeURIComponent(id)}/summary`)
+      if (j.state !== 'running') void qc.invalidateQueries({ queryKey: ['papers'] })
+      return j
+    },
+    enabled,
+    refetchInterval: (q) => (q.state.data?.state === 'running' || !q.state.data ? 3000 : false),
+  })
 }

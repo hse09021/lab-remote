@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { ApiError } from '@/api/client'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -7,6 +7,9 @@ import {
   paperSummariesQuery,
   paperPdfHref,
   papersQuery,
+  notesQuery,
+  useMakeSummary,
+  askIsLive,
   refPaperId,
   summaryDraftsQuery,
   useChooseDiscrepancy,
@@ -128,6 +131,8 @@ export default function PaperReader() {
     ],
   })
   const setStatus = useSetReadStatus()
+  const notes = useQuery(notesQuery())
+  const makeSummary = useMakeSummary()
   const saveRef = useSaveReference()
   const saveMd = useSaveSummaryMd()
   const chooseTarget = useChooseDiscrepancy(id)
@@ -247,7 +252,7 @@ export default function PaperReader() {
               PDF 열기 (새 탭)
             </a>
           )}
-          {mdDrafts.data?.[id] ? <pre className={s.noteBody}>{mdDrafts.data[id]}</pre> : <p className={s.noteHint}>노트 본문이 비어 있어요.</p>}
+          {notes.data?.[id] ? <pre className={s.noteBody}>{notes.data[id]}</pre> : <p className={s.noteHint}>노트 본문이 비어 있어요.</p>}
         </div>
       </main>
     )
@@ -614,6 +619,12 @@ export default function PaperReader() {
             isRefSaved={isRefSaved}
             reader={data}
             summary={summary}
+            onMakeSummary={
+              askIsLive() && paper
+                ? () => makeSummary.mutate(id, { onError: (e) => toast.show(e instanceof Error ? e.message : String(e)) })
+                : undefined
+            }
+            summaryRunning={paper?.summaryState === 'running' || makeSummary.isPending}
             summaryView={summaryView}
             onSummaryViewChange={setSummaryView}
             mdDraft={mdEdit ?? mdDrafts.data?.[id] ?? null}

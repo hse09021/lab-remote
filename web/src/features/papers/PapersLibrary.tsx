@@ -12,6 +12,10 @@ import {
   trashQuery,
   useAddArxiv,
   usePaperActions,
+  notesQuery,
+  useMakeSummary,
+  useSummaryJob,
+  askIsLive,
   useSaveSummaryMd,
   useSetReadStatus,
   useUploadPdf,
@@ -84,6 +88,9 @@ function PapersList() {
   const fileInput = useRef<HTMLInputElement>(null)
   const [added, setAdded] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null)
   const cols = useQuery(collectionsQuery())
+  const notes = useQuery(notesQuery())
+  const makeSummary = useMakeSummary()
+  const live = askIsLive()
   const trash = useQuery(trashQuery())
   const act = usePaperActions()
   const [colDialog, setColDialog] = useState<'' | 'add' | { remove: string }>('')
@@ -135,14 +142,14 @@ function PapersList() {
   const selectedCount = selectedIds.length
 
   // 요약 — AI 요약(아직 mock)이 있으면 그것, 없으면 vault 노트 본문(읽기만)
-  const hasSummary = (id: string) => Boolean(summaries.data?.[id] || mdDrafts.data?.[id])
+  const hasSummary = (id: string) => Boolean(summaries.data?.[id] || notes.data?.[id])
   // 요약이 있는 논문만 이전/다음으로 돌아요
   const order = (papers.data ?? []).filter((p) => hasSummary(p.id)).map((p) => p.id)
   const inList = (papers.data ?? []).some((p) => p.id === openSummaryId)
   const openSummary = openSummaryId && inList ? summaries.data?.[openSummaryId] : undefined
   const openNote =
     openSummaryId && inList && !openSummary ? (papers.data ?? []).find((p) => p.id === openSummaryId) : undefined
-  const noteBody = openNote ? mdDrafts.data?.[openNote.id] : undefined
+  const noteBody = openNote ? notes.data?.[openNote.id] : undefined
   const drawerOpen = Boolean(openSummary || (openNote && noteBody !== undefined))
   const step = (delta: number) => {
     if (!openSummaryId || order.length === 0) return
@@ -232,9 +239,25 @@ function PapersList() {
           )
         }
         if (p.summaryState === 'running') {
-          return <span className={s.summaryRunning}>요약 중</span>
+          return <SummaryRunning id={p.id} />
         }
-        return <span className={s.summaryNone}>—</span>
+        if (!live) return <span className={s.summaryNone}>—</span>
+        return (
+          <button
+            type="button"
+            className={s.makeSummary}
+            disabled={makeSummary.isPending}
+            title="Claude 가 노트와 PDF 를 읽고 요약해요 · vault 에 '이름 요약.md' 를 새로 만들어요"
+            onClick={() =>
+              makeSummary.mutate(p.id, {
+                onSuccess: () => setAdded({ text: `${p.title} 요약을 만드는 중이에요 · 1~2분 걸려요`, tone: 'ok' }),
+                onError: onFail,
+              })
+            }
+          >
+            요약 만들기
+          </button>
+        )
       },
     },
     {
@@ -698,3 +721,10 @@ const CloseIcon = () => (
     <path d="M6 6l12 12M18 6L6 18" />
   </svg>
 )
+
+/** 만드는 중 — 끝날 때까지 물어보고, 끝나면 목록이 새로 받아요 */
+function SummaryRunning({ id }: { id: string }) {
+  const job = useSummaryJob(id, true)
+  if (job.data?.state === 'failed') return <span className={s.summaryNone} title={job.data.error}>실패 · 다시</span>
+  return <span className={s.summaryRunning}>요약 중</span>
+}
