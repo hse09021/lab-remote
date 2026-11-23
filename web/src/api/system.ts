@@ -1,5 +1,5 @@
-import { queryOptions } from '@tanstack/react-query'
-import { get } from './client'
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { get, send } from './client'
 
 /* server/app/system.py 와 짝 */
 
@@ -36,16 +36,28 @@ export interface SystemOverview {
     dataDir: string
     hostname: string
   }
-  tunnel: { state: 'unknown' | 'up' | 'down'; note?: string }
+  tunnel: TunnelStatus & RemoteInfo
   autostart: {
     unit: string
     unitFile: string
     installed: boolean
     enabled: string
     active: string
+    /** systemd 가 다시 띄운 횟수 */
+    restarts: number | null
+    port: number | null
     linger: boolean | null
+    /** 켜기 전 linger (lab.remote 가 기억한 값) */
+    lingerBefore?: boolean | null
     systemctl: boolean
+    /** 이 서버가 그 서비스 안에서 도는가 */
+    inside: boolean
+    /** 서버 출력 보는 명령 */
+    tmux: string
+    installCommand: string
   }
+  /** "지우기" 명령 (이 컴퓨터의 실제 경로) */
+  uninstall: string[]
   gpu: GpuSummary
   host: {
     cpuPct: number | null
@@ -57,10 +69,31 @@ export interface SystemOverview {
   clock?: { running: boolean; lastTick: number | null; error: string; interval: number; next: { name: string; at: number; project: string } | null; waiting: string[] }
 }
 
+/** code tunnel — 읽기만 (켜는 건 사람이 `code tunnel service install`) */
+export interface TunnelStatus {
+  cli: string
+  /** absent: CLI 없음 · off: 꺼짐 · up: 켜짐 · unknown: 못 읽음 */
+  state: 'absent' | 'off' | 'up' | 'unknown'
+  /** `code tunnel service install` 로 설치됐나 */
+  service: boolean
+  loggedIn: boolean | null
+  name: string
+  /** vscode.dev/tunnel/<이름> */
+  url: string
+  detail: string
+}
+
+/** 터널로 전달한 lab.remote 주소 */
+export interface RemoteInfo {
+  publicUrl: string
+  hosts: string[]
+  envHosts: string[]
+}
+
 export const healthQuery = () =>
   queryOptions({
     queryKey: ['health'],
-    queryFn: () => get<{ ok: boolean; version: string }>('/health'),
+    queryFn: () => get<{ ok: boolean; version: string; tunnel?: TunnelStatus['state'] }>('/health'),
     // 헤더의 연결 점 — 화면을 보는 동안만 (백그라운드 탭에서는 멈춰요)
     refetchInterval: 15_000,
     retry: false,
@@ -88,3 +121,29 @@ export const resourcesQuery = () =>
     // 화면을 보는 동안만 5초마다 (목업: "화면을 볼 때만 5초마다")
     refetchInterval: 5_000,
   })
+
+/** 바깥 주소 적기 · 지우기 (빈 값이면 지워요) */
+export function useSetRemote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (url: string) => send<RemoteInfo>('PUT', '/system/remote', { url }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['system'] }),
+  })
+}
+
+/** "세션 다시 켜기" — 이 서버도 그 안이면 잠깐 끊겼다가 돌아와요 */
+export function useRestartSession() {
+  return useMutation({ mutationFn: () => send<{ ok: boolean }>('POST', '/system/autostart/restart') })
+}
+
+/** "자동 시작 끄기…" — 켜기는 터미널에서만 (labremote autostart install) */
+export function useUninstallAutostart() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      send<{ steps: { what: string; ok: boolean; detail: string }[]; stopsSelf: boolean }>('POST', '/system/autostart/uninstall', {
+        confirm: '끄기',
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['system'] }),
+  })
+}

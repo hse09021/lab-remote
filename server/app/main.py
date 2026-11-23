@@ -7,7 +7,8 @@
 
 1. **Host 검사** — `Host` 가 `127.0.0.1`·`localhost`·`[::1]`(포트 무관)이
    아니면 거절한다. DNS rebinding(공격자 도메인을 127.0.0.1 로 돌려 응답까지
-   읽는 것)을 막는다. 터널 주소는 9단계에서 `LAB_ALLOWED_HOSTS` 로 더한다.
+   읽는 것)을 막는다. 터널로 전달한 바깥 주소는 `labremote remote set` (데이터 폴더
+   `remote.json`) 이나 환경 변수 `LAB_ALLOWED_HOSTS` 로 더한다 (remote.py).
 2. **바꾸는 요청에는 `X-Lab-Remote: 1` 헤더** — 다른 출처의 페이지가 이
    헤더를 붙이려면 CORS 사전 요청이 필요한데, 이 서버는 CORS 를 허락하지
    않는다. `Origin` 이 있으면 그 호스트도 같은 규칙으로 본다.
@@ -43,8 +44,9 @@ def _hostname(value: str) -> str:
 
 
 def allowed_hosts() -> frozenset[str]:
-    extra = {h.strip().lower() for h in (os.environ.get("LAB_ALLOWED_HOSTS") or "").split(",") if h.strip()}
-    return LOCAL_HOSTS | extra
+    from . import remote
+
+    return LOCAL_HOSTS | frozenset(remote.extra_hosts())
 
 
 def _refuse(reason: str) -> JSONResponse:
@@ -104,7 +106,10 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     async def local_only(request: Request, call_next):
         hosts = allowed_hosts()
         if _hostname(request.headers.get("host", "")) not in hosts:
-            return _refuse("이 주소로는 열 수 없어요 (Host 가 허용 목록에 없어요).")
+            return _refuse(
+                "이 주소로는 열 수 없어요 (Host 가 허용 목록에 없어요). 터널로 전달한 주소라면 데스크톱에서 "
+                "labremote remote set https://<그 주소> 로 알려 주세요."
+            )
         origin = request.headers.get("origin")
         if origin and origin != "null" and _hostname(urlsplit(origin).netloc) not in hosts:
             return _refuse("다른 사이트에서 온 요청이라 거절했어요.")
@@ -141,9 +146,11 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
 
     @app.get("/api/health")
     def health():
+        from . import tunnel
         from .system import _version
 
-        return {"ok": True, "version": _version()}
+        # 헤더의 "Tunnel" 점 — 터널 상태는 30초 캐시라 15초마다 불려도 명령은 그보다 드물게 돈다
+        return {"ok": True, "version": _version(), "tunnel": tunnel.status()["state"]}
 
     app.include_router(projects_api.router, prefix="/api")
     app.include_router(files_api.router, prefix="/api")

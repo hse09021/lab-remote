@@ -122,6 +122,11 @@
   background: var(--attention);
 }
 
+/* 서버는 닿는데 터널이 꺼져 있음 — 이 데스크톱에서만 열려요 */
+.connDot[data-tone='idle'] {
+  background: var(--dot-idle);
+}
+
 .menuWrap {
   position: relative;
 }

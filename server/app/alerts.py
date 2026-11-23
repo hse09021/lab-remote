@@ -182,7 +182,13 @@ def post(
         elif not config.discord_webhook(DISCORD_KIND.get(rule, "")):
             sent = ""
         else:
-            fields = [("어디", where)] if where else None
+            fields = [("어디", where)] if where else []
+            # 바깥 주소(터널)를 적어 두었으면 그 화면으로 바로 가는 링크 — 답은 거기서 한다
+            from . import remote
+
+            link = remote.link_for(ref)
+            if link:
+                fields.append(("답하기" if rule == "ask" else "열기", link))
             result = notifier.send(
                 conn,
                 DISCORD_KIND.get(rule, "system"),
@@ -190,7 +196,7 @@ def post(
                 subject=subject or f"{kind}:{title}",
                 title=title,
                 body=body,
-                fields=fields,
+                fields=fields or None,
                 poster=poster,
             )
             if result.get("sent"):

@@ -22,9 +22,15 @@ export function AppHeader() {
   const badge = useQuery(badgeQuery())
   const inboxCount = badge.data?.badge ?? 0
 
-  // 터널 상태는 9단계에서 붙어요. 지금은 서버 연결만 보여 줘요.
+  // 목업의 "Tunnel" 점 — 서버에 닿으면 터널 상태를, 못 닿으면 "서버 끊김" 을 보여 줘요
   const connected = health.isSuccess
-  const connLabel = health.isPending ? '연결 확인 중' : connected ? '서버' : '서버 끊김'
+  const tunnelUp = health.data?.tunnel === 'up'
+  const connLabel = health.isPending ? '연결 확인 중' : !connected ? '서버 끊김' : 'Tunnel'
+  const connTitle = !connected
+    ? 'lab.remote 서버에 닿지 않아요'
+    : tunnelUp
+      ? 'code tunnel 이 켜져 있어요'
+      : 'code tunnel 이 꺼져 있어요 — 이 데스크톱에서만 열려요'
 
   return (
     <header className={s.header}>
@@ -67,8 +73,8 @@ export function AppHeader() {
             {gpu.data?.label ?? (gpu.isError ? 'GPU —' : 'GPU …')}
           </span>
 
-          <Link to="/settings/system" className={s.conn} title="System 에서 자세히 봐요">
-            <span aria-hidden="true" className={s.connDot} data-tone={connected ? 'ok' : 'off'} />
+          <Link to="/settings/system" className={s.conn} title={connTitle}>
+            <span aria-hidden="true" className={s.connDot} data-tone={!connected ? 'off' : tunnelUp ? 'ok' : 'idle'} />
             {connLabel}
           </Link>
 

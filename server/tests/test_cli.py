@@ -1,4 +1,4 @@
-"""`labremote` CLI (v3) — `doctor` · `notify test` · `service` · `monitor once`."""
+"""`labremote` CLI (v3) — `doctor` · `notify test` · `autostart` · `remote` · `monitor once`."""
 
 import os
 
@@ -13,7 +13,7 @@ def run(argv):
 
 def test_v1_명령은_없다(capsys):
     """훅·정책·승인·큐·루프 명령은 v3 에서 빠졌다 (PLAN 2장)."""
-    for name in ("hooks", "policy", "approvals", "queue", "up", "installs", "init-project"):
+    for name in ("hooks", "policy", "approvals", "queue", "up", "installs", "init-project", "service"):
         with pytest.raises(SystemExit):
             run([name])
         capsys.readouterr()
@@ -74,7 +74,7 @@ def test_notifier_의_반환_칸_이름을_고정한다(monkeypatch):
     assert "ok" not in got, "칸 이름이 바뀌었어요 — CLI 도 같이 고쳐 주세요"
 
 
-# --- service -----------------------------------------------------------------
+# --- autostart ---------------------------------------------------------------
 
 
 @pytest.fixture()
@@ -82,72 +82,151 @@ def user_config(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     from app.service import units
 
+    monkeypatch.setattr(units, "_systemctl", lambda: "/bin/systemctl")
+    monkeypatch.setattr(units, "_user", lambda: "me")
     return units
+
+
+class FakeSystem:
+    """systemctl · loginctl 을 흉내 — 무엇을 불렀는지 남긴다."""
+
+    def __init__(self, linger=False):
+        self.calls = []
+        self.linger = linger
+
+    def __call__(self, argv):
+        self.calls.append(argv)
+        if argv[:2] == ["loginctl", "enable-linger"]:
+            self.linger = True
+        if argv[:2] == ["loginctl", "disable-linger"]:
+            self.linger = False
+        return 0, ""
 
 
 def test_유닛은_하나뿐이다(user_config):
     """v3 가 만드는 사용자 서비스는 `labremote-session.service` 하나다 (PLAN 1.1)."""
     assert list(user_config.UNITS) == ["labremote-session"]
-    assert user_config.unit_path("labremote-session").endswith(
-        "systemd/user/labremote-session.service"
-    )
-
-
-def test_service_install_이_유닛을_쓰고_활성화는_안_한다(user_config, monkeypatch, capsys):
-    import subprocess
-
-    def boom(*a, **k):
-        raise AssertionError(f"명령을 돌리면 안 돼요: {a}")
-
-    monkeypatch.setattr(subprocess, "run", boom)
-    assert run(["service", "install"]) == 0
-    out = capsys.readouterr().out
-    assert "유닛을 썼어요" in out
-    assert "loginctl enable-linger" in out and "systemctl --user enable --now" in out
-    assert os.path.exists(user_config.unit_path("labremote-session"))
-
-
-def test_service_install_dry_run_은_안_쓴다(user_config, capsys):
-    assert run(["service", "install", "--dry-run"]) == 0
-    assert "[Unit]" in capsys.readouterr().out
-    assert not os.path.exists(user_config.unit_path("labremote-session"))
+    assert user_config.unit_path().endswith("systemd/user/labremote-session.service")
 
 
 def test_유닛_내용(user_config):
-    body = user_config.render("labremote-session")
+    body = user_config.render(port=8123)
     directives = [l.strip() for l in body.splitlines() if l.strip() and not l.strip().startswith("#")]
-    # 키가 섞이면 구독이 아니라 종량제 과금이다
+    # 키가 섞이면 구독이 아니라 종량제 과금이다 — 넣지 않고, 매니저 환경에 있어도 지운다
     assert not any(d.startswith("Environment=ANTHROPIC") for d in directives)
-    # v3 는 Claude Code 의 동작을 바꾸지 않는다
-    assert not any("DISABLE_AUTOUPDATER" in d or "DISABLE_UPDATES" in d for d in directives)
-    # 가볍게 (PLAN 1.3)
-    assert "Nice=19" in directives and "IOSchedulingClass=idle" in directives
-    # 서버를 재시작해도 남은 건 안 죽인다
-    assert [d for d in directives if d.startswith("KillMode=")] == ["KillMode=process"]
-    assert any(d.endswith("-m app.cli serve") for d in directives if d.startswith("ExecStart="))
+    assert any(d.startswith("UnsetEnvironment=") and "ANTHROPIC_API_KEY" in d for d in directives)
+    # tmux "labremote" 안에서 serve 만 — code tunnel 은 여기서 띄우지 않는다 (2026-11-23 결정)
+    start = [d for d in directives if d.startswith("ExecStart=")][0]
+    assert "-L labremote new-session -d -s labremote" in start and "-m app.cli serve --port 8123" in start
+    assert "tunnel" not in body.split("[Service]")[1].split("#")[0]
+    assert "Type=forking" in directives and "Restart=always" in directives
+    assert "Environment=LAB_SESSION_UNIT=labremote-session" in directives
+    assert user_config.port_of_unit() is None
 
 
 def test_유닛_PATH_에_세션_전용_경로가_없다(user_config):
     """지금 셸의 `PATH` 를 베끼면 나중에 없어질 경로가 섞인다."""
-    line = [
-        l for l in user_config.render("labremote-session").splitlines()
-        if l.startswith("Environment=PATH=")
-    ][0]
-    assert "vscode-server" not in line
-    assert "/usr/bin" in line
+    line = [l for l in user_config.render().splitlines() if l.startswith("Environment=PATH=")][0]
+    assert "vscode-server" not in line and "/usr/bin" in line
     parts = line.split("=", 2)[-1].split(":")
     assert len(parts) == len(set(parts)), parts
 
 
-def test_service_status(user_config, monkeypatch, capsys):
+def test_공백이_있는_경로는_거절한다(user_config):
+    with pytest.raises(ValueError):
+        user_config.render(python="/tmp/my env/python")
+
+
+def test_autostart_install_dry_run_은_안_쓴다(user_config, capsys):
+    assert run(["autostart", "install", "--dry-run"]) == 0
+    assert "[Unit]" in capsys.readouterr().out
+    assert not os.path.exists(user_config.unit_path())
+
+
+def test_autostart_install_은_묻고_아니면_안_바꾼다(user_config, monkeypatch, capsys):
     import subprocess
 
-    monkeypatch.setattr(user_config, "_systemctl", lambda: "/bin/systemctl")
-    monkeypatch.setattr(
-        subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a[0], 0, "enabled\n", "")
-    )
-    assert run(["service", "status"]) == 0
-    assert "labremote-session" in capsys.readouterr().out
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(AssertionError(a)))
+    monkeypatch.setattr(user_config, "linger", lambda: False)
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda q: "n")
+    assert run(["autostart", "install"]) == 1
+    out = capsys.readouterr().out
+    assert "linger 켜기" in out and "아무것도 바꾸지 않았어요" in out
+    assert not os.path.exists(user_config.unit_path())
+
+
+def test_autostart_켜고_끄면_linger_가_원래대로(user_config, monkeypatch, isolated_data):
+    from app.service import autostart
+
+    fake = FakeSystem(linger=False)
+    monkeypatch.setattr(user_config, "linger", lambda: fake.linger)
+    steps = autostart.install(port=8001, run=fake)
+    assert all(s["ok"] for s in steps)
+    assert ["loginctl", "enable-linger", "me"] in fake.calls
+    assert ["/bin/systemctl", "--user", "enable", "--now", "labremote-session.service"] in fake.calls
+    assert os.path.exists(user_config.unit_path()) and user_config.port_of_unit() == 8001
+    assert autostart.record()["lingerBefore"] is False
+    # 다시 켜도 "원래 값" 은 처음 것 그대로
+    autostart.install(port=8001, run=fake)
+    assert autostart.record()["lingerBefore"] is False
+
+    fake.calls.clear()
+    autostart.uninstall(run=fake)
+    assert ["loginctl", "disable-linger", "me"] in fake.calls
+    assert fake.calls[-1] == ["/bin/systemctl", "--user", "stop", "--no-block", "labremote-session.service"]
+    assert not os.path.exists(user_config.unit_path()) and autostart.record() == {}
+
+
+def test_원래_linger_가_켜져_있었으면_끄지_않는다(user_config, monkeypatch):
+    from app.service import autostart
+
+    fake = FakeSystem(linger=True)
+    monkeypatch.setattr(user_config, "linger", lambda: fake.linger)
+    autostart.install(run=fake)
+    assert not any(c[0] == "loginctl" for c in fake.calls)
+    autostart.uninstall(run=fake)
+    assert fake.linger is True and not any(c[:2] == ["loginctl", "disable-linger"] for c in fake.calls)
+
+
+def test_실패하면_거기서_멈춘다(user_config, monkeypatch):
+    from app.service import autostart
+
+    monkeypatch.setattr(user_config, "linger", lambda: True)
+    with pytest.raises(autostart.AutostartError, match="daemon-reload"):
+        autostart.install(run=lambda argv: (1, "boom") if "daemon-reload" in argv else (0, ""))
+
+
+def test_꺼져_있으면_다시_켜기를_거절(user_config):
+    from app.service import autostart
+
+    with pytest.raises(autostart.AutostartError, match="꺼져"):
+        autostart.restart(run=lambda argv: (0, ""))
+
+
+def test_autostart_status(user_config, monkeypatch, capsys):
+    import subprocess
+
+    monkeypatch.setattr(user_config, "linger", lambda: True)
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a[0], 0, "enabled\n", ""))
+    assert run(["autostart", "status"]) == 0
+    out = capsys.readouterr().out
+    assert "labremote-session" in out and "tmux -L labremote attach" in out
+
+
+# --- remote ------------------------------------------------------------------
+
+
+def test_remote_set_show_clear(monkeypatch, capsys):
+    from app import tunnel
+
+    monkeypatch.setattr(tunnel, "status", lambda **k: {"state": "off", "url": "", "service": False, "loggedIn": False})
+    assert run(["remote", "set", "http://x.example"]) == 2
+    assert run(["remote", "set", "https://abc-8000.example.ms/"]) == 0
+    assert run(["remote"]) == 0
+    out = capsys.readouterr().out
+    assert "https://abc-8000.example.ms" in out and "로그인 안 함" in out
+    assert run(["remote", "clear"]) == 0
 
 
 def test_setsid_는_cgroup_을_안_바꾼다():

@@ -25,7 +25,8 @@
 - 지우기 · 되돌릴 수 없는 작업은 먼저 묻기. push 는 사람이 요청할 때만.
 
 ## 명령
+- 설치: `./install.sh` (자세한 건 `docs/SETUP.md`, 운영은 `docs/operations.md`)
 - 서버 환경: `conda activate labremote`
 - 프론트엔드: `cd web && npm run dev`
-- 백엔드: `cd server && uvicorn app.main:app --reload` (`app/main.py` 는 v3 1단계에서 생겨요)
+- 백엔드: `cd server && labremote serve` (개발 중 자동 재시작은 `uvicorn --factory app.main:create_app --reload`)
 - 테스트: `cd server && pytest` / `cd web && npm run typecheck && npm run build`

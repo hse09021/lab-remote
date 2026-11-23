@@ -62,3 +62,12 @@ def project(project_root):
 
     registry.register(project_root, "demo")
     return project_root
+
+
+@pytest.fixture(autouse=True)
+def no_tunnel_cli(monkeypatch):
+    """시험에서는 진짜 `code tunnel` 을 부르지 않는다 (느리고 기계마다 다르다)."""
+    from app import tunnel
+
+    monkeypatch.setattr(tunnel, "_run", lambda argv: (-1, "시험에서는 부르지 않아요"))
+    monkeypatch.setattr(tunnel, "_cache", None)

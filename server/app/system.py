@@ -96,23 +96,36 @@ def host_summary() -> dict:
 
 
 def autostart() -> dict:
-    """사용자 서비스 + linger. **읽기만** — 켜고 끄는 건 9단계 CLI."""
+    """사용자 서비스 + linger. 켜고 끄기는 `labremote autostart`(CLI) · "자동 시작 끄기…"(화면)."""
+    from .service import autostart as auto
+
     st = units.status()
-    unit = (st.get("units") or {}).get("labremote-session") or {}
+    unit = (st.get("units") or {}).get(units.NAME) or {}
+    rec = auto.record()
     return {
-        "unit": "labremote-session.service",
-        "unitFile": units.unit_path("labremote-session"),
+        "unit": f"{units.NAME}.service",
+        "unitFile": units.unit_path(),
         "installed": bool(unit.get("file")),
         "enabled": unit.get("enabled") or "",
         "active": unit.get("active") or "",
+        "restarts": unit.get("restarts"),
+        "port": unit.get("port"),
         "linger": st.get("linger"),
+        "lingerBefore": rec.get("lingerBefore"),
         "systemctl": bool(st.get("systemctl")),
+        # 이 서버가 그 유닛 안에서 도는가 — 아니면 "세션 다시 켜기" 가 이 서버를 다시 켜지 않는다
+        "inside": units.inside(),
+        "tmux": f"tmux -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}",
+        "installCommand": "labremote autostart install",
     }
 
 
 def tunnel() -> dict:
-    """code tunnel 상태는 9단계에서 붙인다. 지금은 모른다고 말한다."""
-    return {"state": "unknown", "note": "[확인 필요] 터널 상태는 9단계에서 붙여요"}
+    """code tunnel — 읽기만 (켜고 끄기는 사람이 `code tunnel service install|uninstall`)."""
+    from . import remote
+    from . import tunnel as tunnel_mod
+
+    return {**tunnel_mod.status(), **remote.info()}
 
 
 def _conda_env_row() -> dict:
@@ -129,24 +142,27 @@ def _conda_env_row() -> dict:
 def changes() -> list[dict]:
     """"lab.remote 가 바꾼 것" — PLAN 1장 목록 그대로. 있는지만 본다."""
     rows = [_conda_env_row()]
-    unit_file = units.unit_path("labremote-session")
+    unit_file = units.unit_path()
+    from .service import autostart as auto
+
+    before = auto.record().get("lingerBefore")
     rows.append(
         {
             "what": "사용자 서비스 labremote-session",
             "where": unit_file,
             "present": os.path.exists(unit_file),
-            "when": "자동 시작을 켤 때",
-            "undo": "systemctl --user disable --now labremote-session · 유닛 파일 지우기",
+            "when": "labremote autostart install",
+            "undo": "labremote autostart uninstall",
         }
     )
     linger = units.status().get("linger")
     rows.append(
         {
             "what": "linger (로그아웃해도 서비스 유지)",
-            "where": f"loginctl · {os.environ.get('USER') or ''}",
+            "where": f"loginctl · 사용자 {os.environ.get('USER') or ''}",
             "present": linger,
-            "when": "자동 시작을 켤 때",
-            "undo": "loginctl disable-linger",
+            "when": "labremote autostart install" + (" (원래 no)" if before is False else " (원래 yes)" if before is True else ""),
+            "undo": "uninstall 이 원래 값으로" if before is False else "lab.remote 가 켠 게 아니라 그대로 둬요" if before is True else "loginctl disable-linger",
         }
     )
     for root, name in sorted(registry.load().items(), key=lambda kv: kv[1]):
@@ -174,7 +190,20 @@ def overview(*, port: int | None = None) -> dict:
         "host": host_summary(),
         "changes": changes(),
         "clock": _clock(),
+        "uninstall": uninstall_steps(),
     }
+
+
+def uninstall_steps() -> list[str]:
+    """System 화면 "지우기" — 이 컴퓨터의 실제 경로로."""
+    repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    data = registry.data_dir()
+    out = ["labremote autostart uninstall   # 자동 시작을 켰다면", "conda env remove -n labremote", f"rm -rf {repo}"]
+    if not paths.is_inside(paths.real(repo), paths.real(data)):
+        out.append(f"rm -rf {data}   # 데이터 폴더 (lab.remote 폴더 밖에 있어요)")
+    out.append("# 등록했던 프로젝트의 .labremote/ 는 남아요. 필요하면 프로젝트마다 지워요.")
+    out.append("# code tunnel 을 켰다면: code tunnel service uninstall · code tunnel user logout")
+    return out
 
 
 def _clock() -> dict:

@@ -1,7 +1,7 @@
 """`labremote doctor` — 설치와 환경을 점검한다 (v3).
 
 docs/v3/PLAN.md 4.1 의 점검 목록: conda 환경, Claude Code 설치·로그인, tmux,
-systemd --user, linger, 터널. 거기에 GPU·드라이버와 비밀값 권한을 더 본다.
+systemd --user, 자동 시작(linger), 터널. 거기에 웹 빌드 · GPU·드라이버 · 비밀값 권한을 더 본다.
 
 **읽기만 한다.** `~/.claude`·`.bashrc`·`.condarc`·apt 설정을 고치지 않는다 —
 고칠 명령은 `hint` 로 알려 준다.
@@ -112,8 +112,10 @@ def claude_check() -> Check:
 
 
 def tmux_check() -> Check:
-    """`labremote run` 이 쓰는 tmux 가 있나 (PLAN 1.5)."""
-    binary = shutil.which("tmux")
+    """`labremote run` · 자동 시작이 쓰는 그 tmux 가 있나 (PLAN 1.5)."""
+    from . import runs
+
+    binary = runs.tmux_bin()
     if not binary:
         return Check(False, "tmux", "없어요 — 실행이 접속과 떨어져 돌 수 없어요",
                      hint="sudo apt install tmux")
@@ -138,24 +140,64 @@ def systemd_scope_check() -> Check:
 
 
 def linger_check() -> Check:
-    """linger — **자동 시작을 켤 때만** 필요하다 (PLAN 1.1). 꺼져 있어도 ⚠ 가 아니다."""
+    """자동 시작 — 켤 때만 필요하다 (PLAN 1.1). 꺼져 있는 건 정상이다."""
     from .service import units
 
     got = units.status()
     if not got["systemctl"]:
         return warn("자동 시작", "systemctl 이 없어요 — systemd 가 아닌 환경이에요")
-    unit = next(iter(got["units"].values()), {})
+    unit = got["units"].get(units.NAME) or next(iter(got["units"].values()), {})
     enabled = str(unit.get("enabled") or "")
+    active = str(unit.get("active") or "")
     linger = got["linger"]
     if not unit.get("file"):
-        return Check(True, "자동 시작", "꺼져 있어요 (켜려면 labremote service install)")
+        return Check(True, "자동 시작", "꺼져 있어요 (켜려면 labremote autostart install)")
     if linger is False:
         return warn(
             "자동 시작",
             f"유닛 {enabled or '?'} · linger 꺼짐 — 로그아웃하면 서버가 내려가요",
-            hint="loginctl enable-linger $USER",
+            hint="loginctl enable-linger $USER  (또는 labremote autostart install 을 다시)",
         )
-    return Check(True, "자동 시작", f"유닛 {enabled or '?'} · linger {'켜짐' if linger else '못 읽음'}")
+    if active and active != "active":
+        return warn("자동 시작", f"유닛 {enabled or '?'} · {active} — 서버가 안 떠 있어요",
+                    hint="journalctl --user -u labremote-session -n 50 · labremote autostart status")
+    restarts = unit.get("restarts")
+    extra = f" · 재시작 {restarts}회" if isinstance(restarts, int) and restarts else ""
+    return Check(True, "자동 시작", f"유닛 {enabled or '?'} · {active or '?'} · linger {'켜짐' if linger else '못 읽음'}{extra}")
+
+
+def tunnel_check() -> Check:
+    """code tunnel — **켜는 건 사람이** `code tunnel service install` (2026-11-23 결정). 읽기만 한다.
+
+    밖에서 접속하지 않으면 없어도 된다 — 그래서 ✘ 가 아니라 ⚠ 다.
+    """
+    from . import tunnel
+
+    t = tunnel.status(fresh=True)
+    if t["state"] == "absent":
+        return warn("code tunnel", "VS Code CLI 가 없어요 — 밖(휴대폰 · 다른 PC)에서 열 수 없어요",
+                    hint="밖에서 쓸 때만: VS Code 를 설치하고 docs/SETUP.md 의 '밖에서 접속' 을 따라 주세요.")
+    if t["state"] == "unknown":
+        return warn("code tunnel", f"상태를 못 읽었어요: {t['detail']}")
+    if t["loggedIn"] is False:
+        return warn("code tunnel", "로그인 안 함 · 꺼져 있어요",
+                    hint="code tunnel user login --provider github  →  code tunnel service install")
+    if t["state"] == "off":
+        return warn("code tunnel", "꺼져 있어요" + (" (서비스는 설치됨)" if t["service"] else ""),
+                    hint="code tunnel service install  (재부팅 뒤에도 켜져 있게)")
+    how = "서비스" if t["service"] else "손으로 띄움 — 재부팅하면 꺼져요"
+    return Check(True, "code tunnel", f"켜져 있어요 · {how}" + (f" · {t['url']}" if t["url"] else ""))
+
+
+def web_build_check() -> Check:
+    """서버가 내줄 웹 화면(`web/dist`)이 빌드돼 있나."""
+    from .main import WEB_DIST
+
+    index = os.path.join(WEB_DIST, "index.html")
+    if os.path.exists(index):
+        return Check(True, "웹 화면", WEB_DIST)
+    return Check(False, "웹 화면", "빌드되지 않았어요 — 서버를 열어도 빈 화면이에요",
+                 hint="cd web && npm ci && npm run build")
 
 
 # --- 비밀값 ----------------------------------------------------------------
@@ -330,10 +372,21 @@ def gpu_driver_check() -> Check:
 # --- 모으기 ----------------------------------------------------------------
 
 
-#: 아직 점검하지 않는 것. 해당 단계에서 채운다.
+#: 점검하지 못하는 것 — 사람이 확인해 주세요.
 LIMITATIONS = (
-    "터널(밖에서 접속) 점검은 9단계에서 더해요.",
+    "터널로 전달한 바깥 주소가 실제로 열리는지는 밖(휴대폰 등)에서 직접 열어 봐야 알아요.",
 )
+
+
+def tunnel_note() -> str | None:
+    """터널을 쓰면 늘 붙이는 보안 안내 (System 화면과 같은 말)."""
+    from . import tunnel
+
+    t = tunnel.status()
+    if t["state"] == "up" or t["service"]:
+        return ("터널이 열려 있으면 그 GitHub 계정만 있으면 이 데스크톱의 터미널과 파일에 들어올 수 있어요. "
+                "GitHub 2단계 인증을 켜 두세요.")
+    return None
 
 
 def run() -> dict:
@@ -343,13 +396,15 @@ def run() -> dict:
         tmux_check(),
         systemd_scope_check(),
         linger_check(),
+        tunnel_check(),
+        web_build_check(),
         api_key_check(),
         webhook_check(),
         schema_check(),
         gpu_check(),
         gpu_driver_check(),
     ]
-    notes = [n for n in (nvidia_hold_note(),) if n]
+    notes = [n for n in (tunnel_note(), nvidia_hold_note()) if n]
     return {
         "ok": all(c["level"] != "bad" for c in checks),
         "checks": checks,

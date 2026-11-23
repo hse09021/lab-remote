@@ -22,15 +22,16 @@ def test_run_은_v3_점검만_돈다(monkeypatch):
     """v1 의 훅·정책·샌드박스·앵커 점검은 없다."""
     names = [
         "conda_env_check", "claude_check", "tmux_check", "systemd_scope_check",
-        "linger_check", "api_key_check", "webhook_check", "schema_check",
+        "linger_check", "tunnel_check", "web_build_check", "api_key_check", "webhook_check", "schema_check",
         "gpu_check", "gpu_driver_check",
     ]
     for name in names:
         monkeypatch.setattr(doctor, name, lambda n=name: doctor.Check(True, n))
+    monkeypatch.setattr(doctor, "tunnel_note", lambda: None)
+    monkeypatch.setattr(doctor, "nvidia_hold_note", lambda: None)
     report = doctor.run()
     assert [c["title"] for c in report["checks"]] == names
     assert report["ok"] is True
-    assert any("터널" in note for note in report["limitations"])
 
 
 # --- 설치 --------------------------------------------------------------------
@@ -71,9 +72,11 @@ def test_claude_로그인을_계정_정보로_본다(monkeypatch):
 
 
 def test_tmux(monkeypatch):
-    monkeypatch.setattr(doctor.shutil, "which", lambda name: None)
+    from app import runs
+
+    monkeypatch.setattr(runs, "tmux_bin", lambda: "")
     assert doctor.tmux_check()["level"] == "bad"
-    monkeypatch.setattr(doctor.shutil, "which", lambda name: "/usr/bin/tmux")
+    monkeypatch.setattr(runs, "tmux_bin", lambda: "/usr/bin/tmux")
     # conda 의 tmux 는 libtinfo 경고를 앞에 찍는다 — 판 줄만 고른다
     monkeypatch.setattr(
         doctor, "_run",
@@ -214,3 +217,40 @@ def test_apt_blacklist_가_dump_를_파싱한다(monkeypatch):
     assert got["ok"] is True
     assert got["entries"] == ["nvidia-", "cuda-"]
     assert got["autoReboot"] == "false"
+
+
+# --- 터널 · 웹 ----------------------------------------------------------------
+
+
+def _tunnel(monkeypatch, **got):
+    from app import tunnel
+
+    base = {"cli": "/x/code", "state": "off", "service": False, "loggedIn": True, "name": "", "url": "", "detail": ""}
+    monkeypatch.setattr(tunnel, "status", lambda **k: {**base, **got})
+
+
+def test_터널은_없어도_경고까지만(monkeypatch):
+    _tunnel(monkeypatch, state="absent", cli="")
+    assert doctor.tunnel_check()["level"] == "warn"
+    _tunnel(monkeypatch, loggedIn=False)
+    got = doctor.tunnel_check()
+    assert got["level"] == "warn" and "user login" in got["hint"]
+    _tunnel(monkeypatch, state="off")
+    assert "service install" in doctor.tunnel_check()["hint"]
+    assert doctor.tunnel_note() is None
+
+
+def test_터널이_켜져_있으면_2단계_인증_안내(monkeypatch):
+    _tunnel(monkeypatch, state="up", service=True, name="desk", url="https://vscode.dev/tunnel/desk")
+    got = doctor.tunnel_check()
+    assert got["ok"] and "서비스" in got["detail"] and "vscode.dev/tunnel/desk" in got["detail"]
+    assert "2단계 인증" in doctor.tunnel_note()
+
+
+def test_웹_빌드(monkeypatch, tmp_path):
+    from app import main
+
+    monkeypatch.setattr(main, "WEB_DIST", str(tmp_path))
+    assert doctor.web_build_check()["level"] == "bad"
+    (tmp_path / "index.html").write_text("x")
+    assert doctor.web_build_check()["ok"]

@@ -4,7 +4,7 @@
 해석과 출력만 맡는다 — 서버(FastAPI)가 같은 함수를 부를 수 있게.
 
 지금 있는 것: `serve`, `run`, `runs`, `doctor`, `notify test`,
-`service install|status`, `monitor once`. `autostart`(9단계)는 그 단계에서 더한다
+`autostart install|uninstall|status`, `remote set|clear|show`, `monitor once`
 (docs/v3/PLAN.md 4.1 · 6장).
 """
 
@@ -63,43 +63,105 @@ def cmd_notify(args) -> int:
     return 0
 
 
-def cmd_service(args) -> int:
-    """⚙️ 자동 시작 유닛을 **렌더**한다. 활성화는 사람이 한다."""
-    from .service import units
+def _confirm(question: str, yes: bool) -> bool:
+    if yes:
+        return True
+    if not sys.stdin.isatty():
+        print("✘ 확인할 수 없어요 — 터미널에서 돌리거나 --yes 를 붙여 주세요.", file=sys.stderr)
+        return False
+    try:
+        return input(f"{question} [y/N] ").strip().lower() in ("y", "yes", "네", "ㅇ")
+    except EOFError:
+        return False
 
-    if args.action == "install":
-        if args.dry_run:
-            for name in sorted(units.UNITS):
-                print(f"--- {units.unit_path(name)} ---")
-                print(units.render(name))
+
+def cmd_autostart(args) -> int:
+    """⚙️ 자동 시작 — 사용자 서비스 하나 + (꺼져 있으면) linger. 바꾸기 전에 묻는다."""
+    from .service import autostart, units
+
+    if args.action == "status":
+        got = units.status()
+        if args.json:
+            print(json.dumps({**got, "record": autostart.record()}, ensure_ascii=False, indent=2))
             return 0
-        got = units.install()
-        print(f"✔ 유닛을 썼어요: {got['dir']}")
-        for path in got["written"]:
-            mark = "바뀜" if path in got["changed"] else "그대로"
-            print(f"  {os.path.basename(path)}  ({mark})")
-        print()
-        print("활성화는 **사람이** 해 주세요 (sudo 는 필요 없어요):")
-        for line in units.enable_commands():
-            print(f"  {line}")
+        if not got["systemctl"]:
+            print("systemctl 이 없어요 — systemd 가 아닌 환경이에요.")
+            return 1
+        row = got["units"].get(units.NAME) or {}
+        print(f"{units.NAME}  유닛 {'있어요' if row.get('file') else '없어요'} · {row.get('enabled')} · {row.get('active')}"
+              + (f" · 포트 {row['port']}" if row.get("port") else "")
+              + (f" · 재시작 {row['restarts']}회" if row.get("restarts") is not None else ""))
+        linger = got["linger"]
+        print("linger    " + ("켜져 있어요" if linger else "꺼져 있어요" if linger is False else "못 읽었어요"))
+        print(f"서버 출력  tmux -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}   (나올 때 Ctrl+b d)")
         return 0
 
-    got = units.status()
+    try:
+        if args.action == "install":
+            if args.dry_run:
+                print(f"--- {units.unit_path()} ---")
+                print(units.render(port=args.port))
+                return 0
+            print("자동 시작을 켜면 이것들이 바뀌어요 (sudo 는 필요 없어요):")
+            for st in autostart.plan(port=args.port):
+                print(f"  · {st['what']}\n      {st['detail']}")
+            print("code tunnel 은 여기서 켜지 않아요 — 따로 `code tunnel service install` (docs/SETUP.md).")
+            if not _confirm("켤까요?", args.yes):
+                print("그만뒀어요. 아무것도 바꾸지 않았어요.")
+                return 1
+            steps = autostart.install(port=args.port)
+        else:
+            if not os.path.exists(units.unit_path()) and not autostart.record():
+                print("자동 시작이 이미 꺼져 있어요.")
+                return 0
+            print("자동 시작을 끄면 서비스를 멈추고 유닛 파일을 지워요. linger 는 lab.remote 가 켰을 때만 원래대로 돌려요.")
+            print("학습 실행은 서비스와 따로 돌아서 계속 돌아요.")
+            if not _confirm("끌까요?", args.yes):
+                print("그만뒀어요. 아무것도 바꾸지 않았어요.")
+                return 1
+            steps = autostart.uninstall()
+    except autostart.AutostartError as exc:
+        print(f"✘ {exc}", file=sys.stderr)
+        return 2
+    for st in steps:
+        print(f"{'✔' if st['ok'] else '⚠'} {st['what']}" + (f" — {st['detail']}" if st.get("detail") else ""))
+    if args.action == "install":
+        print(f"\n서버 출력 보기: tmux -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}")
+    return 0
+
+
+def cmd_remote(args) -> int:
+    """🌐 바깥 주소 — 터널로 전달한 lab.remote 주소 (Host 허용 + Discord 답하기 링크)."""
+    from . import remote, tunnel
+
+    try:
+        if args.action == "set":
+            if not args.url:
+                print("✘ 주소를 적어 주세요: labremote remote set https://…", file=sys.stderr)
+                return 2
+            got = remote.set_url(args.url)
+            print(f"✔ 바깥 주소를 적었어요: {got['publicUrl']}")
+            print("  서버가 이 주소로 오는 요청을 받아요. Discord 알림에 '답하기' 링크가 붙어요.")
+            return 0
+        if args.action == "clear":
+            remote.clear()
+            print("✔ 바깥 주소를 지웠어요.")
+            return 0
+    except remote.RemoteError as exc:
+        print(f"✘ {exc}", file=sys.stderr)
+        return 2
+    info = remote.info()
+    t = tunnel.status(fresh=True)
     if args.json:
-        print(json.dumps(got, ensure_ascii=False, indent=2))
+        print(json.dumps({**info, "tunnel": t}, ensure_ascii=False, indent=2))
         return 0
-    if not got["systemctl"]:
-        print("systemctl 이 없어요 — systemd 가 아닌 환경이에요.")
-        return 1
-    linger = got["linger"]
-    print("linger   " + ("켜져 있어요" if linger else
-                         "꺼져 있어요 — 로그아웃하면 서버가 내려가요" if linger is False
-                         else "못 읽었어요"))
-    for name, row in sorted(got["units"].items()):
-        print(f"{name}")
-        print(f"  유닛 파일  {'있어요' if row['file'] else '없어요 (labremote service install)'}")
-        print(f"  enabled   {row.get('enabled')}")
-        print(f"  active    {row.get('active')}")
+    state = {"up": "켜져 있어요", "off": "꺼져 있어요", "absent": "VS Code CLI 가 없어요", "unknown": "못 읽었어요"}[t["state"]]
+    print(f"code tunnel  {state}" + (f" · {t['url']}" if t["url"] else "")
+          + (" · 서비스로 설치됨" if t["service"] else "")
+          + ("" if t["loggedIn"] is None else " · 로그인함" if t["loggedIn"] else " · 로그인 안 함"))
+    print(f"바깥 주소     {info['publicUrl'] or '없음 (labremote remote set https://…)'}")
+    if info["envHosts"]:
+        print(f"LAB_ALLOWED_HOSTS  {', '.join(info['envHosts'])}")
     return 0
 
 
@@ -170,7 +232,11 @@ def cmd_serve(args) -> int:
         f"ionice {'idle' if prio['ionice'] else '그대로'}",
         flush=True,
     )
-    uvicorn.run(create_app(port=args.port), host="127.0.0.1", port=args.port, log_level="warning")
+    # 열린 SSE(실시간 갱신) 연결이 있으면 uvicorn 은 끝없이 기다린다 — 5초 뒤에는 끊고 끝낸다
+    # (자동 시작이 서버를 다시 띄울 수 있게. 실측 2026-11-23: 브라우저 탭 하나로 멈췄어요)
+    uvicorn.run(
+        create_app(port=args.port), host="127.0.0.1", port=args.port, log_level="warning", timeout_graceful_shutdown=5
+    )
     return 0
 
 
@@ -283,10 +349,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("name", nargs="?", help="프로젝트 이름 (선택)")
     p.set_defaults(func=cmd_notify)
 
-    p = sub.add_parser("service", help="자동 시작 유닛 렌더 (활성화는 사람이)")
-    p.add_argument("action", choices=["install", "status"])
-    p.add_argument("--dry-run", action="store_true", help="쓰지 않고 내용만 보여 줘요")
-    p.set_defaults(func=cmd_service)
+    p = sub.add_parser("autostart", help="자동 시작 켜기 · 끄기 (바꾸기 전에 물어봐요)")
+    p.add_argument("action", choices=["install", "uninstall", "status"])
+    p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--yes", action="store_true", help="묻지 않고 진행해요")
+    p.add_argument("--dry-run", action="store_true", help="install: 유닛 내용만 보여 줘요")
+    p.set_defaults(func=cmd_autostart)
+
+    p = sub.add_parser("remote", help="바깥 주소(터널로 전달한 주소) · 터널 상태")
+    p.add_argument("action", choices=["show", "set", "clear"], nargs="?", default="show")
+    p.add_argument("url", nargs="?")
+    p.set_defaults(func=cmd_remote)
 
     p = sub.add_parser("monitor", help="GPU·호스트를 한 번 읽어요")
     p.add_argument("action", choices=["once"])

@@ -23,7 +23,7 @@
 
 1. **시스템 설정은 최소한만.** git clone 후 설치 명령 몇 줄로 끝나야 해요. lab.remote 가 바꾸는 것은 아래뿐이에요.
    - conda 환경 `labremote` (`~/miniconda3/envs/labremote`)
-   - 자동 시작을 켤 때만: 사용자 서비스 `~/.config/systemd/user/labremote-session.service` + `loginctl enable-linger`
+   - 자동 시작을 켤 때만: 사용자 서비스 `~/.config/systemd/user/labremote-session.service` + `loginctl enable-linger` (꺼져 있었을 때만 — 끌 때 원래대로). code tunnel 은 사람이 VS Code 공식 명령으로 켜요(lab.remote 가 바꾸지 않음)
    - 등록한 프로젝트마다 `<프로젝트>/.labremote/`
    - 그 밖의 cron, systemd 타이머, `.bashrc`, `~/.claude/`, `.condarc`, 프로젝트의 `.gitignore` 는 **절대 고치지 않아요.**
 2. **Claude Code 설정과 훅을 건드리지 않아요.** 채팅은 Python `claude-agent-sdk` 로 사용자가 이미 설치하고 로그인한 Claude Code 를 불러 써요. 읽을 설정 범위는 SDK 옵션(`setting_sources` 등)으로 정하고, 권한은 코드로 넘겨요. `--dangerously-skip-permissions`(또는 같은 효과의 모드)는 쓰지 않아요.
@@ -131,7 +131,8 @@
 | 할 일 도구 | Opus 4.7·Sonnet 4.6·Haiku 4.5 이하 모델에서만 기본으로 켜짐. `allowed_tools` 에 할 일 도구 이름(TodoWrite·Task*)을 넣어 켬 | 문서 agent-sdk/todo-tracking, 실측 |
 | Ultracode | Effort 단계가 아니라 Claude Code 설정 키 `"ultracode": true`. 세션마다 `settings`(인라인 JSON → `--settings`)로 켬. xhigh 를 지원하는 모델에서만 | 문서 model-config · settings-reference |
 | 로그인 확인 | 연결만 해서 `account.subscriptionType` 으로 봄(자격 증명 파일 안 읽음, 이메일 안 찍음) | 실측 |
-| 남은 것 | 터널 상태(9단계), Discord 에서 바로 답하기(9단계 — 바깥 주소 필요), Ultracode 를 실제로 돌린 결과(사용량이 커서 안 돌려 봄) | — |
+| 터널 (9단계) | 터널은 사람이 `code tunnel service install` 로 켜고 lab.remote 는 `code tunnel status` · `code tunnel user show` 로 읽기만 (2026-11-23 결정). 전달한 바깥 주소는 `labremote remote set` 으로 적으면 Host 허용 + Discord "답하기" 링크 | VS Code CLI 1.131 도움말 · 실측(꺼진 상태) |
+| 남은 것 | 터널이 켜졌을 때 `status` 의 모양 · 전달 주소가 유지되는지(로그인한 뒤 실측), Ultracode 를 실제로 돌린 결과(사용량이 커서 안 돌려 봄) | — |
 
 ---
 
