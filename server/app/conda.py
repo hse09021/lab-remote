@@ -294,6 +294,7 @@ def start_job(kind: str, env: str, *, tool: str = "", action: str = "", packages
 
 
 def _work(record: dict, argv: list[str]) -> None:
+    final = "failed"
     try:
         if record["kind"] == "delete":
             # 지우기 전에 environment.yml 을 남긴다
@@ -312,16 +313,20 @@ def _work(record: dict, argv: list[str]) -> None:
         if not ok:
             tail = (done.stderr or done.stdout or "").strip().splitlines()[-3:]
             record["error"] = " / ".join(tail)[-500:] or f"종료코드 {done.returncode}"
-        record["state"] = "done" if ok else "failed"
+        final = "done" if ok else "failed"
     except subprocess.TimeoutExpired:
-        record.update(state="failed", error=f"{TIMEOUT_SEC // 60}분 안에 끝나지 않았어요")
+        final = "failed"
+        record["error"] = f"{TIMEOUT_SEC // 60}분 안에 끝나지 않았어요"
     except Exception as exc:
-        record.update(state="failed", error=f"{type(exc).__name__}: {exc}"[:500])
+        final = "failed"
+        record["error"] = f"{type(exc).__name__}: {exc}"[:500]
     finally:
+        # 기록을 다 남긴 뒤에 끝난 것으로 보이게 — 화면 · 시험이 "끝남" 을 보고 기록을 읽어도 있게
         record["endedAt"] = time.time()
         _forget(record["env"])
         if not record["dry"]:
-            _history({k: record.get(k) for k in ("kind", "env", "tool", "action", "specs", "state", "error", "backup")})
+            _history({**{k: record.get(k) for k in ("kind", "env", "tool", "action", "specs", "error", "backup")}, "state": final})
+        record["state"] = final
 
 
 def job(jid: str) -> dict:
