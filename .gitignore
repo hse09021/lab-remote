@@ -12,7 +12,7 @@ dist/
 # 논문에서 나온 개발용 샘플 (저작권)
 web/fixtures/*
 !web/fixtures/.gitkeep
-docs/mockups/paper/
+**/mockups/paper/
 *.pdf
 
 # Python (server/)

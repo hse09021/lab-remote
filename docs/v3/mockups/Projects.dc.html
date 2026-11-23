@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>프로젝트 · 파일</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#0E6E5C}a:hover{color:#08493D}
+button{font-family:inherit}
+.ebtn:hover{background:#E9ECEB !important;color:#141A19 !important}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: #FFFFFF; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+<header style="position: relative; z-index: 20; background: #FFFFFF; border-bottom: 1px solid #E1E5E4; font-family: 'Noto Sans KR', sans-serif">
+<div style="box-sizing: border-box; padding: 0 16px 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em; color: #141A19">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="MissionControl.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Dashboard</a>
+<a href="Projects.dc.html" aria-current="page" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid #0E6E5C; color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none">Projects</a>
+<a href="PaperLibrary.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Papers</a>
+<a href="Inbox.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Inbox<span aria-label="안 읽은 알림 3" style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #B4530F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span></a>
+</nav>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: #56605E">
+<button type="button" aria-label="Go to, Ctrl+K" style="min-height: 36px; min-width: 200px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #E1E5E4; border-radius: 8px; background: #F6F7F7; color: #56605E; font-family: inherit; font-size: 13px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex: 1; text-align: left">Go to…</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 1px 6px; border: 1px solid #E1E5E4; border-radius: 4px; background: #FFFFFF">⌘K</span></button>
+<span style="font-family: 'Roboto Mono', monospace">GPU 94% · 13.1/16G</span>
+<a href="System.dc.html" style="display: inline-flex; align-items: center; gap: 6px; color: #56605E; text-decoration: none"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>Tunnel</a>
+<details style="position: relative">
+<summary aria-label="Conda · System 메뉴" style="list-style: none; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #3D4644"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg></summary>
+<div role="menu" aria-label="Conda · System" style="position: absolute; right: 0; top: calc(100% + 8px); width: 240px; box-sizing: border-box; padding: 6px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 8px 28px rgba(20,26,25,0.14); display: flex; flex-direction: column">
+<a role="menuitem" href="Conda.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">Conda</span><span style="font-size: 11px; color: #56605E">환경 만들기 · 패키지 관리</span></a>
+<a role="menuitem" href="System.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">System</span><span style="font-size: 11px; color: #56605E">서버 · 터널 · 자동 시작 · 삭제</span></a>
+</div>
+</details>
+</div>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; flex: 1">
+<aside aria-label="프로젝트 목록" style="flex: 1 1 280px; max-width: 300px; box-sizing: border-box; background: #F6F7F7; border-right: 1px solid #E1E5E4; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 6px; padding: 14px 10px 6px 16px">
+<span style="font-size: 14px; font-weight: 700">프로젝트</span>
+<span style="font-size: 12px; color: #56605E">{{ total }}</span>
+<button type="button" style="margin-left: auto; min-height: 32px; padding: 0 10px; border: none; border-radius: 8px; background: #141A19; color: #FFFFFF; font-size: 12px; font-weight: 700; cursor: pointer">+ 폴더 등록</button>
+</div>
+<div style="padding: 6px 12px 4px; display: flex; flex-direction: column; gap: 8px">
+<label for="pj-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">프로젝트 검색</label>
+<input id="pj-search" type="text" value="{{ query }}" onChange="{{ onQuery }}" placeholder="이름 · 경로 검색" style="min-height: 36px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-family: inherit; font-size: 13px">
+<div role="group" aria-label="정렬" style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; background: #E9EDEC; border-radius: 8px">
+<button type="button" aria-pressed="{{ sRecent.pressed }}" onClick="{{ sRecent.pick }}" style="{{ sRecent.style }}">최근 활동</button>
+<button type="button" aria-pressed="{{ sName.pressed }}" onClick="{{ sName.pick }}" style="{{ sName.style }}">이름</button>
+</div>
+</div>
+
+<div style="flex: 1; overflow-y: auto; padding: 4px 8px 12px">
+<sc-if value="{{ hasPinned }}" hint-placeholder-val="{{ true }}">
+<div style="padding: 10px 8px 4px; font-size: 11px; font-weight: 700; color: #56605E">고정</div>
+<sc-for list="{{ pinned }}" as="p" hint-placeholder-count="2">
+<button type="button" aria-current="{{ p.current }}" onClick="{{ p.pick }}" style="{{ p.row }}">
+<span aria-hidden="true" style="{{ p.dot }}"></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left">
+<span style="font-family: 'Roboto Mono', monospace; font-size: 13px; color: #141A19; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ p.name }}</span>
+<span style="{{ p.subStyle }}">{{ p.sub }}</span>
+</span>
+<span style="font-size: 11px; color: #56605E; white-space: nowrap">{{ p.ago }}</span>
+</button>
+</sc-for>
+</sc-if>
+<div style="padding: 12px 8px 4px; font-size: 11px; font-weight: 700; color: #56605E">전체</div>
+<sc-for list="{{ rest }}" as="p" hint-placeholder-count="7">
+<button type="button" aria-current="{{ p.current }}" onClick="{{ p.pick }}" style="{{ p.row }}">
+<span aria-hidden="true" style="{{ p.dot }}"></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left">
+<span style="font-family: 'Roboto Mono', monospace; font-size: 13px; color: #141A19; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ p.name }}</span>
+<span style="{{ p.subStyle }}">{{ p.sub }}</span>
+</span>
+<span style="font-size: 11px; color: #56605E; white-space: nowrap">{{ p.ago }}</span>
+</button>
+</sc-for>
+<sc-if value="{{ noMatch }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 16px 8px; font-size: 13px; color: #56605E">맞는 프로젝트가 없어요.</div>
+</sc-if>
+</div>
+<div style="padding: 10px 16px; border-top: 1px solid #E1E5E4; font-size: 12px; color: #56605E; line-height: 1.6">등록한 폴더만 읽어요. lab.remote 가 쓰는 건 각 프로젝트의 <span style="font-family: 'Roboto Mono', monospace">.labremote/</span> 하나뿐이에요.</div>
+</aside>
+
+<main style="flex: 999 1 640px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column">
+<div style="padding: 20px 28px 14px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 20px; border-bottom: 1px solid #EEF1F0">
+<div style="flex: 1 1 420px; min-width: 0">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<span aria-hidden="true" style="{{ cur.dot }}"></span>
+<h1 style="margin: 0; font-family: 'Roboto Mono', monospace; font-size: 22px; font-weight: 700">{{ cur.name }}</h1>
+<button type="button" aria-pressed="{{ cur.pinPressed }}" onClick="{{ togglePin }}" class="ebtn" style="min-height: 28px; padding: 0 8px; border: 1px solid #E1E5E4; border-radius: 6px; background: #FFFFFF; font-size: 12px; color: #3D4644; cursor: pointer">{{ cur.pinLabel }}</button>
+</div>
+<div style="margin-top: 6px; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">{{ cur.path }}</div>
+<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px">
+<span style="padding: 4px 10px; border-radius: 999px; background: #F0F2F2; color: #3D4644; font-family: 'Roboto Mono', monospace">{{ cur.git }}</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #F0F2F2; color: #3D4644">conda · <span style="font-family: 'Roboto Mono', monospace">{{ cur.env }}</span></span>
+<span style="{{ cur.sesPill }}">{{ cur.sessions }}</span>
+<span style="{{ cur.runPill }}">{{ cur.run }}</span>
+</div>
+</div>
+<a href="IDE.dc.html" style="min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; border: 1px solid #C8D0CE; border-radius: 8px; color: #141A19; text-decoration: none; font-size: 13px">IDE 에서 열기</a>
+<a href="ADE.dc.html" style="min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 8px; background: #141A19; color: #FFFFFF; text-decoration: none; font-size: 13px; font-weight: 700">ADE 세션</a>
+</div>
+
+<div role="tablist" aria-label="프로젝트 보기" style="display: flex; background: #F6F7F7; border-bottom: 1px solid #E1E5E4; overflow-x: auto">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+<button type="button" role="tab" aria-selected="{{ t.pressed }}" onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+</sc-for>
+</div>
+
+<sc-if value="{{ isFiles }}" hint-placeholder-val="{{ true }}">
+<div style="padding: 12px 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<label for="pj-tree" style="font-size: 12px; color: #56605E">worktree</label>
+<div id="pj-tree" role="group" aria-label="worktree 고르기" style="display: flex; flex-wrap: wrap; gap: 4px">
+<sc-for list="{{ trees }}" as="w" hint-placeholder-count="3">
+<button type="button" aria-pressed="{{ w.pressed }}" onClick="{{ w.pick }}" style="{{ w.chip }}">{{ w.branch }}</button>
+</sc-for>
+</div>
+<label for="pj-find" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">파일 검색</label>
+<input id="pj-find" type="text" placeholder="파일 이름 검색" style="margin-left: auto; min-height: 36px; box-sizing: border-box; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #F6F7F7; font-family: inherit; font-size: 13px">
+<button type="button" style="min-height: 36px; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 13px; cursor: pointer">새 폴더</button>
+<button type="button" style="min-height: 36px; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 13px; cursor: pointer">새 파일</button>
+<button type="button" style="min-height: 36px; padding: 0 14px; border: none; border-radius: 8px; background: #0E6E5C; color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer">업로드</button>
+</div>
+<nav aria-label="경로" style="padding: 0 28px 8px; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">{{ cur.path }} / <b style="color: #141A19">{{ curTree }}</b></nav>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 720px; border-collapse: collapse; font-size: 13px">
+<thead>
+<tr style="text-align: left; color: #56605E">
+<th style="padding: 10px 8px 10px 28px; font-weight: 500; border-bottom: 1px solid #E1E5E4">이름</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4">git</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4; text-align: right">크기</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4">수정</th>
+<th style="padding: 10px 28px 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4; text-align: right">동작</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ files }}" as="f" hint-placeholder-count="8">
+<tr>
+<td style="padding: 9px 8px 9px 28px; border-bottom: 1px solid #EEF1F0"><span style="display: inline-flex; align-items: center; gap: 8px"><span aria-hidden="true" style="{{ f.icon }}">{{ f.glyph }}</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12.5px">{{ f.name }}</span></span></td>
+<td style="padding: 9px 8px; border-bottom: 1px solid #EEF1F0"><span style="{{ f.gitStyle }}">{{ f.git }}</span></td>
+<td style="padding: 9px 8px; border-bottom: 1px solid #EEF1F0; text-align: right; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #3D4644">{{ f.size }}</td>
+<td style="padding: 9px 8px; border-bottom: 1px solid #EEF1F0; font-size: 12px; color: #56605E">{{ f.when }}</td>
+<td style="padding: 9px 28px 9px 8px; border-bottom: 1px solid #EEF1F0; text-align: right; white-space: nowrap">
+<a href="IDE.dc.html" style="font-size: 12px">열기</a>
+<button type="button" style="margin-left: 8px; min-height: 28px; padding: 0 8px; border: 1px solid #E1E5E4; border-radius: 6px; background: #FFFFFF; font-size: 12px; cursor: pointer">내려받기</button>
+<button type="button" aria-label="{{ f.more }}" class="ebtn" style="margin-left: 4px; width: 28px; height: 28px; border: none; border-radius: 6px; background: transparent; color: #3D4644; cursor: pointer">···</button>
+</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div style="padding: 12px 28px 28px; font-size: 12px; color: #56605E; line-height: 1.6">이름 바꾸기 · 이동 · 삭제는 ··· 에 있어요. 삭제는 한 번 더 확인하고, 실행 중인 학습이 쓰는 폴더는 지울 수 없어요.</div>
+</sc-if>
+
+<sc-if value="{{ isTrees }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 16px 28px 28px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<span style="font-size: 13px; color: #3D4644">작업마다 worktree 하나씩 · ADE 에서 세션을 만들면 함께 생겨요</span>
+<button type="button" style="margin-left: auto; min-height: 36px; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 13px; cursor: pointer">+ worktree</button>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px">
+<thead><tr style="text-align: left; color: #56605E">
+<th style="padding: 10px 8px 10px 0; font-weight: 500; border-bottom: 1px solid #E1E5E4">브랜치</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4">main 대비</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4">세션</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4">경로</th>
+<th style="padding: 10px 0 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4; text-align: right">동작</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{ trees }}" as="w" hint-placeholder-count="3">
+<tr>
+<td style="padding: 10px 8px 10px 0; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">{{ w.branch }}</td>
+<td style="padding: 10px 8px; border-bottom: 1px solid #EEF1F0; font-size: 12px; color: #3D4644">{{ w.ahead }}</td>
+<td style="{{ w.sesStyle }}">{{ w.sub }}</td>
+<td style="padding: 10px 8px; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">{{ w.path }}</td>
+<td style="padding: 10px 0 10px 8px; border-bottom: 1px solid #EEF1F0; text-align: right; white-space: nowrap"><sc-if value="{{ w.stale }}" hint-placeholder-val="{{ false }}"><button type="button" style="min-height: 30px; padding: 0 10px; border: 1px solid #C8D0CE; border-radius: 6px; background: #FFFFFF; font-size: 12px; cursor: pointer">정리…</button></sc-if><a href="ADE.dc.html" style="margin-left: 8px; font-size: 12px">ADE</a></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isWork }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 16px 28px 28px; display: flex; flex-wrap: wrap; gap: 24px">
+<section aria-label="세션" style="flex: 1 1 320px; min-width: 0">
+<h2 style="margin: 0 0 8px; font-size: 15px">세션</h2>
+<sc-for list="{{ sessions }}" as="s" hint-placeholder-count="3">
+<a href="ADE.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #EEF1F0; text-decoration: none; color: #141A19">
+<span aria-hidden="true" style="{{ s.dot }}"></span>
+<span style="flex: 1; min-width: 0; font-size: 13px">{{ s.title }}</span>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">{{ s.branch }}</span>
+<span style="{{ s.pill }}">{{ s.state }}</span>
+</a>
+</sc-for>
+<sc-if value="{{ noSessions }}" hint-placeholder-val="{{ false }}"><div style="padding: 10px 0; font-size: 13px; color: #56605E">세션이 없어요.</div></sc-if>
+</section>
+<section aria-label="실행" style="flex: 1 1 320px; min-width: 0">
+<h2 style="margin: 0 0 8px; font-size: 15px">실행</h2>
+<sc-for list="{{ runs }}" as="r" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #EEF1F0; font-size: 13px">
+<span style="font-family: 'Roboto Mono', monospace; font-weight: 700">{{ r.name }}</span>
+<span style="{{ r.pill }}">{{ r.state }}</span>
+<span style="margin-left: auto; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #3D4644">{{ r.val }}</span>
+<a href="IDE.dc.html" style="font-size: 12px">로그</a>
+</div>
+</sc-for>
+<sc-if value="{{ noRuns }}" hint-placeholder-val="{{ false }}"><div style="padding: 10px 0; font-size: 13px; color: #56605E">실행 기록이 없어요.</div></sc-if>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 16px 28px 28px; max-width: 720px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: grid; grid-template-columns: 140px 1fr; gap: 12px 16px; align-items: center; font-size: 13px">
+<label for="pj-env" style="color: #56605E">기본 conda 환경</label>
+<span style="display: inline-flex; align-items: center; gap: 10px"><button id="pj-env" type="button" style="min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-family: 'Roboto Mono', monospace; font-size: 13px; cursor: pointer">{{ cur.env }}<span aria-hidden="true" style="color: #7A8482">▾</span></button><a href="Conda.dc.html" style="font-size: 12px">환경 관리</a></span>
+<label for="pj-cmd" style="color: #56605E">자주 쓰는 실행 명령</label>
+<input id="pj-cmd" type="text" value="{{ cur.cmd }}" style="min-height: 36px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C8D0CE; border-radius: 8px; font-family: 'Roboto Mono', monospace; font-size: 12px">
+<label for="pj-metric" style="color: #56605E">지표 파일 찾기</label>
+<input id="pj-metric" type="text" value="runs/*/metrics.csv" style="min-height: 36px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C8D0CE; border-radius: 8px; font-family: 'Roboto Mono', monospace; font-size: 12px">
+</div>
+<div style="font-size: 12px; color: #56605E; line-height: 1.6">이 설정은 프로젝트의 <span style="font-family: 'Roboto Mono', monospace">.labremote/settings.json</span> 에 저장돼요. 시나리오는 <span style="font-family: 'Roboto Mono', monospace">.labremote/scenarios/</span>, worktree 는 <span style="font-family: 'Roboto Mono', monospace">.labremote/worktrees/</span> 에 있어요. 이 폴더는 스스로 git 에서 빠져서 repo 의 .gitignore 는 건드리지 않아요.</div>
+<button type="button" role="switch" aria-checked="{{ shareChecked }}" onClick="{{ toggleShare }}" style="width: 100%; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #E1E5E4; border-radius: 10px; background: #FFFFFF; cursor: pointer; text-align: left"><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700; color: #141A19">repo 에 같이 올리기</span><span style="font-size: 12px; color: #56605E">켜면 settings.json 과 scenarios/ 만 git 에 올라가요. worktree · 실행 기록은 계속 빠져요.</span></span><span aria-hidden="true" style="{{ shareTrack }}"><span style="{{ shareKnob }}"></span></span></button>
+<div style="margin-top: 8px; padding: 14px 16px; border: 1px solid #F0C9A8; border-radius: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px">
+<span style="flex: 1 1 280px; font-size: 13px; color: #3D4644"><b style="color: #8A3D09">등록 해제</b> · lab.remote 목록에서만 빠지고 폴더와 파일은 그대로 남아요. .labremote 폴더도 지울지는 한 번 더 물어봐요.</span>
+<button type="button" style="min-height: 36px; padding: 0 14px; border: 1px solid #E0B08A; border-radius: 8px; background: #FFFFFF; color: #8A3D09; font-size: 13px; cursor: pointer">등록 해제…</button>
+</div>
+</div>
+</sc-if>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { project: 'lora', tab: 'files', tree: 'main', sort: 'recent', query: '', pins: { lora: true, vit: true }, share: false };
+  }
+  renderVals() {
+    const P = [
+      { id: 'lora', name: 'lora-rank-ablation', path: '~/projects/lora-rank-ablation', rank: 1, ago: '3분', tone: 'ask', sub: '답 필요 1 · 학습 중', git: 'main · 9f1c2ab · 변경 0', env: 'lora-env', sessions: '세션 3 · 답 필요 1', run: 'EXP-007 학습 중 68%', running: true, cmd: 'python src/train.py --config configs/r16.yaml',
+        trees: [
+          { id: 'main', branch: 'main', ahead: '—', sub: '세션 1 · 학습 EXP-007', path: '.', ask: false },
+          { id: 'early', branch: 'exp/early-stop', ahead: '변경 3 (커밋 전)', sub: '세션 1 · 답 필요', path: '.labremote/worktrees/early-stop', ask: true },
+          { id: 'r64', branch: 'exp/rank-64', ahead: '1 커밋 앞섬', sub: '세션 2 · 작업 중', path: '.labremote/worktrees/rank-64' },
+          { id: 'r16', branch: 'exp/r16', ahead: '#11 로 합쳐짐', sub: '세션 없음', path: '.labremote/worktrees/r16', stale: true }
+        ],
+        ses: [['early stopping 추가', 'exp/early-stop', 'ask'], ['rank 64 설정 비교', 'exp/rank-64', 'work'], ['데이터 로더 질문', 'main', 'done']],
+        runs: [['EXP-007', 'run', '0.587'], ['EXP-006', 'done', '0.571'], ['EXP-005', 'cut', '0.612'], ['sweep-lr', 'fail', '—']] },
+      { id: 'vit', name: 'vit-distill', path: '~/research/vit-distill', rank: 2, ago: '5분', tone: 'work', sub: '작업 중 1', git: 'main · 4be1d07 · 변경 2', env: 'vit-env', sessions: '세션 2 · 작업 중 1', run: '학습 없음', cmd: 'python distill/train.py --teacher deit_base',
+        trees: [
+          { id: 'main', branch: 'main', ahead: '—', sub: '변경 2', path: '.' },
+          { id: 'loader', branch: 'refactor/loader', ahead: '3 커밋 앞섬', sub: '세션 1 · 작업 중', path: '.labremote/worktrees/loader' },
+          { id: 'docs', branch: 'docs/results', ahead: 'PR #12', sub: '세션 1 · 끝남', path: '.labremote/worktrees/docs' }
+        ],
+        ses: [['teacher 로더 리팩터', 'refactor/loader', 'work'], ['README 실험 표 갱신', 'docs/results', 'done']],
+        runs: [['nb-probe', 'done', '—']] },
+      { id: 'diff', name: 'diffusion-sampler', path: '~/projects/diffusion-sampler', rank: 3, ago: '어제', tone: 'idle', sub: '실행 끝남 · FID 기록', git: 'main · 77a01c3', env: 'diff-env', sessions: '세션 없음', run: '어제 끝남', cmd: 'python sample.py --steps 50' },
+      { id: 'eval', name: 'llm-eval-harness', path: '~/projects/llm-eval-harness', rank: 4, ago: '2일', tone: 'idle', sub: '세션 1 · 끝남', git: 'main · 0c9e2d1', env: 'eval-env', sessions: '세션 1 · 끝남', run: '2일 전 끝남', cmd: 'python run_eval.py --suite small' },
+      { id: 'rl', name: 'rl-gridworld', path: '~/toy/rl-gridworld', rank: 5, ago: '3일', tone: 'idle', sub: '변경 4 · 커밋 전', git: 'main · 5d3b8aa · 변경 4', env: 'py311-scratch', sessions: '세션 없음', run: '학습 없음', cmd: 'python train_dqn.py' },
+      { id: 'dino', name: 'paper-repro-dino', path: '~/research/paper-repro-dino', rank: 6, ago: '지난주', tone: 'idle', sub: '실행 2 · 실패 1', git: 'main · b81f4e0', env: 'vit-env', sessions: '세션 없음', run: '지난주 실패', cmd: 'python main_dino.py --arch vit_small' },
+      { id: 'tok', name: 'tokenizer-study', path: '~/notes/tokenizer-study', rank: 7, ago: '2주', tone: 'idle', sub: '노트북 3개', git: 'main · 19ce7b2', env: 'py311-scratch', sessions: '세션 없음', run: '학습 없음', cmd: '' },
+      { id: 'fig', name: 'thesis-figures', path: '~/thesis/figures', rank: 8, ago: '3주', tone: 'idle', sub: 'git 저장소 아님', git: 'git 아님', env: '없음', sessions: '세션 없음', run: '학습 없음', cmd: '' },
+      { id: 'cifar', name: 'old-cifar-baselines', path: '~/archive/old-cifar-baselines', rank: 9, ago: '2달', tone: 'idle', sub: '오래 안 씀', git: 'main · e02a6f9', env: 'py311-scratch', sessions: '세션 없음', run: '학습 없음', cmd: 'python train.py' }
+    ];
+    const COLOR = { ask: '#B4530F', work: '#0E6E5C', idle: '#B7BFBD' };
+    const dot = (c, s) => 'width:' + (s || 8) + 'px;height:' + (s || 8) + 'px;border-radius:999px;flex:none;background:' + c;
+    const q = this.state.query.trim().toLowerCase();
+    const cur = P.find((p) => p.id === this.state.project) || P[0];
+    const list = P.filter((p) => !q || p.name.toLowerCase().indexOf(q) >= 0 || p.path.toLowerCase().indexOf(q) >= 0)
+      .slice().sort((a, b) => this.state.sort === 'name' ? a.name.localeCompare(b.name) : a.rank - b.rank);
+    const ROW = 'width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border:none;border-radius:8px;cursor:pointer;margin-top:1px;';
+    const item = (p) => ({
+      name: p.name, sub: p.sub, ago: p.ago,
+      subStyle: 'font-size:11px;' + (p.tone === 'ask' ? 'color:#8A3D09;font-weight:700' : 'color:#56605E'),
+      dot: dot(COLOR[p.tone]),
+      current: p.id === cur.id ? 'page' : 'false',
+      row: ROW + (p.id === cur.id ? 'background:#FFFFFF;box-shadow:0 1px 2px rgba(20,26,25,0.12)' : 'background:transparent'),
+      pick: () => this.setState({ project: p.id, tree: 'main', tab: this.state.tab })
+    });
+    const pins = this.state.pins;
+    const pinned = list.filter((p) => pins[p.id]).map(item);
+    const rest = list.filter((p) => !pins[p.id]).map(item);
+    const SEG = 'min-height:30px;border:none;border-radius:6px;font-size:12px;cursor:pointer;';
+    const seg = (id) => ({
+      pressed: this.state.sort === id ? 'true' : 'false',
+      style: SEG + (this.state.sort === id ? 'background:#FFFFFF;color:#141A19;font-weight:700;box-shadow:0 1px 2px rgba(20,26,25,0.12)' : 'background:transparent;color:#56605E'),
+      pick: () => this.setState({ sort: id })
+    });
+    const TAB = 'min-height:40px;display:inline-flex;align-items:center;padding:0 16px;border:none;border-right:1px solid #E1E5E4;font-size:13px;cursor:pointer;white-space:nowrap;';
+    const trees0 = cur.trees || [{ id: 'main', branch: cur.git === 'git 아님' ? '(git 아님)' : 'main', ahead: '—', sub: cur.sessions, path: '.' }];
+    const tabs = [['files', '파일'], ['trees', 'worktree ' + trees0.length], ['work', '세션 · 실행'], ['settings', '설정']].map((t) => ({
+      label: t[1],
+      pressed: this.state.tab === t[0] ? 'true' : 'false',
+      style: TAB + (this.state.tab === t[0] ? 'background:#FFFFFF;color:#141A19;font-weight:700;box-shadow:inset 0 2px 0 #0E6E5C;' : 'background:transparent;color:#56605E;'),
+      pick: () => this.setState({ tab: t[0] })
+    }));
+    const CHIP = 'min-height:32px;padding:0 10px;border-radius:6px;font-family:Roboto Mono,monospace;font-size:12px;cursor:pointer;';
+    const trees = trees0.map((t) => ({
+      branch: t.branch, ahead: t.ahead, sub: t.sub, path: t.path, stale: !!t.stale,
+      sesStyle: 'padding:10px 8px;border-bottom:1px solid #EEF1F0;font-size:12px;' + (t.ask ? 'color:#8A3D09;font-weight:700' : 'color:#3D4644'),
+      pressed: t.id === this.state.tree ? 'true' : 'false',
+      chip: CHIP + (t.id === this.state.tree ? 'border:1px solid #0E6E5C;background:#E3F2EE;color:#0B5A4B;font-weight:500' : 'border:1px solid #E1E5E4;background:#FFFFFF;color:#3D4644') + (t.stale ? ';opacity:0.7' : ''),
+      pick: () => this.setState({ tree: t.id })
+    }));
+    const curTree = (trees0.find((t) => t.id === this.state.tree) || trees0[0]).branch;
+    const gitStyle = (g) => 'font-size:11px;padding:2px 8px;border-radius:999px;' + (g === '수정' ? 'background:#FDF0E5;color:#8A3D09' : g === '새 파일' ? 'background:#E3F2EE;color:#0B5A4B' : g === 'gitignore' ? 'background:#F0F2F2;color:#56605E' : 'background:transparent;color:#56605E');
+    const f = (name, folder, git, size, when) => ({
+      name: name, git: git || '—', size: size, when: when, more: name + ' 더보기',
+      glyph: folder ? '▸' : '·',
+      icon: 'width:14px;text-align:center;color:' + (folder ? '#56605E' : '#9AA4A2'),
+      gitStyle: gitStyle(git || '')
+    });
+    const FILES = {
+      lora: [f('configs/', true, '', '4 KB', '12분 전'), f('src/', true, '', '38 KB', '어제'), f('scripts/', true, '', '6 KB', '11/20'), f('tests/', true, '', '9 KB', '11/20'), f('runs/', true, 'gitignore', '3.2 GB', '방금'), f('data/', true, 'gitignore', '18 GB', '11/02'), f('.labremote/', true, 'gitignore', '24 KB', '방금'), f('CLAUDE.md', false, '', '2 KB', '11/18'), f('README.md', false, '', '1 KB', '11/18'), f('environment.yml', false, '', '1 KB', '11/02'), f('.gitignore', false, '', '1 KB', '11/02')],
+      vit: [f('configs/', true, '', '3 KB', '어제'), f('distill/', true, '수정', '22 KB', '5분 전'), f('notebooks/', true, '', '840 KB', '11/19'), f('runs/', true, 'gitignore', '1.1 GB', '11/21'), f('README.md', false, '수정', '3 KB', '어제'), f('pyproject.toml', false, '', '1 KB', '11/10')]
+    };
+    const files = FILES[cur.id] || [f('src/', true, '', '—', cur.ago + ' 전'), f('README.md', false, '', '1 KB', cur.ago + ' 전')];
+    const ST = { ask: ['답 필요', '#FDF0E5', '#8A3D09'], work: ['작업 중', '#E3F2EE', '#0B5A4B'], done: ['끝남', '#F0F2F2', '#3D4644'], run: ['실행 중', '#E3F2EE', '#0B5A4B'], cut: ['끊김', '#FDF0E5', '#8A3D09'], fail: ['실패', '#FCE9E2', '#6B2E07'] };
+    const pill = (k) => 'font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;background:' + ST[k][1] + ';color:' + ST[k][2];
+    const sessions = (cur.ses || []).map((s) => ({ title: s[0], branch: s[1], state: ST[s[2]][0], pill: pill(s[2]), dot: dot(s[2] === 'ask' ? '#B4530F' : s[2] === 'work' ? '#0E6E5C' : '#B7BFBD') }));
+    const runs = (cur.runs || []).map((r) => ({ name: r[0], val: r[2], state: ST[r[1]][0], pill: pill(r[1]) }));
+    const pinned0 = !!pins[cur.id];
+    const statePill = (on, warn) => 'padding:4px 10px;border-radius:999px;' + (warn ? 'background:#FDF0E5;color:#8A3D09;font-weight:700' : on ? 'background:#E3F2EE;color:#0B5A4B' : 'background:#F0F2F2;color:#3D4644');
+    return {
+      total: String(P.length),
+      query: this.state.query,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      sRecent: seg('recent'), sName: seg('name'),
+      pinned: pinned, rest: rest, hasPinned: pinned.length > 0, noMatch: list.length === 0,
+      cur: {
+        name: cur.name, path: cur.path, git: cur.git, env: cur.env, sessions: cur.sessions, run: cur.run, cmd: cur.cmd,
+        dot: dot(COLOR[cur.tone], 12),
+        sesPill: statePill(cur.tone === 'work', cur.tone === 'ask'),
+        runPill: statePill(!!cur.running, false),
+        pinPressed: pinned0 ? 'true' : 'false',
+        pinLabel: pinned0 ? '고정됨' : '고정'
+      },
+      shareChecked: this.state.share ? 'true' : 'false',
+      shareTrack: 'width:40px;height:24px;border-radius:999px;flex:none;position:relative;display:inline-block;' + (this.state.share ? 'background:#0E6E5C' : 'background:#C8D0CE'),
+      shareKnob: 'position:absolute;top:3px;left:' + (this.state.share ? 19 : 3) + 'px;width:18px;height:18px;border-radius:999px;background:#FFFFFF;box-shadow:0 1px 2px rgba(20,26,25,0.2)',
+      toggleShare: () => this.setState({ share: !this.state.share }),
+      togglePin: () => { const n = Object.assign({}, pins); n[cur.id] = !pinned0; this.setState({ pins: n }); },
+      tabs: tabs,
+      isFiles: this.state.tab === 'files', isTrees: this.state.tab === 'trees', isWork: this.state.tab === 'work', isSettings: this.state.tab === 'settings',
+      trees: trees, curTree: curTree, files: files,
+      sessions: sessions, runs: runs, noSessions: sessions.length === 0, noRuns: runs.length === 0
+    };
+  }
+}
+</script>
+</body>
+</html>

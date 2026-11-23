@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>대시보드 · 미션 컨트롤</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#0e6e5c}a:hover{color:#08493d}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans KR', sans-serif; color: #141a19; background: #ffffff; min-height: 1420px; display: flex; flex-direction: column">
+
+  <header style="position: relative; z-index: 20; background: #FFFFFF; border-bottom: 1px solid #E1E5E4; font-family: 'Noto Sans KR', sans-serif">
+<div style="box-sizing: border-box; padding: 0 16px 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em; color: #141A19">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="MissionControl.dc.html" aria-current="page" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid #0E6E5C; color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none">Dashboard</a>
+<a href="Projects.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Projects</a>
+<a href="PaperLibrary.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Papers</a>
+<a href="Inbox.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Inbox<span aria-label="안 읽은 알림 3" style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #B4530F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span></a>
+</nav>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: #56605E">
+<button type="button" aria-label="Go to, Ctrl+K" style="min-height: 36px; min-width: 200px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #E1E5E4; border-radius: 8px; background: #F6F7F7; color: #56605E; font-family: inherit; font-size: 13px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex: 1; text-align: left">Go to…</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 1px 6px; border: 1px solid #E1E5E4; border-radius: 4px; background: #FFFFFF">⌘K</span></button>
+<span style="font-family: 'Roboto Mono', monospace">GPU 94% · 13.1/16G</span>
+<a href="System.dc.html" style="display: inline-flex; align-items: center; gap: 6px; color: #56605E; text-decoration: none"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>Tunnel</a>
+<details style="position: relative">
+<summary aria-label="Conda · System 메뉴" style="list-style: none; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #3D4644"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg></summary>
+<div role="menu" aria-label="Conda · System" style="position: absolute; right: 0; top: calc(100% + 8px); width: 240px; box-sizing: border-box; padding: 6px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 8px 28px rgba(20,26,25,0.14); display: flex; flex-direction: column">
+<a role="menuitem" href="Conda.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">Conda</span><span style="font-size: 11px; color: #56605E">환경 만들기 · 패키지 관리</span></a>
+<a role="menuitem" href="System.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">System</span><span style="font-size: 11px; color: #56605E">서버 · 터널 · 자동 시작 · 삭제</span></a>
+</div>
+</details>
+</div>
+</div>
+</header>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1">
+    <aside aria-label="에이전트" style="flex: 1 1 240px; max-width: 260px; background: #f6f7f7; border-right: 1px solid #e1e5e4; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 8px 10px">
+        <span style="font-size: 13px; font-weight: 700">에이전트 <span style="color: #56605e; font-weight: 400">5</span></span>
+        <button aria-label="새 에이전트" style="width: 32px; height: 32px; border: 0; border-radius: 8px; background: #e3f2ee; color: #0e6e5c; font-size: 18px; cursor: pointer">+</button>
+      </div>
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+        <div style="padding: 10px 8px 4px; display: flex; align-items: baseline; gap: 6px">
+          <span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #3d4644; font-weight: 700">{{ g.project }}</span>
+          <span style="font-size: 11px; color: #56605e">{{ g.runs }}</span>
+        </div>
+        <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="2">
+          <a href="ADE.dc.html" style="{{ it.row }}">
+            <span aria-hidden="true" style="{{ it.dot }}"></span>
+            <span style="flex: 1; min-width: 0">
+              <span style="display: block; font-size: 13px; color: #141a19; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ it.title }}</span>
+              <span style="display: block; font-family: 'Roboto Mono', monospace; font-size: 11px; margin-top: 2px"><span style="color: #0b5a4b">{{ it.add }}</span> <span style="color: #6b2e07">{{ it.del }}</span></span>
+            </span>
+            <span style="font-size: 11px; color: #56605e">{{ it.ago }}</span>
+          </a>
+        </sc-for>
+      </sc-for>
+      <div style="margin-top: 14px; padding: 12px 8px 0; border-top: 1px solid #e1e5e4; font-size: 12px; color: #56605e; line-height: 1.6">
+        지켜보는 폴더 2 · <a href="#">폴더 등록</a><br>로그·CSV·TensorBoard 기록을 있는 그대로 읽어요.
+      </div>
+    </aside>
+
+    <main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
+
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+        <div>
+          <div style="font-size: 13px; color: #56605e">11월 23일 월요일</div>
+          <h1 style="margin: 6px 0 0; font-size: 28px; font-weight: 700">좋은 아침이에요</h1>
+          <div style="margin-top: 8px; font-size: 14px; color: #3d4644">답이 필요한 에이전트 <b style="color: #8a3d09">1</b> · 작업 중 <b>2</b> · 학습 <b>1</b> 실행 중 · 끊긴 실행 <b style="color: #8a3d09">1</b></div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+          <div role="tablist" aria-label="대시보드 보기" style="display: inline-flex; gap: 3px; padding: 3px; background: #f0f2f2; border-radius: 10px; margin-right: 8px">
+            <sc-for list="{{ views }}" as="v" hint-placeholder-count="3">
+              <button type="button" role="tab" aria-selected="{{ v.pressed }}" onClick="{{ v.pick }}" style="{{ v.style }}">{{ v.label }}</button>
+            </sc-for>
+          </div>
+          <a href="IDE.dc.html" style="height: 44px; padding: 0 18px; display: flex; align-items: center; border: 1px solid #c8d0ce; border-radius: 8px; color: #141a19; text-decoration: none; font-size: 14px">새 실행</a>
+          <a href="ADE.dc.html" style="height: 44px; padding: 0 20px; display: flex; align-items: center; border-radius: 8px; background: #141a19; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700">새 세션</a>
+        </div>
+      </div>
+
+      <div role="status" style="display: flex; align-items: center; gap: 16px; padding: 12px 18px; border: 1px solid #f0c9a8; background: #fdf0e5; border-radius: 10px; flex-wrap: wrap">
+        <span style="font-size: 13px; font-weight: 700; color: #8a3d09">중간에 끊긴 실행 1</span>
+        <span style="font-size: 13px; color: #4a2205; flex: 1 1 320px">EXP-005 — 11월 15일 03:12 데스크톱이 다시 켜지면서 끝났어요. 마지막 체크포인트는 epoch 12예요. 자동으로 다시 돌리지 않아요.</span>
+        <a href="IDE.dc.html" style="height: 36px; padding: 0 14px; display: flex; align-items: center; border: 1px solid #e0b08a; border-radius: 8px; color: #8a3d09; text-decoration: none; font-size: 13px; font-weight: 700">이어서 실행…</a>
+      </div>
+
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid #e1e5e4; border-bottom: 1px solid #e1e5e4">
+        <sc-for list="{{ stats }}" as="s" hint-placeholder-count="5">
+          <div style="{{ s.cell }}">
+            <div style="font-size: 13px; color: #56605e">{{ s.label }}</div>
+            <div style="{{ s.numStyle }}">{{ s.value }}<span style="font-size: 14px; color: #56605e; font-weight: 400">{{ s.unit }}</span></div>
+            <sc-if value="{{ s.hasBar }}" hint-placeholder-val="{{ false }}">
+              <div style="height: 6px; background: #e9edec; border-radius: 999px; margin-top: 10px"><div style="width: 68%; height: 6px; background: #0e6e5c; border-radius: 999px"></div></div>
+            </sc-if>
+            <div style="font-size: 12px; color: #56605e; margin-top: 6px">{{ s.sub }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start">
+        <section aria-label="에이전트 진행 현황" style="flex: 2 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+          <sc-for list="{{ lanes }}" as="lane" hint-placeholder-count="3">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span aria-hidden="true" style="{{ lane.dot }}"></span>
+                <h2 style="margin: 0; font-size: 15px">{{ lane.name }}</h2>
+                <span style="font-size: 12px; padding: 1px 8px; border-radius: 999px; background: #f0f2f2; color: #3d4644">{{ lane.count }}</span>
+                <span style="flex: 1; height: 1px; background: #eef1f0"></span>
+                <span style="font-size: 12px; color: #56605e">{{ lane.hint }}</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px">
+                <sc-for list="{{ lane.cards }}" as="c" hint-placeholder-count="2">
+                  <article style="{{ c.box }}">
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px">
+                      <span style="padding: 2px 8px; border-radius: 6px; background: #e3f2ee; color: #0b5a4b">{{ c.project }}</span>
+                      <span style="font-family: 'Roboto Mono', monospace; color: #56605e">{{ c.branch }}</span>
+                      <span style="margin-left: auto; color: #56605e">{{ c.agent }} · {{ c.ago }}</span>
+                    </div>
+                    <h3 style="margin: 10px 0 0; font-size: 15px; font-weight: 700">{{ c.title }}</h3>
+                    <p style="margin: 6px 0 0; font-size: 13px; color: #3d4644; line-height: 1.55">{{ c.note }}</p>
+                    <sc-if value="{{ c.ask }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top: 10px; padding: 10px 12px; border: 1px solid #f0c9a8; background: #ffffff; border-radius: 8px; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #4a2205">{{ c.askText }}</div>
+                    </sc-if>
+                    <div style="margin-top: 12px; padding: 10px 12px; background: #f6f7f7; border-radius: 8px">
+                      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px">
+                        <span style="color: #3d4644">할 일</span>
+                        <span style="font-family: 'Roboto Mono', monospace; font-weight: 700">{{ c.todo }}</span>
+                        <span style="margin-left: auto; color: #56605e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ c.step }}</span>
+                      </div>
+                      <div style="height: 4px; background: #e9edec; border-radius: 999px; margin-top: 8px"><div style="{{ c.bar }}"></div></div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px; font-family: 'Roboto Mono', monospace; font-size: 12px">
+                      <span style="color: #0b5a4b">{{ c.add }}</span><span style="color: #6b2e07">{{ c.del }}</span><span style="color: #56605e">{{ c.files }}</span>
+                      <span style="margin-left: auto; font-family: 'Noto Sans KR', sans-serif; color: #56605e">{{ c.git }}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 12px">
+                      <a href="ADE.dc.html" style="{{ c.primary }}">{{ c.primaryLabel }}</a>
+                      <button style="height: 36px; padding: 0 12px; border: 1px solid #c8d0ce; border-radius: 8px; background: #ffffff; font-size: 13px; cursor: pointer">{{ c.secondary }}</button>
+                    </div>
+                  </article>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </section>
+
+        <aside aria-label="Git 과 자원" style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+          <section style="border: 1px solid #e1e5e4; border-radius: 12px; padding: 16px 18px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between">
+              <h2 style="margin: 0; font-size: 15px">열린 PR <span style="font-weight: 400; color: #56605e">3</span></h2>
+              <a href="#" style="font-size: 12px">GitHub 에서 보기</a>
+            </div>
+            <sc-for list="{{ prs }}" as="pr" hint-placeholder-count="3">
+              <div style="padding: 10px 0; border-bottom: 1px solid #eef1f0">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605e">{{ pr.num }}</span>
+                  <span style="font-size: 13px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ pr.title }}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px">
+                  <span style="{{ pr.pill }}">{{ pr.state }}</span>
+                  <span style="color: #56605e">{{ pr.ci }}</span>
+                  <span style="margin-left: auto; font-family: 'Roboto Mono', monospace; color: #56605e">{{ pr.branch }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </section>
+
+          <section style="border: 1px solid #e1e5e4; border-radius: 12px; padding: 16px 18px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between">
+              <h2 style="margin: 0; font-size: 15px">최근 머지</h2>
+              <span style="font-size: 12px; color: #56605e">이번 주 4 · 오늘 1</span>
+            </div>
+            <sc-for list="{{ merges }}" as="m" hint-placeholder-count="3">
+              <div style="display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef1f0; font-size: 13px">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b3fa0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><circle cx="6" cy="6" r="2.5"></circle><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="12" r="2.5"></circle><path d="M6 8.5v7"></path><path d="M8.3 6.9c5 .3 7.5 2 7.7 2.8"></path></svg>
+                <div style="flex: 1; min-width: 0">
+                  <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ m.title }}</div>
+                  <div style="font-family: 'Roboto Mono', monospace; font-size: 11px; color: #56605e; margin-top: 3px">{{ m.meta }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </section>
+
+          <section style="border: 1px solid #e1e5e4; border-radius: 12px; padding: 16px 18px">
+            <h2 style="margin: 0 0 6px; font-size: 15px">자원 <span style="font-size: 12px; font-weight: 400; color: #56605e">· 화면을 볼 때만 5초마다</span></h2>
+            <sc-for list="{{ resources }}" as="r" hint-placeholder-count="6">
+              <div style="display: grid; grid-template-columns: 52px 1fr 76px; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eef1f0; font-size: 13px">
+                <span style="color: #3d4644">{{ r.label }}</span>
+                <div style="height: 6px; background: #e9edec; border-radius: 999px"><div style="{{ r.bar }}"></div></div>
+                <span style="font-family: 'Roboto Mono', monospace; font-size: 12px; text-align: right">{{ r.value }}</span>
+              </div>
+            </sc-for>
+            <div style="font-size: 12px; color: #8a3d09; margin-top: 10px">VRAM 이 거의 찼어요 — 새 실행은 메모리가 모자랄 수 있어요</div>
+            <div style="font-size: 12px; color: #56605e; margin-top: 4px">lab.remote 서버 자신: CPU 0.3% · RAM 62MB · GPU 0</div>
+          </section>
+        </aside>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isAgents }}" hint-placeholder-val="{{ false }}">
+      <section aria-label="에이전트 관계" style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font-size: 13px; color: #3d4644">
+          <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4"><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="{{ l.dot }}"></span>{{ l.label }}</span></sc-for>
+          <button type="button" role="switch" aria-checked="{{ doneChecked }}" onClick="{{ toggleDone }}" style="margin-left: auto; min-height: 34px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid #e1e5e4; border-radius: 8px; background: #ffffff; font-size: 12px; color: #3d4644; cursor: pointer"><span aria-hidden="true" style="{{ doneBox }}">{{ doneMark }}</span>오늘 끝난 것도 보기</button>
+        </div>
+        <div style="border: 1px solid #e1e5e4; border-radius: 12px; background: #fafbfb; overflow: auto">
+          <div style="position: relative; width: 1080px; height: 560px; margin: 16px auto">
+            <sc-for list="{{ boxes }}" as="b" hint-placeholder-count="2">
+              <div style="{{ b.style }}"><span style="font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 700; color: {{ b.color }}">{{ b.name }}</span><span style="margin-left: 8px; font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 1px 6px; border: 1px solid #e1e5e4; border-radius: 4px; color: #56605e; background: #ffffff">project</span></div>
+            </sc-for>
+            <svg aria-hidden="true" width="1080" height="560" style="position: absolute; left: 0; top: 0">
+              <sc-for list="{{ links }}" as="e" hint-placeholder-count="7"><line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}" stroke="{{ e.color }}" stroke-width="{{ e.w }}" stroke-dasharray="{{ e.dash }}"></line></sc-for>
+            </svg>
+            <div role="img" aria-label="나 (You)" style="position: absolute; left: 18px; top: 248px; width: 64px; height: 64px; box-sizing: border-box; border-radius: 999px; border: 2.5px solid #0e6e5c; background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #0b5a4b">You</div>
+            <sc-for list="{{ agents }}" as="n" hint-placeholder-count="7">
+              <a href="{{ n.href }}" aria-label="{{ n.aria }}" style="{{ n.wrap }}">
+                <span style="{{ n.circle }}">
+                  <sc-if value="{{ n.isRun }}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19h18"></path><path d="M5 15l4-5 4 3 6-7"></path></svg></sc-if>
+                  <sc-if value="{{ n.isAgent }}" hint-placeholder-val="{{ true }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"></path></svg></sc-if>
+                </span>
+                <span style="{{ n.card }}">
+                  <span style="display: block; font-size: 13px; font-weight: 700; color: #141a19; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ n.title }}</span>
+                  <span style="{{ n.stateStyle }}">{{ n.state }}</span>
+                </span>
+              </a>
+            </sc-for>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #56605e; line-height: 1.6">lab.remote 로 띄운 세션 · 하위 에이전트 · 학습 실행만 보여요. 실선은 부모와 하위 에이전트, 점선은 서로 참고하는 관계, 주황 점선은 나를 기다리는 요청이에요. 노드를 누르면 그 세션이나 실행으로 가요.</div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isSchedule }}" hint-placeholder-val="{{ false }}">
+      <section aria-label="예약" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px">
+          <h2 style="margin: 0; font-size: 16px">예약 <span style="font-weight: 400; color: #56605e">5</span></h2>
+          <span style="font-size: 13px; color: #56605e">IDE · ADE 실행 탭의 "시간 정해서 실행…" 으로 만들어요</span>
+          <a href="IDE.dc.html" style="margin-left: auto; height: 38px; padding: 0 14px; display: inline-flex; align-items: center; border: 1px solid #c8d0ce; border-radius: 8px; color: #141a19; text-decoration: none; font-size: 13px">+ 예약 만들기</a>
+        </div>
+        <div style="border: 1px solid #e1e5e4; border-radius: 12px; padding: 14px 18px 10px">
+          <div style="display: flex; align-items: baseline; gap: 10px; font-size: 13px"><b>오늘 08:00 → 내일 08:00</b><span style="color: #56605e">지금 09:52</span></div>
+          <div style="position: relative; height: 70px; margin-top: 10px">
+            <div style="position: absolute; left: 0; right: 0; top: 28px; height: 2px; background: #e1e5e4"></div>
+            <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="9"><span style="{{ t.style }}">{{ t.label }}</span></sc-for>
+            <div title="EXP-007 학습 중 · 약 11:04 에 끝날 예정" style="position: absolute; left: 0%; width: 12.8%; top: 20px; height: 18px; border-radius: 4px; background: #e3f2ee; border: 1px solid #9ccbbe; box-sizing: border-box; font-size: 11px; color: #0b5a4b; padding: 0 6px; line-height: 16px; white-space: nowrap; overflow: hidden">EXP-007</div>
+            <div aria-hidden="true" style="position: absolute; left: 7.8%; top: 10px; width: 2px; height: 40px; background: #141a19"></div>
+            <sc-for list="{{ marks }}" as="m" hint-placeholder-count="3"><span style="{{ m.style }}"><span aria-hidden="true" style="{{ m.pin }}"></span>{{ m.label }}</span></sc-for>
+          </div>
+        </div>
+        <div style="overflow-x: auto">
+          <table style="width: 100%; min-width: 920px; border-collapse: collapse; font-size: 13px">
+            <thead>
+              <tr style="color: #56605e; text-align: left">
+                <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">이름</th>
+                <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">무엇을</th>
+                <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">다음 실행</th>
+                <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">반복</th>
+                <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">위치</th>
+                <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">마지막 결과</th>
+                <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">켜짐</th>
+                <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4; text-align: right">동작</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ jobs }}" as="j" hint-placeholder-count="5">
+                <tr style="{{ j.rowStyle }}">
+                  <td style="padding: 11px 8px; border-bottom: 1px solid #eef1f0; font-weight: 700">{{ j.name }}</td>
+                  <td style="padding: 11px 8px; border-bottom: 1px solid #eef1f0; max-width: 300px"><span style="{{ j.kindStyle }}">{{ j.kind }}</span> <span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #3d4644">{{ j.what }}</span></td>
+                  <td style="padding: 11px 8px; border-bottom: 1px solid #eef1f0; white-space: nowrap">{{ j.next }}</td>
+                  <td style="padding: 11px 8px; border-bottom: 1px solid #eef1f0; color: #3d4644">{{ j.repeat }}</td>
+                  <td style="padding: 11px 8px; border-bottom: 1px solid #eef1f0; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605e">{{ j.where }}</td>
+                  <td style="padding: 11px 8px; border-bottom: 1px solid #eef1f0; font-size: 12px; color: #3d4644">{{ j.last }}</td>
+                  <td style="padding: 11px 8px; border-bottom: 1px solid #eef1f0"><button type="button" role="switch" aria-checked="{{ j.checked }}" aria-label="{{ j.aria }}" onClick="{{ j.toggle }}" style="width: 44px; height: 32px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center"><span aria-hidden="true" style="{{ j.track }}"><span style="{{ j.knob }}"></span></span></button></td>
+                  <td style="padding: 11px 8px; border-bottom: 1px solid #eef1f0; text-align: right; white-space: nowrap"><button type="button" style="min-height: 30px; padding: 0 10px; border: 1px solid #c8d0ce; border-radius: 6px; background: #ffffff; font-size: 12px; cursor: pointer">수정</button><button type="button" style="margin-left: 6px; min-height: 30px; padding: 0 10px; border: 1px solid #e1e5e4; border-radius: 6px; background: #ffffff; color: #3d4644; font-size: 12px; cursor: pointer">삭제</button></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <ul style="margin: 0; padding: 12px 16px 12px 32px; border-radius: 10px; background: #f6f7f7; font-size: 12px; color: #3d4644; line-height: 1.8">
+          <li>예약 시각에 GPU 를 다른 학습이 쓰고 있으면 끝날 때까지 기다렸다가 시작하고, 기다리기 시작할 때 알려요.</li>
+          <li>"앞 실행이 끝나면 시작" 같은 연쇄 예약은 없어요. 예약은 시각으로만 걸어요.</li>
+          <li>에이전트 예약은 그 시각에 세션을 열고 알리기만 해요. 승인이 필요하면 거기서 멈춰요.</li>
+          <li>lab.remote 서버가 시간을 재서 실행해요. cron 이나 systemd 타이머를 만들지 않고, lab.remote 로 만든 예약만 보여요.</li>
+        </ul>
+      </section>
+      </sc-if>
+
+      <footer style="margin-top: auto; height: 44px; border-top: 1px solid #e1e5e4; display: flex; align-items: center; gap: 22px; font-size: 13px; color: #3d4644; flex-wrap: wrap">
+        <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 999px; background: #b4530f"></span>답 필요 1</span>
+        <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 999px; background: #0e6e5c"></span>작업 중 2</span>
+        <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 999px; background: #7a8482"></span>끝남 2</span>
+        <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: #0e6e5c"></span>학습 1 실행 중</span>
+        <span style="margin-left: auto; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605e">PR 3 열림 · 이번 주 머지 4</span>
+      </footer>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1420}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { view: 'overview', showDone: false, jobs: { r32: true, nightly: true, teacher: true, weekly: true, sweep: false } };
+  }
+  renderVals() {
+    const dot = (c) => 'width:8px;height:8px;border-radius:999px;flex:none;background:' + c;
+    const row = (on) => 'display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;text-decoration:none;' + (on ? 'background:#ffffff;box-shadow:0 1px 2px rgb(20 26 25 / 0.12)' : '');
+    const pill = (bg, fg) => 'padding:2px 8px;border-radius:999px;background:' + bg + ';color:' + fg;
+    const cell = (i, n) => 'padding:18px 20px 18px ' + (i === 0 ? '0' : '20px') + ';' + (i < n - 1 ? 'border-right:1px solid #e1e5e4' : '');
+    const num = (c) => "font-family:'Roboto Mono',monospace;font-size:28px;font-weight:700;margin-top:8px;color:" + c;
+    const box = (kind) => 'border:1px solid ' + (kind === 'ask' ? '#f0c9a8' : '#e1e5e4') + ';border-left:3px solid ' + (kind === 'ask' ? '#b4530f' : kind === 'work' ? '#0e6e5c' : '#b7bfbd') + ';border-radius:10px;padding:14px 16px;background:' + (kind === 'ask' ? '#fffaf5' : '#ffffff');
+    const primary = (strong) => 'height:36px;padding:0 14px;display:flex;align-items:center;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;' + (strong ? 'background:#b4530f;color:#ffffff' : 'background:#141a19;color:#ffffff');
+    const bar = (done, total, color) => 'width:' + Math.round(done / total * 100) + '%;height:4px;border-radius:999px;background:' + color;
+    const rbar = (pct, color) => 'width:' + pct + '%;height:6px;border-radius:999px;background:' + color;
+    const VT = 'min-height:34px;padding:0 14px;border:none;border-radius:8px;font-size:13px;cursor:pointer;';
+    const views = [['overview', 'Overview'], ['agents', 'Agents'], ['schedule', 'Schedule']].map((v) => ({
+      label: v[1],
+      pressed: this.state.view === v[0] ? 'true' : 'false',
+      style: VT + (this.state.view === v[0] ? 'background:#ffffff;color:#141a19;font-weight:700;box-shadow:0 1px 2px rgba(20,26,25,0.12)' : 'background:transparent;color:#56605e'),
+      pick: () => this.setState({ view: v[0] })
+    }));
+    const SC = { ask: ['#b4530f', 'Needs you'], work: ['#0e6e5c', 'Working'], run: ['#1f5fa8', 'Running'], done: ['#9aa4a2', 'Done'] };
+    const showDone = this.state.showDone;
+    const A = [
+      { id: 'early', title: 'early stopping 추가', k: 'ask', x: 250, y: 110, state: 'Needs you · Edit 승인', href: 'ADE.dc.html' },
+      { id: 'r64', title: 'rank 64 설정 비교', k: 'work', x: 520, y: 110, state: 'Working', href: 'ADE.dc.html' },
+      { id: 'vram', title: 'VRAM 추정', k: 'work', x: 520, y: 300, state: 'Working · child', href: 'ADE.dc.html' },
+      { id: 'exp7', title: 'EXP-007 학습', k: 'run', x: 250, y: 300, state: 'Running · 68%', href: 'IDE.dc.html', run: true },
+      { id: 'loader', title: '데이터 로더 질문', k: 'done', x: 250, y: 460, state: 'Done · 어제', href: 'ADE.dc.html' },
+      { id: 'tload', title: 'teacher 로더 리팩터', k: 'work', x: 820, y: 110, state: 'Working · 테스트 9/12', href: 'ADE.dc.html' },
+      { id: 'readme', title: 'README 실험 표 갱신', k: 'done', x: 960, y: 230, state: 'Done · PR #12', href: 'ADE.dc.html' }
+    ].filter((n) => showDone || n.k !== 'done');
+    const byId = {};
+    A.forEach((n) => { byId[n.id] = n; });
+    const you = { x: 50, y: 280 };
+    const L = [
+      ['you', 'early', 'ask'], ['you', 'r64', 'you'], ['you', 'exp7', 'you'], ['you', 'tload', 'you'], ['you', 'loader', 'you'], ['you', 'readme', 'you'],
+      ['r64', 'vram', 'child'], ['vram', 'exp7', 'ref']
+    ];
+    const LS = { ask: ['#b4530f', '6 4', 2], you: ['#c8d0ce', '0', 1.5], child: ['#56605e', '0', 2], ref: ['#9aa4a2', '4 4', 1.5] };
+    const links = L.filter((l) => (l[0] === 'you' || byId[l[0]]) && byId[l[1]]).map((l) => {
+      const a = l[0] === 'you' ? you : byId[l[0]], b = byId[l[1]];
+      return { x1: a.x, y1: a.y, x2: b.x, y2: b.y, color: LS[l[2]][0], dash: LS[l[2]][1], w: LS[l[2]][2] };
+    });
+    const agents = A.map((n) => ({
+      title: n.title, state: n.state, href: n.href, isRun: !!n.run, isAgent: !n.run,
+      aria: n.title + ', ' + SC[n.k][1],
+      wrap: 'position:absolute;left:' + (n.x - 100) + 'px;top:' + (n.y - 24) + 'px;width:200px;display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;' + (n.k === 'done' ? 'opacity:0.6' : ''),
+      circle: 'width:48px;height:48px;box-sizing:border-box;border-radius:999px;background:#ffffff;border:2.5px solid ' + SC[n.k][0] + ';display:flex;align-items:center;justify-content:center;color:' + (n.run ? '#1f5fa8' : '#141a19') + ';' + (n.k === 'ask' ? 'box-shadow:0 0 0 4px #fdf0e5' : ''),
+      card: 'max-width:200px;box-sizing:border-box;padding:6px 10px;border-radius:8px;background:#ffffff;border:1px solid #e1e5e4;text-align:center;box-shadow:0 1px 2px rgba(20,26,25,0.08)',
+      stateStyle: 'display:block;font-size:11px;font-weight:700;color:' + (n.k === 'ask' ? '#8a3d09' : n.k === 'run' ? '#1f4f86' : n.k === 'work' ? '#0b5a4b' : '#56605e')
+    }));
+    const boxes = [
+      { name: 'lora-rank-ablation', color: '#0b5a4b', style: 'position:absolute;left:120px;top:0;width:560px;height:550px;box-sizing:border-box;padding:12px 14px;border:1.5px solid #9ccbbe;border-radius:14px;background:#f6fbf9' },
+      { name: 'vit-distill', color: '#1f4f86', style: 'position:absolute;left:710px;top:0;width:362px;height:320px;box-sizing:border-box;padding:12px 14px;border:1.5px solid #b9cbe4;border-radius:14px;background:#f5f8fc' }
+    ];
+    const legend = [['ask', 'Needs you 1'], ['work', 'Working 3'], ['run', 'Running 1'], ['done', 'Done 2']].map((l) => ({ label: l[1], dot: 'width:10px;height:10px;border-radius:999px;box-sizing:border-box;border:2.5px solid ' + SC[l[0]][0] + ';background:#ffffff' }));
+    const pct = (h) => ((h < 8 ? h + 24 : h) - 8) / 24 * 100;
+    const ticks = [8, 11, 14, 17, 20, 23, 2, 5, 8].map((h, i) => ({ label: String(h).padStart(2, '0') + ':00', style: 'position:absolute;top:48px;font-family:Roboto Mono,monospace;font-size:11px;color:#56605e;transform:translateX(' + (i === 0 ? '0' : i === 8 ? '-100%' : '-50%') + ');left:' + (i === 8 ? 100 : pct(h)) + '%' }));
+    const mark = (h, label, tone) => ({ label: label, pin: 'width:10px;height:10px;border-radius:999px;background:' + (tone === 'off' ? '#c8d0ce' : '#1f5fa8'), style: 'position:absolute;top:0;left:' + pct(h) + '%;transform:translateX(-5px);display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#1f4f86;white-space:nowrap' });
+    const marks = [mark(14, 'r32 학습 14:00'), mark(3, '야간 평가 03:00'), { label: '내일 09:30 teacher baseline →', pin: 'display:none', style: 'position:absolute;top:0;right:0;font-size:11px;color:#1f4f86;white-space:nowrap' }];
+    const J = [
+      { id: 'r32', name: 'r32 학습', kind: '명령', what: 'python src/train.py --config configs/r32.yaml', next: '오늘 14:00', repeat: '한 번', where: 'lora · exp/early-stop', last: '—' },
+      { id: 'nightly', name: '야간 평가', kind: '명령', what: 'python src/eval.py --all', next: '내일 03:00', repeat: '매일', where: 'lora · main', last: '오늘 03:00 성공 · 12분' },
+      { id: 'teacher', name: 'teacher baseline', kind: '명령', what: 'python distill/train.py --teacher deit_base', next: '내일 09:30', repeat: '한 번', where: 'vit · main', last: '—' },
+      { id: 'weekly', name: '주간 결과 정리', kind: '에이전트', what: 'Claude 세션을 열고 알리기만 해요', next: '11/30 (월) 10:00', repeat: '매주 월', where: 'lora · main', last: '11/23 세션 열림' },
+      { id: 'sweep', name: 'sweep-lr 다시', kind: '명령', what: 'bash scripts/sweep_lr.sh 1e-4 2e-4', next: '—', repeat: '한 번', where: 'lora · exp/data-aug', last: '지난번 실패 · 1' }
+    ];
+    const jobs = J.map((j) => {
+      const on = !!this.state.jobs[j.id];
+      return Object.assign({}, j, {
+        checked: on ? 'true' : 'false',
+        aria: j.name + ' 켜짐',
+        rowStyle: on ? '' : 'opacity:0.6',
+        kindStyle: 'font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;' + (j.kind === '에이전트' ? 'background:#f0f2f2;color:#141a19' : 'background:#e8eff8;color:#1f4f86'),
+        track: 'width:40px;height:24px;border-radius:999px;position:relative;display:inline-block;' + (on ? 'background:#0e6e5c' : 'background:#c8d0ce'),
+        knob: 'position:absolute;top:3px;left:' + (on ? 19 : 3) + 'px;width:18px;height:18px;border-radius:999px;background:#ffffff;box-shadow:0 1px 2px rgba(20,26,25,0.2)',
+        toggle: () => { const n = Object.assign({}, this.state.jobs); n[j.id] = !on; this.setState({ jobs: n }); }
+      });
+    });
+    return {
+      views: views,
+      isOverview: this.state.view === 'overview', isAgents: this.state.view === 'agents', isSchedule: this.state.view === 'schedule',
+      agents: agents, links: links, boxes: boxes, legend: legend,
+      doneChecked: showDone ? 'true' : 'false', doneMark: showDone ? '✓' : '',
+      doneBox: 'width:16px;height:16px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;box-sizing:border-box;' + (showDone ? 'background:#0e6e5c;color:#ffffff' : 'border:1.5px solid #9aa4a2;color:transparent'),
+      toggleDone: () => this.setState({ showDone: !showDone }),
+      ticks: ticks, marks: marks, jobs: jobs,
+      groups: [
+        { project: 'lora-rank-ablation', runs: '· 학습 1', items: [
+          { title: 'early stopping 추가', add: '+14', del: '−2', ago: '3분', dot: dot('#b4530f'), row: row(true) },
+          { title: 'rank 64 설정 비교', add: '+3', del: '−3', ago: '12분', dot: dot('#0e6e5c'), row: row(false) },
+          { title: '데이터 증강 실험', add: '+41', del: '−0', ago: '2시간', dot: dot('#7a8482'), row: row(false) }
+        ] },
+        { project: 'vit-distill', runs: '', items: [
+          { title: 'teacher 로더 리팩터', add: '+88', del: '−61', ago: '5분', dot: dot('#0e6e5c'), row: row(false) },
+          { title: 'README 실험 표 갱신', add: '+20', del: '−4', ago: '어제', dot: dot('#7a8482'), row: row(false) }
+        ] }
+      ],
+      stats: [
+        { label: '에이전트', value: '5', unit: '', hasBar: false, sub: '작업 중 2 · 답 필요 1 · 끝남 2', cell: cell(0, 5), numStyle: num('#141a19') },
+        { label: '답이 필요해요', value: '1', unit: '', hasBar: false, sub: '가장 오래된 것 3분 전', cell: cell(1, 5), numStyle: num('#b4530f') },
+        { label: 'EXP-007 학습 중', value: '34', unit: ' / 50 epoch', hasBar: true, sub: '약 1시간 12분 남음', cell: cell(2, 5), numStyle: num('#141a19') },
+        { label: '열린 PR', value: '3', unit: '', hasBar: false, sub: '리뷰 기다림 1 · 변경 요청 1', cell: cell(3, 5), numStyle: num('#141a19') },
+        { label: '이번 주 머지', value: '4', unit: '', hasBar: false, sub: '오늘 1 · main ← exp/r16', cell: cell(4, 5), numStyle: num('#0e6e5c') }
+      ],
+      lanes: [
+        { name: '답이 필요해요', count: '1', hint: '카드에서 바로 답하거나 ADE 에서 답해요', dot: dot('#b4530f'), cards: [
+          { project: 'lora-rank-ablation', branch: 'exp/early-stop', agent: 'Claude Code', ago: '3분 전', title: 'early stopping 추가', note: 'train.py 학습 루프에 patience 3 기준을 넣으려고 해요.', ask: true, askText: 'Edit src/train.py · +4 −1 · early stopping 을 학습 루프에 연결', todo: '2/4', step: '지금: train.py 수정 승인 기다림', bar: bar(2, 4, '#b4530f'), add: '+14', del: '−2', files: '3 files', git: 'PR 없음', box: box('ask'), primary: primary(true), primaryLabel: 'ADE 에서 보기', secondary: '바로 허용' }
+        ] },
+        { name: '작업 중', count: '2', hint: '마지막 출력 기준', dot: dot('#0e6e5c'), cards: [
+          { project: 'lora-rank-ablation', branch: 'exp/rank-64', agent: 'Claude Code', ago: '12분 전', title: 'rank 64 설정 비교', note: 'configs/r64.yaml 을 만들고 메모리 사용량을 계산하는 중이에요.', ask: false, askText: '', todo: '3/6', step: '지금: VRAM 추정', bar: bar(3, 6, '#0e6e5c'), add: '+3', del: '−3', files: '1 file', git: 'PR #13 초안', box: box('work'), primary: primary(false), primaryLabel: 'ADE 에서 보기', secondary: '중지' },
+          { project: 'vit-distill', branch: 'refactor/loader', agent: 'Claude Code', ago: '5분 전', title: 'teacher 로더 리팩터', note: '테스트 12개 중 9개 통과. 나머지를 고치는 중이에요.', ask: false, askText: '', todo: '5/8', step: '지금: 실패한 테스트 3개', bar: bar(5, 8, '#0e6e5c'), add: '+88', del: '−61', files: '7 files', git: 'PR 없음', box: box('work'), primary: primary(false), primaryLabel: 'ADE 에서 보기', secondary: '중지' }
+        ] },
+        { name: '끝남', count: '2', hint: '검토하고 합치거나 보관해요', dot: dot('#7a8482'), cards: [
+          { project: 'lora-rank-ablation', branch: 'exp/data-aug', agent: 'Claude Code', ago: '2시간 전', title: '데이터 증강 실험', note: 'RandAugment 옵션을 추가했어요. sweep-lr 실행은 실패(종료코드 1).', ask: false, askText: '', todo: '6/6', step: '완료', bar: bar(6, 6, '#7a8482'), add: '+41', del: '−0', files: '4 files', git: 'PR #9 변경 요청', box: box('done'), primary: primary(false), primaryLabel: '검토하기', secondary: '보관' },
+          { project: 'vit-distill', branch: 'docs/results', agent: 'Claude Code', ago: '어제', title: 'README 실험 표 갱신', note: 'EXP-003~006 결과를 표로 정리했어요.', ask: false, askText: '', todo: '4/4', step: '완료', bar: bar(4, 4, '#7a8482'), add: '+20', del: '−4', files: '1 file', git: 'PR #12 리뷰 기다림', box: box('done'), primary: primary(false), primaryLabel: '검토하기', secondary: '보관' }
+        ] }
+      ],
+      prs: [
+        { num: '#12', title: 'README 실험 표 갱신', state: '리뷰 기다림', pill: pill('#e3f2ee', '#0b5a4b'), ci: 'CI 통과', branch: 'docs/results' },
+        { num: '#9', title: '데이터 증강 옵션 추가', state: '변경 요청', pill: pill('#fdf0e5', '#8a3d09'), ci: 'CI 실패', branch: 'exp/data-aug' },
+        { num: '#13', title: 'rank 64 설정 비교', state: '초안', pill: pill('#f0f2f2', '#3d4644'), ci: 'CI 대기', branch: 'exp/rank-64' }
+      ],
+      merges: [
+        { title: 'early stop 실험 설정 (r16)', meta: 'main ← exp/r16 · #11 · 오늘 08:40' },
+        { title: '평가 스크립트 seed 고정', meta: 'main ← fix/seed · #10 · 어제' },
+        { title: 'distill loss 가중치 조정', meta: 'main ← exp/kd-alpha · #7 · 11/20' }
+      ],
+      resources: [
+        { label: 'GPU', value: '94%', bar: rbar(94, '#0e6e5c') },
+        { label: 'VRAM', value: '13.1/16G', bar: rbar(82, '#b4530f') },
+        { label: '온도', value: '71°C', bar: rbar(71, '#7a8482') },
+        { label: 'CPU', value: '38%', bar: rbar(38, '#7a8482') },
+        { label: 'RAM', value: '24/64G', bar: rbar(38, '#7a8482') },
+        { label: '디스크', value: '274G 여유', bar: rbar(55, '#7a8482') }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

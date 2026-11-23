@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>논문 지식그래프</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F7}
+a{color:#0E6E5C}a:hover{color:#08493D}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 1000px; background: #F6F7F7; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+<header style="position: relative; z-index: 20; background: #FFFFFF; border-bottom: 1px solid #E1E5E4; font-family: 'Noto Sans KR', sans-serif">
+<div style="box-sizing: border-box; padding: 0 16px 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em; color: #141A19">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="MissionControl.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Dashboard</a>
+<a href="Projects.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Projects</a>
+<a href="PaperLibrary.dc.html" aria-current="page" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid #0E6E5C; color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none">Papers</a>
+<a href="Inbox.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Inbox<span aria-label="안 읽은 알림 3" style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #B4530F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span></a>
+</nav>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: #56605E">
+<button type="button" aria-label="Go to, Ctrl+K" style="min-height: 36px; min-width: 200px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #E1E5E4; border-radius: 8px; background: #F6F7F7; color: #56605E; font-family: inherit; font-size: 13px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex: 1; text-align: left">Go to…</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 1px 6px; border: 1px solid #E1E5E4; border-radius: 4px; background: #FFFFFF">⌘K</span></button>
+<span style="font-family: 'Roboto Mono', monospace">GPU 94% · 13.1/16G</span>
+<a href="System.dc.html" style="display: inline-flex; align-items: center; gap: 6px; color: #56605E; text-decoration: none"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>Tunnel</a>
+<details style="position: relative">
+<summary aria-label="Conda · System 메뉴" style="list-style: none; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #3D4644"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg></summary>
+<div role="menu" aria-label="Conda · System" style="position: absolute; right: 0; top: calc(100% + 8px); width: 240px; box-sizing: border-box; padding: 6px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 8px 28px rgba(20,26,25,0.14); display: flex; flex-direction: column">
+<a role="menuitem" href="Conda.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">Conda</span><span style="font-size: 11px; color: #56605E">환경 만들기 · 패키지 관리</span></a>
+<a role="menuitem" href="System.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">System</span><span style="font-size: 11px; color: #56605E">서버 · 터널 · 자동 시작 · 삭제</span></a>
+</div>
+</details>
+</div>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; flex: 1">
+<aside aria-label="그래프 필터" style="flex: 1 1 240px; max-width: 260px; box-sizing: border-box; padding: 20px 16px; border-right: 1px solid #E1E5E4; display: flex; flex-direction: column; gap: 18px">
+<div>
+<label for="kg-find" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">노드 검색</label>
+<input id="kg-find" type="text" placeholder="논문 · 메모 · 프로젝트 검색" style="width: 100%; min-height: 38px; box-sizing: border-box; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-family: inherit; font-size: 13px">
+</div>
+<fieldset style="margin: 0; padding: 0; border: none; display: flex; flex-direction: column; gap: 6px">
+<legend style="padding: 0 0 6px; font-size: 12px; font-weight: 700; color: #56605E">연결 종류</legend>
+<sc-for list="{{ kinds }}" as="k" hint-placeholder-count="3">
+<button type="button" aria-pressed="{{ k.pressed }}" onClick="{{ k.pick }}" style="{{ k.row }}">
+<span aria-hidden="true" style="{{ k.check }}">{{ k.mark }}</span>
+<svg aria-hidden="true" width="28" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="{{ k.color }}" stroke-width="2" stroke-dasharray="{{ k.dash }}"></line></svg>
+<span style="flex: 1; text-align: left; font-size: 13px; color: #141A19">{{ k.label }}</span>
+<span style="font-size: 11px; color: #56605E">{{ k.count }}</span>
+</button>
+</sc-for>
+</fieldset>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700; color: #56605E">노드</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 999px; background: #0E6E5C"></span>논문 · 미세조정</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 999px; background: #1F5FA8"></span>논문 · 비전</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 999px; background: #56605E"></span>논문 · 기초</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 2px; background: #141A19"></span>프로젝트</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span aria-hidden="true" style="width: 10px; height: 10px; margin: 1px; transform: rotate(45deg); background: #6B3FA0"></span>내 메모</span>
+</div>
+<div style="font-size: 12px; color: #56605E; line-height: 1.6">인용은 참고문헌에서 읽고, 메모 연결은 vault 의 [[링크]] 를 따라가요. 노드 크기는 연결 수예요.</div>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px">
+<h1 style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.02em">Library</h1>
+<div role="group" aria-label="논문 보기" style="display: inline-flex; gap: 3px; padding: 3px; background: #F0F2F2; border-radius: 10px"><a href="PaperLibrary.dc.html" style="min-height: 34px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 8px; color: #56605E; font-size: 13px; text-decoration: none">List</a><a href="PaperGraph.dc.html" aria-current="page" style="min-height: 34px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 8px; background: #FFFFFF; color: #141A19; font-size: 13px; font-weight: 700; text-decoration: none; box-shadow: 0 1px 2px rgba(20,26,25,0.12)">Graph</a></div>
+<span style="font-size: 13px; color: #56605E">논문 11 · 프로젝트 2 · 메모 1</span>
+<div role="group" aria-label="보기 범위" style="margin-left: auto; display: inline-flex; gap: 3px; padding: 3px; background: #E9EDEC; border-radius: 10px">
+<button type="button" aria-pressed="{{ dAll.pressed }}" onClick="{{ dAll.pick }}" style="{{ dAll.style }}">전체</button>
+<button type="button" aria-pressed="{{ dNear.pressed }}" onClick="{{ dNear.pick }}" style="{{ dNear.style }}">선택한 노드 주변만</button>
+</div>
+</div>
+<section aria-label="그래프" style="flex: 1; min-height: 640px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 1px 2px rgba(20,26,25,0.06); overflow: auto">
+<div style="position: relative; width: 780px; height: 620px; margin: 10px auto">
+<svg aria-hidden="true" width="780" height="620" style="position: absolute; left: 0; top: 0">
+<sc-for list="{{ edges }}" as="e" hint-placeholder-count="18"><line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}" stroke="{{ e.color }}" stroke-width="{{ e.w }}" stroke-dasharray="{{ e.dash }}" opacity="{{ e.op }}"></line></sc-for>
+</svg>
+<sc-for list="{{ nodes }}" as="n" hint-placeholder-count="14">
+<button type="button" aria-pressed="{{ n.pressed }}" aria-label="{{ n.aria }}" onClick="{{ n.pick }}" style="{{ n.btn }}">
+<span aria-hidden="true" style="width: 22px; height: 22px; flex: none; display: flex; align-items: center; justify-content: center"><span style="{{ n.dot }}"></span></span>
+<span style="{{ n.label }}">{{ n.name }}</span>
+</button>
+</sc-for>
+</div>
+</section>
+</main>
+
+<aside aria-label="선택한 노드" style="flex: 1 1 300px; max-width: 340px; box-sizing: border-box; padding: 20px 18px; border-left: 1px solid #E1E5E4; background: #FFFFFF; display: flex; flex-direction: column; gap: 14px">
+<div>
+<span style="{{ sel.kindStyle }}">{{ sel.kind }}</span>
+<h2 style="margin: 8px 0 0; font-size: 17px; line-height: 1.4">{{ sel.title }}</h2>
+<div style="margin-top: 4px; font-size: 13px; color: #56605E">{{ sel.meta }}</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<a href="{{ sel.openHref }}" style="min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 8px; background: #141A19; color: #FFFFFF; text-decoration: none; font-size: 13px; font-weight: 700">{{ sel.openLabel }}</a>
+<a href="PaperLibrary.dc.html" style="min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; border: 1px solid #C8D0CE; border-radius: 8px; color: #141A19; text-decoration: none; font-size: 13px">라이브러리</a>
+</div>
+<div>
+<div style="font-size: 13px; font-weight: 700">연결 {{ sel.count }}</div>
+<ul style="margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column">
+<sc-for list="{{ sel.links }}" as="l" hint-placeholder-count="6">
+<li style="display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #EEF1F0; font-size: 13px">
+<span style="flex: 1; min-width: 0">{{ l.name }}</span>
+<span style="{{ l.pill }}">{{ l.why }}</span>
+</li>
+</sc-for>
+</ul>
+</div>
+<div style="padding: 12px; border-radius: 10px; background: #F6F7F7; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; font-weight: 700">연결된 논문들 사이 관계 묻기</span>
+<span style="font-size: 12px; color: #3D4644; line-height: 1.6">예: "LoRA 계열 4편이 rank 를 다루는 방식 비교해 줘". 누를 때만 Claude 에게 보내요.</span>
+<a href="PaperReader.dc.html" style="align-self: flex-start; min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; color: #141A19; text-decoration: none; font-size: 13px">Claude 에게 묻기</a>
+</div>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 'lora', cite: true, use: true, note: true, plan: true, near: false };
+  }
+  renderVals() {
+    const COL = { ft: '#0E6E5C', vis: '#1F5FA8', base: '#56605E', proj: '#141A19', note: '#6B3FA0', plan: '#FFFFFF' };
+    const N = [
+      { id: 'attn', name: 'Attention Is All You Need', t: 'base', x: 400, y: 70, meta: 'Vaswani et al. · 2017', kind: '논문 · 기초' },
+      { id: 'bert', name: 'BERT', t: 'base', x: 190, y: 40, meta: 'Devlin et al. · 2018', kind: '논문 · 기초' },
+      { id: 'vit', name: 'ViT', t: 'vis', x: 640, y: 60, meta: 'Dosovitskiy et al. · 2020', kind: '논문 · 비전' },
+      { id: 'adapter', name: 'Adapters', t: 'ft', x: 110, y: 190, meta: 'Houlsby et al. · 2019', kind: '논문 · 미세조정' },
+      { id: 'prefix', name: 'Prefix-Tuning', t: 'ft', x: 90, y: 330, meta: 'Li & Liang · 2021', kind: '논문 · 미세조정' },
+      { id: 'lora', name: 'LoRA', t: 'ft', x: 340, y: 270, meta: 'Hu et al. · 2021', kind: '논문 · 미세조정' },
+      { id: 'qlora', name: 'QLoRA', t: 'ft', x: 230, y: 420, meta: 'Dettmers et al. · 2023', kind: '논문 · 미세조정' },
+      { id: 'adalora', name: 'AdaLoRA', t: 'ft', x: 420, y: 450, meta: 'Zhang et al. · 2023', kind: '논문 · 미세조정' },
+      { id: 'dora', name: 'DoRA', t: 'ft', x: 530, y: 350, meta: 'Liu et al. · 2024', kind: '논문 · 미세조정' },
+      { id: 'deit', name: 'DeiT', t: 'vis', x: 720, y: 190, meta: 'Touvron et al. · 2021', kind: '논문 · 비전' },
+      { id: 'kd', name: 'Knowledge Distillation', t: 'base', x: 740, y: 330, meta: 'Hinton et al. · 2015', kind: '논문 · 기초' },
+      { id: 'p_lora', name: 'lora-rank-ablation', t: 'proj', x: 480, y: 560, meta: '프로젝트 · ~/projects/lora-rank-ablation', kind: '프로젝트' },
+      { id: 'p_vit', name: 'vit-distill', t: 'proj', x: 740, y: 490, meta: '프로젝트 · ~/research/vit-distill', kind: '프로젝트' },
+      { id: 'note', name: 'rank · alpha 비율 메모', t: 'note', x: 170, y: 545, meta: '내 메모 · vault/Notes/rank-alpha.md', kind: '내 메모' }
+    ];
+    const E = [
+      ['bert', 'attn', 'cite'], ['vit', 'attn', 'cite'], ['lora', 'attn', 'cite'], ['lora', 'adapter', 'cite'], ['lora', 'prefix', 'cite'],
+      ['adapter', 'bert', 'cite'], ['qlora', 'lora', 'cite'], ['adalora', 'lora', 'cite'], ['dora', 'lora', 'cite'], ['deit', 'vit', 'cite'], ['deit', 'kd', 'cite'],
+      ['p_lora', 'lora', 'use'], ['p_lora', 'dora', 'use'], ['p_lora', 'vit', 'use'], ['p_vit', 'deit', 'use'], ['p_vit', 'kd', 'use'], ['p_vit', 'vit', 'use'],
+      ['note', 'lora', 'note'], ['note', 'qlora', 'note'], ['note', 'p_lora', 'note']
+    ];
+    const KIND = {
+      cite: { label: '인용', color: '#9AA4A2', dash: '0', w: 1.5 },
+      use: { label: '프로젝트에서 사용', color: '#0E6E5C', dash: '0', w: 2.5 },
+      note: { label: '내 메모 링크', color: '#6B3FA0', dash: '6 4', w: 2 }
+    };
+    const on = { cite: this.state.cite, use: this.state.use, note: this.state.note, plan: this.state.plan };
+    const SX = 0.78;
+    N.forEach((n) => { n.x = Math.round(n.x * SX); });
+    const byId = {};
+    N.forEach((n) => { byId[n.id] = n; });
+    const sel = byId[this.state.sel] || byId.lora;
+    const visE = E.filter((e) => on[e[2]]);
+    const deg = {};
+    E.forEach((e) => { deg[e[0]] = (deg[e[0]] || 0) + 1; deg[e[1]] = (deg[e[1]] || 0) + 1; });
+    const nb = {};
+    nb[sel.id] = true;
+    visE.forEach((e) => { if (e[0] === sel.id) nb[e[1]] = true; if (e[1] === sel.id) nb[e[0]] = true; });
+    const near = this.state.near;
+    const nodes = N.filter((n) => !near || nb[n.id]).map((n) => {
+      const isSel = n.id === sel.id;
+      const lit = !!nb[n.id];
+      const size = Math.min(20, 9 + (deg[n.id] || 0) * 1.6);
+      const shape = n.t === 'proj' ? 'border-radius:3px;' : n.t === 'note' ? 'border-radius:2px;transform:rotate(45deg);' : n.t === 'plan' ? 'border-radius:3px;border:2.5px solid #141A19;box-sizing:border-box;' : 'border-radius:999px;';
+      const dotSize = n.t === 'note' ? size * 0.75 : size;
+      return {
+        name: n.name, aria: n.name + ' 선택',
+        pressed: isSel ? 'true' : 'false',
+        pick: () => this.setState({ sel: n.id }),
+        btn: 'position:absolute;left:' + (n.x - 11) + 'px;top:' + (n.y - 11) + 'px;display:flex;align-items:center;gap:4px;padding:0 6px 0 0;min-height:22px;border:none;background:transparent;cursor:pointer;opacity:' + (lit ? '1' : '0.35'),
+        dot: 'display:block;width:' + dotSize + 'px;height:' + dotSize + 'px;background:' + COL[n.t] + ';' + shape + (isSel ? 'box-shadow:0 0 0 3px #FFFFFF,0 0 0 5px ' + COL[n.t] + ';' : ''),
+        label: 'font-size:' + (isSel ? 14 : 12.5) + 'px;' + (isSel ? 'font-weight:700;color:#141A19;' : 'color:#3D4644;') + (n.t === 'proj' ? "font-family:'Roboto Mono',monospace;" : '') + 'background:rgba(255,255,255,0.85);padding:1px 4px;border-radius:4px;white-space:nowrap'
+      };
+    });
+    const edges = visE.filter((e) => !near || (nb[e[0]] && nb[e[1]])).map((e) => {
+      const a = byId[e[0]], b = byId[e[1]], k = KIND[e[2]];
+      const touch = e[0] === sel.id || e[1] === sel.id;
+      return { x1: a.x, y1: a.y, x2: b.x, y2: b.y, color: k.color, dash: k.dash, w: touch ? k.w + 0.5 : k.w, op: touch ? 1 : 0.3 };
+    });
+    const ROW = 'width:100%;display:flex;align-items:center;gap:8px;min-height:36px;padding:0 6px;border:none;border-radius:8px;background:transparent;cursor:pointer;';
+    const kinds = ['cite', 'use', 'note'].map((id) => ({
+      label: KIND[id].label, color: KIND[id].color, dash: KIND[id].dash,
+      count: String(E.filter((e) => e[2] === id).length),
+      pressed: on[id] ? 'true' : 'false',
+      mark: on[id] ? '✓' : '',
+      check: 'width:16px;height:16px;border-radius:4px;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:11px;box-sizing:border-box;' + (on[id] ? 'background:#0E6E5C;color:#FFFFFF' : 'border:1.5px solid #9AA4A2;color:transparent'),
+      row: ROW,
+      pick: () => { const s = {}; s[id] = !on[id]; this.setState(s); }
+    }));
+    const WHY = { cite: ['#F0F2F2', '#3D4644'], use: ['#E3F2EE', '#0B5A4B'], note: ['#F1EAF8', '#5A3488'], plan: ['#F0F2F2', '#141A19'] };
+    const links = visE.filter((e) => e[0] === sel.id || e[1] === sel.id).map((e) => {
+      const other = byId[e[0] === sel.id ? e[1] : e[0]];
+      let why = KIND[e[2]].label;
+      if (e[2] === 'cite') why = e[0] === sel.id ? '인용함' : '인용됨';
+      return { name: other.name, why: why, pill: 'font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;background:' + WHY[e[2]][0] + ';color:' + WHY[e[2]][1] };
+    });
+    const SEG = 'min-height:32px;padding:0 12px;border:none;border-radius:8px;font-size:12px;cursor:pointer;';
+    const seg = (v) => ({
+      pressed: near === v ? 'true' : 'false',
+      style: SEG + (near === v ? 'background:#FFFFFF;color:#141A19;font-weight:700;box-shadow:0 1px 2px rgba(20,26,25,0.12)' : 'background:transparent;color:#56605E'),
+      pick: () => this.setState({ near: v })
+    });
+    const kindStyle = 'display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;' + (sel.t === 'plan' ? 'color:#141A19;background:#FFFFFF;border:1.5px solid #141A19' : 'color:#FFFFFF;background:' + COL[sel.t]);
+    const open = sel.t === 'proj' ? ['Projects.dc.html', '프로젝트 열기'] : sel.t === 'note' ? ['PaperLibrary.dc.html', '메모 열기'] : ['PaperReader.dc.html', '리더에서 열기'];
+    return {
+      nodes: nodes, edges: edges, kinds: kinds,
+      dAll: seg(false), dNear: seg(true),
+      sel: { title: sel.name, meta: sel.meta, kind: sel.kind, kindStyle: kindStyle, count: String(links.length), links: links, openHref: open[0], openLabel: open[1] }
+    };
+  }
+}
+</script>
+</body>
+</html>

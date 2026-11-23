@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>IDE · 코드 편집</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F7}
+a{color:#0E6E5C}a:hover{color:#08493D}
+.ebtn:hover{background:#E9ECEB !important;color:#141A19 !important}
+.rs{transition:background .15s}.rs:hover,.rs:focus-visible{background:#0E6E5C !important;outline:none}
+.ccbox{container-type:inline-size}
+@container (max-width: 330px){.cc-model{order:6 !important;flex-basis:100%}.cc-modename{display:none}}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 900px; background: #F6F7F7; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+
+<header style="position: relative; z-index: 20; background: #FFFFFF; border-bottom: 1px solid #E1E5E4; font-family: 'Noto Sans KR', sans-serif">
+<div style="box-sizing: border-box; padding: 0 16px 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em; color: #141A19">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="MissionControl.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Dashboard</a>
+<a href="Projects.dc.html" aria-current="page" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid #0E6E5C; color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none">Projects</a>
+<a href="PaperLibrary.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Papers</a>
+<a href="Inbox.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Inbox<span aria-label="안 읽은 알림 3" style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #B4530F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span></a>
+</nav>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: #56605E">
+<button type="button" aria-label="Go to, Ctrl+K" style="min-height: 36px; min-width: 200px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #E1E5E4; border-radius: 8px; background: #F6F7F7; color: #56605E; font-family: inherit; font-size: 13px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex: 1; text-align: left">Go to…</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 1px 6px; border: 1px solid #E1E5E4; border-radius: 4px; background: #FFFFFF">⌘K</span></button>
+<span style="font-family: 'Roboto Mono', monospace">GPU 94% · 13.1/16G</span>
+<a href="System.dc.html" style="display: inline-flex; align-items: center; gap: 6px; color: #56605E; text-decoration: none"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>Tunnel</a>
+<details style="position: relative">
+<summary aria-label="Conda · System 메뉴" style="list-style: none; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #3D4644"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg></summary>
+<div role="menu" aria-label="Conda · System" style="position: absolute; right: 0; top: calc(100% + 8px); width: 240px; box-sizing: border-box; padding: 6px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 8px 28px rgba(20,26,25,0.14); display: flex; flex-direction: column">
+<a role="menuitem" href="Conda.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">Conda</span><span style="font-size: 11px; color: #56605E">환경 만들기 · 패키지 관리</span></a>
+<a role="menuitem" href="System.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">System</span><span style="font-size: 11px; color: #56605E">서버 · 터널 · 자동 시작 · 삭제</span></a>
+</div>
+</details>
+</div>
+</div>
+</header>
+
+<main style="flex: 1; min-height: 0; display: flex">
+<div style="flex: 1; min-width: 0; min-height: 0; display: flex; overflow-x: auto; background: #FFFFFF">
+<div style="flex: 1; min-width: 1160px; min-height: 0; display: flex; flex-direction: column">
+<div style="flex: 0 0 40px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: #F6F7F7; border-bottom: 1px solid #E1E5E4">
+<a href="Projects.dc.html" style="min-height: 30px; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; color: #141A19; text-decoration: none; font-family: 'Roboto Mono', monospace; font-size: 12.5px; font-weight: 700"><span aria-hidden="true" style="color: #56605E">‹</span>lora-rank-ablation<span aria-hidden="true" style="font-size: 10px; color: #56605E">▾</span></a>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">⎇ exp/rank-64</span>
+<div role="group" aria-label="작업 화면 전환" style="margin-left: auto; display: inline-flex; gap: 2px; padding: 2px; background: #E9EDEC; border-radius: 8px"><a href="IDE.dc.html" aria-current="page" style="min-height: 28px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: 6px; background: #FFFFFF; color: #141A19; font-size: 12px; font-weight: 700; text-decoration: none; box-shadow: 0 1px 2px rgba(20,26,25,0.12)">IDE</a><a href="ADE.dc.html" style="min-height: 28px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: 6px; color: #56605E; font-size: 12px; text-decoration: none">ADE</a></div>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex">
+
+<nav aria-label="작업 표시줄" style="flex: 0 0 56px; background: #F0F2F2; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0">
+<button type="button" aria-label="탐색기" aria-pressed="{{ act.explorer.pressed }}" onClick="{{ act.explorer.pick }}" style="{{ act.explorer.style }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H8a2 2 0 00-2 2v12a2 2 0 002 2h9a2 2 0 002-2V8l-5-5z"></path><path d="M14 3v5h5"></path><path d="M3 8v11a2 2 0 002 2h9"></path></svg></button>
+<button type="button" aria-label="검색" aria-pressed="{{ act.search.pressed }}" onClick="{{ act.search.pick }}" style="{{ act.search.style }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg></button>
+<button type="button" aria-label="소스 제어, 변경 1개" aria-pressed="{{ act.git.pressed }}" onClick="{{ act.git.pick }}" style="{{ act.git.style }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="5" r="2.2"></circle><circle cx="6" cy="19" r="2.2"></circle><circle cx="18" cy="8" r="2.2"></circle><path d="M6 7.2v9.6M18 10.2c0 4-6 3.5-11 7"></path></svg><span style="position: absolute; top: 6px; right: 5px; min-width: 16px; height: 16px; border-radius: 999px; background: #0E6E5C; color: #FFFFFF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center">1</span></button>
+<button type="button" aria-label="Scenario" aria-pressed="{{ act.scenario.pressed }}" onClick="{{ act.scenario.pick }}" style="{{ act.scenario.style }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="10" width="7" height="5" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect><path d="M10 5.5h2a2 2 0 012 2V10M14 12.5h-2a2 2 0 00-2 2V16"></path></svg></button>
+<button type="button" aria-label="실행" aria-pressed="{{ act.run.pressed }}" onClick="{{ act.run.pick }}" style="{{ act.run.style }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 006 21h12a1.7 1.7 0 001.5-2.5L14 9V3"></path><path d="M7 15h10"></path></svg></button>
+<button type="button" aria-label="설정" style="margin-top: auto; width: 44px; height: 44px; border-radius: 10px; border: none; background: transparent; color: #56605E; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg></button>
+</nav>
+
+<aside aria-label="사이드바" style="{{ sideStyle }}">
+
+<sc-if value="{{ showExplorer }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; min-height: 0; overflow-y: auto">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 6px 14px">
+<span style="font-size: 13px; font-weight: 700">탐색기</span>
+<button type="button" class="ebtn" aria-label="탐색기 더보기" title="더보기" style="width: 28px; height: 28px; flex: 0 0 28px; border-radius: 6px; border: none; background: transparent; color: #3D4644; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 16px; letter-spacing: 1px">···</button>
+</div>
+<ul style="margin: 0; padding: 0 6px 12px; list-style: none; display: flex; flex-direction: column; font-family: 'Roboto Mono', monospace; font-size: 13px">
+<li class="eroot" style="display: flex; align-items: center; gap: 2px; padding: 2px 4px 2px 0">
+<button type="button" aria-expanded="{{ treeOpenStr }}" onClick="{{ toggleTree }}" style="flex: 1; min-width: 0; min-height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: none; background: transparent; font-family: 'Noto Sans KR', sans-serif; font-size: 13px; font-weight: 700; color: #141A19; text-align: left; cursor: pointer"><span aria-hidden="true" style="{{ caretStyle }}">▾</span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">lora-rank-ablation <span style="font-weight: 400; color: #56605E">· exp/rank-64</span></span></button>
+<button type="button" class="ebtn" aria-label="새 파일" title="새 파일" onClick="{{ newFile }}" style="width: 28px; height: 28px; flex: 0 0 28px; border-radius: 6px; border: none; background: transparent; color: #3D4644; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3H7a2 2 0 00-2 2v14a2 2 0 002 2h4"></path><path d="M13 3v5h5v3"></path><circle cx="17" cy="17" r="4"></circle><path d="M17 15v4M15 17h4"></path></svg></button><button type="button" class="ebtn" aria-label="새 폴더" title="새 폴더" onClick="{{ newFolder }}" style="width: 28px; height: 28px; flex: 0 0 28px; border-radius: 6px; border: none; background: transparent; color: #3D4644; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 19H5a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v2"></path><circle cx="17" cy="17" r="4"></circle><path d="M17 15v4M15 17h4"></path></svg></button><button type="button" class="ebtn" aria-label="탐색기 새로 고침" title="탐색기 새로 고침" onClick="{{ refreshTree }}" style="width: 28px; height: 28px; flex: 0 0 28px; border-radius: 6px; border: none; background: transparent; color: #3D4644; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 11-2.3-5.7"></path><path d="M20 4v4h-4"></path></svg></button><button type="button" class="ebtn" aria-label="모두 접기" title="모두 접기" onClick="{{ collapseAll }}" style="width: 28px; height: 28px; flex: 0 0 28px; border-radius: 6px; border: none; background: transparent; color: #3D4644; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8.5 12h7"></path></svg></button>
+</li>
+<sc-if value="{{ treeOpen }}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{ creating }}" hint-placeholder-val="{{ false }}">
+<li style="display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 22px">
+<span aria-hidden="true" style="font-size: 12px; color: #56605E">{{ createIcon }}</span>
+<label for="ex-new" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{ createLabel }}</label>
+<input id="ex-new" autofocus="" value="{{ newName }}" onChange="{{ onNewName }}" onKeyDown="{{ onNewKey }}" placeholder="{{ createLabel }}" style="flex: 1; min-width: 0; height: 26px; box-sizing: border-box; padding: 0 6px; border: 1px solid #0E6E5C; border-radius: 4px; outline: none; font-family: 'Roboto Mono', monospace; font-size: 12.5px; background: #FFFFFF">
+</li>
+<li style="padding: 0 8px 4px 22px; font-family: 'Noto Sans KR', sans-serif; font-size: 11px; color: #56605E">Enter로 만들기 · Esc로 취소</li>
+</sc-if>
+<sc-for list="{{ createdItems }}" as="n" hint-placeholder-count="0"><li style="{{ n.style }}"><span style="flex: 1">{{ n.label }}</span><span style="font-weight: 500; color: #0E6E5C">U</span></li></sc-for>
+
+<li style="padding: 5px 8px 5px 22px">CLAUDE.md</li>
+<li><button type="button" onClick="{{ openEval }}" style="{{ treeEval }}"><span style="flex: 1">README.md</span></button></li>
+<li style="padding: 5px 8px 5px 22px; color: #56605E">▾ configs/</li>
+<li style="padding: 5px 8px 5px 38px">r16.yaml</li>
+<li style="padding: 5px 8px 5px 38px">r32.yaml</li>
+<li><button type="button" onClick="{{ openConfig }}" style="{{ treeConfig }}"><span style="flex: 1">r64.yaml</span><span style="font-weight: 500; color: #0B5A4B">U</span></button></li>
+<li style="padding: 5px 8px 5px 22px; color: #56605E">▾ src/</li>
+<li><button type="button" onClick="{{ openTrain }}" style="{{ treeTrain }}"><span style="flex: 1">train.py</span></button></li>
+<li style="padding: 5px 8px 5px 38px">model.py</li>
+<li style="padding: 5px 8px 5px 38px">ckpt.py</li>
+<li style="padding: 5px 8px 5px 22px; color: #56605E">▸ scripts/</li>
+<li style="padding: 5px 8px 5px 22px; color: #56605E">▸ tests/</li>
+<li style="padding: 5px 8px 5px 22px; color: #7A8482; display: flex; gap: 8px"><span style="flex: 1">▸ runs/</span><span style="font-family: 'Noto Sans KR', sans-serif; font-size: 11px">gitignore</span></li>
+<li style="padding: 5px 8px 5px 22px; color: #7A8482; display: flex; gap: 8px"><span style="flex: 1">▸ data/</span><span style="font-family: 'Noto Sans KR', sans-serif; font-size: 11px">gitignore</span></li>
+<li style="padding: 5px 8px 5px 22px">environment.yml</li>
+<li style="padding: 5px 8px 5px 22px">.gitignore</li>
+</sc-if>
+</ul>
+</div>
+</sc-if>
+
+<sc-if value="{{ showSearch }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px">
+<span style="font-size: 13px; font-weight: 700">검색</span>
+<label for="fc-find" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">프로젝트에서 검색</label>
+<input id="fc-find" type="text" placeholder="프로젝트에서 검색" style="min-height: 38px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid #C8D0CE; background: #F6F7F7; font-family: inherit; font-size: 13px">
+<span style="font-size: 12px; color: #56605E">파일 이름과 내용을 함께 검색해요</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ showGit }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; min-height: 0; flex: 1">
+<div style="padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13px; font-weight: 700">소스 제어</span>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">exp/rank-64 · main보다 1커밋 앞섬</span>
+</div>
+<div style="padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid #EEF1F0">
+<label for="fc-msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">커밋 메시지</label>
+<input id="fc-msg" type="text" placeholder="메시지 (Ctrl+Enter로 exp/rank-64에 커밋)" style="min-height: 38px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid #C8D0CE; background: #F6F7F7; font-family: inherit; font-size: 13px">
+<div style="display: flex; gap: 6px">
+<button type="button" style="flex: 1; min-height: 38px; border-radius: 8px; border: none; background: #0E6E5C; color: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer">✓ 커밋</button>
+<button type="button" style="min-height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid #C8D0CE; background: #FFFFFF; font-family: inherit; font-size: 13px; cursor: pointer">PR 열기</button>
+</div>
+<span style="font-size: 12px; font-weight: 700; padding-top: 4px">변경 내용 · 1</span>
+<div style="display: flex; align-items: center; gap: 8px; font-family: 'Roboto Mono', monospace; font-size: 12px"><span style="flex: 1; overflow-wrap: anywhere">configs/r64.yaml</span><span style="color: #0B5A4B; font-weight: 500">U</span></div>
+</div>
+<div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto">
+<span style="font-size: 12px; font-weight: 700; padding-bottom: 6px">그래프</span>
+<div style="display: flex; gap: 10px; padding: 6px 0"><svg width="14" height="34" aria-hidden="true"><line x1="7" y1="14" x2="7" y2="34" stroke="#9CCBBE" stroke-width="2"></line><circle cx="7" cy="9" r="5" fill="#FFFFFF" stroke="#0E6E5C" stroke-width="2"></circle></svg><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px">r64 비교용 학습 스크립트 인자 추가</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; color: #56605E"><span style="color: #0B5A4B; font-weight: 500">Claude</span> · 9f1c2ab · exp/rank-64</span></div></div>
+<div style="display: flex; gap: 10px; padding: 6px 0"><svg width="14" height="34" aria-hidden="true"><line x1="7" y1="0" x2="7" y2="34" stroke="#9CCBBE" stroke-width="2"></line><circle cx="7" cy="9" r="4" fill="#56605E"></circle></svg><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px">early stop 실험 설정 (r16) (#11)</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; color: #56605E">a3f9c1e · main</span></div></div>
+<div style="display: flex; gap: 10px; padding: 6px 0"><svg width="14" height="34" aria-hidden="true"><line x1="7" y1="0" x2="7" y2="34" stroke="#9CCBBE" stroke-width="2"></line><circle cx="7" cy="9" r="4" fill="#56605E"></circle></svg><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px">평가 스크립트 seed 고정 (#10)</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; color: #56605E">41c07fa · main</span></div></div>
+<div style="display: flex; gap: 10px; padding: 6px 0"><svg width="14" height="34" aria-hidden="true"><line x1="7" y1="0" x2="7" y2="20" stroke="#9CCBBE" stroke-width="2"></line><circle cx="7" cy="9" r="4" fill="#56605E"></circle></svg><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px">데이터 로더 정리 (#9)</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; color: #56605E">7be2d90 · main</span></div></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showScenario }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; min-height: 0; overflow-y: auto; padding: 12px 14px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px"><span style="font-size: 13px; font-weight: 700">Scenario · lora-rank-ablation</span><span style="font-size: 11px; color: #56605E">보기 전용</span></div>
+<span style="font-size: 12px; color: #56605E">Claude 가 11/22 에 그림 · 파일 7개 분석 · <span style="font-family: 'Roboto Mono', monospace">.labremote/scenarios/main.json</span></span>
+</div>
+<div style="margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: #FDF0E5; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #4A2205; line-height: 1.5">그린 뒤로 <span style="font-family: 'Roboto Mono', monospace">src/train.py</span> 가 바뀌었어요. 저절로 다시 그리지는 않아요.</span>
+<button type="button" style="align-self: flex-start; min-height: 32px; padding: 0 12px; border: 1px solid #E0B08A; border-radius: 8px; background: #FFFFFF; color: #8A3D09; font-size: 12px; font-weight: 700; cursor: pointer">Claude 로 다시 그리기</button>
+</div>
+<ol style="margin: 14px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column">
+<li style="display: flex; gap: 10px">
+<div aria-hidden="true" style="flex: 0 0 22px; display: flex; flex-direction: column; align-items: center">
+<span style="width: 22px; height: 22px; border-radius: 6px; background: #141A19; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">1</span>
+<span style="flex: 1; width: 2px; min-height: 18px; background: #C8D0CE"></span><span style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #C8D0CE"></span>
+</div>
+<div style="flex: 1; min-width: 0; margin-bottom: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid #E1E5E4; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap"><span style="font-size: 13px; font-weight: 700">데이터 준비</span></div>
+<div style="margin-top: 4px; font-family: 'Roboto Mono', monospace; font-size: 11.5px; color: #3D4644; overflow-wrap: anywhere">python scripts/prepare_data.py</div>
+<div style="margin-top: 6px; display: grid; grid-template-columns: 34px 1fr; gap: 2px 6px; font-size: 11px"><span style="color: #56605E">받음</span><span style="font-family: 'Roboto Mono', monospace; color: #3D4644; overflow-wrap: anywhere">data/raw/</span><span style="color: #56605E">냄</span><span style="font-family: 'Roboto Mono', monospace; color: #0B5A4B; overflow-wrap: anywhere">data/processed/{train,val,test}</span></div>
+<button type="button" style="margin-top: 6px; min-height: 28px; padding: 0; border: none; background: transparent; color: #0E6E5C; font-size: 12px; font-weight: 500; cursor: pointer">실행 탭에 채우기</button>
+</div>
+</li>
+<li style="display: flex; gap: 10px">
+<div aria-hidden="true" style="flex: 0 0 22px; display: flex; flex-direction: column; align-items: center">
+<span style="width: 22px; height: 22px; border-radius: 6px; background: #141A19; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span>
+<span style="flex: 1; width: 2px; min-height: 18px; background: #C8D0CE"></span><span style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #C8D0CE"></span>
+</div>
+<div style="flex: 1; min-width: 0; margin-bottom: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid #F0C9A8; background: #FFFAF5">
+<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap"><span style="font-size: 13px; font-weight: 700">학습</span><span style="font-size: 11px; padding: 1px 6px; border-radius: 999px; background: #FDF0E5; color: #8A3D09">코드 바뀜</span></div>
+<div style="margin-top: 4px; font-family: 'Roboto Mono', monospace; font-size: 11.5px; color: #3D4644; overflow-wrap: anywhere">python src/train.py --config configs/&lt;r&gt;.yaml</div>
+<div style="margin-top: 4px; font-size: 11px; color: #1F4F86">설정 3개 · r16 · r32 · r64</div>
+<div style="margin-top: 6px; display: grid; grid-template-columns: 34px 1fr; gap: 2px 6px; font-size: 11px"><span style="color: #56605E">받음</span><span style="font-family: 'Roboto Mono', monospace; color: #3D4644; overflow-wrap: anywhere">data/processed/train · val</span><span style="color: #56605E">냄</span><span style="font-family: 'Roboto Mono', monospace; color: #0B5A4B; overflow-wrap: anywhere">runs/&lt;exp&gt;/ckpt/ · metrics.csv</span></div>
+<button type="button" style="margin-top: 6px; min-height: 28px; padding: 0; border: none; background: transparent; color: #0E6E5C; font-size: 12px; font-weight: 500; cursor: pointer">실행 탭에 채우기</button>
+</div>
+</li>
+<li style="display: flex; gap: 10px">
+<div aria-hidden="true" style="flex: 0 0 22px; display: flex; flex-direction: column; align-items: center">
+<span style="width: 22px; height: 22px; border-radius: 6px; background: #141A19; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">3</span>
+<span style="flex: 1; width: 2px; min-height: 18px; background: #C8D0CE"></span><span style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #C8D0CE"></span>
+</div>
+<div style="flex: 1; min-width: 0; margin-bottom: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid #E1E5E4; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap"><span style="font-size: 13px; font-weight: 700">추론</span></div>
+<div style="margin-top: 4px; font-family: 'Roboto Mono', monospace; font-size: 11.5px; color: #3D4644; overflow-wrap: anywhere">python src/infer.py --ckpt runs/&lt;exp&gt;/ckpt/best.pt</div>
+<div style="margin-top: 6px; display: grid; grid-template-columns: 34px 1fr; gap: 2px 6px; font-size: 11px"><span style="color: #56605E">받음</span><span style="font-family: 'Roboto Mono', monospace; color: #3D4644; overflow-wrap: anywhere">ckpt/ · data/processed/test</span><span style="color: #56605E">냄</span><span style="font-family: 'Roboto Mono', monospace; color: #0B5A4B; overflow-wrap: anywhere">runs/&lt;exp&gt;/preds.csv</span></div>
+<button type="button" style="margin-top: 6px; min-height: 28px; padding: 0; border: none; background: transparent; color: #0E6E5C; font-size: 12px; font-weight: 500; cursor: pointer">실행 탭에 채우기</button>
+</div>
+</li>
+<li style="display: flex; gap: 10px">
+<div aria-hidden="true" style="flex: 0 0 22px; display: flex; flex-direction: column; align-items: center">
+<span style="width: 22px; height: 22px; border-radius: 6px; background: #141A19; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">4</span>
+<span style="flex: 1; width: 2px; min-height: 18px; background: #C8D0CE"></span><span style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #C8D0CE"></span>
+</div>
+<div style="flex: 1; min-width: 0; margin-bottom: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid #E1E5E4; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap"><span style="font-size: 13px; font-weight: 700">평가</span></div>
+<div style="margin-top: 4px; font-family: 'Roboto Mono', monospace; font-size: 11.5px; color: #3D4644; overflow-wrap: anywhere">python src/eval.py --preds runs/&lt;exp&gt;/preds.csv</div>
+<div style="margin-top: 6px; display: grid; grid-template-columns: 34px 1fr; gap: 2px 6px; font-size: 11px"><span style="color: #56605E">받음</span><span style="font-family: 'Roboto Mono', monospace; color: #3D4644; overflow-wrap: anywhere">preds.csv · data/processed/test</span><span style="color: #56605E">냄</span><span style="font-family: 'Roboto Mono', monospace; color: #0B5A4B; overflow-wrap: anywhere">runs/&lt;exp&gt;/eval.json</span></div>
+<button type="button" style="margin-top: 6px; min-height: 28px; padding: 0; border: none; background: transparent; color: #0E6E5C; font-size: 12px; font-weight: 500; cursor: pointer">실행 탭에 채우기</button>
+</div>
+</li>
+<li style="display: flex; gap: 10px">
+<div aria-hidden="true" style="flex: 0 0 22px; display: flex; flex-direction: column; align-items: center">
+<span style="width: 22px; height: 22px; border-radius: 6px; background: #141A19; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">5</span>
+</div>
+<div style="flex: 1; min-width: 0; margin-bottom: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid #E1E5E4; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap"><span style="font-size: 13px; font-weight: 700">결과 표</span></div>
+<div style="margin-top: 4px; font-family: 'Roboto Mono', monospace; font-size: 11.5px; color: #3D4644; overflow-wrap: anywhere">python scripts/make_table.py</div>
+<div style="margin-top: 6px; display: grid; grid-template-columns: 34px 1fr; gap: 2px 6px; font-size: 11px"><span style="color: #56605E">받음</span><span style="font-family: 'Roboto Mono', monospace; color: #3D4644; overflow-wrap: anywhere">runs/*/eval.json</span><span style="color: #56605E">냄</span><span style="font-family: 'Roboto Mono', monospace; color: #0B5A4B; overflow-wrap: anywhere">README.md 표</span></div>
+<button type="button" style="margin-top: 6px; min-height: 28px; padding: 0; border: none; background: transparent; color: #0E6E5C; font-size: 12px; font-weight: 500; cursor: pointer">실행 탭에 채우기</button>
+</div>
+</li>
+</ol>
+<div style="margin-top: 2px; font-size: 12px; color: #56605E; line-height: 1.6">순서만 보여 줘요. 단계를 이어서 자동으로 돌리지 않아요. "실행 탭에 채우기" 는 명령만 채우고, 실행은 직접 눌러요.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showRun }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; min-height: 0; overflow-y: auto">
+<div style="padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13px; font-weight: 700">실행</span>
+<span style="font-size: 12px; color: #56605E; line-height: 1.5">명령 한 줄로 돌려요 · 브라우저를 닫아도 계속 돌아요</span>
+</div>
+<div style="padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid #EEF1F0">
+<label for="fc-cmd" style="font-size: 12px; color: #56605E">명령</label>
+<input id="fc-cmd" type="text" value="python src/train.py --config configs/r64.yaml" style="min-height: 38px; box-sizing: border-box; padding: 0 10px; border-radius: 8px; border: 1px solid #C8D0CE; background: #FFFFFF; font-family: 'Roboto Mono', monospace; font-size: 12px">
+<div style="display: grid; grid-template-columns: 52px 1fr; gap: 8px 10px; align-items: center; font-size: 12px">
+<span style="color: #56605E">위치</span><span style="font-family: 'Roboto Mono', monospace">exp/rank-64</span>
+<span style="color: #56605E">환경</span><button type="button" style="min-height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-radius: 8px; border: 1px solid #C8D0CE; background: #FFFFFF; font-family: 'Roboto Mono', monospace; font-size: 12px; cursor: pointer">lora-env<span aria-hidden="true" style="color: #7A8482">▾</span></button>
+</div>
+<details style="font-size: 12px; color: #56605E">
+<summary style="cursor: pointer; min-height: 28px">더 보기 · 지표 파일 자동 · 끝나면 Discord</summary>
+<div style="margin-top: 6px; padding: 8px 10px; border-radius: 6px; background: #F6F7F7; font-family: 'Roboto Mono', monospace; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere">systemd-run --user --scope tmux new -d -s run-exp-008 "conda run -n lora-env python src/train.py … | tee runs/exp-008/train.log"</div>
+</details>
+<button type="button" style="min-height: 38px; border-radius: 8px; border: none; background: #141A19; color: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer">지금 실행</button>
+<details style="font-size: 12px; color: #3D4644">
+<summary style="cursor: pointer; min-height: 32px; display: flex; align-items: center; color: #0E6E5C; font-weight: 500">시간 정해서 실행…</summary>
+<div style="margin-top: 6px; padding: 10px; border: 1px solid #E1E5E4; border-radius: 8px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: grid; grid-template-columns: 40px 1fr; gap: 8px; align-items: center">
+<label for="fc-when" style="color: #56605E">언제</label><input id="fc-when" type="text" value="오늘 14:00" style="min-height: 32px; box-sizing: border-box; padding: 0 8px; border: 1px solid #C8D0CE; border-radius: 6px; font-family: 'Roboto Mono', monospace; font-size: 12px">
+<label for="fc-rep" style="color: #56605E">반복</label><button id="fc-rep" type="button" style="min-height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; border: 1px solid #C8D0CE; border-radius: 6px; background: #FFFFFF; font-size: 12px; cursor: pointer">한 번<span aria-hidden="true" style="color: #7A8482">▾</span></button>
+</div>
+<span style="line-height: 1.5; color: #56605E">그때 GPU 가 바쁘면 끝날 때까지 기다렸다가 시작하고 알려요.</span>
+<button type="button" style="min-height: 34px; border-radius: 8px; border: 1px solid #141A19; background: #FFFFFF; color: #141A19; font-size: 12px; font-weight: 700; cursor: pointer">예약 만들기</button>
+</div>
+</details>
+</div>
+
+<div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #EEF1F0">
+<span style="font-size: 12px; font-weight: 700">실행 중</span>
+<div style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #0E6E5C"></span><span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 500">EXP-007 <span style="font-weight: 400; color: #56605E">· main</span></span><button type="button" style="min-height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid #C8D0CE; background: #FFFFFF; font-size: 11px; cursor: pointer">터미널에 붙기</button></div>
+<div style="height: 4px; border-radius: 999px; background: #E9EDEC; overflow: hidden"><div style="width: 68%; height: 100%; background: #0E6E5C"></div></div>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 11px; color: #56605E">epoch 34/50 · 약 1시간 12분</span>
+</div>
+
+<div style="padding: 12px 14px; display: flex; flex-direction: column">
+<span style="font-size: 12px; font-weight: 700; padding-bottom: 6px">최근 실행</span>
+<div style="display: flex; align-items: center; gap: 8px; padding: 7px 0"><span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 12px">EXP-006</span><span style="font-family: 'Roboto Mono', monospace; font-size: 12px">0.571</span><a href="#log-006" style="font-size: 11px">로그</a></div>
+<div style="display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid #EEF1F0"><span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 12px">EXP-005</span><span style="font-size: 11px; color: #8A3D09; font-weight: 700">끊김</span><a href="#log-005" style="font-size: 11px">로그</a></div>
+<div style="display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid #EEF1F0"><span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 12px">sweep-lr</span><span style="font-size: 11px; color: #6B2E07; font-weight: 700">실패 · 1</span><a href="#log-sweep" style="font-size: 11px">로그</a></div>
+</div>
+</div>
+</sc-if>
+</aside>
+
+<div class="rs" role="separator" aria-orientation="vertical" aria-label="사이드바 너비 조절" tabIndex="0" onPointerDown="{{ dragSide }}" onKeyDown="{{ keySide }}" style="{{ sideRs }}"></div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+
+<section aria-label="편집기" style="flex: 1; min-height: 0; display: flex; flex-direction: column">
+<div role="tablist" aria-label="열린 파일" style="flex: 0 0 auto; display: flex; background: #F6F7F7; border-bottom: 1px solid #E1E5E4; overflow-x: auto">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+<button type="button" role="tab" aria-selected="{{ t.pressed }}" onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}<span aria-hidden="true" style="color: #7A8482; font-size: 12px">×</span></button>
+</sc-for>
+</div>
+<div style="flex: 0 0 auto; padding: 6px 18px; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">{{ crumb }}</div>
+
+<div style="flex: 1; min-height: 0; display: flex; overflow: hidden">
+<div style="flex: 1; min-width: 0; overflow: auto">
+
+<sc-if value="{{ isConfig }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 4px 18px 6px; padding: 10px 14px; border-radius: 10px; background: #E3F2EE; font-size: 13px">
+<span style="font-weight: 700; color: #0B5A4B">Claude 가 12분 전에 만듦</span>
+<span style="flex: 1 1 200px; color: #0B4A3E">세션 · rank 64 설정 비교 (ADE)</span>
+<a href="ADE.dc.html" style="min-height: 32px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid #9CCBBE; background: #FFFFFF; font-size: 12px; text-decoration: none">세션 보기</a>
+<button type="button" style="min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #9CCBBE; background: #FFFFFF; font-family: inherit; font-size: 12px; cursor: pointer">r32.yaml 과 비교</button>
+<button type="button" style="min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #9CCBBE; background: #FFFFFF; font-family: inherit; font-size: 12px; cursor: pointer">되돌리기</button>
+</div>
+<div style="padding: 4px 0 16px; font-family: 'Roboto Mono', monospace; font-size: 13px; line-height: 24px; white-space: pre">
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">1</span><span><span style="color: #0B5A4B">name</span>: r64</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">2</span><span><span style="color: #0B5A4B">base</span>: configs/r32.yaml</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">3</span><span><span style="color: #0B5A4B">model</span>:</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">4</span><span>  <span style="color: #0B5A4B">backbone</span>: <span style="color: #8A3D09">vit_base_patch16_224</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">5</span><span><span style="color: #0B5A4B">lora</span>:</span></div>
+<div style="display: flex; padding: 0 18px; background: #FCE9E2"><span aria-hidden="true" style="width: 32px; text-align: right; color: #8A3D09; margin-right: 18px">−</span><span style="color: #6B2E07">  rank: 32</span></div>
+<div style="display: flex; padding: 0 18px; background: #DDF1EA"><span aria-hidden="true" style="width: 32px; text-align: right; color: #0B5A4B; margin-right: 18px">6</span><span>  <span style="color: #0B5A4B">rank</span>: <span style="color: #1F5FA8">64</span><span style="color: #0B5A4B; font-family: 'Noto Sans KR', sans-serif; font-size: 12px">    ← r32 대비</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">7</span><span>  <span style="color: #0B5A4B">alpha</span>: <span style="color: #1F5FA8">128</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">8</span><span>  <span style="color: #0B5A4B">dropout</span>: <span style="color: #1F5FA8">0.05</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">9</span><span><span style="color: #0B5A4B">train</span>:</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">10</span><span>  <span style="color: #0B5A4B">lr</span>: <span style="color: #1F5FA8">2.0e-4</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">11</span><span>  <span style="color: #0B5A4B">batch_size</span>: <span style="color: #1F5FA8">32</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">12</span><span>  <span style="color: #0B5A4B">epochs</span>: <span style="color: #1F5FA8">50</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">13</span><span>  <span style="color: #0B5A4B">seed</span>: <span style="color: #1F5FA8">42</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">14</span><span><span style="color: #0B5A4B">output_dir</span>: <span style="color: #8A3D09">runs/r64</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">15</span><span><span style="color: #6B7572; font-style: italic"># W&amp;B 키는 환경변수 WANDB_API_KEY로 주입 (.env, gitignore)</span></span></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTrain }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 4px 0 16px; font-family: 'Roboto Mono', monospace; font-size: 13px; line-height: 24px; white-space: pre">
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">1</span><span><span style="color: #6B3FA0">import</span> yaml</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">2</span><span><span style="color: #6B3FA0">from</span> peft <span style="color: #6B3FA0">import</span> LoraConfig, get_peft_model</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">3</span><span><span style="color: #6B3FA0">from</span> src.model <span style="color: #6B3FA0">import</span> build_backbone</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">4</span><span><span style="color: #6B3FA0">from</span> src.ckpt <span style="color: #6B3FA0">import</span> load_resume, save_resume</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">5</span><span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">6</span><span><span style="color: #6B3FA0">def</span> <span style="color: #0B5A4B">main</span>(cfg_path):</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">7</span><span>    cfg = yaml.safe_load(<span style="color: #0B5A4B">open</span>(cfg_path))</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">8</span><span>    model = build_backbone(cfg[<span style="color: #8A3D09">"model"</span>])</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">9</span><span>    lora = LoraConfig(r=cfg[<span style="color: #8A3D09">"lora"</span>][<span style="color: #8A3D09">"rank"</span>],</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">10</span><span>                      lora_alpha=cfg[<span style="color: #8A3D09">"lora"</span>][<span style="color: #8A3D09">"alpha"</span>])</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">11</span><span>    model = get_peft_model(model, lora)</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">12</span><span>    start = load_resume(cfg[<span style="color: #8A3D09">"output_dir"</span>])  <span style="color: #6B7572; font-style: italic"># 재개용 체크포인트</span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">13</span><span>    <span style="color: #6B3FA0">for</span> epoch <span style="color: #6B3FA0">in</span> <span style="color: #0B5A4B">range</span>(start, cfg[<span style="color: #8A3D09">"train"</span>][<span style="color: #8A3D09">"epochs"</span>]):</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">14</span><span>        train_one_epoch(model, epoch)</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">15</span><span>        save_resume(model, epoch, cfg[<span style="color: #8A3D09">"output_dir"</span>])</span></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEval }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 4px 0 16px; font-family: 'Roboto Mono', monospace; font-size: 13px; line-height: 24px; white-space: pre; color: #3D4644">
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">1</span><span style="color: #0B5A4B; font-weight: 500"># lora-rank-ablation</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">2</span><span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">3</span><span>LoRA rank 에 따라 ViT 미세조정 결과가 어떻게 바뀌는지 비교해요.</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">4</span><span></span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">5</span><span style="color: #0B5A4B; font-weight: 500">## 실행</span></div>
+<div style="display: flex; padding: 0 18px"><span aria-hidden="true" style="width: 32px; text-align: right; color: #7A8482; margin-right: 18px">6</span><span>python src/train.py --config configs/r16.yaml</span></div>
+</div>
+</sc-if>
+
+</div>
+<div aria-hidden="true" style="flex: 0 0 64px; border-left: 1px solid #EEF1F0; padding: 8px 8px; display: flex; flex-direction: column; gap: 3px">
+<div style="height: 3px; width: 70%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 50%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 40%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 85%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 30%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 45%; background: #9CCBBE; border-radius: 2px"></div>
+<div style="height: 3px; width: 40%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 55%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 25%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 35%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 60%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 40%; background: #D6DCDB; border-radius: 2px"></div>
+<div style="height: 3px; width: 80%; background: #D6DCDB; border-radius: 2px"></div>
+</div>
+</div>
+</section>
+
+<div class="rs" role="separator" aria-orientation="horizontal" aria-label="하단 패널 높이 조절" tabIndex="0" onPointerDown="{{ dragBottom }}" onKeyDown="{{ keyBottom }}" style="flex: 0 0 5px; background: #E1E5E4; cursor: row-resize; touch-action: none"></div>
+<section aria-label="하단 패널" style="{{ bottomStyle }}">
+<div role="tablist" aria-label="터미널" style="display: flex; align-items: center; gap: 4px; padding: 6px 12px 0; flex-wrap: wrap">
+<button type="button" role="tab" aria-selected="false" style="min-height: 34px; padding: 0 12px; border: none; border-radius: 8px; background: transparent; color: #56605E; font-family: 'Roboto Mono', monospace; font-size: 12px; cursor: pointer">bash</button>
+<button type="button" role="tab" aria-selected="true" style="min-height: 34px; padding: 0 12px; border: none; border-radius: 8px; background: #F0F2F2; color: #141A19; font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 500; cursor: pointer">EXP-007 · tmux</button>
+<button type="button" role="tab" aria-selected="false" style="min-height: 34px; padding: 0 12px; border: none; border-radius: 8px; background: transparent; color: #56605E; font-family: 'Roboto Mono', monospace; font-size: 12px; cursor: pointer">pytest</button>
+<button type="button" aria-label="새 터미널" style="width: 34px; height: 34px; border: none; border-radius: 8px; background: transparent; color: #56605E; font-size: 18px; cursor: pointer">+</button>
+<span style="margin-left: auto; font-size: 12px; color: #56605E">터미널 3 · 창을 닫아도 tmux 세션은 남아요</span>
+</div>
+<div style="flex: 1; overflow: auto; padding: 10px 22px; font-family: 'Roboto Mono', monospace; font-size: 12px; line-height: 1.8; color: #3D4644; white-space: pre">[21:51:44] epoch 34/50  step 1420/1563  loss 0.4089  lr 1.61e-04
+[21:51:56] epoch 34/50  step 1480/1563  loss 0.4081  lr 1.61e-04
+<span style="color: #0E6E5C; font-weight: 500">user@ubuntu-desktop</span>:<span style="color: #1F5FA8">~/projects/lora-rank-ablation</span>$ _</div>
+</section>
+</div>
+
+<div class="rs" role="separator" aria-orientation="vertical" aria-label="Claude Code 패널 너비 조절" tabIndex="0" onPointerDown="{{ dragChat }}" onKeyDown="{{ keyChat }}" style="flex: 0 0 5px; background: #E1E5E4; cursor: col-resize; touch-action: none"></div>
+<aside aria-label="Claude Code" style="{{ chatStyle }}">
+<div style="flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #EEF1F0">
+<span style="font-size: 13px; font-weight: 700; background: #F0F2F2; border-radius: 8px; padding: 6px 10px">Claude Code</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #0E6E5C; font-weight: 700"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>연결됨</span>
+<button type="button" aria-label="세션 기록" style="margin-left: auto; width: 34px; height: 34px; border-radius: 8px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#56605E" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg></button>
+<button type="button" aria-label="새 세션" style="width: 34px; height: 34px; border-radius: 8px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#56605E" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 8v8M8 12h8"></path></svg></button>
+</div>
+<div style="flex: 0 0 auto; padding: 10px 16px 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">rank 64 설정 비교</span><span style="font-size: 12px; color: #56605E">ADE 와 같은 세션 · exp/rank-64</span></div>
+
+<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: flex-end; max-width: 88%; background: #F0F2F2; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.6">r64.yaml 에서 alpha 도 같이 바꾼 이유가 뭐야?</div>
+<div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.7">
+<span>r16 · r32 설정과 같은 비율(alpha = 2 × rank)을 지키려고 함께 올렸어요. 비율이 달라지면 학습률이 바뀐 효과가 섞여서 rank 만 비교하기 어려워져요.</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; background: #F0F2F2; border-radius: 6px; padding: 3px 8px">configs/r32.yaml</span>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; background: #F0F2F2; border-radius: 6px; padding: 3px 8px">configs/r16.yaml</span>
+</div>
+</div>
+<div style="align-self: flex-end; max-width: 88%; background: #F0F2F2; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.6">r64 가 VRAM 16G 안에 들어가는지 확인해 줘</div>
+<div style="font-size: 14px; line-height: 1.7">GPU 메모리를 재는 스크립트를 돌려 볼게요. 하위 에이전트가 batch 크기별로 나눠서 계산하고 있어요.</div>
+<div role="group" aria-label="승인 요청" style="border: 1px solid #F0C9A8; border-left: 3px solid #B4530F; border-radius: 10px; background: #FFFAF5; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700; color: #8A3D09">승인이 필요해요 · Bash</span>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #4A2205; overflow-wrap: anywhere">pip install nvidia-ml-py</span>
+<span style="font-size: 12px; color: #4A2205; line-height: 1.5">설치할 곳: lora-env · 이 환경은 EXP-007 이 쓰는 중이라 lab.remote 가 막아 둘 거예요. 다른 환경을 고르라고 답할 수 있어요.</span>
+<div style="display: flex; gap: 6px; flex-wrap: wrap">
+<button type="button" style="min-height: 34px; padding: 0 12px; border: none; border-radius: 8px; background: #B4530F; color: #FFFFFF; font-size: 12px; font-weight: 700; cursor: pointer">허용</button>
+<button type="button" style="min-height: 34px; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 12px; cursor: pointer">거부하고 지시하기</button>
+</div>
+</div>
+</div>
+
+<div style="flex: 0 0 auto; padding: 12px">
+<div class="ccbox" style="border: 1.5px solid #0E6E5C; border-radius: 12px; display: flex; flex-direction: column">
+<sc-if value="{{ modeNote }}" hint-placeholder-val="{{ false }}"><span role="status" style="margin: 10px 12px 0; font-size: 12px; color: #0B5A4B; background: #E3F2EE; border-radius: 8px; padding: 6px 10px; line-height: 1.5">{{ modeNoteText }}</span></sc-if>
+<div style="display: flex; align-items: flex-start; gap: 6px; padding: 10px 8px 4px 14px">
+<label for="fc-chat" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Claude 에게 요청하기</label>
+<textarea id="fc-chat" rows="2" placeholder="Claude 에게 요청하기…" style="flex: 1; min-width: 0; border: none; outline: none; resize: none; padding: 4px 0; font-family: inherit; font-size: 14px; background: transparent"></textarea>
+<button type="button" aria-label="음성 입력" style="width: 32px; height: 32px; flex: none; border-radius: 8px; border: none; background: transparent; color: #56605E; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0014 0M12 18v3"></path></svg></button>
+</div>
+<sc-if value="{{ anyMenuOpen }}" hint-placeholder-val="{{ false }}"><button type="button" tabIndex="-1" aria-label="메뉴 닫기" onClick="{{ closeMenus }}" style="position: fixed; inset: 0; z-index: 30; margin: 0; padding: 0; border: none; background: transparent; cursor: default"></button></sc-if>
+<div class="cc-row" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px 8px; border-top: 1px solid #EEF1F0">
+<button type="button" aria-label="파일 첨부" style="order: 1; width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; color: #3D4644; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<button type="button" aria-label="슬래시 명령" style="order: 2; width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; color: #3D4644; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M14 8l-4 8"></path></svg></button>
+<div class="cc-model" style="order: 3; position: relative">
+<button type="button" aria-haspopup="menu" aria-expanded="{{ modelOpen }}" aria-label="{{ modelAria }}" onClick="{{ toggleModel }}" style="min-height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: none; border-radius: 999px; background: #F0F2F2; font-family: inherit; font-size: 12px; color: #141A19; cursor: pointer"><span style="font-weight: 500">{{ modelChip }}</span><span style="color: #56605E">{{ effortName }}</span></button>
+<sc-if value="{{ modelOpen }}" hint-placeholder-val="{{ false }}">
+<div role="menu" aria-label="모델" style="position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 31; width: 320px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 -8px 28px rgba(20,26,25,0.14); padding: 6px; display: flex; flex-direction: column">
+<span style="padding: 8px 10px 6px; font-size: 12px; color: #56605E">Select a model</span>
+<div style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{ models }}" as="m" hint-placeholder-count="7">
+<button type="button" role="menuitemradio" aria-checked="{{ m.checked }}" onClick="{{ m.pick }}" style="{{ m.style }}">
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: left"><span style="font-size: 13px; font-weight: 700">{{ m.name }}</span><span style="font-size: 12px; color: #56605E">{{ m.desc }}</span></span>
+<span aria-hidden="true" style="{{ m.check }}">✓</span>
+</button>
+</sc-for>
+</div>
+<div style="margin-top: 4px; border-top: 1px solid #EEF1F0; padding-top: 4px">
+<div style="padding: 8px 10px; display: flex; align-items: center; gap: 10px">
+<span style="font-size: 13px; color: #141A19">Effort <span style="color: #56605E">({{ effortName }})</span></span>
+<div role="radiogroup" aria-label="Effort" style="margin-left: auto; display: flex; align-items: center; gap: 2px; padding: 3px 4px; border-radius: 999px; background: #F0F2F2">
+<sc-for list="{{ efforts }}" as="e" hint-placeholder-count="5">
+<button type="button" role="radio" aria-checked="{{ e.checked }}" aria-label="{{ e.aria }}" onClick="{{ e.pick }}" style="width: 22px; height: 22px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><span style="{{ e.dot }}"></span></button>
+</sc-for>
+</div>
+</div>
+<button type="button" role="switch" aria-checked="{{ ultraChecked }}" onClick="{{ toggleUltra }}" style="width: 100%; min-height: 40px; padding: 0 10px; display: flex; align-items: center; gap: 10px; border: none; border-radius: 8px; background: transparent; font-family: inherit; cursor: pointer">
+<span style="font-size: 13px; color: #141A19">Ultracode</span>
+<span aria-hidden="true" style="{{ ultraTrack }}"><span style="{{ ultraKnob }}"></span></span>
+</button>
+</div>
+</div>
+</sc-if>
+</div>
+<div class="cc-mode" style="order: 4; margin-left: auto; position: relative">
+<button type="button" aria-haspopup="menu" aria-expanded="{{ modeOpen }}" aria-label="{{ modeAria }}" onClick="{{ toggleMode }}" style="{{ modeBtn }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ modeIcon }}"></path></svg><span class="cc-modename">{{ modeName }}</span></button>
+<sc-if value="{{ modeOpen }}" hint-placeholder-val="{{ false }}">
+<div role="menu" aria-label="Mode" style="position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 31; width: 340px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 -8px 28px rgba(20,26,25,0.14); padding: 6px; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; padding: 8px 10px 6px"><span style="font-size: 12px; color: #56605E">Modes</span><span style="margin-left: auto; font-size: 11px; color: #56605E"><span style="font-family: 'Roboto Mono', monospace; padding: 1px 5px; border: 1px solid #E1E5E4; border-radius: 4px">⇧</span> + <span style="font-family: 'Roboto Mono', monospace; padding: 1px 5px; border: 1px solid #E1E5E4; border-radius: 4px">tab</span> to switch</span></div>
+<sc-for list="{{ modes }}" as="m" hint-placeholder-count="4">
+<button type="button" role="menuitemradio" aria-checked="{{ m.checked }}" onClick="{{ m.pick }}" style="{{ m.style }}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px; color: #3D4644"><path d="{{ m.icon }}"></path></svg>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13.5px; font-weight: 700">{{ m.name }}</span><span style="font-size: 12px; line-height: 1.5; color: #56605E">{{ m.desc }}</span></span>
+<span aria-hidden="true" style="{{ m.check }}">✓</span>
+</button>
+</sc-for>
+<div style="margin-top: 4px; border-top: 1px solid #EEF1F0; padding-top: 4px">
+<div style="padding: 8px 10px; display: flex; align-items: center; gap: 10px">
+<span style="font-size: 13px; color: #141A19">Effort <span style="color: #56605E">({{ effortName }})</span></span>
+<div role="radiogroup" aria-label="Effort" style="margin-left: auto; display: flex; align-items: center; gap: 2px; padding: 3px 4px; border-radius: 999px; background: #F0F2F2">
+<sc-for list="{{ efforts }}" as="e" hint-placeholder-count="5">
+<button type="button" role="radio" aria-checked="{{ e.checked }}" aria-label="{{ e.aria }}" onClick="{{ e.pick }}" style="width: 22px; height: 22px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><span style="{{ e.dot }}"></span></button>
+</sc-for>
+</div>
+</div>
+<button type="button" role="switch" aria-checked="{{ ultraChecked }}" onClick="{{ toggleUltra }}" style="width: 100%; min-height: 40px; padding: 0 10px; display: flex; align-items: center; gap: 10px; border: none; border-radius: 8px; background: transparent; font-family: inherit; cursor: pointer">
+<span style="font-size: 13px; color: #141A19">Ultracode</span>
+<span aria-hidden="true" style="{{ ultraTrack }}"><span style="{{ ultraKnob }}"></span></span>
+</button>
+</div>
+</div>
+</sc-if>
+</div>
+<button type="button" aria-label="보내기" style="order: 5; width: 32px; height: 32px; border-radius: 8px; border: none; background: #0E6E5C; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button>
+</div>
+</div>
+</div>
+</aside>
+</div>
+
+<footer style="flex: 0 0 30px; display: flex; align-items: center; gap: 18px; padding: 0 14px; background: #0E6E5C; color: #FFFFFF; font-family: 'Roboto Mono', monospace; font-size: 12px">
+<span>⎇ exp/rank-64</span>
+<span>⟳</span>
+<span>✕ 0  ⚠ 0</span>
+<span style="margin-left: auto">{{ status }}</span>
+<span>공백: 2</span>
+<span>UTF-8</span>
+<span>LF</span>
+<span>{{ lang }}</span>
+<span style="font-family: 'Noto Sans KR', sans-serif">● Claude Code</span>
+</footer>
+
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { file: 'config', side: 'explorer', sideOpen: true, sideW: 270, chatW: 380, bottomH: 230, mode: 'manual', modeOpen: false, effort: 2, model: 'default', modelOpen: false, ultra: false, modeFrom: null, treeOpen: true, creating: null, newName: '', created: [], refreshed: 0 };
+    this.drag = null;
+  }
+  componentDidMount() {
+    this.onMove = (e) => {
+      const d = this.drag;
+      if (!d) return;
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      if (d.kind === 'side') this.setState({ sideW: clamp(d.start + (e.clientX - d.x), 180, 480) });
+      if (d.kind === 'chat') this.setState({ chatW: clamp(d.start - (e.clientX - d.x), 280, 640) });
+      if (d.kind === 'bottom') this.setState({ bottomH: clamp(d.start - (e.clientY - d.y), 90, 560) });
+    };
+    this.onUp = () => { this.drag = null; };
+    window.addEventListener('pointermove', this.onMove);
+    window.addEventListener('pointerup', this.onUp);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('pointermove', this.onMove);
+    window.removeEventListener('pointerup', this.onUp);
+  }
+  startDrag(kind, e) {
+    e.preventDefault();
+    const start = kind === 'side' ? this.state.sideW : (kind === 'chat' ? this.state.chatW : this.state.bottomH);
+    this.drag = { kind: kind, x: e.clientX, y: e.clientY, start: start };
+  }
+  nudge(kind, e) {
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const step = 16;
+    if (kind === 'side' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      this.setState({ sideW: clamp(this.state.sideW + (e.key === 'ArrowRight' ? step : -step), 180, 480) });
+    }
+    if (kind === 'chat' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      this.setState({ chatW: clamp(this.state.chatW + (e.key === 'ArrowLeft' ? step : -step), 280, 640) });
+    }
+    if (kind === 'bottom' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      this.setState({ bottomH: clamp(this.state.bottomH + (e.key === 'ArrowUp' ? step : -step), 90, 560) });
+    }
+  }
+  renderVals() {
+    const file = this.state.file;
+    const side = this.state.side;
+    const FILES = [
+      { id: 'config', label: 'r64.yaml', status: '줄 6, 열 9', lang: 'YAML', crumb: 'configs › r64.yaml' },
+      { id: 'train', label: 'train.py', status: '줄 12, 열 5', lang: 'Python', crumb: 'src › train.py' },
+      { id: 'eval', label: 'README.md', status: '줄 1, 열 1', lang: 'Markdown', crumb: 'README.md' }
+    ];
+    const TAB = 'min-height:40px;display:inline-flex;align-items:center;gap:10px;padding:0 14px;border:none;border-right:1px solid #E1E5E4;font-family:Roboto Mono,monospace;font-size:13px;cursor:pointer;white-space:nowrap;';
+    const tabs = FILES.map((f) => ({
+      label: f.label,
+      pressed: f.id === file ? 'true' : 'false',
+      style: TAB + (f.id === file ? 'background:#FFFFFF;color:#141A19;font-weight:500;box-shadow:inset 0 2px 0 #0E6E5C;' : 'background:transparent;color:#56605E;'),
+      pick: () => this.setState({ file: f.id })
+    }));
+    const ACT = 'position:relative;width:44px;height:44px;border-radius:10px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+    const actBtn = (id) => ({
+      pressed: side === id && this.state.sideOpen ? 'true' : 'false',
+      style: ACT + (side === id && this.state.sideOpen ? 'background:#FFFFFF;color:#0E6E5C;box-shadow:0 1px 2px rgba(20,26,25,0.12);' : 'background:transparent;color:#56605E;'),
+      pick: () => this.setState(side === id ? { sideOpen: !this.state.sideOpen } : { side: id, sideOpen: true })
+    });
+    const TREE = 'width:100%;min-height:32px;display:flex;align-items:center;gap:8px;padding:0 8px;border:none;border-radius:6px;text-align:left;font-family:Roboto Mono,monospace;font-size:13px;cursor:pointer;';
+    const tree = (id, indent) => TREE + 'padding-left:' + indent + 'px;' + (file === id ? 'background:#E3F2EE;color:#0B5A4B;font-weight:500;' : 'background:transparent;color:#141A19;');
+    const current = FILES.find((f) => f.id === file) || FILES[0];
+    const MODES = [
+      { id: 'manual', name: 'Manual', desc: '파일을 고치기 전에 매번 승인을 받아요.', icon: 'M8 13V5.5a1.5 1.5 0 013 0V12M11 11V4.5a1.5 1.5 0 013 0V12M14 11.5V6a1.5 1.5 0 013 0v7a6 6 0 01-6 6h-1a6 6 0 01-5.2-3l-1.6-2.8a1.5 1.5 0 012.6-1.5L8 13' },
+      { id: 'edit', name: 'Edit automatically', desc: '파일 수정은 바로 하고, 명령 실행은 물어봐요.', icon: 'M8 8l-4 4 4 4M16 8l4 4-4 4' },
+      { id: 'plan', name: 'Plan', desc: '코드를 살펴보고 계획을 먼저 보여 준 뒤 고쳐요.', icon: 'M6 3h9l3 3v15H6zM9 10h6M9 14h6M9 18h4' },
+      { id: 'auto', name: 'Auto', desc: '안전 검사를 통과한 작업은 승인하고, 위험해 보이면 멈추고 물어봐요.', icon: 'M13 2L4 14h7l-1 8 9-12h-7z' }
+    ];
+    const EFFORTS = ['Low', 'Medium', 'High', 'Extra high', 'Max'];
+    const MODELS = [
+      { id: 'default', name: 'Default (recommended)', chip: 'Opus 5.5', desc: 'Opus 5.5 · 일상 작업과 복잡한 작업 모두' },
+      { id: 'opus', name: 'Opus 5.5', chip: 'Opus 5.5', desc: '복잡한 작업과 일상 작업' },
+      { id: 'fable52', name: 'Fable 5.2', chip: 'Fable 5.2', desc: '가장 어려운 작업 · 사용량이 빨리 줄어요' },
+      { id: 'sonnet', name: 'Sonnet 5.5', chip: 'Sonnet 5.5', desc: '간단한 작업에 가장 효율적' },
+      { id: 'haiku', name: 'Haiku 5.5', chip: 'Haiku 5.5', desc: '빠른 답변' },
+      { id: 'fable51', name: 'Fable 5.1', chip: 'Fable 5.1', desc: '아주 어렵고 오래 걸리는 작업' },
+      { id: 'haiku45', name: 'Haiku 4.5', chip: 'Haiku 4.5', desc: '빠른 답변' }
+    ];
+    const curModel = MODELS.find((m) => m.id === this.state.model) || MODELS[0];
+    const ITEM = 'width:100%;display:flex;align-items:flex-start;gap:10px;padding:10px;border:none;border-radius:8px;text-align:left;font-family:inherit;color:#141A19;cursor:pointer;';
+    const CHECK = (on) => 'flex:none;font-size:13px;color:#0E6E5C;' + (on ? '' : 'visibility:hidden');
+    const curMode = MODES.find((m) => m.id === this.state.mode);
+    const prevMode = MODES.find((m) => m.id === this.state.modeFrom);
+    const commitNew = () => {
+      const nm = this.state.newName.trim().replace(/\/+$/, '');
+      if (!nm) { this.setState({ creating: null, newName: '' }); return; }
+      this.setState({ created: this.state.created.concat([{ name: nm, kind: this.state.creating }]), creating: null, newName: '' });
+    };
+    return {
+      treeOpen: this.state.treeOpen,
+      treeOpenStr: this.state.treeOpen ? 'true' : 'false',
+      caretStyle: 'display:inline-block;width:12px;font-size:12px;color:#56605E;transition:transform .12s;' + (this.state.treeOpen ? '' : 'transform:rotate(-90deg);'),
+      toggleTree: () => this.setState({ treeOpen: !this.state.treeOpen }),
+      newFile: () => this.setState({ treeOpen: true, creating: 'file', newName: '' }),
+      newFolder: () => this.setState({ treeOpen: true, creating: 'folder', newName: '' }),
+      refreshTree: () => this.setState({ refreshed: this.state.refreshed + 1 }),
+      collapseAll: () => this.setState({ treeOpen: false, creating: null }),
+      creating: !!this.state.creating,
+      createIcon: this.state.creating === 'folder' ? '▸' : '·',
+      createLabel: this.state.creating === 'folder' ? '새 폴더 이름' : '새 파일 이름',
+      newName: this.state.newName,
+      onNewName: (e) => this.setState({ newName: e.target.value }),
+      onNewKey: (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); commitNew(); } if (e.key === 'Escape') this.setState({ creating: null, newName: '' }); },
+      createdItems: this.state.created.map((c) => ({
+        label: c.kind === 'folder' ? '▸ ' + c.name + '/' : c.name,
+        style: 'display:flex;gap:8px;padding:5px 8px 5px 22px;' + (c.kind === 'folder' ? 'color:#56605E;' : 'color:#0B5A4B;')
+      })),
+      modeName: curMode.name,
+      modeIcon: curMode.icon,
+      effortName: EFFORTS[this.state.effort],
+      efforts: EFFORTS.map((name, i) => ({
+        aria: 'Effort ' + name, checked: i === this.state.effort ? 'true' : 'false',
+        dot: i === this.state.effort ? 'display:block;width:16px;height:16px;border-radius:999px;background:#FFFFFF;box-shadow:0 1px 3px rgba(20,26,25,0.35)' : 'display:block;width:6px;height:6px;border-radius:999px;background:#9AA4A2',
+        pick: () => this.setState({ effort: i })
+      })),
+      modelName: curModel.name,
+      modelChip: curModel.chip,
+      ultraChecked: this.state.ultra ? 'true' : 'false',
+      ultraTrack: 'margin-left:auto;width:36px;height:20px;border-radius:999px;position:relative;display:inline-block;flex:none;' + (this.state.ultra ? 'background:#0E6E5C' : 'background:#C8D0CE'),
+      ultraKnob: 'position:absolute;top:2px;left:' + (this.state.ultra ? 18 : 2) + 'px;width:16px;height:16px;border-radius:999px;background:#FFFFFF;box-shadow:0 1px 2px rgba(20,26,25,0.25)',
+      toggleUltra: () => this.setState({ ultra: !this.state.ultra }),
+      modelAria: '모델: ' + curModel.chip + ', Effort ' + EFFORTS[this.state.effort] + ', 바꾸기',
+      modelOpen: this.state.modelOpen,
+      anyMenuOpen: !!(this.state.modeOpen || this.state.modelOpen),
+      closeMenus: () => this.setState({ modeOpen: false, modelOpen: false }),
+      toggleModel: () => this.setState({ modelOpen: !this.state.modelOpen, modeOpen: false }),
+      models: MODELS.map((m) => {
+        const on = m.id === curModel.id;
+        return { name: m.name, desc: m.desc, checked: on ? 'true' : 'false', check: CHECK(on), style: ITEM + 'align-items:center;' + (on ? 'background:#F6FBF9;' : 'background:transparent;'), pick: () => this.setState({ model: m.id, modelOpen: false }) };
+      }),
+      modeAria: 'Mode: ' + curMode.name + ', Effort ' + EFFORTS[this.state.effort] + ', 바꾸기',
+      modeOpen: this.state.modeOpen,
+      toggleMode: () => this.setState({ modeOpen: !this.state.modeOpen, modelOpen: false }),
+      modeBtn: 'min-height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border:none;border-radius:8px;font-family:inherit;font-size:12.5px;cursor:pointer;' + (this.state.mode === 'auto' ? 'background:#FDF0E5;color:#8A3D09;' : this.state.mode === 'edit' ? 'background:#E3F2EE;color:#0B5A4B;' : this.state.mode === 'plan' ? 'background:#F0F2F2;color:#3D4644;' : 'background:transparent;color:#141A19;'),
+      modes: MODES.map((m) => {
+        const on = m.id === this.state.mode;
+        return {
+          name: m.name, desc: m.desc, icon: m.icon,
+          checked: on ? 'true' : 'false',
+          check: CHECK(on),
+          style: ITEM + (on ? 'background:#F6FBF9;' : 'background:transparent;'),
+          pick: () => this.setState({ modeOpen: false, mode: m.id, modeFrom: m.id === this.state.mode ? this.state.modeFrom : this.state.mode })
+        };
+      }),
+      modeNote: !!prevMode && prevMode.id !== this.state.mode,
+      modeNoteText: prevMode ? prevMode.name + ' → ' + curMode.name + ' · 다음 요청부터 이 세션에 적용돼요.' : '',
+      tabs,
+      act: { explorer: actBtn('explorer'), search: actBtn('search'), git: actBtn('git'), scenario: actBtn('scenario'), run: actBtn('run') },
+      showRun: side === 'run',
+      showScenario: side === 'scenario',
+      showExplorer: side === 'explorer',
+      showSearch: side === 'search',
+      showGit: side === 'git',
+      isConfig: file === 'config',
+      isTrain: file === 'train',
+      isEval: file === 'eval',
+      status: current.status,
+      lang: current.lang,
+      crumb: current.crumb,
+      fileLabel: current.label,
+      treeEval: tree('eval', 22),
+      treeConfig: tree('config', 38),
+      treeTrain: tree('train', 38),
+      openEval: () => this.setState({ file: 'eval' }),
+      openConfig: () => this.setState({ file: 'config' }),
+      openTrain: () => this.setState({ file: 'train' }),
+      sideStyle: this.state.sideOpen ? 'flex:0 0 ' + this.state.sideW + 'px;min-width:0;display:flex;flex-direction:column;overflow:hidden;' : 'display:none;',
+      sideRs: this.state.sideOpen ? 'flex:0 0 5px;background:#E1E5E4;cursor:col-resize;touch-action:none;' : 'display:none;',
+      chatStyle: 'flex:0 0 ' + this.state.chatW + 'px;min-width:0;display:flex;flex-direction:column;',
+      bottomStyle: 'flex:0 0 ' + this.state.bottomH + 'px;min-height:0;display:flex;flex-direction:column;',
+      dragSide: (e) => this.startDrag('side', e),
+      dragChat: (e) => this.startDrag('chat', e),
+      dragBottom: (e) => this.startDrag('bottom', e),
+      keySide: (e) => this.nudge('side', e),
+      keyChat: (e) => this.nudge('chat', e),
+      keyBottom: (e) => this.nudge('bottom', e)
+    };
+  }
+}
+</script>
+</body>
+</html>

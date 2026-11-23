@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>시스템 · 설치 상태</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#0e6e5c}a:hover{color:#08493d}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans KR', sans-serif; color: #141a19; background: #ffffff; min-height: 1180px; display: flex; flex-direction: column">
+  <header style="position: relative; z-index: 20; background: #FFFFFF; border-bottom: 1px solid #E1E5E4; font-family: 'Noto Sans KR', sans-serif">
+<div style="box-sizing: border-box; padding: 0 16px 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em; color: #141A19">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="MissionControl.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Dashboard</a>
+<a href="Projects.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Projects</a>
+<a href="PaperLibrary.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Papers</a>
+<a href="Inbox.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Inbox<span aria-label="안 읽은 알림 3" style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #B4530F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span></a>
+</nav>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: #56605E">
+<button type="button" aria-label="Go to, Ctrl+K" style="min-height: 36px; min-width: 200px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #E1E5E4; border-radius: 8px; background: #F6F7F7; color: #56605E; font-family: inherit; font-size: 13px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex: 1; text-align: left">Go to…</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 1px 6px; border: 1px solid #E1E5E4; border-radius: 4px; background: #FFFFFF">⌘K</span></button>
+<span style="font-family: 'Roboto Mono', monospace">GPU 94% · 13.1/16G</span>
+<a href="System.dc.html" style="display: inline-flex; align-items: center; gap: 6px; color: #56605E; text-decoration: none"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>Tunnel</a>
+<details style="position: relative">
+<summary aria-label="Conda · System 메뉴" style="list-style: none; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #E3F2EE; color: #0B5A4B"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg></summary>
+<div role="menu" aria-label="Conda · System" style="position: absolute; right: 0; top: calc(100% + 8px); width: 240px; box-sizing: border-box; padding: 6px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 8px 28px rgba(20,26,25,0.14); display: flex; flex-direction: column">
+<a role="menuitem" href="Conda.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">Conda</span><span style="font-size: 11px; color: #56605E">환경 만들기 · 패키지 관리</span></a>
+<a role="menuitem" href="System.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">System</span><span style="font-size: 11px; color: #56605E">서버 · 터널 · 자동 시작 · 삭제</span></a>
+</div>
+</details>
+</div>
+</div>
+</header>
+
+  <main style="width: 100%; padding: 32px 32px 56px; box-sizing: border-box; display: flex; flex-direction: column; gap: 28px">
+    <div>
+      <h1 style="margin: 0; font-size: 26px">시스템</h1>
+      <p style="margin: 8px 0 0; font-size: 14px; color: #56605e; line-height: 1.6">lab.remote 가 이 데스크톱에서 어떻게 떠 있는지, 무엇을 바꿨는지 보여 줘요. 여기 없는 시스템 설정은 건드리지 않아요.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+      <sc-for list="{{ status }}" as="s" hint-placeholder-count="4">
+        <div style="border: 1px solid #e1e5e4; border-radius: 12px; padding: 16px">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #56605e"><span aria-hidden="true" style="{{ s.dot }}"></span>{{ s.label }}</div>
+          <div style="font-size: 17px; font-weight: 700; margin-top: 8px">{{ s.value }}</div>
+          <div style="font-family: 'Roboto Mono', monospace; font-size: 11.5px; color: #56605e; margin-top: 6px; line-height: 1.6">{{ s.sub }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <section>
+      <h2 style="margin: 0 0 4px; font-size: 17px">lab.remote 가 바꾼 것</h2>
+      <p style="margin: 0 0 12px; font-size: 13px; color: #56605e">이게 전부예요. 나머지 상태는 lab.remote 폴더(<span style="font-family: 'Roboto Mono', monospace">data/</span> · <span style="font-family: 'Roboto Mono', monospace">.env</span>)와, 등록한 프로젝트마다 하나씩 있는 <span style="font-family: 'Roboto Mono', monospace">.labremote/</span> 에만 있어요.</p>
+      <div style="overflow-x: auto">
+        <table style="width: 100%; min-width: 720px; border-collapse: collapse; font-size: 13px">
+          <thead>
+            <tr style="color: #56605e; text-align: left">
+              <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">무엇</th>
+              <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">어디</th>
+              <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">언제 생겼나</th>
+              <th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #e1e5e4">되돌리기</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ changes }}" as="c" hint-placeholder-count="4">
+              <tr>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #eef1f0; font-weight: 700">{{ c.what }}</td>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #eef1f0; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #3d4644">{{ c.where }}</td>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #eef1f0; color: #56605e">{{ c.when }}</td>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #eef1f0; font-family: 'Roboto Mono', monospace; font-size: 12px">{{ c.undo }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div style="display: flex; gap: 20px; flex-wrap: wrap">
+      <section style="flex: 1 1 420px; border: 1px solid #e1e5e4; border-radius: 12px; padding: 18px 20px">
+        <h2 style="margin: 0 0 12px; font-size: 17px">자동 시작</h2>
+        <pre style="margin: 0; padding: 12px 14px; background: #f6f7f7; border-radius: 8px; font-family: 'Roboto Mono', monospace; font-size: 12px; line-height: 1.7; color: #3d4644; white-space: pre-wrap">부팅 → labremote-session.service
+  └ tmux "labremote"
+      ├ code tunnel        ● 연결됨 (재시작 0회)
+      └ labremote serve    ● 127.0.0.1:8000 · nice 19
+          ├ 예약 시계      ● 다음 오늘 14:00 · r32 학습
+          └ Claude 세션    4개 · Agent SDK</pre>
+        <p style="margin: 12px 0 0; font-size: 13px; color: #56605e; line-height: 1.6">Wake-on-LAN 으로 켜도 로그인 없이 바로 접속할 수 있어요. 학습은 이 세션과 분리돼서 세션을 다시 켜도 살아요. 예약은 이 서버가 시간을 재서 실행해서, 서버가 꺼져 있으면 돌지 않아요.</p>
+        <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap">
+          <button style="height: 40px; padding: 0 14px; border: 1px solid #c8d0ce; border-radius: 8px; background: #ffffff; font-size: 13px; cursor: pointer">세션 다시 켜기</button>
+          <button style="height: 40px; padding: 0 14px; border: 1px solid #e0b08a; border-radius: 8px; background: #ffffff; color: #8a3d09; font-size: 13px; cursor: pointer">자동 시작 끄기…</button>
+        </div>
+      </section>
+
+      <section style="flex: 1 1 420px; border: 1px solid #e1e5e4; border-radius: 12px; padding: 18px 20px">
+        <h2 style="margin: 0 0 12px; font-size: 17px">알림</h2>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eef1f0; font-size: 13px"><span>Discord 웹훅</span><span style="color: #0b5a4b">설정됨 · .env</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eef1f0; font-size: 13px"><span>보내는 것</span><span style="color: #3d4644">7가지 중 5개 · <a href="Inbox.dc.html">Inbox 에서 바꾸기</a></span></div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px"><span>Claude 승인 요청</span><span style="color: #3d4644">lab.remote 가 Inbox · Discord 로 보내요</span></div>
+        <button style="margin-top: 12px; height: 40px; padding: 0 14px; border: 1px solid #c8d0ce; border-radius: 8px; background: #ffffff; font-size: 13px; cursor: pointer">시험 알림 보내기</button>
+      </section>
+    </div>
+
+    <section style="border: 1px solid #f0c9a8; background: #fffaf5; border-radius: 12px; padding: 16px 20px">
+      <h2 style="margin: 0 0 6px; font-size: 15px; color: #8a3d09">보안</h2>
+      <p style="margin: 0; font-size: 13px; color: #4a2205; line-height: 1.7">터널이 늘 열려 있어서 GitHub 계정만 있으면 이 데스크톱의 터미널과 파일에 들어올 수 있어요. GitHub 2단계 인증을 켜 두세요. 서버는 127.0.0.1 에만 열려서 터널을 거치지 않으면 닿지 않아요.</p>
+    </section>
+
+    <section>
+      <h2 style="margin: 0 0 8px; font-size: 17px">지우기</h2>
+      <pre style="margin: 0; padding: 12px 14px; background: #f6f7f7; border-radius: 8px; font-family: 'Roboto Mono', monospace; font-size: 12px; line-height: 1.8; color: #3d4644">labremote autostart uninstall
+conda env remove -n labremote
+rm -rf ~/lab-remote
+# 등록했던 프로젝트의 .labremote/ 는 남아요. 필요하면 프로젝트마다 지워요.</pre>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dot = (c) => 'width:8px;height:8px;border-radius:999px;background:' + c;
+    return {
+      status: [
+        { label: 'lab.remote 서버', value: '실행 중', sub: '127.0.0.1:8000\nCPU 0.3% · 62MB', dot: dot('#0e6e5c') },
+        { label: 'code tunnel', value: '연결됨', sub: 'vscode.dev/tunnel/\nhse-desktop', dot: dot('#0e6e5c') },
+        { label: '자동 시작', value: '켜짐', sub: 'labremote-session\nlinger yes', dot: dot('#0e6e5c') },
+        { label: 'GPU', value: 'RTX 5080', sub: '드라이버 595.99.02\n커널·유저랜드 같음', dot: dot('#0e6e5c') }
+      ],
+      changes: [
+        { what: 'conda 환경', where: '~/miniconda3/envs/labremote', when: '설치할 때', undo: 'conda env remove -n labremote' },
+        { what: '사용자 서비스', where: '~/.config/systemd/user/labremote-session.service', when: 'autostart install', undo: 'labremote autostart uninstall' },
+        { what: 'linger', where: 'loginctl · 사용자 hse09021', when: 'autostart install (원래 no)', undo: 'uninstall 이 원래 값으로' },
+        { what: '프로젝트 폴더', where: '<프로젝트>/.labremote/ · 스스로 git 에서 빠짐', when: '프로젝트를 등록할 때', undo: '등록 해제 때 지울지 골라요' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

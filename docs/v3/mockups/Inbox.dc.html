@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Inbox · 알림</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F7}
+a{color:#0E6E5C}a:hover{color:#08493D}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: #F6F7F7; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+<header style="position: relative; z-index: 20; background: #FFFFFF; border-bottom: 1px solid #E1E5E4; font-family: 'Noto Sans KR', sans-serif">
+<div style="box-sizing: border-box; padding: 0 16px 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em; color: #141A19">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="MissionControl.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Dashboard</a>
+<a href="Projects.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Projects</a>
+<a href="PaperLibrary.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Papers</a>
+<a href="Inbox.dc.html" aria-current="page" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid #0E6E5C; color: #141A19; font-size: 14px; font-weight: 700; text-decoration: none">Inbox<span aria-label="안 읽은 알림 3" style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #B4530F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span></a>
+</nav>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: #56605E">
+<button type="button" aria-label="Go to, Ctrl+K" style="min-height: 36px; min-width: 200px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #E1E5E4; border-radius: 8px; background: #F6F7F7; color: #56605E; font-family: inherit; font-size: 13px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex: 1; text-align: left">Go to…</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 1px 6px; border: 1px solid #E1E5E4; border-radius: 4px; background: #FFFFFF">⌘K</span></button>
+<span style="font-family: 'Roboto Mono', monospace">GPU 94% · 13.1/16G</span>
+<a href="System.dc.html" style="display: inline-flex; align-items: center; gap: 6px; color: #56605E; text-decoration: none"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>Tunnel</a>
+<details style="position: relative">
+<summary aria-label="Conda · System 메뉴" style="list-style: none; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #3D4644"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg></summary>
+<div role="menu" aria-label="Conda · System" style="position: absolute; right: 0; top: calc(100% + 8px); width: 240px; box-sizing: border-box; padding: 6px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 8px 28px rgba(20,26,25,0.14); display: flex; flex-direction: column">
+<a role="menuitem" href="Conda.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">Conda</span><span style="font-size: 11px; color: #56605E">환경 만들기 · 패키지 관리</span></a>
+<a role="menuitem" href="System.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">System</span><span style="font-size: 11px; color: #56605E">서버 · 터널 · 자동 시작 · 삭제</span></a>
+</div>
+</details>
+</div>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; flex: 1; width: 100%; box-sizing: border-box">
+<nav aria-label="알림 종류" style="flex: 1 1 220px; max-width: 240px; box-sizing: border-box; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0 0 10px 8px; font-size: 22px; font-weight: 900; letter-spacing: -0.02em">Inbox</h1>
+<sc-for list="{{ filters }}" as="f" hint-placeholder-count="6">
+<button type="button" aria-pressed="{{ f.pressed }}" onClick="{{ f.pick }}" style="{{ f.row }}"><span style="flex: 1; text-align: left">{{ f.label }}</span><span style="{{ f.countStyle }}">{{ f.count }}</span></button>
+</sc-for>
+<button type="button" aria-pressed="{{ unreadPressed }}" onClick="{{ toggleUnread }}" style="margin-top: 12px; width: 100%; min-height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: none; border-radius: 8px; background: transparent; font-size: 13px; color: #141A19; cursor: pointer"><span aria-hidden="true" style="{{ unreadBox }}">{{ unreadMark }}</span>안 읽은 것만</button>
+<button type="button" style="margin-top: 4px; min-height: 36px; padding: 0 10px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 13px; cursor: pointer">모두 읽음으로</button>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 20px 20px 40px">
+<section aria-label="알림 목록" style="background: #FFFFFF; border-radius: 16px; box-shadow: 0 1px 2px rgba(20,26,25,0.06); overflow: hidden">
+<sc-for list="{{ items }}" as="it" hint-placeholder-count="9">
+<article style="{{ it.box }}">
+<span aria-hidden="true" style="{{ it.dot }}"></span>
+<div style="flex: 1; min-width: 0">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+<span style="{{ it.pill }}">{{ it.type }}</span>
+<span style="font-size: 14px; font-weight: 700">{{ it.title }}</span>
+<span style="font-family: 'Roboto Mono', monospace; font-size: 12px; color: #56605E">{{ it.where }}</span>
+</div>
+<p style="margin: 6px 0 0; font-size: 13px; color: #3D4644; line-height: 1.6">{{ it.text }}</p>
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px">
+<sc-if value="{{ it.hasPrimary }}" hint-placeholder-val="{{ true }}"><a href="{{ it.pHref }}" style="{{ it.pStyle }}">{{ it.pLabel }}</a></sc-if>
+<sc-if value="{{ it.hasSecondary }}" hint-placeholder-val="{{ true }}"><a href="{{ it.sHref }}" style="min-height: 34px; padding: 0 12px; display: inline-flex; align-items: center; border: 1px solid #C8D0CE; border-radius: 8px; color: #141A19; text-decoration: none; font-size: 12px">{{ it.sLabel }}</a></sc-if>
+<span style="margin-left: auto; font-size: 12px; color: #56605E">{{ it.sent }}</span>
+</div>
+</div>
+<span style="font-size: 12px; color: #56605E; white-space: nowrap">{{ it.ago }}</span>
+</article>
+</sc-for>
+<sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 40px 20px; text-align: center; font-size: 14px; color: #56605E">이 종류의 알림이 없어요.</div>
+</sc-if>
+</section>
+</main>
+
+<aside aria-label="Discord 연동" style="flex: 1 1 320px; max-width: 380px; box-sizing: border-box; padding: 20px 20px 40px 0; display: flex; flex-direction: column; gap: 14px">
+<section style="background: #FFFFFF; border-radius: 16px; box-shadow: 0 1px 2px rgba(20,26,25,0.06); padding: 18px 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 8px">
+<h2 style="margin: 0; font-size: 16px">Discord 웹훅</h2>
+<span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #0B5A4B"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>연결됨</span>
+</div>
+<div style="padding: 10px 12px; border-radius: 8px; background: #F6F7F7; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #3D4644; overflow-wrap: anywhere">discord.com/api/webhooks/••••••/••••••</div>
+<span style="font-size: 12px; color: #56605E; line-height: 1.6">웹훅 주소는 lab.remote 폴더에만 저장해요 (나만 읽기). repo 에는 올라가지 않아요. 마지막 전송 · 1시간 전 성공</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" style="min-height: 38px; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 13px; cursor: pointer">테스트 보내기</button>
+<button type="button" style="min-height: 38px; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 13px; cursor: pointer">주소 바꾸기</button>
+<button type="button" style="min-height: 38px; padding: 0 12px; border: 1px solid #E0B08A; border-radius: 8px; background: #FFFFFF; color: #8A3D09; font-size: 13px; cursor: pointer">연결 끊기</button>
+</div>
+</section>
+
+<section style="background: #FFFFFF; border-radius: 16px; box-shadow: 0 1px 2px rgba(20,26,25,0.06); padding: 18px 18px; display: flex; flex-direction: column; gap: 6px">
+<h2 style="margin: 0 0 6px; font-size: 16px">Discord 로 보낼 알림</h2>
+<sc-for list="{{ rules }}" as="r" hint-placeholder-count="7">
+<button type="button" role="switch" aria-checked="{{ r.checked }}" onClick="{{ r.pick }}" style="width: 100%; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 4px; border: none; border-bottom: 1px solid #EEF1F0; background: transparent; cursor: pointer">
+<span style="flex: 1; text-align: left; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; color: #141A19">{{ r.label }}</span><span style="font-size: 11px; color: #56605E">{{ r.sub }}</span></span>
+<span aria-hidden="true" style="{{ r.track }}"><span style="{{ r.knob }}"></span></span>
+</button>
+</sc-for>
+<div style="margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: #F6F7F7; font-size: 12px; color: #3D4644; line-height: 1.6">조용한 시간 <b style="font-family: 'Roboto Mono', monospace">00:00 – 07:00</b> · 이때는 답 필요와 실패만 보내요. <a href="#">바꾸기</a></div>
+</section>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'all', unread: false, rules: { ask: true, done: true, fail: true, plan: true, pr: false, merge: false, sys: true } };
+  }
+  renderVals() {
+    const T = {
+      ask: { label: '답 필요', c: ['#FDF0E5', '#8A3D09'], dot: '#B4530F' },
+      run: { label: '실행', c: ['#E3F2EE', '#0B5A4B'], dot: '#0E6E5C' },
+      sched: { label: '예약', c: ['#E8EFF8', '#1F4F86'], dot: '#1F5FA8' },
+      pr: { label: 'PR · 머지', c: ['#F1EAF8', '#5A3488'], dot: '#6B3FA0' },
+      sys: { label: '시스템', c: ['#F0F2F2', '#3D4644'], dot: '#7A8482' }
+    };
+    const PRIMARY = 'min-height:34px;padding:0 12px;display:inline-flex;align-items:center;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;';
+    const I = [
+      { k: 'ask', title: 'early stopping 추가', where: 'lora-rank-ablation · exp/early-stop', text: 'Claude 가 src/train.py 수정(+4 −1) 승인을 기다려요.', ago: '3분 전', unread: true, sent: 'Discord 보냄', p: ['ADE.dc.html', 'ADE 에서 답하기', true], s: ['MissionControl.dc.html', '대시보드'] },
+      { k: 'sched', title: '예약 · r32 학습 오늘 14:00', where: 'lora-rank-ablation · exp/early-stop', text: '그때 GPU 를 다른 학습이 쓰고 있으면 끝날 때까지 기다렸다가 시작해요.', ago: '20분 전', unread: true, sent: 'Discord 보냄', p: ['MissionControl.dc.html', 'Schedule 보기', false], s: null },
+      { k: 'run', title: 'sweep-lr 실패', where: 'exp/data-aug · 종료코드 1', text: 'ModuleNotFoundError: timm — vit-env 에는 있지만 lora-env 에는 없어요.', ago: '1시간 전', unread: true, sent: 'Discord 보냄', p: ['IDE.dc.html', '로그 보기', false], s: ['Conda.dc.html', 'conda 환경'] },
+      { k: 'pr', title: 'PR #9 변경 요청', where: 'exp/data-aug', text: '리뷰에서 2곳 변경을 요청했어요. CI 도 실패했어요.', ago: '2시간 전', unread: false, sent: '', p: null, s: ['ADE.dc.html', '세션에서 고치기'] },
+      { k: 'sys', title: 'VRAM 이 거의 찼어요', where: 'RTX 5080 · 13.1/16G', text: 'EXP-007 이 도는 동안 새 실행은 메모리가 모자랄 수 있어요.', ago: '오늘 09:10', unread: false, sent: 'Discord 보냄', p: null, s: ['MissionControl.dc.html', '자원 보기'] },
+      { k: 'pr', title: '머지 #11 · main ← exp/r16', where: 'lora-rank-ablation', text: 'early stop 실험 설정 (r16) 이 main 에 합쳐졌어요.', ago: '오늘 08:40', unread: false, sent: '', p: null, s: null },
+      { k: 'run', title: 'EXP-006 끝남', where: 'exp/early-stop · 종료코드 0', text: 'val loss 0.571 · 3시간 2분. 이 폴더에서 가장 좋은 결과예요.', ago: '어제', unread: false, sent: 'Discord 보냄', p: null, s: ['IDE.dc.html', '로그 보기'] },
+      { k: 'pr', title: 'PR #12 리뷰 기다림', where: 'docs/results', text: 'README 실험 표 갱신 · CI 통과', ago: '어제', unread: false, sent: '', p: null, s: null },
+      { k: 'run', title: 'EXP-005 중간에 끊김', where: 'main · epoch 12 체크포인트', text: '11월 15일 03:12 데스크톱이 다시 켜지면서 끝났어요. 자동으로 다시 돌리지 않아요.', ago: '11/15', unread: false, sent: 'Discord 보냄', p: ['IDE.dc.html', '이어서 실행…', false], s: null }
+    ];
+    const f = this.state.filter;
+    const shown = I.filter((it) => (f === 'all' || it.k === f) && (!this.state.unread || it.unread));
+    const items = shown.map((it) => ({
+      type: T[it.k].label, title: it.title, where: it.where, text: it.text, ago: it.ago, sent: it.sent,
+      pill: 'font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;background:' + T[it.k].c[0] + ';color:' + T[it.k].c[1],
+      dot: 'width:8px;height:8px;margin-top:8px;border-radius:999px;flex:none;background:' + (it.unread ? T[it.k].dot : 'transparent'),
+      box: 'display:flex;gap:12px;padding:16px 20px;border-bottom:1px solid #EEF1F0;' + (it.unread ? 'background:#FFFFFF' : 'background:#FCFCFC'),
+      hasPrimary: !!it.p, pHref: it.p ? it.p[0] : '#', pLabel: it.p ? it.p[1] : '',
+      pStyle: PRIMARY + (it.p && it.p[2] ? 'background:#B4530F;color:#FFFFFF' : 'background:#141A19;color:#FFFFFF'),
+      hasSecondary: !!it.s, sHref: it.s ? it.s[0] : '#', sLabel: it.s ? it.s[1] : ''
+    }));
+    const ROW = 'width:100%;min-height:40px;display:flex;align-items:center;gap:8px;padding:0 10px;border:none;border-radius:8px;font-size:13px;cursor:pointer;';
+    const filters = [['all', '전체'], ['ask', '답 필요'], ['run', '실행'], ['sched', '예약'], ['pr', 'PR · 머지'], ['sys', '시스템']].map((x) => {
+      const n = x[0] === 'all' ? I.length : I.filter((it) => it.k === x[0]).length;
+      const un = (x[0] === 'all' ? I : I.filter((it) => it.k === x[0])).filter((it) => it.unread).length;
+      const on = f === x[0];
+      return {
+        label: x[1], count: un ? un + ' 새' : String(n),
+        countStyle: 'font-size:12px;' + (un ? 'color:#8A3D09;font-weight:700' : 'color:#56605E'),
+        pressed: on ? 'true' : 'false',
+        row: ROW + (on ? 'background:#FFFFFF;color:#141A19;font-weight:700;box-shadow:0 1px 2px rgba(20,26,25,0.12)' : 'background:transparent;color:#3D4644'),
+        pick: () => this.setState({ filter: x[0] })
+      };
+    });
+    const R = [
+      ['ask', '답이 필요할 때', '승인 요청 · 질문'],
+      ['done', '실행이 끝났을 때', '종료코드 0'],
+      ['fail', '실행 실패 · 끊김', '종료코드가 0 이 아니거나 재부팅으로 끊김'],
+      ['plan', '예약 실행이 시작 · 대기할 때', '예약 시각에 시작했거나, GPU 가 바빠 기다리기 시작했을 때'],
+      ['pr', 'PR 리뷰 · 변경 요청', 'GitHub 에서 읽어 와요'],
+      ['merge', '머지', 'main 에 합쳐졌을 때'],
+      ['sys', '시스템 경고', 'VRAM · 디스크 · 터널 끊김']
+    ];
+    const rules = R.map((r) => {
+      const on = !!this.state.rules[r[0]];
+      return {
+        label: r[1], sub: r[2], checked: on ? 'true' : 'false',
+        track: 'width:40px;height:24px;border-radius:999px;flex:none;position:relative;display:inline-block;' + (on ? 'background:#0E6E5C' : 'background:#C8D0CE'),
+        knob: 'position:absolute;top:3px;left:' + (on ? 19 : 3) + 'px;width:18px;height:18px;border-radius:999px;background:#FFFFFF;box-shadow:0 1px 2px rgba(20,26,25,0.2)',
+        pick: () => { const next = Object.assign({}, this.state.rules); next[r[0]] = !on; this.setState({ rules: next }); }
+      };
+    });
+    const u = this.state.unread;
+    return {
+      items: items, empty: items.length === 0, filters: filters, rules: rules,
+      unreadPressed: u ? 'true' : 'false',
+      unreadMark: u ? '✓' : '',
+      unreadBox: 'width:16px;height:16px;border-radius:4px;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:11px;box-sizing:border-box;' + (u ? 'background:#0E6E5C;color:#FFFFFF' : 'border:1.5px solid #9AA4A2;color:transparent'),
+      toggleUnread: () => this.setState({ unread: !u })
+    };
+  }
+}
+</script>
+</body>
+</html>

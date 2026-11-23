@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>conda 환경</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;family=Roboto+Mono:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F7}
+a{color:#0E6E5C}a:hover{color:#08493D}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 1300px; background: #F6F7F7; color: #141A19; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+<header style="position: relative; z-index: 20; background: #FFFFFF; border-bottom: 1px solid #E1E5E4; font-family: 'Noto Sans KR', sans-serif">
+<div style="box-sizing: border-box; padding: 0 16px 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; min-height: 64px">
+<span style="font-size: 17px; font-weight: 900; letter-spacing: -0.02em; color: #141A19">lab<span style="color: #0E6E5C">.</span>remote</span>
+<nav aria-label="주 메뉴" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
+<a href="MissionControl.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Dashboard</a>
+<a href="Projects.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Projects</a>
+<a href="PaperLibrary.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Papers</a>
+<a href="Inbox.dc.html" style="min-height: 64px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 3px solid transparent; color: #56605E; font-size: 14px; text-decoration: none">Inbox<span aria-label="안 읽은 알림 3" style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #B4530F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span></a>
+</nav>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: #56605E">
+<button type="button" aria-label="Go to, Ctrl+K" style="min-height: 36px; min-width: 200px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #E1E5E4; border-radius: 8px; background: #F6F7F7; color: #56605E; font-family: inherit; font-size: 13px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex: 1; text-align: left">Go to…</span><span style="font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 1px 6px; border: 1px solid #E1E5E4; border-radius: 4px; background: #FFFFFF">⌘K</span></button>
+<span style="font-family: 'Roboto Mono', monospace">GPU 94% · 13.1/16G</span>
+<a href="System.dc.html" style="display: inline-flex; align-items: center; gap: 6px; color: #56605E; text-decoration: none"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0E6E5C"></span>Tunnel</a>
+<details style="position: relative">
+<summary aria-label="Conda · System 메뉴" style="list-style: none; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #E3F2EE; color: #0B5A4B"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg></summary>
+<div role="menu" aria-label="Conda · System" style="position: absolute; right: 0; top: calc(100% + 8px); width: 240px; box-sizing: border-box; padding: 6px; background: #FFFFFF; border: 1px solid #E1E5E4; border-radius: 12px; box-shadow: 0 8px 28px rgba(20,26,25,0.14); display: flex; flex-direction: column">
+<a role="menuitem" href="Conda.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">Conda</span><span style="font-size: 11px; color: #56605E">환경 만들기 · 패키지 관리</span></a>
+<a role="menuitem" href="System.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #141A19"><span style="font-size: 13px; font-weight: 700">System</span><span style="font-size: 11px; color: #56605E">서버 · 터널 · 자동 시작 · 삭제</span></a>
+</div>
+</details>
+</div>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; flex: 1">
+<aside aria-label="환경 목록" style="flex: 1 1 280px; max-width: 300px; box-sizing: border-box; padding: 20px 14px; border-right: 1px solid #E1E5E4; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; padding: 0 8px 10px">
+<span style="font-size: 14px; font-weight: 700">환경 <span style="font-weight: 400; color: #56605E">5</span></span>
+<button type="button" style="margin-left: auto; min-height: 36px; padding: 0 12px; border: none; border-radius: 8px; background: #141A19; color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer">+ 새 환경</button>
+</div>
+<sc-for list="{{ envs }}" as="e" hint-placeholder-count="5">
+<button type="button" aria-pressed="{{ e.pressed }}" onClick="{{ e.pick }}" style="{{ e.row }}">
+<span style="display: flex; align-items: center; gap: 8px; width: 100%">
+<span style="flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 700; color: #141A19; text-align: left">{{ e.name }}</span>
+<span style="{{ e.tagStyle }}">{{ e.tag }}</span>
+</span>
+<span style="display: block; width: 100%; margin-top: 4px; font-size: 11px; color: #56605E; text-align: left">{{ e.sub }}</span>
+</button>
+</sc-for>
+<div style="margin-top: 14px; padding: 12px 8px 0; border-top: 1px solid #E1E5E4; font-size: 12px; color: #56605E; line-height: 1.6">~/miniconda3/envs 아래 환경만 다뤄요. conda 설정(.condarc)은 바꾸지 않아요.</div>
+</aside>
+
+<main style="flex: 999 1 640px; min-width: 0; box-sizing: border-box; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 20px">
+<div style="flex: 1 1 420px; min-width: 0">
+<h1 style="margin: 0; font-family: 'Roboto Mono', monospace; font-size: 26px; font-weight: 700">{{ cur.name }}</h1>
+<div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px">
+<span style="padding: 4px 10px; border-radius: 999px; background: #F0F2F2; color: #3D4644; font-family: 'Roboto Mono', monospace">{{ cur.path }}</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #F0F2F2; color: #3D4644">Python {{ cur.py }}</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #F0F2F2; color: #3D4644">{{ cur.size }}</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #F0F2F2; color: #3D4644">쓰는 프로젝트 · {{ cur.used }}</span>
+</div>
+</div>
+<button type="button" style="min-height: 40px; padding: 0 14px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 13px; cursor: pointer">environment.yml 내보내기</button>
+<button type="button" style="min-height: 40px; padding: 0 14px; border: 1px solid #C8D0CE; border-radius: 8px; background: #FFFFFF; font-size: 13px; cursor: pointer">복제…</button>
+</div>
+
+<sc-if value="{{ cur.locked }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 18px; border: 1px solid #F0C9A8; background: #FDF0E5; border-radius: 10px">
+<span style="font-size: 13px; font-weight: 700; color: #8A3D09">사용 중이라 잠겨 있어요</span>
+<span style="flex: 1 1 320px; font-size: 13px; color: #4A2205">EXP-007 이 이 환경으로 학습 중이에요. 패키지를 바꾸면 학습이 깨질 수 있어서 끝날 때까지 설치 · 제거 · 삭제를 막아요. Claude 의 설치 요청도 여기서 막혀요.</span>
+<a href="MissionControl.dc.html" style="font-size: 13px; font-weight: 700; color: #8A3D09">학습 보기</a>
+</div>
+</sc-if>
+<sc-if value="{{ cur.protected }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 18px; border: 1px solid #C8D0CE; background: #F0F2F2; border-radius: 10px">
+<span style="font-size: 13px; font-weight: 700">지울 수 없는 환경이에요</span>
+<span style="flex: 1 1 320px; font-size: 13px; color: #3D4644">{{ cur.protectNote }}</span>
+</div>
+</sc-if>
+
+<section aria-label="패키지 설치" style="background: #FFFFFF; border-radius: 16px; box-shadow: 0 1px 2px rgba(20,26,25,0.06); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 16px">패키지 설치</h2>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<label for="cd-pkg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">패키지 이름</label>
+<input id="cd-pkg" type="text" value="timm==1.0.11" style="flex: 1 1 260px; min-height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; font-family: 'Roboto Mono', monospace; font-size: 13px">
+<div role="group" aria-label="설치 방법" style="display: inline-flex; gap: 3px; padding: 3px; background: #E9EDEC; border-radius: 10px">
+<button type="button" aria-pressed="false" style="min-height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: transparent; color: #56605E; font-size: 13px; cursor: pointer">conda</button>
+<button type="button" aria-pressed="true" style="min-height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: #FFFFFF; color: #141A19; font-size: 13px; font-weight: 700; box-shadow: 0 1px 2px rgba(20,26,25,0.12); cursor: pointer">pip</button>
+</div>
+<button type="button" disabled="{{ cur.lockAttr }}" style="{{ cur.previewBtn }}">바뀌는 것 미리 보기</button>
+</div>
+<div style="border: 1px solid #E1E5E4; border-radius: 10px; overflow: hidden">
+<div style="padding: 8px 12px; background: #F6F7F7; font-size: 12px; color: #3D4644">미리 보기 · 설치하면 이렇게 바뀌어요 (아직 아무것도 설치하지 않았어요)</div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-family: 'Roboto Mono', monospace; font-size: 12px">
+<span><span style="color: #0B5A4B; font-weight: 700">↑</span> timm 1.0.9 → 1.0.11</span>
+<span><span style="color: #0B5A4B; font-weight: 700">↑</span> huggingface-hub 0.24.6 → 0.26.2</span>
+<span><span style="color: #56605E">=</span> torch 2.5.1 그대로</span>
+</div>
+<div style="padding: 10px 12px; border-top: 1px solid #EEF1F0; display: flex; align-items: center; gap: 10px">
+<span style="flex: 1; font-size: 12px; color: #56605E">설치 기록은 lab.remote 폴더에 남겨서 나중에 되돌릴 수 있어요.</span>
+<button type="button" disabled="{{ cur.lockAttr }}" style="{{ cur.installBtn }}">설치</button>
+</div>
+</div>
+</section>
+
+<section aria-label="패키지 목록" style="background: #FFFFFF; border-radius: 16px; box-shadow: 0 1px 2px rgba(20,26,25,0.06); overflow: hidden">
+<div style="padding: 16px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; border-bottom: 1px solid #EEF1F0">
+<h2 style="margin: 0; font-size: 16px">패키지 <span style="font-weight: 400; color: #56605E">{{ cur.count }}</span></h2>
+<span style="font-size: 12px; color: #8A3D09">업데이트 있음 2</span>
+<label for="cd-find" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">패키지 검색</label>
+<input id="cd-find" type="text" placeholder="패키지 검색" style="margin-left: auto; min-height: 36px; box-sizing: border-box; padding: 0 12px; border: 1px solid #C8D0CE; border-radius: 8px; background: #F6F7F7; font-family: inherit; font-size: 13px">
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 720px; border-collapse: collapse; font-size: 13px">
+<thead>
+<tr style="text-align: left; color: #56605E">
+<th style="padding: 10px 20px; font-weight: 500; border-bottom: 1px solid #E1E5E4">이름</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4">버전</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4">출처</th>
+<th style="padding: 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4">최신</th>
+<th style="padding: 10px 20px 10px 8px; font-weight: 500; border-bottom: 1px solid #E1E5E4; text-align: right">동작</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ pkgs }}" as="k" hint-placeholder-count="10">
+<tr>
+<td style="padding: 9px 20px; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace; font-weight: 500">{{ k.name }}</td>
+<td style="padding: 9px 8px; border-bottom: 1px solid #EEF1F0; font-family: 'Roboto Mono', monospace">{{ k.ver }}</td>
+<td style="padding: 9px 8px; border-bottom: 1px solid #EEF1F0; font-size: 12px; color: #56605E">{{ k.src }}</td>
+<td style="{{ k.latestStyle }}">{{ k.latest }}</td>
+<td style="padding: 9px 20px 9px 8px; border-bottom: 1px solid #EEF1F0; text-align: right; white-space: nowrap">
+<sc-if value="{{ k.canUp }}" hint-placeholder-val="{{ false }}"><button type="button" disabled="{{ cur.lockAttr }}" style="min-height: 30px; padding: 0 10px; border: 1px solid #C8D0CE; border-radius: 6px; background: #FFFFFF; font-size: 12px; cursor: pointer">업데이트</button></sc-if>
+<button type="button" disabled="{{ cur.lockAttr }}" style="margin-left: 6px; min-height: 30px; padding: 0 10px; border: 1px solid #E1E5E4; border-radius: 6px; background: #FFFFFF; color: #3D4644; font-size: 12px; cursor: pointer">제거</button>
+</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+<section aria-label="환경 삭제" style="border: 1px solid #F0C9A8; border-radius: 16px; padding: 18px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; background: #FFFFFF">
+<div style="flex: 1 1 320px">
+<h2 style="margin: 0; font-size: 16px; color: #8A3D09">환경 삭제</h2>
+<p style="margin: 6px 0 0; font-size: 13px; color: #3D4644; line-height: 1.6">되돌릴 수 없어요. 지우기 전에 environment.yml 을 lab.remote 폴더에 백업해 둬요.</p>
+</div>
+<label for="cd-del" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">삭제 확인용 환경 이름</label>
+<input id="cd-del" type="text" placeholder="{{ cur.delHint }}" disabled="{{ cur.noDelete }}" style="flex: 0 1 280px; min-height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid #E0B08A; border-radius: 8px; font-family: 'Roboto Mono', monospace; font-size: 13px">
+<button type="button" disabled="{{ true }}" style="min-height: 40px; padding: 0 16px; border: none; border-radius: 8px; background: #E9EDEC; color: #56605E; font-size: 13px; font-weight: 700">삭제</button>
+</section>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { env: 'vit-env' };
+  }
+  renderVals() {
+    const E = [
+      { name: 'base', tag: '보호됨', tone: 'gray', sub: 'conda 기본 · Python 3.12', py: '3.12.7', size: '2.1 GB', used: '없음', protected: true, protectNote: 'conda 의 기본 환경이라 지우거나 패키지를 바꾸지 않아요. 보기만 할 수 있어요.' },
+      { name: 'labremote', tag: '보호됨', tone: 'gray', sub: 'lab.remote 서버 전용', py: '3.11.9', size: '0.4 GB', used: 'lab.remote', protected: true, protectNote: 'lab.remote 서버가 쓰는 환경이에요. 지우면 lab.remote 가 멈춰서 여기서는 막아 둬요.' },
+      { name: 'lora-env', tag: '사용 중', tone: 'orange', sub: 'EXP-007 학습 중 · 잠김', py: '3.11.9', size: '7.8 GB', used: 'lora-rank-ablation', locked: true },
+      { name: 'vit-env', tag: '', tone: '', sub: 'vit-distill · 어제 씀', py: '3.11.9', size: '6.4 GB', used: 'vit-distill' },
+      { name: 'py311-scratch', tag: '', tone: '', sub: '94일 동안 안 씀', py: '3.11.4', size: '3.0 GB', used: '없음' }
+    ];
+    const cur0 = E.find((e) => e.name === this.state.env) || E[3];
+    const ROW = 'width:100%;display:block;padding:10px 12px;border:none;border-radius:10px;cursor:pointer;';
+    const tag = (t) => 'font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;' + (t === 'orange' ? 'background:#FDF0E5;color:#8A3D09;font-weight:700' : t === 'gray' ? 'background:#E9EDEC;color:#3D4644' : 'display:none');
+    const envs = E.map((e) => ({
+      name: e.name, tag: e.tag, sub: e.sub, tagStyle: tag(e.tone),
+      pressed: e.name === cur0.name ? 'true' : 'false',
+      row: ROW + (e.name === cur0.name ? 'background:#FFFFFF;box-shadow:0 1px 2px rgba(20,26,25,0.12)' : 'background:transparent'),
+      pick: () => this.setState({ env: e.name })
+    }));
+    const blocked = !!(cur0.locked || cur0.protected);
+    const btn = (primary) => 'min-height:40px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:700;' + (blocked ? 'border:none;background:#E9EDEC;color:#56605E;cursor:not-allowed' : (primary ? 'border:none;background:#141A19;color:#FFFFFF;cursor:pointer' : 'border:1px solid #C8D0CE;background:#FFFFFF;color:#141A19;cursor:pointer'));
+    const P = [
+      ['python', cur0.py, 'conda-forge', ''],
+      ['pytorch', '2.5.1', 'pytorch', ''],
+      ['torchvision', '0.20.1', 'pytorch', ''],
+      ['pytorch-cuda', '12.4', 'pytorch', ''],
+      ['timm', '1.0.9', 'pip', '1.0.11'],
+      ['transformers', '4.46.0', 'pip', ''],
+      ['peft', '0.13.2', 'pip', '0.13.3'],
+      ['numpy', '1.26.4', 'conda-forge', ''],
+      ['pandas', '2.2.3', 'conda-forge', ''],
+      ['tensorboard', '2.18.0', 'pip', '']
+    ];
+    const pkgs = (cur0.name === 'labremote' ? [['python', cur0.py, 'conda-forge', ''], ['fastapi', '0.115.4', 'pip', ''], ['uvicorn', '0.32.0', 'pip', ''], ['claude-agent-sdk', '—', 'pip', '']] : P).map((p) => ({
+      name: p[0], ver: p[1], src: p[2],
+      latest: p[3] || '최신',
+      canUp: !!p[3],
+      latestStyle: 'padding:9px 8px;border-bottom:1px solid #EEF1F0;font-family:Roboto Mono,monospace;font-size:12px;' + (p[3] ? 'color:#8A3D09;font-weight:700' : 'color:#56605E')
+    }));
+    return {
+      envs: envs,
+      pkgs: pkgs,
+      cur: {
+        name: cur0.name, path: '~/miniconda3/envs/' + cur0.name, py: cur0.py, size: cur0.size, used: cur0.used,
+        count: String(pkgs.length * 14 + 3),
+        locked: !!cur0.locked, protected: !!cur0.protected, protectNote: cur0.protectNote || '',
+        lockAttr: blocked,
+        noDelete: blocked,
+        delHint: blocked ? '이 환경은 지울 수 없어요' : cur0.name + ' 를 입력하면 삭제할 수 있어요',
+        previewBtn: btn(false), installBtn: btn(true)
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
