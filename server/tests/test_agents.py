@@ -295,5 +295,68 @@ def test_할_일_도구를_켜고_위험한_도구는_허용_목록에_없다():
     opts = b._options()
     assert opts.allowed_tools == ["TodoWrite", "TaskCreate", "TaskUpdate", "TaskGet", "TaskList"]
     assert not {"Bash", "Edit", "Write"} & set(opts.allowed_tools)
-    assert "AskUserQuestion" in opts.disallowed_tools
+    assert "AskUserQuestion" not in opts.disallowed_tools  # 질문 카드로 답한다
+    assert opts.settings is None  # Ultracode 는 켤 때만
+    on = claude.ClaudeBackend(base.SessionConfig(cwd=".", extra={"ultracode": True}), emit=lambda e: None, ask=None)._options()
+    assert json.loads(on.settings) == {"ultracode": True}
     assert opts.permission_mode == "default" and opts.setting_sources == ["user", "project", "local"]
+
+
+Q = {"questions": [
+    {"question": "어느 형식으로 쓸까요?", "header": "형식", "options": [{"label": "CSV", "description": ""}, {"label": "JSON", "description": ""}], "multiSelect": False},
+    {"question": "무엇을 넣을까요?", "header": "항목", "options": [{"label": "loss", "description": ""}, {"label": "acc", "description": ""}], "multiSelect": True},
+]}
+
+
+def test_질문에_답하면_answers_로_돌려준다(fake, project, conn):
+    async def go():
+        bus.bind(asyncio.get_running_loop())
+        m = Manager()
+        fake.script = [("AskUserQuestion", Q)]
+        s = await m.create("demo", text="정리해 줘")
+        [p] = await wait_pending(m)
+        assert m.pending_list()[0]["summary"] == "어느 형식으로 쓸까요? 외 1개"
+        assert "질문" in inbox.items(conn)[0]["title"]
+        with pytest.raises(AgentError, match="계속 허용"):
+            m.answer(p.id, "allowSession")
+        with pytest.raises(AgentError, match="없는 질문"):
+            m.answer(p.id, "answer", answers={"엉뚱한 질문": "CSV"})
+        with pytest.raises(AgentError, match="고르거나"):
+            m.answer(p.id, "answer", answers={})
+        m.answer(p.id, "answer", answers={"어느 형식으로 쓸까요?": "CSV", "무엇을 넣을까요?": ["loss", "acc"]}, via="ADE")
+        await settle(m, s["id"])
+        d = fake.instances[0].decisions[0]
+        assert d.allow is True
+        assert d.updated_input == {"questions": Q["questions"], "answers": {"어느 형식으로 쓸까요?": "CSV", "무엇을 넣을까요?": ["loss", "acc"]}}
+        assert inbox.badge(conn) == 0
+
+    run(go())
+
+
+def test_보기_대신_직접_쓴_답(fake, project):
+    async def go():
+        bus.bind(asyncio.get_running_loop())
+        m = Manager()
+        fake.script = [("AskUserQuestion", Q)]
+        s = await m.create("demo", text="정리해 줘")
+        [p] = await wait_pending(m)
+        m.answer(p.id, "answer", response="둘 다 말고 마크다운 표로 해 줘")
+        await settle(m, s["id"])
+        assert fake.instances[0].decisions[0].updated_input["response"] == "둘 다 말고 마크다운 표로 해 줘"
+
+    run(go())
+
+
+def test_Ultracode_는_다음_연결부터(fake, project):
+    async def go():
+        bus.bind(asyncio.get_running_loop())
+        m = Manager()
+        s = await m.create("demo", text="1")
+        await settle(m, s["id"])
+        await m.configure(s["id"], ultracode=True)
+        assert s["id"] not in m.live
+        await m.send(s["id"], "2")
+        await settle(m, s["id"])
+        assert fake.instances[-1].config.extra == {"ultracode": True}
+
+    run(go())

@@ -102,7 +102,7 @@ function SessionCard({ x, kind }: { x: AgentSession; kind: 'ask' | 'work' | 'don
       )}
       <div className={s.actions}>
         <Link to={adeHref(x)} className={s.primary} data-strong={kind === 'ask'}>
-          {kind === 'ask' ? 'ADE 에서 답하기' : 'ADE 로 가기'}
+          {kind === 'ask' ? (p?.tool === 'AskUserQuestion' ? 'ADE 에서 질문에 답하기' : 'ADE 에서 답하기') : 'ADE 로 가기'}
         </Link>
         {p && <QuickAllow p={p} />}
       </div>
@@ -114,6 +114,8 @@ function SessionCard({ x, kind }: { x: AgentSession; kind: 'ask' | 'work' | 'don
 export function QuickAllow({ p, via = 'Dashboard' }: { p: PendingApproval; via?: string }) {
   const [open, setOpen] = useState(false)
   const answer = useAnswer()
+  // 질문은 보기를 골라야 해서 "보고 허용" 이 없어요 — ADE 의 질문 카드에서 답해요
+  if (p.tool === 'AskUserQuestion') return null
   if (!open) {
     return (
       <button type="button" className={s.secondary} onClick={() => setOpen(true)}>

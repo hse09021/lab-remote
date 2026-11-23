@@ -21,6 +21,7 @@ export interface ComposerSettings {
   mode: ModeId
   model: string
   effort: string
+  ultracode?: boolean
 }
 
 interface Props {
@@ -96,6 +97,29 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
       setMenu('')
     }
   }
+
+  // Ultracode — Claude Code 설정이라 xhigh 를 지원하는 모델에서만 (문서: model-config)
+  const ultraOk = !!info.data?.ultracode && efforts.includes(info.data.ultracode.needsEffort)
+  const ultraRow = ultraOk && (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={!!settings.ultracode}
+      className={s.ultraRow}
+      onClick={() => {
+        onSettings({ ultracode: !settings.ultracode })
+        setNote(`Ultracode ${settings.ultracode ? '끔' : '켬'} · 다음 요청부터 적용돼요. 켜면 큰 작업을 워크플로로 나눠 돌려서 사용량이 많이 들어요.`)
+      }}
+    >
+      <span className={s.menuText}>
+        <span className={s.menuName}>Ultracode</span>
+        <span className={s.menuDesc}>큰 작업을 여러 하위 작업으로 나눠 돌려요 · 사용량이 많이 들어요</span>
+      </span>
+      <span aria-hidden="true" className={s.switchTrack} data-on={!!settings.ultracode}>
+        <span className={s.switchKnob} />
+      </span>
+    </button>
+  )
 
   const effortRow = efforts.length > 0 && (
     <div className={s.effortRow}>
@@ -194,6 +218,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
             >
               <span>{chipName(current)}</span>
               {efforts.length > 0 && <span className={s.muted}>{effortName}</span>}
+              {ultraOk && settings.ultracode && <span className={s.ultraTag}>Ultracode</span>}
             </button>
             {menu === 'model' && (
               <div role="menu" aria-label="모델" className={s.menu}>
@@ -223,7 +248,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
                   {info.isError && <span className={s.menuDesc}>모델 목록을 못 받았어요 — Claude Code 설치·로그인을 확인해 주세요.</span>}
                 </div>
                 {effortRow}
-                {/* Ultracode: SDK 옵션을 찾지 못해 숨겨요 [확인 필요] */}
+                {ultraRow}
               </div>
             )}
           </div>
@@ -263,6 +288,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
                   </button>
                 ))}
                 {effortRow}
+                {ultraRow}
               </div>
             )}
           </div>

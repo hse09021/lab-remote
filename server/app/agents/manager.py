@@ -242,6 +242,7 @@ class Manager:
         mode: str = "manual",
         model: str = "",
         effort: str = "",
+        ultracode: bool = False,
         kind: str = "claude",
     ) -> dict:
         root = projects.require(project)
@@ -276,6 +277,7 @@ class Manager:
             "mode": mode,
             "model": model,
             "effort": effort,
+            "ultracode": bool(ultracode),
             "agentSessionId": "",
             "createdAt": time.time(),
             "state": "idle",
@@ -310,6 +312,7 @@ class Manager:
             model=rec.get("model") or "",
             effort=rec.get("effort") or "",
             resume=rec.get("agentSessionId") or "",
+            extra={"ultracode": bool(rec.get("ultracode"))},
         )
         cls = _backend_class(rec.get("kind") or "claude")
         backend = cls(cfg, emit=lambda ev: self._on_event(sid, ev), ask=lambda req: self._on_ask(sid, req))
@@ -405,7 +408,7 @@ class Manager:
             with db.open_db() as conn:
                 return alerts.post(
                     conn, "ask", "ask",
-                    f"{rec['title']} · {req.tool} 승인",
+                    f"{rec['title']} · " + ("질문" if req.tool == "AskUserQuestion" else f"{req.tool} 승인"),
                     where=f"{rec['project']} · {rec.get('branch') or ('프로젝트 루트' if rec.get('tree') in ('.', '') else rec.get('tree'))}",
                     body=req.title or view["summary"],
                     project=rec["project"],
@@ -425,14 +428,27 @@ class Manager:
         finally:
             self.pending.pop(aid, None)
 
-    def answer(self, aid: str, choice: str, *, reason: str = "", via: str = "") -> dict:
-        """`choice`: allow · allowSession · deny. 먼저 온 답만 먹는다."""
+    def answer(
+        self,
+        aid: str,
+        choice: str,
+        *,
+        reason: str = "",
+        via: str = "",
+        answers: dict | None = None,
+        response: str = "",
+    ) -> dict:
+        """`choice`: allow · allowSession · deny · answer(질문에 답). 먼저 온 답만 먹는다."""
         p = self.pending.get(aid)
         if not p or p.future.done():
             raise AgentError("이미 답했거나 사라진 승인 요청이에요.")
-        if choice not in ("allow", "allowSession", "deny"):
+        if choice not in ("allow", "allowSession", "deny", "answer"):
             raise AgentError(f"모르는 답이에요: {choice}")
+        if choice == "answer":
+            return self._answer_questions(p, answers or {}, response, via)
         root, rec = self._find(p.session)
+        if choice == "allowSession" and p.request.tool == "AskUserQuestion":
+            raise AgentError("질문에는 '계속 허용' 이 없어요. 답을 골라 주세요.")
         if choice == "allowSession":
             key = _allow_key(p.request)
             live = self.live.get(p.session)
@@ -460,6 +476,47 @@ class Manager:
         bus.publish("session.state", {"session": p.session})
         return {"id": aid, "state": state}
 
+    def _answer_questions(self, p: Pending, answers: dict, response: str, via: str) -> dict:
+        """AskUserQuestion — 답은 질문 글을 열쇠로, 고른 label(여러 개면 목록)을 값으로.
+
+        `response` 는 보기 대신 자유롭게 쓴 답이다(문서의 top-level `response`).
+        """
+        questions = p.request.input.get("questions")
+        if not isinstance(questions, list):
+            raise AgentError("질문 요청이 아니에요.")
+        texts = {str(q.get("question", "")) for q in questions if isinstance(q, dict)}
+        clean: dict = {}
+        for key, value in (answers or {}).items():
+            if key not in texts:
+                raise AgentError(f"없는 질문이에요: {key[:60]}")
+            if isinstance(value, list):
+                items = [str(v).strip() for v in value if str(v).strip()]
+                if items:
+                    clean[key] = items
+            elif str(value).strip():
+                clean[key] = str(value).strip()
+        response = (response or "").strip()
+        if not clean and not response:
+            raise AgentError("답을 고르거나 적어 주세요.")
+        updated = {"questions": questions, "answers": clean}
+        if response:
+            updated["response"] = response
+        root, rec = self._find(p.session)
+        p.future.set_result(Decision(allow=True, updated_input=updated))
+        self._append(root, p.session, {"type": "approval", "approvalId": p.id, "state": "answered", "tool": p.request.tool, "answers": clean, "response": response, "via": via})
+        if not any(x.session == p.session and x.id != p.id for x in self.pending.values()):
+            rec["state"] = "working"
+        self._save(root, rec)
+        if p.inbox_id:
+            try:
+                with db.open_db() as conn:
+                    inbox.mark_read(conn, [p.inbox_id])
+            except Exception:
+                pass
+        bus.publish("approval.done", {"id": p.id, "session": p.session, "state": "answered"})
+        bus.publish("session.state", {"session": p.session})
+        return {"id": p.id, "state": "answered"}
+
     def pending_list(self) -> list[dict]:
         return [self._pending_view(p) for p in sorted(self.pending.values(), key=lambda p: p.created)]
 
@@ -476,10 +533,23 @@ class Manager:
             self._append(root, sid, {"type": "system", "text": "멈췄어요."})
         return self._view(rec)
 
-    async def configure(self, sid: str, *, mode: str | None = None, model: str | None = None, effort: str | None = None) -> dict:
-        """Mode·Model 은 바로, Effort 는 다음 연결부터(연결 중이고 쉬고 있으면 끊었다가 이어 간다)."""
+    async def configure(
+        self,
+        sid: str,
+        *,
+        mode: str | None = None,
+        model: str | None = None,
+        effort: str | None = None,
+        ultracode: bool | None = None,
+    ) -> dict:
+        """Mode·Model 은 바로, Effort·Ultracode 는 다음 연결부터(쉬고 있으면 끊었다가 이어 간다)."""
         root, rec = self._find(sid)
         live = self.live.get(sid)
+        if ultracode is not None and bool(ultracode) != bool(rec.get("ultracode")):
+            rec["ultracode"] = bool(ultracode)
+            if live and not live.backend.busy:
+                await self.disconnect(sid)
+                live = None
         if mode is not None:
             if mode not in MODES:
                 raise AgentError(f"모르는 Mode 예요: {mode}")

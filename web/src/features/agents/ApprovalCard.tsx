@@ -73,8 +73,116 @@ const ago = (sec: number) => {
   return `${Math.floor(d / 3600)}시간 전부터`
 }
 
+interface Question {
+  question: string
+  header?: string
+  options?: { label: string; description?: string }[]
+  multiSelect?: boolean
+}
+
+/** Claude 의 객관식 질문(AskUserQuestion) — 보기를 고르거나 직접 적어서 답해요 */
+export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
+  const answer = useAnswer()
+  const questions = (Array.isArray(p.input.questions) ? p.input.questions : []) as Question[]
+  const [picked, setPicked] = useState<Record<string, string[]>>({})
+  const [other, setOther] = useState<Record<string, string>>({})
+  const [response, setResponse] = useState('')
+  const err = answer.error instanceof ApiError ? answer.error.message : answer.error ? String(answer.error) : ''
+
+  const toggle = (q: Question, label: string) =>
+    setPicked((old) => {
+      const cur = old[q.question] ?? []
+      if (!q.multiSelect) return { ...old, [q.question]: [label] }
+      return { ...old, [q.question]: cur.includes(label) ? cur.filter((x) => x !== label) : [...cur, label] }
+    })
+
+  const submit = () => {
+    const answers: Record<string, string | string[]> = {}
+    for (const q of questions) {
+      // "기타" 에 적은 글은 'Other' 가 아니라 그 글 자체를 답으로 (문서: user-input)
+      const labels = [...(picked[q.question] ?? []), ...(other[q.question]?.trim() ? [other[q.question].trim()] : [])]
+      if (labels.length) answers[q.question] = q.multiSelect ? labels : labels[labels.length - 1]
+    }
+    answer.mutate({ id: p.id, choice: 'answer', answers, response, via })
+  }
+
+  return (
+    <div role="group" aria-label="에이전트의 질문" className={s.approval}>
+      <div className={s.approvalHead}>
+        <span className={s.approvalTitle}>질문이 왔어요</span>
+        <span className={s.muted}>{ago(p.createdAt)} 기다리는 중</span>
+      </div>
+      {questions.map((q) => (
+        <fieldset key={q.question} className={s.question}>
+          <legend className={s.questionText}>
+            {q.header && <span className={s.questionHeader}>{q.header}</span>}
+            {q.question}
+            {q.multiSelect && <span className={s.muted}> · 여러 개 골라도 돼요</span>}
+          </legend>
+          <div className={s.options}>
+            {(q.options ?? []).map((o) => {
+              const on = (picked[q.question] ?? []).includes(o.label)
+              return (
+                <button
+                  key={o.label}
+                  type="button"
+                  role={q.multiSelect ? 'checkbox' : 'radio'}
+                  aria-checked={on}
+                  className={s.option}
+                  onClick={() => toggle(q, o.label)}
+                >
+                  <span className={s.optionLabel}>{o.label}</span>
+                  {o.description && <span className={s.menuDesc}>{o.description}</span>}
+                </button>
+              )
+            })}
+          </div>
+          <input
+            className={s.reason}
+            value={other[q.question] ?? ''}
+            onChange={(e) => setOther((old) => ({ ...old, [q.question]: e.target.value }))}
+            placeholder="기타 — 직접 적기"
+            aria-label={`${q.question} — 기타`}
+          />
+        </fieldset>
+      ))}
+      <input
+        className={s.reason}
+        value={response}
+        onChange={(e) => setResponse(e.target.value)}
+        placeholder="보기 대신 하고 싶은 말 (선택)"
+        aria-label="보기 대신 하고 싶은 말"
+      />
+      <div className={s.approvalActions}>
+        <button type="button" className={s.allow} disabled={answer.isPending} onClick={submit}>
+          답하기
+        </button>
+        <button
+          type="button"
+          className={s.denyBtn}
+          disabled={answer.isPending}
+          onClick={() => answer.mutate({ id: p.id, choice: 'deny', reason: '질문에 답하지 않았어요', via })}
+        >
+          건너뛰기
+        </button>
+        <span className={s.muted}>같은 질문이 대시보드 · Inbox 에도 떠요. 먼저 답한 곳이 적용돼요.</span>
+      </div>
+      {err && (
+        <div role="alert" className={s.errText}>
+          {err}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** ADE 채팅 안의 승인 카드 — 허용 / 이 세션에서 계속 허용 / 거부(이유) */
 export function ApprovalCard({ p, via }: { p: PendingApproval; via: string }) {
+  if (p.tool === 'AskUserQuestion') return <QuestionCard p={p} via={via} />
+  return <PermissionCard p={p} via={via} />
+}
+
+function PermissionCard({ p, via }: { p: PendingApproval; via: string }) {
   const answer = useAnswer()
   const [reason, setReason] = useState('')
   const fileTool = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(p.tool)

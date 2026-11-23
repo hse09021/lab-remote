@@ -235,7 +235,7 @@ function NewSession({ project, defaultTree }: { project: string; defaultTree: st
   const trees = useQuery(worktreesQuery(project))
   const [where, setWhere] = useState(defaultTree || '.')
   const [branch, setBranch] = useState('')
-  const [settings, setSettings] = useState<ComposerSettings>({ mode: 'manual' as ModeId, model: '', effort: '' })
+  const [settings, setSettings] = useState<ComposerSettings>({ mode: 'manual' as ModeId, model: '', effort: '', ultracode: false })
   const options = trees.data?.state === 'ok' ? trees.data.worktrees.filter((w) => w.rel !== null) : []
   const err = create.error instanceof ApiError ? create.error.message : create.error ? String(create.error) : ''
 

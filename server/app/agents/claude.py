@@ -7,8 +7,11 @@ Claude Code 를 부른다(PLAN 1.2).
   같게(사람이 고름, 2026-11-23). lab.remote 는 설정 파일을 **쓰지 않는다.**
 - 권한: SDK 의 `can_use_tool` 콜백으로 받아 manager 에 넘긴다. bypass 계열 모드는
   쓰지 않는다.
-- `AskUserQuestion` 도구는 끈다 — SDK 에 답을 넘기는 방법이 문서에 없다
-  ([확인 필요]). 꺼 두면 Claude 가 채팅 글로 묻는다.
+- `AskUserQuestion`(객관식 질문)은 승인과 같은 길(`can_use_tool`)로 받아, 답을
+  `updated_input={"questions": 원래 질문, "answers": {질문 글: 고른 label}}` 로 돌려준다.
+- Ultracode 는 Claude Code 설정 키(`"ultracode": true`)다. 세션마다 `settings`
+  (인라인 JSON → `--settings`)로 켠다 — 사용자 설정 파일을 쓰지 않는다
+  (code.claude.com/docs/en/model-config · settings-reference).
 
 확인한 것(설치된 claude-agent-sdk 0.2.187 · Claude Code 2.1.318):
 `PermissionMode` = default·acceptEdits·plan·bypassPermissions·dontAsk·auto,
@@ -19,6 +22,7 @@ Claude Code 를 부른다(PLAN 1.2).
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import shutil
 from typing import Any
@@ -31,7 +35,11 @@ __all__ = ["ClaudeBackend", "MODE_MAP", "EFFORTS", "cli_path", "probe_info", "su
 MODE_MAP = {"manual": "default", "edit": "acceptEdits", "plan": "plan", "auto": "auto"}
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 SETTING_SOURCES = ["user", "project", "local"]
-DISALLOWED = ["AskUserQuestion"]
+#: 끄는 도구 — 없다. AskUserQuestion(Claude 의 객관식 질문)도 `can_use_tool` 로 와서
+#: 화면의 질문 카드로 답한다(code.claude.com/docs/en/agent-sdk/user-input).
+DISALLOWED: list[str] = []
+#: 질문 도구 이름
+ASK_TOOL = "AskUserQuestion"
 #: 할 일 도구를 켠다. 공식 문서(code.claude.com/docs/en/agent-sdk/todo-tracking):
 #: 할 일 도구는 Opus 4.7 · Sonnet 4.6 · Haiku 4.5 이하 모델에서만 기본으로 켜지고,
 #: `allowed_tools` 에 할 일 도구 이름이 하나라도 있으면 그 세션은 켜진다.
@@ -58,6 +66,11 @@ def _scrub_env() -> None:
 
 def summarize(name: str, data: dict[str, Any]) -> str:
     """도구 사용 줄에 보일 한 줄."""
+    if name == ASK_TOOL and isinstance(data.get("questions"), list) and data["questions"]:
+        first = data["questions"][0]
+        if isinstance(first, dict):
+            more = len(data["questions"]) - 1
+            return str(first.get("question", ""))[:300] + (f" 외 {more}개" if more else "")
     for key in ("command", "file_path", "notebook_path", "path", "pattern", "url", "query", "description", "prompt"):
         value = data.get(key)
         if isinstance(value, str) and value.strip():
@@ -149,6 +162,7 @@ class ClaudeBackend(AgentBackend):
             can_use_tool=self._can_use_tool,
             allowed_tools=list(ALLOWED),
             disallowed_tools=list(DISALLOWED),
+            settings=json.dumps({"ultracode": True}) if cfg.extra.get("ultracode") else None,
             stderr=self._on_stderr,
         )
 

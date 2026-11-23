@@ -22,8 +22,8 @@ export interface AgentInfo {
   modes: { id: ModeId; label: string }[]
   version: string
   maxLive: number
-  /** SDK 에서 찾지 못해 null — 화면에서 숨겨요 */
-  ultracode: null
+  /** Ultracode — 이 Effort 를 지원하는 모델에서만 켤 수 있어요 */
+  ultracode: { needsEffort: string } | null
 }
 
 export interface PendingApproval {
@@ -49,8 +49,10 @@ export type AgentEvent = { at: number } & (
   | {
       type: 'approval'
       approvalId: string
-      state: 'pending' | 'allowed' | 'denied'
+      state: 'pending' | 'allowed' | 'denied' | 'answered'
       tool: string
+      answers?: Record<string, string | string[]>
+      response?: string
       summary?: string
       input?: Record<string, unknown>
       title?: string
@@ -72,6 +74,7 @@ export interface AgentSession {
   mode: ModeId
   model: string
   effort: string
+  ultracode?: boolean
   agentSessionId: string
   createdAt: number
   updatedAt: number
@@ -129,7 +132,7 @@ function useAgentMutation<V, R = unknown>(run: (v: V) => Promise<R>) {
 
 export const useCreateSession = () =>
   useAgentMutation(
-    (v: { project: string; text: string; title?: string; tree?: string; newBranch?: string; mode: ModeId; model: string; effort: string }) =>
+    (v: { project: string; text: string; title?: string; tree?: string; newBranch?: string; mode: ModeId; model: string; effort: string; ultracode?: boolean }) =>
       send<SessionDetail>('POST', '/agents/sessions', v),
   )
 
@@ -140,11 +143,25 @@ export const useInterrupt = () =>
   useAgentMutation((sid: string) => send<AgentSession>('POST', `/agents/sessions/${enc(sid)}/interrupt`))
 
 export const useConfigure = () =>
-  useAgentMutation((v: { sid: string; mode?: ModeId; model?: string; effort?: string }) =>
-    send<AgentSession>('PUT', `/agents/sessions/${enc(v.sid)}/config`, { mode: v.mode, model: v.model, effort: v.effort }),
+  useAgentMutation((v: { sid: string; mode?: ModeId; model?: string; effort?: string; ultracode?: boolean }) =>
+    send<AgentSession>('PUT', `/agents/sessions/${enc(v.sid)}/config`, { mode: v.mode, model: v.model, effort: v.effort, ultracode: v.ultracode }),
   )
 
 export const useAnswer = () =>
-  useAgentMutation((v: { id: string; choice: 'allow' | 'allowSession' | 'deny'; reason?: string; via: string }) =>
-    send<{ id: string; state: string }>('POST', `/approvals/${enc(v.id)}`, { choice: v.choice, reason: v.reason ?? '', via: v.via }),
+  useAgentMutation(
+    (v: {
+      id: string
+      choice: 'allow' | 'allowSession' | 'deny' | 'answer'
+      reason?: string
+      via: string
+      answers?: Record<string, string | string[]>
+      response?: string
+    }) =>
+      send<{ id: string; state: string }>('POST', `/approvals/${enc(v.id)}`, {
+        choice: v.choice,
+        reason: v.reason ?? '',
+        via: v.via,
+        answers: v.answers,
+        response: v.response ?? '',
+      }),
   )

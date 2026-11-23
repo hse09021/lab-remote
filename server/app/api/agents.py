@@ -27,6 +27,7 @@ class CreateBody(BaseModel):
     mode: str = "manual"
     model: str = ""
     effort: str = ""
+    ultracode: bool = False
 
 
 class SendBody(BaseModel):
@@ -37,12 +38,16 @@ class ConfigBody(BaseModel):
     mode: str | None = None
     model: str | None = None
     effort: str | None = None
+    ultracode: bool | None = None
 
 
 class AnswerBody(BaseModel):
-    choice: str  # allow · allowSession · deny
+    choice: str  # allow · allowSession · deny · answer
     reason: str = ""
     via: str = ""
+    #: choice=answer — {질문 글: label 또는 [label, ...]}
+    answers: dict[str, str | list[str]] | None = None
+    response: str = ""
 
 
 def _bad(exc: Exception, status: int = 400) -> JSONResponse:
@@ -59,8 +64,9 @@ async def info():
         **got,
         "modes": [{"id": m, "label": MODE_LABELS[m]} for m in MODES],
         "maxLive": MAX_LIVE,
-        # Ultracode 는 SDK 옵션을 찾지 못했다 — 화면에서 숨긴다
-        "ultracode": None,
+        # Ultracode — Claude Code 설정 키를 세션마다 --settings 로 넘긴다.
+        # xhigh 를 지원하는 모델에서만 켤 수 있다(문서: model-config)
+        "ultracode": {"needsEffort": "xhigh"},
     }
 
 
@@ -81,6 +87,7 @@ async def create(body: CreateBody):
             mode=body.mode,
             model=body.model,
             effort=body.effort,
+            ultracode=body.ultracode,
         )
     except AgentError as exc:
         return _bad(exc)
@@ -113,7 +120,7 @@ async def interrupt(sid: str):
 @router.put("/agents/sessions/{sid}/config")
 async def configure(sid: str, body: ConfigBody):
     try:
-        return await manager.configure(sid, mode=body.mode, model=body.model, effort=body.effort)
+        return await manager.configure(sid, mode=body.mode, model=body.model, effort=body.effort, ultracode=body.ultracode)
     except AgentError as exc:
         return _bad(exc)
 
@@ -133,7 +140,7 @@ def approvals():
 async def answer(aid: str, body: AnswerBody):
     # async 라서 이벤트 루프에서 돈다 — 기다리는 future 를 같은 루프에서 푼다
     try:
-        return manager.answer(aid, body.choice, reason=body.reason, via=body.via)
+        return manager.answer(aid, body.choice, reason=body.reason, via=body.via, answers=body.answers, response=body.response)
     except AgentError as exc:
         return _bad(exc, 409)
 

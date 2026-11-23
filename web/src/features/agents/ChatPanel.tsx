@@ -24,7 +24,7 @@ export function ChatPanel({ session }: { session: AgentSession }) {
     end.current?.scrollIntoView({ block: 'end' })
   }, [events.length, session.pending.length])
 
-  const settings: ComposerSettings = { mode: session.mode, model: session.model, effort: session.effort }
+  const settings: ComposerSettings = { mode: session.mode, model: session.model, effort: session.effort, ultracode: !!session.ultracode }
   const err = [sendMsg.error, configure.error, interrupt.error].find(Boolean)
 
   return (
@@ -111,7 +111,7 @@ export function EventList({ events }: { events: AgentEvent[] }) {
             )
           case 'tool':
             // 할 일 도구는 줄 대신 아래 '할 일' 상자로 보여요
-            if (['TodoWrite', 'TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet'].includes(e.name)) return null
+            if (['TodoWrite', 'TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet', 'AskUserQuestion'].includes(e.name)) return null
             return <ToolRow key={i} v={{ call: e, result }} />
           case 'todos':
             return latestTodos ? <Todos key={i} items={e.items} /> : null
@@ -123,6 +123,15 @@ export function EventList({ events }: { events: AgentEvent[] }) {
             )
           case 'approval':
             if (e.state === 'pending') return null
+            if (e.state === 'answered') {
+              const picked = Object.entries(e.answers ?? {}).map(([q, a]) => `${q} → ${Array.isArray(a) ? a.join(', ') : a}`)
+              return (
+                <div key={i} className={s.approvalDone} data-state="allowed">
+                  답함 · {[...picked, e.response ? `“${e.response}”` : ''].filter(Boolean).join(' · ')}
+                  {e.via ? ` · ${e.via}` : ''}
+                </div>
+              )
+            }
             return (
               <div key={i} className={s.approvalDone} data-state={e.state}>
                 {e.state === 'allowed' ? '허용함' : '거부함'} · {e.tool}
