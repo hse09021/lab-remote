@@ -98,3 +98,24 @@ def test_Inbox_와_Dashboard_API(tmp_path, project):
     assert client.get("/api/inbox/badge").json() == {"badge": 0}
     dash = client.get("/api/dashboard").json()
     assert dash["projects"] == 1 and dash["runs"]["running"] == [] and dash["agents"] is None
+
+
+def test_PR_리뷰가_바뀌면_알려요(conn):
+    from app import inbox, watch
+
+    def feed(state):
+        return lambda: {"available": True, "items": [
+            {"project": "demo", "number": 7, "title": "lr 낮추기", "branch": "exp/lr", "state": state, "ci": "", "url": "https://github.com/me/demo/pull/7"},
+        ]}
+
+    # 처음 본 PR은 기억만
+    assert watch.check_prs(conn, feed=feed("리뷰 기다림")) == []
+    assert watch.check_prs(conn, feed=feed("리뷰 기다림")) == []
+    got = watch.check_prs(conn, feed=feed("변경 요청"))
+    assert [x["number"] for x in got] == [7]
+    items = inbox.items(conn, kind="pr")
+    assert items[0]["title"].startswith("PR #7 변경 요청")
+    # 같은 상태는 다시 알리지 않아요
+    assert watch.check_prs(conn, feed=feed("변경 요청")) == []
+    # gh가 없으면 아무것도 안 해요
+    assert watch.check_prs(conn, feed=lambda: {"available": False, "items": []}) == []

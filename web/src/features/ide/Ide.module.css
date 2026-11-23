@@ -721,3 +721,12 @@ kbd {
   background: var(--hover);
   color: var(--text);
 }
+
+/* PR 만들기 창의 입력 칸 */
+.dialogField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-soft);
+}

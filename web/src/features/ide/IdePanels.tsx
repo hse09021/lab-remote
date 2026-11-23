@@ -164,9 +164,12 @@ export function SearchPanel({ project, tree, onOpen }: { project: string; tree: 
 export function GitPanel({ project, tree, onDiff }: { project: string; tree: string; onDiff: (path: string) => void }) {
   const status = useQuery(gitStatusQuery(project, tree))
   const caps = useQuery(gitCapsQuery(project))
-  const { commit, merge } = useGitAction(project)
+  const { commit, merge, pr } = useGitAction(project)
   const [message, setMessage] = useState('')
   const [asking, setAsking] = useState(false)
+  const [prOpen, setPrOpen] = useState(false)
+  const [prTitle, setPrTitle] = useState('')
+  const [prBody, setPrBody] = useState('')
   const st = status.data
   if (!st) return <div className={s.panel}><span className={s.muted}>불러오는 중이에요…</span></div>
   if (st.state !== 'ok') return <div className={s.panel}><span className={s.muted}>{st.state === 'none' ? 'git 저장소가 아니에요.' : st.reason}</span></div>
@@ -196,9 +199,19 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         <button type="button" className={s.primaryBtn} disabled={!message.trim() || !st.changed || commit.isPending} onClick={doCommit}>
           ✓ 커밋
         </button>
-        {caps.data?.pr && (
-          <button type="button" className={s.ghostBtn} disabled title="PR 만들기는 다음에 붙어요">
-            PR 열기
+        {caps.data?.pr && !isMain && (
+          <button
+            type="button"
+            className={s.ghostBtn}
+            title="gh로 PR을 열어요 — 브랜치가 원격에 올라가 있어야 해요"
+            onClick={() => {
+              setPrTitle(st.branch.replace(/^[^/]*\//, '').replace(/[-_]/g, ' '))
+              setPrBody('')
+              pr.reset()
+              setPrOpen(true)
+            }}
+          >
+            PR 만들기
           </button>
         )}
         {!isMain && (
@@ -210,6 +223,14 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
       {commit.isError && <div className={s.errText}>{errText(commit.error)}</div>}
       {commit.data && <div className={s.okText}>커밋했어요 · {commit.data.sha}</div>}
       {merge.data && <div className={s.okText}>{merge.data.main}에 합쳤어요 · {merge.data.sha}</div>}
+      {pr.data && (
+        <div className={s.okText}>
+          PR을 열었어요 ·{' '}
+          <a href={pr.data.url} target="_blank" rel="noreferrer">
+            {pr.data.number ? `#${pr.data.number}` : pr.data.url}
+          </a>
+        </div>
+      )}
       <span className={s.groupLabel}>변경 내용 · {st.changed}</span>
       {st.changes.map((c) => (
         <button key={c.path} type="button" className={s.fileRow} onClick={() => onDiff(c.path)}>
@@ -219,6 +240,31 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
           </span>
         </button>
       ))}
+      <Dialog
+        open={prOpen}
+        title={`${st.branch}으로 PR 만들기`}
+        confirmLabel="PR 만들기"
+        busy={pr.isPending}
+        error={errText(pr.error) || undefined}
+        onClose={() => {
+          pr.reset()
+          setPrOpen(false)
+        }}
+        onConfirm={() => pr.mutate({ tree, title: prTitle, body: prBody }, { onSuccess: () => setPrOpen(false) })}
+      >
+        <label className={s.dialogField}>
+          제목
+          <input className={s.input} value={prTitle} onChange={(e) => setPrTitle(e.target.value)} autoFocus />
+        </label>
+        <label className={s.dialogField}>
+          설명 (선택)
+          <textarea className={s.textarea} rows={4} value={prBody} onChange={(e) => setPrBody(e.target.value)} />
+        </label>
+        <span>
+          <code>gh pr create</code>로 열어요. lab.remote는 push하지 않아요 — 브랜치를 먼저 원격에 올려 주세요 (
+          <code>git push -u origin {st.branch}</code>).
+        </span>
+      </Dialog>
       <Dialog
         open={asking}
         title={`${st.branch}을 main에 합칠까요?`}

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAnswer } from '@/api/agents'
+import { useQuery } from '@tanstack/react-query'
+import { useAnswer, useCloseSession, useInterrupt } from '@/api/agents'
+import { sessionCardsQuery } from '@/api/inbox'
+import type { SessionCardGit } from '@/api/inbox'
 import type { AgentSession, PendingApproval } from '@/api/agents'
 import { ApiError } from '@/api/client'
 import { agoShort } from '@/lib/time'
@@ -46,6 +49,7 @@ export function AgentAside({ sessions }: { sessions: AgentSession[] }) {
 
 export function Lanes({ sessions }: { sessions: AgentSession[] }) {
   const lanes = laneOf(sessions)
+  const cards = useQuery({ ...sessionCardsQuery(), enabled: sessions.length > 0 })
   const rows: [keyof typeof lanes, string, string][] = [
     ['ask', '답이 필요해요', '카드에서 펼쳐 보고 허용하거나 ADE에서 답해요'],
     ['work', '작업 중', '마지막 출력 기준'],
@@ -63,7 +67,7 @@ export function Lanes({ sessions }: { sessions: AgentSession[] }) {
           </div>
           {lanes[k].length === 0 && <div className={s.empty}>없어요.</div>}
           {lanes[k].map((x) => (
-            <SessionCard key={x.id} x={x} kind={k} />
+            <SessionCard key={x.id} x={x} kind={k} git={cards.data?.sessions[x.id]} />
           ))}
         </div>
       ))}
@@ -71,9 +75,11 @@ export function Lanes({ sessions }: { sessions: AgentSession[] }) {
   )
 }
 
-function SessionCard({ x, kind }: { x: AgentSession; kind: 'ask' | 'work' | 'done' }) {
+function SessionCard({ x, kind, git }: { x: AgentSession; kind: 'ask' | 'work' | 'done'; git?: SessionCardGit }) {
   const p = x.pending[0]
   const t = x.todos
+  const interrupt = useInterrupt()
+  const close = useCloseSession()
   return (
     <article className={s.card} data-kind={kind}>
       <div className={s.cardTop}>
@@ -100,11 +106,44 @@ function SessionCard({ x, kind }: { x: AgentSession; kind: 'ask' | 'work' | 'don
           </div>
         </div>
       )}
+      {/* git 상태 — 세션 위치의 커밋 안 한 변경 · 그 브랜치의 PR */}
+      {git && (git.files > 0 || git.pr) && (
+        <div className={s.gitLine}>
+          {git.files > 0 && (
+            <>
+              <span className={s.add}>+{git.add}</span>
+              <span className={s.del}>−{git.del}</span>
+              <span className={s.muted}>파일 {git.files}</span>
+            </>
+          )}
+          {git.pr && (
+            <a href={git.pr.url} target="_blank" rel="noreferrer" className={s.prPill}>
+              PR #{git.pr.number} {git.pr.state}
+            </a>
+          )}
+        </div>
+      )}
       <div className={s.actions}>
         <Link to={adeHref(x)} className={s.primary} data-strong={kind === 'ask'}>
           {kind === 'ask' ? (p?.tool === 'AskUserQuestion' ? 'ADE에서 질문에 답하기' : 'ADE에서 답하기') : 'ADE로 가기'}
         </Link>
         {p && <QuickAllow p={p} />}
+        {kind === 'work' && (
+          <button type="button" className={s.secondary} disabled={interrupt.isPending} onClick={() => interrupt.mutate(x.id)}>
+            중지
+          </button>
+        )}
+        {kind === 'done' && (
+          <button
+            type="button"
+            className={s.secondary}
+            disabled={close.isPending}
+            title="목록에서 빼요 · 기록은 남고 메시지를 보내면 다시 열려요"
+            onClick={() => close.mutate({ sid: x.id, closed: true })}
+          >
+            보관
+          </button>
+        )}
       </div>
     </article>
   )

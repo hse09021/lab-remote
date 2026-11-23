@@ -128,3 +128,18 @@ export interface GitFeed {
 
 export const gitFeedQuery = () =>
   queryOptions({ queryKey: ['dashboard', 'git'], queryFn: () => get<GitFeed>('/dashboard/git'), refetchInterval: 60_000 })
+
+/** 세션 카드의 git 상태 — 세션 위치의 +/− · 바뀐 파일 수 · 그 브랜치의 열린 PR */
+export interface SessionCardGit {
+  add: number
+  del: number
+  files: number
+  pr: { number: number; state: string; url: string } | null
+}
+
+export const sessionCardsQuery = () =>
+  queryOptions({
+    queryKey: ['dashboard', 'cards'],
+    queryFn: () => get<{ sessions: Record<string, SessionCardGit> }>('/dashboard/cards'),
+    refetchInterval: 30_000,
+  })

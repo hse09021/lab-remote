@@ -363,6 +363,12 @@ function GitCards({ feed, failed }: { feed?: GitFeed; failed?: boolean }) {
       <section className={s.sideCard}>
         <h2 className={s.h2}>
           열린 PR {feed?.prs.available && <span className={s.muted}>{feed.prs.items.length}</span>}
+          {/* 저장소 PR 목록 — 열린 PR 주소에서 만들어요 (저장소가 여럿이면 첫 번째) */}
+          {feed?.prs.items[0]?.url && (
+            <a className={s.ghLink} href={feed.prs.items[0].url.replace(/\/pull\/\d+.*$/, '/pulls')} target="_blank" rel="noreferrer">
+              GitHub에서 보기
+            </a>
+          )}
         </h2>
         {!feed && <div className={s.muted}>{failed ? 'git 기록을 못 읽었어요.' : '불러오는 중이에요…'}</div>}
         {feed && !feed.prs.available && <div className={s.muted}>{feed.prs.reason}</div>}

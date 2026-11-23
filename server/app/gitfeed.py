@@ -112,3 +112,51 @@ def feed(*, fresh: bool = False) -> dict:
         got = {"merges": merges(), "prs": prs()}
         _cache = (now, got)
         return got
+
+
+_card_cache: tuple[float, dict] | None = None
+
+
+def session_cards(sessions: list[dict], *, fresh: bool = False) -> dict:
+    """Dashboard 세션 카드의 git 상태 — 세션 위치의 +/− · 바뀐 파일 수, 그 브랜치의 열린 PR.
+
+    worktree마다 `git diff --numstat HEAD` 한 번. 15초 캐시라 화면이 자주 물어도 가볍다.
+    """
+    global _card_cache
+    from . import files, projects
+
+    now = time.monotonic()
+    if not fresh and _card_cache and now - _card_cache[0] < 15:
+        cached = _card_cache[1]
+        if all(x["id"] in cached for x in sessions):
+            return cached
+    pr_by = {}
+    for pr in (feed()["prs"].get("items") or []):
+        pr_by[(pr["project"], pr["branch"])] = {"number": pr["number"], "state": pr["state"], "url": pr["url"]}
+    out: dict[str, dict] = {}
+    by_tree: dict[str, dict] = {}
+    for x in sessions:
+        try:
+            root = projects.require(x["project"])
+            base = files.base_of(root, "" if x.get("tree") in ("", ".") else x["tree"])
+        except Exception:
+            continue
+        if base not in by_tree:
+            info = {"add": 0, "del": 0, "files": 0}
+            try:
+                st = view.status(base)
+                if st.get("state") == "ok":
+                    info["files"] = len(st["changes"])
+                    for line in ops.run(base, ["diff", "--numstat", "HEAD"], check=False).splitlines():
+                        parts = line.split("\t")
+                        if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+                            info["add"] += int(parts[0])
+                            info["del"] += int(parts[1])
+            except Exception:
+                pass
+            by_tree[base] = info
+        card = dict(by_tree[base])
+        card["pr"] = pr_by.get((x["project"], x.get("branch") or ""))
+        out[x["id"]] = card
+    _card_cache = (now, out)
+    return out

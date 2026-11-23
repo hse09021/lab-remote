@@ -131,6 +131,14 @@ def git_feed():
     return gitfeed.feed()
 
 
+@router.get("/dashboard/cards")
+def session_cards():
+    """세션 카드의 git 상태 (+/− · 파일 수 · 열린 PR) — 15초 캐시"""
+    from .. import gitfeed
+
+    return {"sessions": gitfeed.session_cards(manager.list())}
+
+
 @router.get("/dashboard")
 def overview():
     with db.open_db() as conn:

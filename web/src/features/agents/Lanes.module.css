@@ -273,3 +273,34 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+/* 카드의 git 상태 줄 */
+.gitLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.add {
+  color: var(--diff-add-text);
+}
+
+.del {
+  color: var(--diff-del-text);
+}
+
+.prPill {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  font-family: var(--font-sans);
+  color: var(--text-soft);
+  text-decoration: none;
+}
+
+.prPill:hover {
+  color: var(--text);
+}

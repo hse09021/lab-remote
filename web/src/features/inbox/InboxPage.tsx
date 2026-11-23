@@ -108,6 +108,12 @@ function actions(it: InboxItem): { primary?: [string, string, boolean]; secondar
     return { secondary: [base, '로그 보기'] }
   }
   if (it.kind === 'sys') return { secondary: ['/dashboard', '자원 보기'] }
+  if (it.kind === 'pr') {
+    // PR 주소가 있으면 GitHub로, 없으면(머지) 프로젝트 IDE로
+    const url = it.ref.pr
+    if (url) return { primary: [url, 'GitHub에서 보기', false], secondary: p ? [`/projects/${encodeURIComponent(p)}/ide`, 'IDE'] : undefined }
+    return p ? { secondary: [`/projects/${encodeURIComponent(p)}/ide`, 'IDE에서 보기'] } : {}
+  }
   if (it.kind === 'sched') {
     // 예약이 연 세션 · 실행으로 바로, 아니면 Schedule 보기
     const p2 = p && it.ref.session
@@ -139,11 +145,17 @@ function Item({ it, pending, onRead }: { it: InboxItem; pending?: PendingApprova
         </div>
         {it.body && <p className={s.text}>{it.body}</p>}
         <div className={s.itemActions}>
-          {a.primary && (
-            <Link to={a.primary[0]} className={s.primary} data-strong={a.primary[2]} onClick={onRead}>
-              {a.primary[1]}
-            </Link>
-          )}
+          {a.primary &&
+            // GitHub 같은 바깥 주소는 새 탭으로
+            (/^https?:\/\//.test(a.primary[0]) ? (
+              <a href={a.primary[0]} target="_blank" rel="noreferrer" className={s.primary} data-strong={a.primary[2]} onClick={onRead}>
+                {a.primary[1]}
+              </a>
+            ) : (
+              <Link to={a.primary[0]} className={s.primary} data-strong={a.primary[2]} onClick={onRead}>
+                {a.primary[1]}
+              </Link>
+            ))}
           {a.secondary && (
             <Link to={a.secondary[0]} className={s.secondary} onClick={onRead}>
               {a.secondary[1]}
@@ -240,7 +252,7 @@ function DiscordPanel() {
             바꾸기
           </button>
         </div>
-        <p className={s.note}>예약 · PR · 머지 알림은 해당 기능이 붙는 단계(4·5단계)부터 실제로 와요.</p>
+        <p className={s.note}>PR 리뷰 알림은 gh(GitHub CLI)가 있을 때 10분마다 GitHub에서 읽어 와요. 머지 알림은 lab.remote에서 main에 합칠 때 와요.</p>
       </section>
 
       <WebhookDialog open={editing} onClose={() => setEditing(false)} />

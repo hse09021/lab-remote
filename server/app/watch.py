@@ -9,22 +9,28 @@
 - 자원 경고(VRAM · 디스크 · 드라이버)는 실행이 돌고 있을 때 5분마다만 본다
   — 화면을 안 볼 때 서버가 혼자 자원을 폴링하지 않는다는 원칙(PLAN 1.3)을
   지키면서, 학습이 위험할 때는 알려 주려고.
+- GitHub PR 리뷰(변경 요청 · 승인)는 **"PR 리뷰 · 변경 요청" 알림을 켰고 gh가 있을 때만**
+  10분마다 `gh pr list`로 본다. 처음 본 PR은 기억만 하고, 상태가 바뀌면 알린다.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import threading
 import time
 
-from . import alerts, db, projects, registry, runs
+from . import alerts, db, gitfeed, projects, registry, runs
 from .monitor import gpu as gpu_mod
 
-__all__ = ["Watcher", "tick", "check_resources", "VRAM_WARN_PCT", "DISK_WARN_GB"]
+__all__ = ["Watcher", "tick", "check_resources", "check_prs", "VRAM_WARN_PCT", "DISK_WARN_GB"]
 
 INTERVAL_SEC = 10
 RESOURCE_EVERY_SEC = 300
+PR_EVERY_SEC = 600
+#: 알리는 리뷰 상태 (gitfeed.prs의 state)
+PR_NOTIFY = ("변경 요청", "승인됨")
 VRAM_WARN_PCT = 90.0
 DISK_WARN_GB = 10.0
 #: 같은 시스템 경고를 다시 Inbox에 넣기까지
@@ -139,6 +145,40 @@ def check_resources(conn, *, probe=None, poster=None) -> None:
                       "체크포인트를 못 남길 수 있어요.", poster=poster)
 
 
+def _pr_seen_path() -> str:
+    return os.path.join(registry.data_dir(), "pr_seen.json")
+
+
+def check_prs(conn, *, feed=None, poster=None) -> list[dict]:
+    """열린 PR의 리뷰 상태가 바뀌었으면 알린다. 처음 본 PR은 기억만 한다."""
+    got = (feed or gitfeed.prs)()
+    if not got.get("available"):
+        return []
+    try:
+        with open(_pr_seen_path(), encoding="utf-8") as fh:
+            seen = json.load(fh)
+        if not isinstance(seen, dict):
+            seen = {}
+    except (OSError, ValueError):
+        seen = {}
+    first = not seen
+    now_seen, posted = {}, []
+    for pr in got.get("items") or []:
+        key = f"{pr['project']}#{pr['number']}"
+        now_seen[key] = pr["state"]
+        before = seen.get(key)
+        if first or before == pr["state"] or pr["state"] not in PR_NOTIFY:
+            continue
+        alerts.post(conn, "pr", "pr", f"PR #{pr['number']} {pr['state']} · {pr['title'][:80]}", where=f"{pr['project']} · {pr['branch']}",
+                    body=pr.get("url") or "", project=pr["project"], ref={"project": pr["project"], "pr": pr.get("url") or ""},
+                    act=pr["state"] == "변경 요청", subject=f"pr:{key}:{pr['state']}", poster=poster)
+        posted.append(pr)
+    os.makedirs(os.path.dirname(_pr_seen_path()), exist_ok=True)
+    with open(_pr_seen_path(), "w", encoding="utf-8") as fh:
+        json.dump(now_seen, fh, ensure_ascii=False)
+    return posted
+
+
 def _any_running() -> bool:
     for root in registry.load():
         folder = runs.runs_dir(root)
@@ -162,6 +202,7 @@ class Watcher(threading.Thread):
         self.interval = interval
         self.stop_event = threading.Event()
         self._last_resources = 0.0
+        self._last_prs = 0.0
 
     def run(self) -> None:  # pragma: no cover - 실제 스레드는 시험에서 안 띄운다
         while not self.stop_event.is_set():
@@ -172,6 +213,10 @@ class Watcher(threading.Thread):
                     if _any_running() and now - self._last_resources >= RESOURCE_EVERY_SEC:
                         self._last_resources = now
                         check_resources(conn)
+                    # PR 리뷰는 그 알림을 켰을 때만 (gh로 GitHub에 묻는 일이라)
+                    if now - self._last_prs >= PR_EVERY_SEC and alerts.load()["rules"].get("pr") and shutil.which("gh"):
+                        self._last_prs = now
+                        check_prs(conn)
             except Exception:  # 감시가 죽으면 서버 전체가 멈춘 것처럼 보인다
                 pass
             self.stop_event.wait(self.interval)

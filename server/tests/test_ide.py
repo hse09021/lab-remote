@@ -192,3 +192,70 @@ def test_최근_머지(repo, monkeypatch):
     # gh가 없으면 없다고 말한다
     monkeypatch.setattr(gitfeed.shutil, "which", lambda name: None)
     assert gitfeed.prs()["available"] is False
+
+
+def test_PR_열기는_push_된_브랜치만(repo, tmp_path):
+    remote = tmp_path / "remote.git"
+    _git(tmp_path, "init", "-q", "--bare", str(remote))
+    _git(repo, "remote", "add", "origin", str(remote))
+    made = worktree.add(repo, "exp/pr")
+    calls = []
+
+    class Done:
+        returncode = 0
+        stdout = "Creating pull request\nhttps://github.com/me/demo/pull/7\n"
+        stderr = ""
+
+    def fake(cmd):
+        calls.append(cmd)
+        return Done()
+
+    with pytest.raises(actions.ActionError, match="제목"):
+        actions.create_pr(made["path"], " ", runner=fake)
+    # 아직 원격에 없어요 — lab.remote는 push하지 않아요
+    with pytest.raises(actions.ActionError, match="원격에 없어요"):
+        actions.create_pr(made["path"], "lr 낮추기", runner=fake)
+    _git(made["path"], "push", "-q", "-u", "origin", "exp/pr")
+    got = actions.create_pr(made["path"], "lr 낮추기", "본문", runner=fake)
+    assert got == {"url": "https://github.com/me/demo/pull/7", "number": "7", "branch": "exp/pr"}
+    assert calls[-1][1:4] == ["pr", "create", "--head"] and "lr 낮추기" in calls[-1]
+    # 원격보다 앞선 커밋이 있으면 먼저 push하라고 해요
+    with open(os.path.join(made["path"], "src", "train.py"), "a") as fh:
+        fh.write("x = 1\n")
+    actions.commit(made["path"], "더")
+    with pytest.raises(actions.ActionError, match="1개 앞서요"):
+        actions.create_pr(made["path"], "lr 낮추기", runner=fake)
+    # main에서는 열지 않아요
+    with pytest.raises(actions.ActionError, match="main이 아닌"):
+        actions.create_pr(repo, "x", runner=fake)
+
+
+def test_합치면_Inbox에_남아요(repo, tmp_path):
+    from app import db, inbox
+
+    client = TestClient(main.create_app(web_dist=str(tmp_path)), base_url="http://127.0.0.1:8000")
+    made = worktree.add(repo, "exp/m")
+    with open(os.path.join(made["path"], "src", "train.py"), "a") as fh:
+        fh.write("y = 2\n")
+    actions.commit(made["path"], "y")
+    r = client.post("/api/projects/demo/git/merge", json={"branch": "exp/m"}, headers=H)
+    assert r.status_code == 200
+    with db.open_db() as conn:
+        got = inbox.items(conn, kind="pr")
+    assert any("exp/m" in x["title"] and "합침" in x["title"] for x in got)
+
+
+def test_세션_카드_git_상태(repo, monkeypatch):
+    from app import gitfeed
+
+    monkeypatch.setattr(gitfeed, "feed", lambda **_: {"merges": {}, "prs": {"available": True, "items": [
+        {"project": "demo", "number": 3, "title": "t", "branch": "exp/c", "state": "리뷰 기다림", "ci": "", "url": "u"}]}})
+    made = worktree.add(repo, "exp/c")
+    with open(os.path.join(repo, made["rel"], "src", "train.py"), "a") as fh:
+        fh.write("a = 1\nb = 2\n")
+    got = gitfeed.session_cards([
+        {"id": "s1", "project": "demo", "tree": made["rel"], "branch": "exp/c"},
+        {"id": "s2", "project": "demo", "tree": ".", "branch": "main"},
+    ], fresh=True)
+    assert got["s1"] == {"add": 2, "del": 0, "files": 1, "pr": {"number": 3, "state": "리뷰 기다림", "url": "u"}}
+    assert got["s2"] == {"add": 0, "del": 0, "files": 0, "pr": None}

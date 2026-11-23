@@ -10,7 +10,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .. import files, projects, search, terminals
+from .. import alerts, db, files, projects, search, terminals
 from ..git import actions
 
 router = APIRouter()
@@ -24,6 +24,12 @@ class CommitBody(BaseModel):
 
 class MergeBody(BaseModel):
     branch: str
+
+
+class PrBody(BaseModel):
+    tree: str = ""
+    title: str
+    body: str = ""
 
 
 class TermBody(BaseModel):
@@ -58,9 +64,29 @@ def commit(name: str, body: CommitBody):
 @router.post("/projects/{name}/git/merge")
 def merge(name: str, body: MergeBody):
     try:
-        return actions.merge_to_main(projects.require(name), body.branch)
+        got = actions.merge_to_main(projects.require(name), body.branch)
     except actions.ActionError as exc:
         return _bad(exc, 409)
+    # Inbox "PR · 머지" — Discord는 "머지" 알림을 켰을 때만
+    with db.open_db() as conn:
+        alerts.post(conn, "pr", "merge", f"{got['branch']} → {got['main']} 합침", where=name,
+                    body=f"merge --no-ff · {got['sha']}", project=name, ref={"project": name}, subject=f"merge:{name}:{got['sha']}")
+    return got
+
+
+@router.post("/projects/{name}/git/pr")
+def open_pr(name: str, body: PrBody):
+    """PR 열기 (gh) — 브랜치가 원격에 올라가 있을 때만. lab.remote는 push하지 않는다."""
+    base = files.base_of(projects.require(name), body.tree)
+    try:
+        got = actions.create_pr(base, body.title, body.body)
+    except actions.ActionError as exc:
+        return _bad(exc, 409)
+    with db.open_db() as conn:
+        # 사람이 직접 한 일이라 Inbox에만 (읽음으로)
+        alerts.post(conn, "pr", None, f"PR {('#' + got['number']) if got['number'] else ''} 열었어요 · {body.title[:80]}".replace("  ", " "),
+                    where=f"{name} · {got['branch']}", body=got["url"], project=name, ref={"project": name, "pr": got["url"]}, read=True)
+    return got
 
 
 @router.get("/projects/{name}/terminals")

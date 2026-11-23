@@ -3,17 +3,19 @@
 모든 호출이 `ops.run()`을 지난다(안전 옵션 + `.git` 검사, 훅 안 돎).
 **push · force · reset은 만들지 않는다.** 합치기는 main worktree가 깨끗할 때만,
 충돌이 나면 바로 되돌린다(`merge --abort`) — 반쯤 합쳐진 채로 두지 않는다.
-PR은 `gh`가 있을 때만(지금 이 컴퓨터엔 없다 — 화면에서 버튼을 숨긴다).
+PR은 `gh`가 있을 때만(없으면 화면에서 버튼을 숨긴다). lab.remote는 push하지 않으므로
+**브랜치가 이미 원격에 올라가 있고 앞선 커밋이 없을 때만** `gh pr create`를 부른다.
 """
 
 from __future__ import annotations
 
 import shutil
+import subprocess
 
 from .. import paths
 from . import ops, view
 
-__all__ = ["ActionError", "commit", "merge_to_main", "gh_available"]
+__all__ = ["ActionError", "commit", "merge_to_main", "gh_available", "create_pr"]
 
 
 class ActionError(ValueError):
@@ -71,3 +73,37 @@ def merge_to_main(root: str, branch: str) -> dict:
         ops.run(path, ["merge", "--abort"], check=False)
         raise ActionError(f"충돌이 나서 합치지 않고 되돌렸어요. 세션이나 IDE에서 충돌을 풀고 다시 해 주세요. ({str(exc)[:200]})") from None
     return {"main": main, "branch": branch, "sha": ops.head_sha(path)}
+
+
+def create_pr(base: str, title: str, body: str = "", *, runner=None) -> dict:
+    """이 worktree의 브랜치로 PR을 연다 (`gh pr create`). push는 하지 않는다."""
+    title = (title or "").strip()
+    if not title:
+        raise ActionError("PR 제목을 적어 주세요.")
+    gh = shutil.which("gh")
+    if not gh and runner is None:
+        raise ActionError("gh(GitHub CLI)가 없어요 — 깔고 gh auth login 하면 PR을 열 수 있어요.")
+    info = view.status(base)
+    if info.get("state") != "ok":
+        raise ActionError(info.get("reason") or "git 저장소가 아니에요.")
+    branch = info.get("branch") or ""
+    if not branch or branch in ("main", "master"):
+        raise ActionError("main이 아닌 브랜치에서 열어 주세요.")
+    upstream = ops.run(base, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], check=False).strip()
+    if not upstream or "fatal" in upstream or upstream.startswith("@"):
+        raise ActionError(f"{branch}이 아직 원격에 없어요. 터미널에서 git push -u origin {branch} 한 뒤 다시 눌러 주세요 (lab.remote는 push하지 않아요).")
+    ahead = ops.run(base, ["rev-list", "--count", "@{u}..HEAD"], check=False).strip()
+    if ahead.isdigit() and int(ahead) > 0:
+        raise ActionError(f"원격보다 커밋 {ahead}개 앞서요. 터미널에서 git push 한 뒤 다시 눌러 주세요 (lab.remote는 push하지 않아요).")
+    cmd = [gh or "gh", "pr", "create", "--head", branch, "--title", title[:200], "--body", (body or "")[:20000]]
+    run = runner or (lambda c: subprocess.run(c, cwd=base, capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL))
+    try:
+        done = run(cmd)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ActionError(f"gh를 부르지 못했어요: {exc}") from None
+    if done.returncode != 0:
+        msg = (done.stderr or done.stdout or "").strip().splitlines()
+        raise ActionError(f"PR을 열지 못했어요: {(msg[-1] if msg else '알 수 없는 오류')[:300]}")
+    url = next((line.strip() for line in (done.stdout or "").splitlines() if line.strip().startswith("https://")), "")
+    number = url.rstrip("/").rsplit("/", 1)[-1] if "/pull/" in url else ""
+    return {"url": url, "number": number, "branch": branch}

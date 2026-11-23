@@ -89,6 +89,15 @@ export function useGitAction(project: string) {
       mutationFn: (branch: string) => send<{ main: string; sha: string }>('POST', `/projects/${enc(project)}/git/merge`, { branch }),
       onSuccess: done,
     }),
+    /** PR 열기 (gh) — 브랜치가 원격에 올라가 있을 때만. lab.remote는 push하지 않아요 */
+    pr: useMutation({
+      mutationFn: (v: { tree: string; title: string; body: string }) =>
+        send<{ url: string; number: string; branch: string }>('POST', `/projects/${enc(project)}/git/pr`, v),
+      onSuccess: () => {
+        done()
+        qc.invalidateQueries({ queryKey: ['dashboard'] })
+      },
+    }),
   }
 }
 
