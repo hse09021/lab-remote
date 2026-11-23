@@ -40,12 +40,6 @@ export interface MockState {
   summaryMd: Record<string, string>
   /** 수치 불일치에서 고른 재현 목표 */
   discrepancy: Record<string, string>
-  /** 탐색기에서 한 파일 작업 (경로는 '/' 로 이어 붙인 전체 경로) */
-  fileOps: {
-    created: Array<{ path: string; kind: 'file' | 'dir' }>
-    renamed: Record<string, string>
-    deleted: string[]
-  }
 }
 
 const VERSION = 1
@@ -58,7 +52,6 @@ const empty = (): MockState => ({
   annotations: {},
   summaryMd: {},
   discrepancy: {},
-  fileOps: { created: [], renamed: {}, deleted: [] },
 })
 
 /* ── localStorage ─────────────────────────────────────────── */
@@ -211,59 +204,5 @@ export function setSummaryMd(paperId: string, markdown: string | null) {
 
 export function setDiscrepancy(paperId: string, target: string) {
   update((prev) => ({ ...prev, discrepancy: { ...prev.discrepancy, [paperId]: target } }))
-}
-
-export const readFileOps = () => state.fileOps
-
-export function createNode(path: string, kind: 'file' | 'dir') {
-  update((prev) => ({
-    ...prev,
-    fileOps: {
-      ...prev.fileOps,
-      // 지웠다가 같은 이름으로 다시 만들 수도 있어요
-      deleted: prev.fileOps.deleted.filter((p) => p !== path),
-      created: [...prev.fileOps.created.filter((c) => c.path !== path), { path, kind }],
-    },
-  }))
-}
-
-/**
- * 이름 바꾸기는 경로가 달라지는 일이에요.
- * 내가 만든 것은 경로 자체를 옮기고, 원래 트리에 있던 것만 renamed 로 적어요.
- * (그래야 그다음 삭제·붙여넣기가 같은 경로를 가리켜요)
- */
-export function renameNode(path: string, name: string) {
-  const parent = path.split('/').slice(0, -1).join('/')
-  const next = parent ? `${parent}/${name}` : name
-  const move = (p: string) =>
-    p === path || p.startsWith(`${path}/`) ? next + p.slice(path.length) : p
-
-  update((prev) => {
-    const isMine = prev.fileOps.created.some((c) => c.path === path)
-    const renamed = Object.fromEntries(
-      Object.entries(prev.fileOps.renamed).map(([k, v]) => [move(k), v]),
-    )
-    return {
-      ...prev,
-      fileOps: {
-        created: prev.fileOps.created.map((c) => ({ ...c, path: move(c.path) })),
-        deleted: prev.fileOps.deleted.map(move),
-        renamed: isMine ? renamed : { ...renamed, [path]: name },
-      },
-    }
-  })
-}
-
-export function deleteNode(path: string) {
-  update((prev) => ({
-    ...prev,
-    fileOps: {
-      ...prev.fileOps,
-      created: prev.fileOps.created.filter((c) => c.path !== path),
-      deleted: prev.fileOps.deleted.includes(path)
-        ? prev.fileOps.deleted
-        : [...prev.fileOps.deleted, path],
-    },
-  }))
 }
 

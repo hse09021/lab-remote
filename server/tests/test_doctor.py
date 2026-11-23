@@ -30,7 +30,7 @@ def test_run_은_v3_점검만_돈다(monkeypatch):
     report = doctor.run()
     assert [c["title"] for c in report["checks"]] == names
     assert report["ok"] is True
-    assert any("[확인 필요]" in note for note in report["limitations"])
+    assert any("터널" in note for note in report["limitations"])
 
 
 # --- 설치 --------------------------------------------------------------------
@@ -52,12 +52,22 @@ def test_claude_가_없으면_실패(monkeypatch):
     assert "로그인을 대신하지 않아요" in got["hint"]
 
 
-def test_claude_로그인은_확인_필요로_남긴다(monkeypatch):
-    """자격 증명 파일을 읽지 않는다. 로그인 확인은 3단계에서 정한다."""
+def test_claude_로그인을_계정_정보로_본다(monkeypatch):
+    """자격 증명 파일을 읽지 않고, SDK 가 알려 주는 구독 종류만 쓴다(이메일은 안 찍는다)."""
     monkeypatch.setattr(doctor.shutil, "which", lambda name: "/usr/bin/claude")
     monkeypatch.setattr(doctor, "_run", lambda argv, timeout=10: (0, "2.1.318 (Claude Code)\n"))
+    monkeypatch.setattr(doctor, "_login_probe", lambda: {"installed": True, "loggedIn": True, "plan": "Claude Max"})
     got = doctor.claude_check()
-    assert got["ok"] is True and "[확인 필요]" in got["detail"]
+    assert got["ok"] is True and "로그인됨 · Claude Max" in got["detail"]
+    monkeypatch.setattr(doctor, "_login_probe", lambda: {"installed": True, "loggedIn": False, "plan": ""})
+    got = doctor.claude_check()
+    assert got["ok"] is False and "/login" in got["hint"]
+
+    def boom():
+        raise RuntimeError("x")
+
+    monkeypatch.setattr(doctor, "_login_probe", boom)
+    assert doctor.claude_check()["level"] == "warn"
 
 
 def test_tmux(monkeypatch):

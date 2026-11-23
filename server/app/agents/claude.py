@@ -29,7 +29,7 @@ from typing import Any
 
 from .base import AgentBackend, ApprovalRequest, SessionConfig
 
-__all__ = ["ClaudeBackend", "MODE_MAP", "EFFORTS", "cli_path", "probe_info", "summarize"]
+__all__ = ["ClaudeBackend", "MODE_MAP", "EFFORTS", "cli_path", "probe_info", "probe_account", "summarize"]
 
 #: 화면 Mode → SDK permission_mode
 MODE_MAP = {"manual": "default", "edit": "acceptEdits", "plan": "plan", "auto": "auto"}
@@ -120,6 +120,27 @@ async def probe_info(cwd: str) -> dict:
     options = ClaudeAgentOptions(cli_path=path, cwd=cwd, setting_sources=SETTING_SOURCES, permission_mode="default")
     async with ClaudeSDKClient(options=options) as client:
         return _public_info(await client.get_server_info())
+
+
+async def probe_account(cwd: str) -> dict:
+    """로그인했나 — 연결만 해서 Claude Code 가 알려 주는 계정 정보를 본다.
+
+    자격 증명 파일을 읽지 않는다. **이메일은 돌려주지 않고** 구독 종류만 쓴다.
+    (확인: 연결 직후 `get_server_info()["account"]` 에 subscriptionType · apiProvider 가
+    온다 — 2026-11-23, Claude Code 2.1.318. 로그아웃 상태의 모양은 재 보지 않았다.)
+    """
+    from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
+
+    _scrub_env()
+    path = cli_path()
+    if not path:
+        return {"installed": False, "loggedIn": False, "plan": ""}
+    options = ClaudeAgentOptions(cli_path=path, cwd=cwd, setting_sources=[], permission_mode="default")
+    async with ClaudeSDKClient(options=options) as client:
+        info = await client.get_server_info() or {}
+    account = info.get("account") if isinstance(info.get("account"), dict) else {}
+    plan = str(account.get("subscriptionType") or account.get("apiProvider") or "")
+    return {"installed": True, "loggedIn": bool(account.get("subscriptionType") or account.get("email")), "plan": plan}
 
 
 class ClaudeBackend(AgentBackend):

@@ -74,11 +74,21 @@ def conda_env_check() -> Check:
     )
 
 
-def claude_check() -> Check:
-    """Claude Code 가 설치돼 있나 (`claude --version`).
+def _login_probe() -> dict:
+    """SDK 로 연결만 해서 계정 정보를 본다(메시지를 보내지 않아 사용량을 안 쓴다)."""
+    import asyncio
 
-    **로그인 여부는 아직 안 본다** — 자격 증명 파일을 읽지 않고 확인하는
-    방법은 3단계(`claude-agent-sdk`)에서 정한다. [확인 필요]
+    from . import registry
+    from .agents.claude import probe_account
+
+    return asyncio.run(asyncio.wait_for(probe_account(registry.data_dir()), timeout=60))
+
+
+def claude_check() -> Check:
+    """Claude Code 가 설치돼 있고 로그인돼 있나.
+
+    로그인은 `claude-agent-sdk` 로 **연결만** 해서 Claude Code 가 알려 주는 계정
+    정보(구독 종류)로 본다. 자격 증명 파일은 읽지 않고, 이메일은 찍지 않는다.
     """
     binary = shutil.which("claude")
     if not binary:
@@ -90,7 +100,15 @@ def claude_check() -> Check:
     head = (out.strip().splitlines() or [""])[-1]
     if code != 0 or not head:
         return warn("Claude Code", f"판을 못 읽었어요: {head[:120]}")
-    return Check(True, "Claude Code", f"{head} · 로그인 확인은 [확인 필요]")
+    try:
+        got = _login_probe()
+    except Exception as exc:  # SDK 가 없거나 연결이 안 됨
+        return warn("Claude Code", f"{head} · 로그인을 확인하지 못했어요 ({type(exc).__name__})",
+                    hint="터미널에서 claude 를 한 번 열어 로그인돼 있는지 봐 주세요.")
+    if not got.get("loggedIn"):
+        return Check(False, "Claude Code", f"{head} · 로그인이 안 돼 있어요",
+                     hint="터미널에서 claude 를 열고 /login 으로 로그인해 주세요 (lab.remote 는 로그인을 대신하지 않아요).")
+    return Check(True, "Claude Code", f"{head} · 로그인됨 · {got.get('plan') or '구독 종류 모름'}")
 
 
 def tmux_check() -> Check:
@@ -317,7 +335,6 @@ def gpu_driver_check() -> Check:
 
 #: 아직 점검하지 않는 것. 해당 단계에서 채운다.
 LIMITATIONS = (
-    "Claude Code 로그인 여부는 3단계에서 점검해요 [확인 필요].",
     "터널(밖에서 접속) 점검은 9단계에서 더해요.",
 )
 

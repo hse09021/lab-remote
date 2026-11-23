@@ -1,5 +1,5 @@
-import type { FileNode, Paper } from '../types'
-import { overlayPapers, readFileOps, readDiscrepancy } from '../mockStore'
+import type { Paper } from '../types'
+import { overlayPapers, readDiscrepancy } from '../mockStore'
 
 /**
  * mock JSON(처음 상태) 위에 저장소의 내 값을 덮어요.
@@ -11,9 +11,6 @@ export function applyOverlay<T>(path: string, data: T): T {
     return overlayPapers(data as Paper[]) as T
   }
 
-  if (path === '/code/tree') {
-    return applyFileOps(data as FileNode, '') as T
-  }
 
   const reader = path.match(/^\/papers\/([^/]+)\/reader$/)
   if (reader) {
@@ -25,33 +22,4 @@ export function applyOverlay<T>(path: string, data: T): T {
   }
 
   return data
-}
-
-/**
- * 탐색기에서 한 작업(만들기·이름 바꾸기·삭제)을 트리에 덮어요.
- * 경로는 루트를 뺀 '/' 이어 붙인 전체 경로예요.
- */
-function applyFileOps(node: FileNode, parentPath: string): FileNode {
-  const ops = readFileOps()
-  const path = parentPath ? `${parentPath}/${node.name}` : node.name
-  const name = ops.renamed[path] ?? node.name
-  const self = { ...node, name }
-
-  if (node.kind !== 'dir') return self
-
-  const kept = (node.children ?? [])
-    .filter((c) => !ops.deleted.includes(`${path}/${c.name}`))
-    .map((c) => applyFileOps(c, path))
-
-  const added: FileNode[] = ops.created
-    .filter((c) => c.path.startsWith(`${path}/`) && !c.path.slice(path.length + 1).includes('/'))
-    .map((c) => ({
-      // 이름을 바꾸면 created 의 경로 자체가 옮겨져요 (mockStore.renameNode)
-      name: c.path.slice(path.length + 1),
-      kind: c.kind,
-      gitStatus: 'U' as const,
-      ...(c.kind === 'dir' ? { children: [], open: false } : {}),
-    }))
-
-  return { ...self, children: [...added, ...kept] }
 }

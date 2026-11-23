@@ -4,9 +4,6 @@ import {
   removeAnnotation,
   removeSavedPaper,
   restoreAnnotation,
-  createNode,
-  deleteNode,
-  renameNode,
   setDiscrepancy,
   setReadStatus,
   setSummaryMd,
@@ -78,24 +75,6 @@ export function applyMockWrite(method: string, path: string, body: unknown): unk
     return body
   }
 
-  /* 탐색기 파일 작업 */
-  if (path === '/code/tree') {
-    if (method === 'POST') {
-      const { path: at, kind } = body as { path: string; kind: 'file' | 'dir' }
-      createNode(at, kind)
-      return body
-    }
-    if (method === 'PATCH') {
-      const { path: at, name } = body as { path: string; name: string }
-      renameNode(at, name)
-      return body
-    }
-    if (method === 'DELETE') {
-      const { path: at } = body as { path: string }
-      deleteNode(at)
-      return body
-    }
-  }
 
   // 아직 저장소에 없는 쓰기는 보낸 값을 그대로 돌려줘요 (목업 흉내)
   return body

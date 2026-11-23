@@ -8,12 +8,6 @@ import { applyOverlay } from './overlay'
  * 동적 import라 쓰지 않는 mock은 번들에 들어가지 않아요.
  */
 const MOCKS: Record<string, () => Promise<{ default: unknown }>> = {
-  '/code/files': () => import('./code-files.json'),
-  '/code/tree': () => import('./file-tree.json'),
-  '/code/terminal': () => import('./terminal.json'),
-  '/code/commits': () => import('./commits.json'),
-  '/code/chat': () => import('./code-chat.json'),
-  '/code/run': () => import('./code-run.json'),
   '/papers': () => import('./papers.json'),
   '/papers/summaries': () => import('./paper-summaries.json'),
   '/papers/chat': () => import('./library-chat.json'),

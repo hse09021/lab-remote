@@ -109,11 +109,29 @@
 | Conda | `Conda.dc.html` | 환경 목록(보호됨/사용 중 표시), 환경 정보, 잠김·보호 배너, 패키지 설치(conda/pip, 바뀌는 것 미리 보기 → 설치), 패키지 표(업데이트/제거), 삭제(이름 입력) |
 | System | `System.dc.html` | 서버·터널·자동 시작·GPU 상태, "lab.remote 가 바꾼 것" 표(`.labremote/` 포함), 자동 시작 구조(예약 시계, Claude 세션 수), 알림 요약, 보안 안내, 지우기 명령 |
 
-### Claude Code 옵션 매핑 (확인 필요)
+### Claude Code 옵션 매핑 (확인함 — 아래 "확인 결과")
 
 - Mode → SDK 권한 모드: Manual → 기본(편집마다 승인), Edit automatically → 편집 자동 허용, Plan → 계획 모드, Auto → 안전 검사 통과 시 자동 허용. **설치된 `claude-agent-sdk` 와 Claude Code 버전에서 실제로 지원하는 값과 이름을 확인**해서 매핑하고, 지원하지 않는 모드·Effort 단계·Ultracode 는 UI 에서 숨겨요. 기본값은 Manual.
 - 모델 목록은 하드코딩하지 말고 Claude Code / SDK 에서 받아오는 방법을 찾아요. 방법이 없으면 서버 설정 파일의 목록을 쓰고 그 사실을 화면 아래 작은 글씨로 알려요.
 - Mode·Model·Effort 는 세션마다 적용되고 `~/.claude` 를 바꾸지 않아요.
+
+#### 확인 결과 (2026-11-23 · `claude-agent-sdk` 0.2.187 · Claude Code 2.1.318)
+
+설치된 패키지 · 실행 파일 · 공식 문서(code.claude.com/docs)로 확인했고, 실제 세션으로 한 번씩 돌려 봤어요.
+
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| Claude Code 부르기 | `cli_path` 로 사용자가 설치한 `claude`. SDK 에 딸린 사본은 안 씀 | 설치된 SDK |
+| 읽을 설정 | `setting_sources=["user","project","local"]` (터미널에서 쓸 때와 같게 — 사람이 고름) | 사람 결정 |
+| Mode | Manual → `default`, Edit automatically → `acceptEdits`, Plan → `plan`, Auto → `auto`. `bypassPermissions`·`dontAsk` 는 안 씀. Auto 는 모델이 지원할 때만 보임 | SDK `PermissionMode` |
+| Effort | `low`·`medium`·`high`·`xhigh`·`max`. 모델마다 지원 단계가 다름. 세션 중 바꾸는 함수가 없어 다음 연결부터 적용 | SDK `EffortLevel`, server info |
+| 모델 목록 | 하드코딩하지 않고 연결 직후 `get_server_info()["models"]`(모델별 지원 Effort 포함). 계정 정보는 화면에 안 보냄 | 실측 |
+| 승인 | `can_use_tool` 콜백 → 대기 중 승인 → 먼저 온 답. "이 세션에서 계속 허용" 은 lab.remote 가 세션 안에서만 기억(설정 파일 안 씀) | SDK, 실측 |
+| 질문(AskUserQuestion) | `can_use_tool` 로 옴. 답은 `updated_input={"questions": 원래 질문, "answers": {질문 글: label 또는 [label]}}`, 보기 대신 쓴 글은 `response` | 문서 agent-sdk/user-input, 실측 |
+| 할 일 도구 | Opus 4.7·Sonnet 4.6·Haiku 4.5 이하 모델에서만 기본으로 켜짐. `allowed_tools` 에 할 일 도구 이름(TodoWrite·Task*)을 넣어 켬 | 문서 agent-sdk/todo-tracking, 실측 |
+| Ultracode | Effort 단계가 아니라 Claude Code 설정 키 `"ultracode": true`. 세션마다 `settings`(인라인 JSON → `--settings`)로 켬. xhigh 를 지원하는 모델에서만 | 문서 model-config · settings-reference |
+| 로그인 확인 | 연결만 해서 `account.subscriptionType` 으로 봄(자격 증명 파일 안 읽음, 이메일 안 찍음) | 실측 |
+| 남은 것 | 터널 상태(9단계), Discord 에서 바로 답하기(9단계 — 바깥 주소 필요), Ultracode 를 실제로 돌린 결과(사용량이 커서 안 돌려 봄) | — |
 
 ---
 
