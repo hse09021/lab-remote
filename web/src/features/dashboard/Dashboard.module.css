@@ -457,3 +457,68 @@
     max-width: none;
   }
 }
+
+/* 열린 PR · 최근 머지 */
+.gitRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.gitTop {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gitNum,
+.gitBranch {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.gitBranch {
+  margin-left: auto;
+}
+
+.gitTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gitMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.gitPill {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--text-soft);
+}
+
+.gitPill[data-state='리뷰 기다림'],
+.gitPill[data-state='승인됨'] {
+  background: var(--accent-tint);
+  color: var(--accent-dark);
+}
+
+.gitPill[data-state='변경 요청'] {
+  background: var(--attention-tint);
+  color: var(--attention-text);
+}

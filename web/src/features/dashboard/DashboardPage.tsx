@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { dashboardQuery } from '@/api/inbox'
-import type { DashboardPayload } from '@/api/inbox'
+import { dashboardQuery, gitFeedQuery } from '@/api/inbox'
+import type { DashboardPayload, GitFeed } from '@/api/inbox'
 import { resourcesQuery } from '@/api/system'
 import { useAckRun } from '@/api/runs'
 import { sessionsQuery } from '@/api/agents'
@@ -39,6 +39,7 @@ const runHref = (r: Run, extra = '') => `/projects/${encodeURIComponent(r.projec
 
 function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; onView: (v: string) => void }) {
   const dash = useQuery(dashboardQuery())
+  const git = useQuery(gitFeedQuery())
   const agents = useQuery(sessionsQuery())
   // 답 필요가 위로
   const sorted = [...(agents.data?.sessions ?? [])].sort(
@@ -91,7 +92,7 @@ function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; 
         {dash.data && view === 'overview' && (
           <>
             <CutBanner runs={dash.data.runs.cut} />
-            <Stats d={dash.data} sessions={sorted} />
+            <Stats d={dash.data} sessions={sorted} git={git.data} />
             <div className={s.columns}>
               <section aria-label="에이전트 진행 현황" className={s.lanes}>
                 <Lanes sessions={sorted} />
@@ -110,14 +111,7 @@ function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; 
                 ))}
               </section>
               <aside aria-label="Git 과 자원" className={s.side}>
-                <section className={s.sideCard}>
-                  <h2 className={s.h2}>열린 PR</h2>
-                  <div className={s.muted}>4단계(소스 제어)에서 붙어요.</div>
-                </section>
-                <section className={s.sideCard}>
-                  <h2 className={s.h2}>최근 머지</h2>
-                  <div className={s.muted}>4단계(소스 제어)에서 붙어요.</div>
-                </section>
+                <GitCards feed={git.data} failed={git.isError} />
                 <Resources self={dash.data.self} />
               </aside>
             </div>
@@ -205,7 +199,7 @@ function lastEpoch(r: Run): { value: string; unit: string; sub: string } | null 
   return null
 }
 
-function Stats({ d, sessions }: { d: DashboardPayload; sessions: AgentSession[] }) {
+function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSession[]; git?: GitFeed }) {
   const run = d.runs.running[0]
   const prog = run ? lastEpoch(run) : null
   const lanes = laneOf(sessions)
@@ -237,8 +231,22 @@ function Stats({ d, sessions }: { d: DashboardPayload; sessions: AgentSession[] 
           sub: `오늘 끝남 ${d.runs.finishedToday.length - d.runs.failedToday} · 실패 ${d.runs.failedToday}`,
           tone: 'default',
         },
-    { label: '열린 PR', value: '—', sub: '4단계에서 붙어요', tone: 'muted' },
-    { label: '이번 주 머지', value: '—', sub: '4단계에서 붙어요', tone: 'muted' },
+    git?.prs.available
+      ? {
+          label: '열린 PR',
+          value: String(git.prs.items.length),
+          sub: summarizePrs(git.prs.items),
+          tone: 'default',
+        }
+      : { label: '열린 PR', value: '—', sub: git ? 'gh 가 없어서 못 읽어요' : '…', tone: 'muted' },
+    git
+      ? {
+          label: '이번 주 머지',
+          value: String(git.merges.week),
+          sub: git.merges.items[0] ? `오늘 ${git.merges.today} · ${git.merges.items[0].main} ← ${git.merges.items[0].branch || '…'}` : '이번 주에는 없어요',
+          tone: 'default',
+        }
+      : { label: '이번 주 머지', value: '—', sub: '…', tone: 'muted' },
   ]
   return (
     <div className={s.stats}>
@@ -337,5 +345,56 @@ function Resources({ self }: { self: DashboardPayload['self'] }) {
         lab.remote 서버 자신: CPU {self.cpuPct ?? '…'}% · RAM {self.rssMb ?? '?'}MB · GPU 0
       </div>
     </section>
+  )
+}
+
+function summarizePrs(items: GitFeed['prs']['items']) {
+  if (!items.length) return '열린 PR 이 없어요'
+  const count = (state: string) => items.filter((p) => p.state === state).length
+  return [`리뷰 기다림 ${count('리뷰 기다림')}`, `변경 요청 ${count('변경 요청')}`].join(' · ')
+}
+
+/** 오른쪽 "열린 PR" · "최근 머지" — 목업 MissionControl */
+function GitCards({ feed, failed }: { feed?: GitFeed; failed?: boolean }) {
+  return (
+    <>
+      <section className={s.sideCard}>
+        <h2 className={s.h2}>
+          열린 PR {feed?.prs.available && <span className={s.muted}>{feed.prs.items.length}</span>}
+        </h2>
+        {!feed && <div className={s.muted}>{failed ? 'git 기록을 못 읽었어요.' : '불러오는 중이에요…'}</div>}
+        {feed && !feed.prs.available && <div className={s.muted}>{feed.prs.reason}</div>}
+        {feed?.prs.available && feed.prs.items.length === 0 && <div className={s.muted}>열린 PR 이 없어요.</div>}
+        {feed?.prs.items.map((pr) => (
+          <a key={`${pr.project}#${pr.number}`} href={pr.url} target="_blank" rel="noreferrer" className={s.gitRow}>
+            <span className={s.gitTop}>
+              <span className={s.gitNum}>#{pr.number}</span>
+              <span className={s.gitTitle}>{pr.title}</span>
+            </span>
+            <span className={s.gitMeta}>
+              <span className={s.gitPill} data-state={pr.state}>
+                {pr.state}
+              </span>
+              {pr.ci && <span>{pr.ci}</span>}
+              <span className={s.gitBranch}>{pr.branch}</span>
+            </span>
+          </a>
+        ))}
+      </section>
+      <section className={s.sideCard}>
+        <h2 className={s.h2}>
+          최근 머지 {feed && <span className={s.muted}>이번 주 {feed.merges.week} · 오늘 {feed.merges.today}</span>}
+        </h2>
+        {feed && feed.merges.items.length === 0 && <div className={s.muted}>이번 주에 main 에 합친 게 없어요.</div>}
+        {feed?.merges.items.map((m) => (
+          <div key={`${m.project}${m.at}${m.title}`} className={s.gitRow}>
+            <span className={s.gitTitle}>{m.branch || m.title}</span>
+            <span className={s.gitMeta}>
+              {m.project} · {m.main} ← {m.branch || '…'} · {whenShort(m.at)}
+            </span>
+          </div>
+        ))}
+      </section>
+    </>
   )
 }

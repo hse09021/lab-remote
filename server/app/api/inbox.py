@@ -123,6 +123,14 @@ def test_send():
     return {"sent": False, "detail": f"보내지 못했어요{f' (HTTP {status})' if status else ''}"}
 
 
+@router.get("/dashboard/git")
+def git_feed():
+    """열린 PR(gh 가 있을 때) · 최근 머지 — 느려서 Dashboard 본문과 따로, 60초 캐시."""
+    from .. import gitfeed
+
+    return gitfeed.feed()
+
+
 @router.get("/dashboard")
 def overview():
     with db.open_db() as conn:

@@ -176,3 +176,19 @@ def test_worktree_만들기와_정리(repo, tmp_path):
     assert r.status_code == 200 and r.json() == {"removed": rel}
     assert not os.path.exists(os.path.join(repo, rel))
     assert "exp/wd" in _git(repo, "branch", "--list", "exp/wd")  # 브랜치는 남는다
+
+
+def test_최근_머지(repo, monkeypatch):
+    from app import gitfeed
+
+    made = worktree.add(repo, "exp/feed")
+    with open(os.path.join(repo, made["rel"], "src", "train.py"), "a") as fh:
+        fh.write("feed = 1\n")
+    actions.commit(os.path.join(repo, made["rel"]), "feed")
+    actions.merge_to_main(repo, "exp/feed")
+    got = gitfeed.merges()
+    assert got["week"] == 1 and got["today"] == 1
+    assert got["items"][0]["project"] == "demo" and got["items"][0]["branch"] == "exp/feed"
+    # gh 가 없으면 없다고 말한다
+    monkeypatch.setattr(gitfeed.shutil, "which", lambda name: None)
+    assert gitfeed.prs()["available"] is False

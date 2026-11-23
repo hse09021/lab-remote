@@ -114,3 +114,17 @@ export function useTestSend() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['notify'] }),
   })
 }
+
+/* ── Dashboard 의 열린 PR · 최근 머지 (느려서 따로 · 서버가 60초 캐시) ─────── */
+
+export interface GitFeed {
+  merges: { items: { project: string; main: string; branch: string; title: string; at: number }[]; week: number; today: number }
+  prs: {
+    available: boolean
+    reason: string
+    items: { project: string; number: number; title: string; branch: string; state: string; ci: string; url: string }[]
+  }
+}
+
+export const gitFeedQuery = () =>
+  queryOptions({ queryKey: ['dashboard', 'git'], queryFn: () => get<GitFeed>('/dashboard/git'), refetchInterval: 60_000 })

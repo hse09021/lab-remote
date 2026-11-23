@@ -78,7 +78,7 @@
   color: var(--text-muted);
   font-family: inherit;
   font-size: 13px;
-  cursor: not-allowed;
+  cursor: pointer;
 }
 
 .gotoText {

@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { gpuQuery, healthQuery } from '@/api/system'
 import { badgeQuery } from '@/api/inbox'
 import { useOutsideClick } from '@/lib/useOutsideClick'
+import { GotoPalette } from './GotoPalette'
 import s from './AppHeader.module.css'
 
 /** 전역 헤더 한 줄 (PLAN 4.2 · 목업 공통 헤더) */
@@ -17,6 +18,19 @@ const TABS = [
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
 export function AppHeader() {
+  const [goto, setGoto] = useState(false)
+  // Ctrl/⌘+K — 편집기(Monaco) · 터미널은 Ctrl+K 를 자기 단축키로 써서 거기서는 가로채지 않아요
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'k' || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest('.monaco-editor, .xterm')) return
+      e.preventDefault()
+      setGoto((v) => !v)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const gpu = useQuery(gpuQuery())
   const health = useQuery(healthQuery())
   const badge = useQuery(badgeQuery())
@@ -58,8 +72,8 @@ export function AppHeader() {
             type="button"
             className={s.goto}
             aria-label={`Go to, ${isMac ? '⌘' : 'Ctrl+'}K`}
-            title="검색 창은 아직 없어요"
-            disabled
+            title="화면 · 프로젝트 · 논문 · 세션으로 바로 가기"
+            onClick={() => setGoto(true)}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <circle cx="11" cy="11" r="6" />
@@ -79,6 +93,7 @@ export function AppHeader() {
           </Link>
 
           <SettingsMenu />
+          <GotoPalette open={goto} onClose={() => setGoto(false)} />
         </div>
       </div>
     </header>

@@ -1,7 +1,7 @@
 """Dashboard Overview — 등록한 모든 프로젝트의 실행을 한데 모은다.
 
-에이전트(3단계)·PR·머지(4단계 이후)는 아직 없어서 `null` 로 둔다. 화면은
-`null` 을 "몇 단계에서 붙어요" 로 보여 준다 — 0 으로 거짓말하지 않는다.
+PR · 머지는 느린 명령(gh · git log)이라 `/api/dashboard/git`(gitfeed.py)에서 따로 준다.
+에이전트는 `/api/agents/sessions` 에서 따로 받는다. 그래서 여기서는 `null` 로 둔다.
 """
 
 from __future__ import annotations
@@ -81,7 +81,7 @@ def overview(conn) -> dict:
             "failedToday": sum(1 for r in finished_today if r["state"] == "failed"),
         },
         "inbox": {"badge": inbox.badge(conn)},
-        # 뒤 단계에서 채운다
+        # 따로 받는다 (agents/sessions · dashboard/git)
         "agents": None,
         "prs": None,
         "merges": None,
