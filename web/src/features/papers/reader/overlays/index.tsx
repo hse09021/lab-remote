@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import type { CSSProperties } from 'react'
 import type { UserAnnotation } from '@/api/annotations'
-import type { ExplainZone, Highlight, PaperSection, PtRect } from '@/api/types'
+import type { ExplainSpot, ExplainZone, Highlight, PaperSection, PtRect } from '@/api/types'
 import type { PdfPageContext } from '../pdf/types'
 import { HIGHLIGHT_CATEGORIES } from '../highlightCategories'
 import s from './Overlays.module.css'
@@ -116,6 +116,7 @@ export function SectionSparkles({
   ctx,
   sections,
   titleSpot,
+  spots = [],
   onExplain,
   onHover,
 }: {
@@ -123,10 +124,12 @@ export function SectionSparkles({
   sections: PaperSection[]
   /** 1쪽 제목 옆 버튼 */
   titleSpot: { x: number; y: number } | null
+  /** 그림 · 표 · 수식 옆 버튼 */
+  spots?: ExplainSpot[]
   onExplain: (key: string, el: HTMLElement | null) => void
   onHover?: (key: string | null, el: HTMLElement | null) => void
 }) {
-  const spark = (key: string, label: string, x: number, y: number) => (
+  const spark = (key: string, label: string, x: number, y: number, tip = '설명') => (
     <button
       key={key}
       type="button"
@@ -141,7 +144,7 @@ export function SectionSparkles({
     >
       <SparkIcon />
       <span className={s.tip}>
-        설명 <span className={s.kbd}>E</span>
+        {tip} <span className={s.kbd}>E</span>
       </span>
     </button>
   )
@@ -156,6 +159,9 @@ export function SectionSparkles({
           sec.xEnd + 8,
           sec.y + 6,
         ),
+      )}
+      {spots.map((sp) =>
+        spark(sp.key, `${sp.label} 설명받기`, sp.x, sp.y, sp.kind === 'eq' ? '수식 설명' : sp.kind === 'table' ? '표 설명' : '그림 설명'),
       )}
     </>
   )

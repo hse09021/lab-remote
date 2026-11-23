@@ -17,6 +17,9 @@ export function sanitizePaperHtml(raw: string): string {
       'math', 'mi', 'mo', 'mn', 'mrow', 'msub', 'msup', 'msubsup',
       'mfrac', 'msqrt', 'mroot', 'mtext', 'mspace', 'mover', 'munder',
       'mtable', 'mtr', 'mtd', 'semantics', 'annotation',
+      // arXiv(LaTeXML)가 쓰는 나머지 MathML
+      'mstyle', 'mpadded', 'mphantom', 'menclose', 'munderover', 'mmultiscripts', 'mprescripts', 'none',
+      'mlabeledtr', 'merror', 'annotation-xml', 'cite',
     ],
     ALLOWED_ATTR: [
       'id', 'class', 'style', 'colspan', 'rowspan', 'scope',
@@ -25,6 +28,9 @@ export function sanitizePaperHtml(raw: string): string {
       'data-section', 'data-explain', 'data-cite',
       // MathML
       'xmlns', 'display', 'mathvariant', 'encoding', 'columnalign', 'rowspacing', 'columnspacing',
+      'alttext', 'stretchy', 'fence', 'separator', 'lspace', 'rspace', 'accent', 'accentunder',
+      'largeop', 'movablelimits', 'symmetric', 'minsize', 'maxsize', 'linethickness', 'scriptlevel',
+      'displaystyle', 'depth', 'voffset', 'notation', 'rowalign', 'form', 'mathsize',
     ],
     /*
      * 바깥 주소로 나가는 건 막아요 (이미지는 같은 출처 fixtures만).
@@ -37,6 +43,9 @@ export function sanitizePaperHtml(raw: string): string {
       'colspan', 'rowspan', 'scope', 'width', 'height', 'loading', 'target', 'rel', 'type',
       // MathML
       'display', 'mathvariant', 'encoding', 'columnalign', 'rowspacing', 'columnspacing',
+      'alttext', 'stretchy', 'fence', 'separator', 'lspace', 'rspace', 'accent', 'accentunder',
+      'largeop', 'movablelimits', 'symmetric', 'minsize', 'maxsize', 'linethickness', 'scriptlevel',
+      'displaystyle', 'depth', 'voffset', 'notation', 'rowalign', 'form', 'mathsize',
     ],
     ADD_ATTR: ['data-section', 'data-explain', 'data-cite'],
     /*

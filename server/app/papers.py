@@ -232,9 +232,10 @@ def list_papers(*, trash: bool = False) -> list[dict]:
     status = settings().get("status") or {}
     hidden = _hidden()
     cols = _collections()
-    from . import summaries
+    from . import paperhtml, summaries
 
     made = set(summaries.load_all())
+    html = paperhtml.states()
     running = summaries.running_ids()
     out = []
     for p in scan()["papers"]:
@@ -254,6 +255,8 @@ def list_papers(*, trash: bool = False) -> list[dict]:
             "path": f"vault/{p['path']}",
             "hasPdf": p.get("hasPdf", False),
             "arxiv": p.get("arxiv") or "",
+            # arXiv HTML 본문 — done · running · none(arXiv에 없음) · error · missing(아직 안 받음)
+            "htmlState": html.get(p["id"], ""),
             "collections": sorted(name for name, ids in cols.items() if p["id"] in ids),
         })
     return out

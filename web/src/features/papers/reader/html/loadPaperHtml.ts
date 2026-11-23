@@ -18,7 +18,7 @@ export interface LoadedPaperHtml {
 export async function loadPaperHtml(paperId: string): Promise<LoadedPaperHtml> {
   if (import.meta.env.DEV) {
     try {
-      const res = await fetch(`/fixtures/${paperId}.arxiv.html`)
+      const res = await fetch(`/fixtures/${encodeURIComponent(paperId)}.arxiv.html`)
       if (res.ok) {
         const text = await res.text()
         // 서버 설정이 어긋나 SPA 셸(index.html)이 돌아오는 일이 있어서
@@ -34,14 +34,15 @@ export async function loadPaperHtml(paperId: string): Promise<LoadedPaperHtml> {
     }
   }
 
-  if (isMockPath(`/papers/${paperId}/html`)) {
+  const path = `/papers/${encodeURIComponent(paperId)}/html`
+  if (isMockPath(path)) {
     // mock으로 돌 때만 골격을 가져와요. 실제 서버를 볼 땐 번들에 안 들어가요
     const sample = await import('@/api/mock/attn.sample.html?raw')
     return { html: sanitizePaperHtml(sample.default), isReal: false }
   }
 
-  // FastAPI가 붙으면 본문을 여기서 받아요
-  const res = await fetch(`${API_BASE}/papers/${paperId}/html`)
-  if (!res.ok) throw new ApiError(res.status, `/papers/${paperId}/html`)
+  // 서버가 arXiv에서 받아 둔 본문 (그림 주소는 서버가 같은 출처로 바꿔 둬요)
+  const res = await fetch(`${API_BASE}${path}`)
+  if (!res.ok) throw new ApiError(res.status, path)
   return { html: sanitizePaperHtml(await res.text()), isReal: true }
 }

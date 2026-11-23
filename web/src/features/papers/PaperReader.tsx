@@ -12,6 +12,8 @@ import {
   askIsLive,
   runReaderAi,
   useStartAnalysis,
+  useFetchPaperHtml,
+  usePaperHtmlState,
   refPaperId,
   summaryDraftsQuery,
   useChooseDiscrepancy,
@@ -21,6 +23,7 @@ import {
 } from '@/api/papers'
 import type { PaperSource, ReadStatus } from '@/api/types'
 import {
+  Button,
   CollapsedRail,
   ErrorState,
   LoadingState,
@@ -158,6 +161,12 @@ export default function PaperReader() {
     aiLive ? { paperId: id } : null,
   )
   const startAnalysis = useStartAnalysis(id)
+  // vault의 arXiv 논문 — HTML 본문은 데이터 폴더에 받아 둬요 (안 받았으면 누를 때)
+  const fetchHtml = useFetchPaperHtml()
+  const vaultHtml = !reader.data && !!paper?.arxiv
+  const htmlNeeded = vaultHtml && source === 'arxiv-html' && paper?.htmlState !== 'done'
+  const htmlQ = usePaperHtmlState(id, htmlNeeded)
+  const htmlState = htmlNeeded ? (htmlQ.data?.state ?? paper?.htmlState ?? 'missing') : 'done'
   const [liveTr, setLiveTr] = useState<{ text: string; translation: string | null; note: string | null } | null>(null)
 
   /*
@@ -294,7 +303,15 @@ export default function PaperReader() {
   /* ── 떠 있는 것들 공통 핸들러 ─────────────────────────── */
   const openChat = (key: string, anchor: SelectionAnchor, context: string | null = null) => {
     overlays.closeAll()
-    chat.open(topicKeyFor(key, data.topics), anchor, context)
+    // 그림 · 표 · 수식 — 캡션이나 식 글자를 맥락으로 같이 보내요
+    const label = key.replace(/^el:\d+:/, '')
+    const spot =
+      key.startsWith('el:') && context === null
+        ? (data.explainSpots?.find((x) => x.key === key) ?? data.explainSpots?.find((x) => x.label === label))
+        : undefined
+    // HTML 보기에서 누른 것(쪽 모름)은 PDF에서 찾은 같은 이름의 쪽으로 — 같은 대화로 이어져요
+    const samePdf = key.startsWith('el:0:') ? data.explainSpots?.find((x) => x.label === label) : undefined
+    chat.open(topicKeyFor(samePdf?.key ?? key, data.topics), anchor, spot ? spot.text : context)
   }
   const openCite = (n: number, anchor: SelectionAnchor) => overlays.openCite(n, anchor)
   const onHover = (key: string | null, anchor: SelectionAnchor | null) => {
@@ -524,6 +541,9 @@ export default function PaperReader() {
               onChange={(next) => {
                 // 읽던 섹션을 그대로 두고 형식만 바꿔요
                 setSource(next)
+                if (next === 'arxiv-html' && vaultHtml && paper?.htmlState !== 'done' && paper?.htmlState !== 'running') {
+                  fetchHtml.mutate(id)
+                }
                 if (activeId) requestJump({ sectionId: activeId })
               }}
               label="원문 형식"
@@ -598,6 +618,24 @@ export default function PaperReader() {
                   onDismiss: () => setNudgeDismissed(true),
                 }}
               />
+            ) : htmlState !== 'done' ? (
+              <div className={s.htmlWait}>
+                {htmlState === 'none' ? (
+                  <p>arXiv에 이 논문의 HTML 본문이 없어요. PDF로 읽어 주세요.</p>
+                ) : htmlState === 'error' || fetchHtml.isError ? (
+                  <>
+                    <p>arXiv HTML을 받지 못했어요.</p>
+                    <Button variant="outline" size="md" onClick={() => fetchHtml.mutate(id)}>
+                      다시 받기
+                    </Button>
+                  </>
+                ) : (
+                  <p>arXiv HTML 본문과 그림을 받는 중이에요… 한 번만 받아 두면 다음부터 바로 열려요.</p>
+                )}
+                <Button variant="outline" size="md" onClick={() => setSource('pdf')}>
+                  PDF로 보기
+                </Button>
+              </div>
             ) : (
               <HtmlView
                 reader={data}

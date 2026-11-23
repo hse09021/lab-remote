@@ -381,6 +381,8 @@ export function PdfView({
                 // 미리 써 둔 설명이 없는 논문(vault)에는 설명 버튼을 두지 않아요
                 sections={hasTopics ? pageSections : []}
                 titleSpot={hasTopics && ctx.page === 1 ? TITLE_SPOT : null}
+                // 그림 · 표 · 수식 — 캡션 · 식 번호 옆 (vault 논문은 누를 때 서버에 물어요)
+                spots={aiLive ? (reader.explainSpots ?? []).filter((x) => x.page === ctx.page) : []}
                 onExplain={(key, el) => openAt(key, el)}
                 onHover={(key, el) =>
                   onHover(key, key && el ? anchorAt(el) : null)

@@ -43,6 +43,14 @@
 }
 
 /* ── 섹션 헤딩 옆 설명 버튼 ───────────────────────────────── */
+/* 그림 · 표 · 수식 설명 버튼 — 본문 오른쪽 여백에 (식 번호 · 그림을 가리지 않게) */
+.elementSlot {
+  position: absolute;
+  top: 0;
+  right: -36px;
+  z-index: 2;
+}
+
 .sparkleSlot {
   position: absolute;
   top: 50%;

@@ -28,8 +28,8 @@ interface Props {
   jump: HtmlJump | null
   onActiveSection: (id: string) => void
   onProgress: (pct: number) => void
-  /** 설명 버튼·그림·수식 — 누른 자리를 함께 넘겨요 */
-  onExplain: (key: string, anchor: Anchor) => void
+  /** 설명 버튼·그림·수식 — 누른 자리를 함께 넘겨요 (그림 · 표 · 수식은 캡션 · 식 글자도) */
+  onExplain: (key: string, anchor: Anchor, context?: string | null) => void
   /** 본문 인용 칩 */
   onCite: (n: number, anchor: Anchor) => void
   /** 실제 드래그 선택 — 다시 그릴 자리(블록 id + 오프셋)까지 넘겨요 */
@@ -71,10 +71,12 @@ export function HtmlView({
   /** 주입된 HTML 안에 React를 끼워 넣을 자리들 */
   const [slots, setSlots] = useState<{
     sparkles: Array<{ key: string; el: HTMLElement; label: string }>
+    /** 그림 · 표 · 수식 */
+    elements: Array<{ key: string; el: HTMLElement; label: string; tip: string; context: string }>
     config: HTMLElement | null
     check: HTMLElement | null
     memo: HTMLElement | null
-  }>({ sparkles: [], config: null, check: null, memo: null })
+  }>({ sparkles: [], elements: [], config: null, check: null, memo: null })
 
   const scrollRef = useRef<HTMLDivElement>(null)
   /* 이동 직후에는 관찰자가 다음 섹션으로 덮어쓰지 않게 잠깐 쉬어요 */
@@ -120,8 +122,42 @@ export function HtmlView({
       })
     }
 
+    // 그림 · 표 · 수식 (arXiv LaTeXML) — 오른쪽 위에 설명 버튼
+    const elements: Array<{ key: string; el: HTMLElement; label: string; tip: string; context: string }> = []
+    const used = new Set<string>()
+    let eqAuto = 0
+    for (const box of Array.from(root.querySelectorAll<HTMLElement>('.ltx_figure, .ltx_table, .ltx_equationgroup, .ltx_equation'))) {
+      if (box.classList.contains('ltx_equation') && box.closest('.ltx_equationgroup')) continue
+      if (box.parentElement?.closest('.ltx_figure, .ltx_table')) continue // 그림 안의 작은 그림
+      const isEq = !box.classList.contains('ltx_figure') && !box.classList.contains('ltx_table')
+      const isTable = box.classList.contains('ltx_table')
+      const caption = box.querySelector('.ltx_caption')?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+      const tag = isEq
+        ? (box.querySelector('.ltx_tag_equation')?.textContent ?? '').trim()
+        : (box.querySelector('.ltx_caption .ltx_tag')?.textContent ?? '').replace(/[:.]\s*$/, '').trim()
+      const label = isEq ? (tag ? `식 ${tag}` : `식 ${++eqAuto}번째`) : tag || (isTable ? '표' : '그림')
+      if (used.has(label)) continue
+      used.add(label)
+      const tex = Array.from(box.querySelectorAll('math'))
+        .map((m) => m.getAttribute('alttext') ?? '')
+        .filter(Boolean)
+        .join(' ')
+      box.style.position = 'relative'
+      const slot = document.createElement('span')
+      slot.className = s.elementSlot!
+      box.appendChild(slot)
+      elements.push({
+        key: `el:0:${label}`,
+        el: slot,
+        label,
+        tip: isEq ? '수식 설명' : isTable ? '표 설명' : '그림 설명',
+        context: (isEq ? tex : caption).slice(0, 600),
+      })
+    }
+
     setSlots({
       sparkles,
+      elements,
       config: root.querySelector<HTMLElement>('#config-card'),
       check: root.querySelector<HTMLElement>('#note-check'),
       memo: root.querySelector<HTMLElement>('#memo-fn4'),
@@ -129,6 +165,7 @@ export function HtmlView({
 
     return () => {
       sparkles.forEach((x) => x.el.remove())
+      elements.forEach((x) => x.el.remove())
     }
   }, [html, reader.sections])
 
@@ -202,6 +239,42 @@ export function HtmlView({
     }
   }, [html, onCite, onExplain, onSelect, onHover, reader.sections])
 
+  /*
+   * ── vault 논문: PDF 목차 섹션 ↔ arXiv HTML 제목 잇기 ────────
+   * 미리 만든 리더 데이터는 섹션마다 htmlAnchor가 있지만, vault 논문은 PDF 책갈피에서
+   * 온 섹션이라 없어요. 제목 글자를 맞춰서 HTML 제목에 data-section을 붙여요.
+   */
+  // 어느 본문으로 만든 지도인지 같이 둬요 — 다 만들기 전에는 이동을 미뤄요
+  const [mapped, setMapped] = useState<{ html: string | null; map: Record<string, string> }>({ html: null, map: {} })
+  const anchors = mapped.map
+  useEffect(() => {
+    const root = bodyRef.current
+    if (!root || !html) return
+    const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+    const heads = Array.from(root.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')).map((h) => {
+      const tag = h.querySelector('.ltx_tag')?.textContent ?? ''
+      const text = h.textContent ?? ''
+      return { el: h, key: norm(tag ? text.replace(tag, '') : text.replace(/^\s*(?:\d+|[A-Z])(?:\.\d+)*\.?\s+/, '')) }
+    })
+    const map: Record<string, string> = {}
+    let from = 0
+    for (const sec of reader.sections) {
+      if (sec.htmlAnchor) continue
+      const want = norm(sec.title)
+      if (!want) continue
+      // 순서대로 찾아요 — 같은 제목이 뒤에 또 있어도(부록 등) 앞에서부터
+      let i = heads.findIndex((h, j) => j >= from && h.key === want)
+      if (i < 0) i = heads.findIndex((h, j) => j >= from && want.length >= 6 && (h.key.startsWith(want) || want.startsWith(h.key)) && h.key.length >= 6)
+      if (i < 0) continue
+      from = i + 1
+      const h = heads[i]!.el
+      if (!h.id) h.id = `lr-${sec.id}`
+      h.dataset.section = sec.id
+      map[sec.id] = h.id
+    }
+    setMapped({ html, map })
+  }, [html, reader.sections])
+
   /* ── 스크롤 추적 ─────────────────────────────────────────── */
   useEffect(() => {
     const root = scrollRef.current
@@ -221,7 +294,7 @@ export function HtmlView({
     )
     marks.forEach((m) => io.observe(m))
     return () => io.disconnect()
-  }, [html, onActiveSection])
+  }, [html, onActiveSection, anchors])
 
   const reportProgress = useCallback(() => {
     const el = scrollRef.current
@@ -263,8 +336,9 @@ export function HtmlView({
       const body = bodyRef.current
       if (!root || !body) return
       const sec = reader.sections.find((x) => x.id === sectionId)
-      if (!sec?.htmlAnchor) return
-      const el = body.querySelector<HTMLElement>(`#${CSS.escape(sec.htmlAnchor)}`)
+      const anchor = sec?.htmlAnchor ?? anchors[sectionId]
+      if (!anchor) return
+      const el = body.querySelector<HTMLElement>(`#${CSS.escape(anchor)}`)
       if (!el) return
       // offsetTop은 offsetParent 기준이라 어긋나요. 화면 좌표로 계산해요.
       const top =
@@ -275,19 +349,19 @@ export function HtmlView({
       suppressUntil.current = Date.now() + (smooth ? 700 : 300)
       root.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' })
     },
-    [reader.sections],
+    [reader.sections, anchors],
   )
 
   // PDF에서 넘어오면 본문이 아직 없을 수 있어요.
   // 본문이 붙은 뒤에도 한 번 맞춰 줘야 읽던 자리가 유지돼요.
   const appliedJump = useRef<number | null>(null)
   useEffect(() => {
-    if (!html || !jump) return
+    if (!html || !jump || mapped.html !== html) return
     if (appliedJump.current === jump.nonce) return
     appliedJump.current = jump.nonce
     // 주입 직후에는 레이아웃이 아직이라 한 프레임 뒤에 옮겨요
     requestAnimationFrame(() => scrollToSection(jump.sectionId, false))
-  }, [html, jump, scrollToSection])
+  }, [html, jump, scrollToSection, mapped.html])
 
   if (failed) {
     return (
@@ -313,6 +387,8 @@ export function HtmlView({
         ) : (
           <div
             ref={bodyRef}
+            // arXiv 본문은 <article class="ltx_document">라 논문 글꼴 · 폭을 바깥에서 입혀요
+            className={isReal ? 'paper' : undefined}
             // loadPaperHtml이 DOMPurify로 정리한 결과만 들어와요
             dangerouslySetInnerHTML={{ __html: html }}
           />
@@ -338,6 +414,23 @@ export function HtmlView({
               onClick={(el) => {
                 const scroller = scrollRef.current
                 if (scroller) onExplain(x.key, anchorFrom(el, scroller))
+              }}
+              onHover={(el) => {
+                const scroller = scrollRef.current
+                onHover(el && scroller ? x.key : null, el && scroller ? anchorFrom(el, scroller) : null)
+              }}
+            />,
+            x.el,
+          ),
+        )}
+        {slots.elements.map((x) =>
+          createPortal(
+            <Sparkle
+              label={`${x.label} 설명받기`}
+              tip={x.tip}
+              onClick={(el) => {
+                const scroller = scrollRef.current
+                if (scroller) onExplain(x.key, anchorFrom(el, scroller), x.context)
               }}
               onHover={(el) => {
                 const scroller = scrollRef.current

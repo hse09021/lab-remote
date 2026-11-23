@@ -5,10 +5,10 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import APIRouter, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from .. import annotations, library, papers, reader_ai, summaries
+from .. import annotations, library, paperhtml, papers, reader_ai, summaries
 
 router = APIRouter()
 
@@ -279,11 +279,56 @@ def trash(pid: str, body: TrashBody):
 
 @router.post("/papers/arxiv")
 def add_arxiv(body: ArxivBody):
-    """arXiv 링크로 논문 추가 — vault에 새 노트(+ PDF)만 쓴다."""
+    """arXiv 링크로 논문 추가 — vault에 새 노트(+ PDF)만 쓴다. arXiv HTML은 뒤에서 데이터 폴더로 받는다."""
     try:
-        return papers.add_arxiv(body.url)
+        made = papers.add_arxiv(body.url)
     except papers.PapersError as exc:
         return _bad(exc)
+    try:
+        if paperhtml.state(made["id"]) in ("missing", "error"):
+            made["html"] = paperhtml.start(made["id"])
+    except papers.PapersError:
+        pass
+    return made
+
+
+# 받은 본문을 주소로 바로 열어도 페이지로 그려지지 않게 — 화면은 글로 받아 DOMPurify로 걸러요
+_NO_RUN = {"Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'", "X-Content-Type-Options": "nosniff"}
+
+
+@router.get("/papers/{pid}/html")
+def get_html(pid: str):
+    """arXiv HTML 본문 (데이터 폴더에 받아 둔 것)"""
+    try:
+        return PlainTextResponse(paperhtml.html_of(pid), headers=_NO_RUN)
+    except papers.PapersError as exc:
+        return _bad(exc, 404)
+
+
+@router.post("/papers/{pid}/html")
+def fetch_html(pid: str):
+    """arXiv HTML 받기 (뒤에서) — 예전에 넣은 arXiv 논문을 리더에서 처음 열 때"""
+    try:
+        return {"state": paperhtml.start(pid)}
+    except papers.PapersError as exc:
+        return _bad(exc, 404)
+
+
+@router.get("/papers/{pid}/html/state")
+def html_state(pid: str):
+    try:
+        paperhtml.arxiv_of(pid)
+    except papers.PapersError as exc:
+        return _bad(exc, 404)
+    return {"state": paperhtml.state(pid)}
+
+
+@router.get("/papers/{pid}/html/assets/{name}")
+def html_asset(pid: str, name: str):
+    try:
+        return FileResponse(paperhtml.asset_of(pid, name), headers={**_NO_RUN, "Cache-Control": "max-age=86400"})
+    except papers.PapersError as exc:
+        return _bad(exc, 404)
 
 
 @router.put("/papers/pdf")

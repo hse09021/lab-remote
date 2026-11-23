@@ -228,3 +228,147 @@
   padding: 0 1px;
   background: var(--hl-edge);
 }
+
+/*
+ * ── arXiv HTML (LaTeXML) ─────────────────────────────────────
+ * 서버가 arXiv에서 받아 둔 본문(<article class="ltx_document">)이에요.
+ */
+.paper img {
+  max-width: 100%;
+  height: auto;
+}
+
+.paper .ltx_title_document {
+  font-size: 26px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.paper .ltx_authors {
+  display: block;
+  margin: 12px 0 24px;
+  font-size: 13.5px;
+  text-align: center;
+  color: var(--text-soft);
+}
+
+.paper .ltx_abstract {
+  margin: 0 0 28px;
+  font-size: 14.5px;
+}
+
+.paper .ltx_tag {
+  margin-right: 8px;
+}
+
+.paper .ltx_figure,
+.paper .ltx_table {
+  margin: 24px 0;
+  max-width: 100%;
+  text-align: center;
+}
+
+.paper .ltx_caption {
+  display: block;
+  margin-top: 8px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  text-align: left;
+  color: var(--text-soft);
+}
+
+.paper .ltx_tabular {
+  margin: 0 auto;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.paper .ltx_td,
+.paper .ltx_th {
+  padding: 3px 8px;
+}
+
+.paper .ltx_border_t { border-top: 1px solid var(--border-strong); }
+.paper .ltx_border_b { border-bottom: 1px solid var(--border-strong); }
+.paper .ltx_border_tt { border-top: 2px solid var(--border-strong); }
+.paper .ltx_border_bb { border-bottom: 2px solid var(--border-strong); }
+.paper .ltx_border_l { border-left: 1px solid var(--border-strong); }
+.paper .ltx_border_r { border-right: 1px solid var(--border-strong); }
+
+.paper .ltx_equation,
+.paper .ltx_equationgroup {
+  width: 100%;
+  margin: 16px 0;
+  border-collapse: collapse;
+}
+
+.paper .ltx_equation td,
+.paper .ltx_equationgroup td {
+  padding: 0 4px;
+}
+
+.paper .ltx_eqn_center_padleft,
+.paper .ltx_eqn_center_padright {
+  width: 50%;
+}
+
+.paper .ltx_eqn_eqno {
+  width: 1%;
+  padding-left: 12px;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--text-muted);
+}
+
+/* 각주 본문은 숨기고 표시만 남겨요 */
+.paper .ltx_note_outer {
+  display: none;
+}
+
+.paper .ltx_note_mark {
+  font-size: 0.75em;
+  vertical-align: super;
+  color: var(--text-muted);
+}
+
+.paper .ltx_bibliography {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.paper .ltx_listing,
+.paper .ltx_verbatim {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  overflow-x: auto;
+}
+
+/*
+ * LaTeXML의 \resizebox — 바깥에 줄인 크기를 고정하고 안쪽을 transform으로 줄여요.
+ * 글꼴이 달라 높이가 어긋나면 표끼리 겹쳐서, 줄이기를 풀고 넓으면 가로로 스크롤해요.
+ */
+.paper .ltx_transformed_outer {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100%;
+  overflow-x: auto;
+  vertical-align: baseline !important;
+}
+
+.paper .ltx_transformed_inner {
+  transform: none !important;
+}
+
+/* 나란히 놓인 그림 · 표 묶음 */
+.paper .ltx_flex_figure {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+.paper .ltx_flex_break {
+  flex-basis: 100%;
+}

@@ -50,6 +50,9 @@ const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers\/ask$/, ['POST']],
   [/^\/papers\/ask\/[^/]+$/, ['GET']],
   [/^\/papers\/[^/]+\/pdf$/, ['GET']],
+  // arXiv HTML 본문 · 받기 · 상태
+  [/^\/papers\/[^/]+\/html$/, ['GET', 'POST']],
+  [/^\/papers\/[^/]+\/html\/state$/, ['GET']],
 ]
 
 const isLive = (path: string, method = 'GET') =>

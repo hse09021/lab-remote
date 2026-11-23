@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { runReaderAi } from '@/api/papers'
 import type { ExplainResult } from '@/api/papers'
 import type { ChatEntry, PaperSection, Topic } from '@/api/types'
@@ -48,6 +48,32 @@ const toTopic = (r: ExplainResult): Topic => ({
   qs: (r.questions ?? []).map((q) => ({ q, a: '', go: '', src: '' })),
 })
 
+/**
+ * 닫아도 남는 대화 — 논문마다, 대화(설명 주제 + 고른 글)마다 둬요.
+ * X는 창만 닫고, 휴지통을 눌러야 그 대화가 지워져요. 다른 논문에 갔다 와도 남아요(새로 고치면 비워져요).
+ */
+interface Saved {
+  log: ChatEntry[]
+  asked: Record<string, true>
+  liveTopic: Topic | null
+}
+const SAVED = new Map<string, Saved>()
+const sessionKey = (paper: string, topicKey: string, context: string | null) => `${paper}\u0000${topicKey}\u0000${context ?? ''}`
+
+/** 열린 창이 그 대화가 아니어도 저장소에 답을 넣어요 (창을 닫은 뒤에 온 답) */
+function patchSaved(key: string, fn: (s: Saved) => Saved) {
+  const cur = SAVED.get(key) ?? { log: [], asked: {}, liveTopic: null }
+  SAVED.set(key, fn(cur))
+}
+
+const fillAnswer = (log: ChatEntry[], answer: ChatEntry) => {
+  const out = [...log]
+  const i = out.findIndex((e) => e.kind === 'loading')
+  if (i >= 0) out[i] = answer
+  else out.push(answer)
+  return out
+}
+
 export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSection[] = [], live: LiveChat | null = null) {
   const [state, setState] = useState<FloatingChatState>(EMPTY)
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([])
@@ -56,51 +82,79 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
   // 앞 대화 · 고른 글을 보낼 때 읽는 지금 상태
   const now = useRef(state)
   now.current = state
+  const paperKey = live?.paperId ?? 'local'
+  /** 지금 열린 대화의 키 */
+  const current = useRef<string | null>(null)
+
+  // 열린 대화가 바뀔 때마다 저장소에 같이 적어요
+  useEffect(() => {
+    if (current.current && state.open) {
+      SAVED.set(current.current, { log: state.log, asked: state.asked, liveTopic: state.liveTopic })
+    }
+  }, [state.open, state.log, state.asked, state.liveTopic])
 
   const open = useCallback(
     (topicKey: string, anchor: ChatAnchor | null, context: string | null = null) => {
-      const n = ++seq.current
+      seq.current++
       const sec = sections.find((x) => x.id === topicKey)
       const needLive = !!live && !topics[topicKey]
-      const kind = sec ? 'section' : context ? 'selection' : null
+      // 그림 · 표 · 수식 — `el:<쪽>:<이름>`
+      const el = topicKey.match(/^el:(\d+):(.+)$/)
+      const kind = sec ? 'section' : el ? 'element' : context ? 'selection' : null
+      const key = sessionKey(paperKey, topicKey, context)
+      current.current = key
+      const saved = SAVED.get(key)
+      // 전에 연 대화면 그대로 이어요 — 설명도 다시 묻지 않아요(실패했던 것만 다시)
+      const reuse = saved && saved.liveTopic && saved.liveTopic.title !== '설명하지 못했어요'
+      if (saved && (reuse || !needLive || !kind)) {
+        setState({ open: true, minimized: false, topicKey, anchor, log: saved.log, asked: saved.asked, context, liveTopic: saved.liveTopic })
+        return
+      }
       setState({
         open: true,
         minimized: false,
         topicKey,
         anchor,
-        log: [],
-        asked: {},
+        log: saved?.log ?? [],
+        asked: saved?.asked ?? {},
         context,
         liveTopic: needLive
           ? kind
-            ? { title: sec ? `${sec.n ? `§${sec.n} ` : ''}${sec.title}` : '고른 글', blocks: [{ p: 'Claude가 논문을 읽는 중이에요…' }], qs: [] }
+            ? { title: sec ? `${sec.n ? `§${sec.n} ` : ''}${sec.title}` : el ? el[2]! : '고른 글', blocks: [{ p: 'Claude가 논문을 읽는 중이에요…' }], qs: [] }
             : { title: '이 논문에 묻기', blocks: [{ p: '아래에 질문을 적으면 Claude가 이 논문을 읽고 답해요.' }], qs: [] }
           : null,
       })
       if (!needLive || !kind || !live) return
       runReaderAi<ExplainResult>(live.paperId, {
         kind,
-        section: sec ? `${sec.n ? `${sec.n} ` : ''}${sec.title}` : '',
+        section: sec ? `${sec.n ? `${sec.n} ` : ''}${sec.title}` : el ? el[2]! : '',
         text: context ?? '',
-        page: sec?.page ?? 0,
+        page: sec?.page ?? (el ? Number(el[1]) : 0),
       })
-        .then((r) => n === seq.current && setState((p) => ({ ...p, liveTopic: toTopic(r) })))
-        .catch(
-          (e: unknown) =>
-            n === seq.current &&
-            setState((p) => ({ ...p, liveTopic: { title: '설명하지 못했어요', blocks: [{ p: e instanceof Error ? e.message : String(e) }], qs: [] } })),
-        )
+        .then((r) => {
+          const topic = toTopic(r)
+          patchSaved(key, (x) => ({ ...x, liveTopic: topic }))
+          if (current.current === key) setState((p) => ({ ...p, liveTopic: topic }))
+        })
+        .catch((e: unknown) => {
+          const topic = { title: '설명하지 못했어요', blocks: [{ p: e instanceof Error ? e.message : String(e) }], qs: [] }
+          patchSaved(key, (x) => ({ ...x, liveTopic: topic }))
+          if (current.current === key) setState((p) => ({ ...p, liveTopic: topic }))
+        })
     },
-    [live, sections, topics],
+    [live, sections, topics, paperKey],
   )
 
+  /** X — 창만 닫아요. 대화는 저장소에 남아요 */
   const close = useCallback(() => {
-    timers.current.forEach(clearTimeout)
-    timers.current = []
+    current.current = null
+    seq.current++
     setState(EMPTY)
   }, [])
 
+  /** 휴지통 — 이 대화만 지워요 */
   const clearLog = useCallback(() => {
+    if (current.current) patchSaved(current.current, (x) => ({ ...x, log: [], asked: {} }))
     setState((p) => ({ ...p, log: [], asked: {} }))
   }, [])
 
@@ -118,17 +172,17 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
           e.kind === 'user' ? [{ role: 'user', text: e.text }] : e.kind === 'answer' ? [{ role: 'assistant', text: e.text }] : [],
         )
         const context = now.current.context ?? ''
+        const key = current.current
         setState((p) => ({ ...p, log: [...p.log, { kind: 'user', text: question }, { kind: 'loading' }], asked: { ...p.asked, [question]: true } }))
-        const finish = (text: string) =>
-          n === seq.current &&
-          setState((p) => {
-            const log = [...p.log]
-            const i = log.findIndex((e) => e.kind === 'loading')
-            const answer: ChatEntry = { kind: 'answer', text }
-            if (i >= 0) log[i] = answer
-            else log.push(answer)
-            return { ...p, log }
-          })
+        const finish = (text: string) => {
+          const answer: ChatEntry = { kind: 'answer', text }
+          if (n === seq.current && current.current === key) {
+            setState((p) => ({ ...p, log: fillAnswer(p.log, answer) }))
+          } else if (key) {
+            // 창을 닫은 뒤에 온 답 — 그 대화에 넣어 둬요
+            patchSaved(key, (x) => ({ ...x, log: fillAnswer(x.log, answer) }))
+          }
+        }
         runReaderAi<ExplainResult>(live.paperId, { kind: 'ask', question, history, text: context })
           .then((r) => finish((r.paragraphs ?? []).join('\n\n') || r.title))
           .catch((e: unknown) => finish(`답하지 못했어요 — ${e instanceof Error ? e.message : String(e)}`))
@@ -139,20 +193,19 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
         log: [...p.log, { kind: 'user', text: question }, { kind: 'loading' }],
         asked: { ...p.asked, [question]: true },
       }))
+      const key = current.current
       const t = setTimeout(() => {
-        setState((p) => {
-          const log = [...p.log]
-          const i = log.findIndex((e) => e.kind === 'loading')
+        const fill = (p: { log: ChatEntry[] }) => {
           const answer: ChatEntry = canned
             ? { kind: 'answer', text: canned.a, go: canned.go, src: canned.src }
             : {
                 kind: 'answer',
                 text: '서버 없이 화면만 보는 모드(VITE_USE_MOCK=all)라 미리 써 둔 답만 있어요.',
               }
-          if (i >= 0) log[i] = answer
-          else log.push(answer)
-          return { ...p, log }
-        })
+          return fillAnswer(p.log, answer)
+        }
+        if (current.current === key) setState((p) => ({ ...p, log: fill(p) }))
+        else if (key) patchSaved(key, (x) => ({ ...x, log: fill(x) }))
       }, ANSWER_DELAY)
       timers.current.push(t)
     },

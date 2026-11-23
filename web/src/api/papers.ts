@@ -4,6 +4,7 @@ import type {
   LibraryChat,
   Paper,
   PaperGraph,
+  PaperHtmlState,
   VaultInfo,
   PaperReaderPayload,
   PaperSummaryMap,
@@ -277,6 +278,32 @@ export interface SummaryJob {
   error: string
 }
 
+/* ── arXiv HTML 본문 (데이터 폴더에 받아 둬요) ───────────────────────────── */
+
+/** 받기 시작 — 예전에 넣은 arXiv 논문을 리더에서 처음 HTML로 볼 때 */
+export function useFetchPaperHtml() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => send<{ state: PaperHtmlState }>('POST', `/papers/${encodeURIComponent(id)}/html`, {}),
+    onSuccess: (_r, id) => qc.invalidateQueries({ queryKey: ['papers', 'html-state', id] }),
+  })
+}
+
+/** 받는 동안 2초마다 물어보고, 끝나면 목록을 새로 받아요 */
+export function usePaperHtmlState(id: string, enabled: boolean) {
+  const qc = useQueryClient()
+  return useQuery({
+    queryKey: ['papers', 'html-state', id],
+    queryFn: async () => {
+      const r = await get<{ state: PaperHtmlState }>(`/papers/${encodeURIComponent(id)}/html/state`)
+      if (r.state !== 'running') void qc.invalidateQueries({ queryKey: ['papers'], exact: true })
+      return r
+    },
+    enabled,
+    refetchInterval: (q) => (q.state.data?.state === 'running' ? 2000 : false),
+  })
+}
+
 export function useMakeSummary() {
   const qc = useQueryClient()
   return useMutation({
@@ -302,7 +329,7 @@ export function useSummaryJob(id: string, enabled: boolean) {
 
 /* ── 리더 AI (누를 때만 · 그 논문의 노트 · PDF를 읽기 전용으로) ─────────────── */
 
-export type ReaderAiKind = 'section' | 'selection' | 'ask' | 'translate' | 'analyze'
+export type ReaderAiKind = 'section' | 'selection' | 'element' | 'ask' | 'translate' | 'analyze'
 
 export interface ReaderAiBody {
   kind: ReaderAiKind

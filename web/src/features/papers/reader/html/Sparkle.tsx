@@ -6,10 +6,13 @@ import o from '../overlays/Overlays.module.css'
  */
 export function Sparkle({
   label,
+  tip = '설명',
   onClick,
   onHover,
 }: {
   label: string
+  /** 말풍선 글자 — "그림 설명" · "표 설명" · "수식 설명" */
+  tip?: string
   onClick: (el: HTMLElement) => void
   onHover?: (el: HTMLElement | null) => void
 }) {
@@ -40,7 +43,7 @@ export function Sparkle({
         <path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" />
       </svg>
       <span className={o.tip}>
-        설명 <span className={o.kbd}>E</span>
+        {tip} <span className={o.kbd}>E</span>
       </span>
     </button>
   )

@@ -79,7 +79,7 @@ ANALYZE = {
     "required": ["highlights", "references"],
 }
 
-KINDS = ("section", "selection", "ask", "translate", "analyze")
+KINDS = ("section", "selection", "element", "ask", "translate", "analyze")
 _jobs: dict[str, dict] = {}
 
 
@@ -118,6 +118,15 @@ def _prompt(kind: str, p: dict, req: dict) -> tuple[str, dict]:
     hist = [f"[{'질문' if h.get('role') == 'user' else '답'}] {str(h.get('text') or '')[:1200]}" for h in (req.get("history") or [])[-6:] if isinstance(h, dict)]
     if kind == "section":
         base += [f"이 논문의 '{req.get('section') or text}' 부분({page}쪽 근처)을 처음 읽는 사람에게 풀어서 설명해 주세요."]
+        return "\n".join(base), EXPLAIN
+    if kind == "element":
+        # 그림 · 표 · 수식 — 캡션(또는 식 줄)과 쪽을 받아 PDF에서 그 자리를 직접 보고 설명
+        label = str(req.get("section") or "그림")[:80]
+        base += [
+            f"{str(page) + '쪽의 ' if page else ''}{label}을(를) 처음 보는 사람에게 풀어서 설명해 주세요.",
+            "PDF에서 그 자리를 직접 보고 — 무엇을 보여 주는지, 축 · 열 · 기호가 뜻하는 것, 본문이 여기서 끌어내는 결론을 짚어 주세요.",
+            f"캡션 · 식 글자: \"{text}\"" if text else "",
+        ]
         return "\n".join(base), EXPLAIN
     if kind == "selection":
         base += [f"{page}쪽의 이 구절을 풀어서 설명해 주세요:", f"\"{text}\""]
@@ -171,7 +180,7 @@ def start(pid: str, kind: str, req: dict | None = None, *, model: str = "", quer
         raise ReaderAiError("모르는 요청이에요.")
     _paper(pid)
     req = req or {}
-    if kind in ("selection", "translate") and not str(req.get("text") or "").strip():
+    if kind in ("selection", "translate") and not str(req.get("text") or "").strip():  # element는 글자 없이도 돼요(쪽 + 이름)
         raise ReaderAiError("고른 글이 없어요.")
     if kind == "ask" and not str(req.get("question") or "").strip():
         raise ReaderAiError("질문을 적어 주세요.")

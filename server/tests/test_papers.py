@@ -6,7 +6,7 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-from app import main, papers, projects
+from app import main, paperhtml, papers, projects
 
 H = {"X-Lab-Remote": "1"}
 
@@ -209,9 +209,13 @@ def test_추가_API(vault, tmp_path, monkeypatch):
     client.put("/api/papers/vault", json={"path": vault}, headers=H)
     monkeypatch.setattr(papers, "_get", _fetch())
     monkeypatch.setattr(papers, "add_arxiv", lambda url, _f=papers.add_arxiv: _f(url, fetch=_fetch()))
+    started = []
+    monkeypatch.setattr(paperhtml, "start", lambda pid: started.append(pid) or "running")
     assert client.post("/api/papers/arxiv", json={"url": "nope"}, headers=H).status_code == 400
     r = client.post("/api/papers/arxiv", json={"url": "https://arxiv.org/abs/1706.03762"}, headers=H)
-    assert r.status_code == 200 and r.json()["created"]
+    # arXiv HTML도 뒤에서 같이 받아요
+    assert r.status_code == 200 and r.json()["created"] and r.json()["html"] == "running"
+    assert started == ["Attention Is All You Need"]
     r = client.put("/api/papers/pdf?name=my paper.pdf", content=b"%PDF-1.4 x", headers={**H, "Content-Type": "application/octet-stream"})
     assert r.status_code == 200 and r.json()["id"] == "my paper"
     assert client.get("/api/papers/my paper/pdf").content == b"%PDF-1.4 x"
@@ -436,6 +440,10 @@ def test_리더_AI(vault, monkeypatch):
         assert '3쪽의 이 구절' in run.seen["prompt"] and run.seen["opts"].tools == ["Read", "Glob", "Grep"]
         with pytest.raises(reader_ai.ReaderAiError):
             reader_ai.start("LoRA", "translate", {"text": " "})
+        # 그림 · 표 · 수식 설명 — 쪽과 이름으로 PDF의 그 자리를 보게 해요
+        el = _fake_agent({"title": "그림 1", "paragraphs": ["x"], "questions": []})
+        got = await wait(reader_ai.start("LoRA", "element", {"section": "Figure 1", "text": "Figure 1: LoRA reparametrization", "page": 2}, query_fn=el)["id"])
+        assert got["state"] == "done" and "2쪽의 Figure 1" in el.seen["prompt"] and "LoRA reparametrization" in el.seen["prompt"]
         an = _fake_agent({"highlights": [
             {"category": "core", "quote": "We propose LoRA", "page": 1, "note": "핵심"},
             {"category": "bogus", "quote": "x", "page": 1, "note": ""},
@@ -446,3 +454,79 @@ def test_리더_AI(vault, monkeypatch):
         assert stored["highlights"][0]["quote"] == "We propose LoRA" and stored["references"][0]["arxiv"] == "1706.03762"
 
     asyncio.run(go())
+
+
+# --- arXiv HTML 본문 ---------------------------------------------------------
+
+
+PAGE = b"""<!DOCTYPE html><html><head><script>alert(1)</script></head><body>
+<header class="arxiv-html-header"><img src="/static/logo.svg">Report GitHub Issue</header>
+<article class="ltx_document">
+<section id="S1"><h2 class="ltx_title ltx_title_section"><span class="ltx_tag">1 </span>Introduction</h2>
+<figure><img src="2106.09685v2/x1.png" alt="f1"><img src="2106.09685v2/extracted/9/fig.svg"><img src="https://evil.example/y.png">
+<img src="2106.09685v2/x1.png"><img src="data:image/png;base64,AAA"></figure></section></article>
+<footer>arXiv footer</footer></body></html>"""
+
+
+def _html_get(pages):
+    calls = []
+
+    def get(url, *, limit, timeout=60):
+        calls.append(url)
+        if url in pages:
+            body = pages[url]
+            final = "https://arxiv.org/html/2106.09685v2" if url.startswith("https://arxiv.org/html/2106.09685") and "/" not in url[len("https://arxiv.org/html/"):] else url
+            return body, final
+        return b"", url
+
+    get.calls = calls
+    return get
+
+
+def test_arxiv_HTML_받기(vault):
+    papers.set_vault(vault)
+    get = _html_get({
+        "https://arxiv.org/html/2106.09685": PAGE,
+        "https://arxiv.org/html/2106.09685v2/x1.png": b"\x89PNG one",
+        "https://arxiv.org/html/2106.09685v2/extracted/9/fig.svg": b"<svg/>",
+    })
+    assert paperhtml.state("LoRA") == "missing"
+    assert paperhtml.fetch("LoRA", get=get) == "done"
+    html = paperhtml.html_of("LoRA")
+    # 그림은 받아서 같은 출처 주소로 — 같은 그림은 한 번만, 바깥 주소 · data:는 그대로
+    assert '/api/papers/LoRA/html/assets/a1.png' in html and '/api/papers/LoRA/html/assets/a2.svg' in html
+    assert html.count("a1.png") == 2 and "https://evil.example/y.png" in html and "data:image" in html
+    assert get.calls.count("https://arxiv.org/html/2106.09685v2/x1.png") == 1
+    assert not any("evil" in c or "logo" in c for c in get.calls)
+    # 본문만 — arXiv 사이트 머리글 · 꼬리말은 빼요
+    assert html.startswith("<article") and "Report GitHub Issue" not in html and "arXiv footer" not in html
+    assert open(paperhtml.asset_of("LoRA", "a1.png"), "rb").read() == b"\x89PNG one"
+    with pytest.raises(papers.PapersError):
+        paperhtml.asset_of("LoRA", "../meta.json")
+    assert {p["id"]: p for p in papers.list_papers()}["LoRA"]["htmlState"] == "done"
+    # vault에는 아무것도 안 생겨요
+    assert sorted(os.listdir(os.path.join(vault, "Papers"))) == ["LoRA.md", "Transformer.md"]
+
+
+def test_arXiv에_HTML이_없으면_none(vault):
+    papers.set_vault(vault)
+    assert paperhtml.fetch("LoRA", get=_html_get({})) == "none"
+    assert paperhtml.state("LoRA") == "none"
+    with pytest.raises(papers.PapersError):
+        paperhtml.html_of("LoRA")
+    # arXiv 번호가 없는 논문은 받지 않아요
+    with pytest.raises(papers.PapersError, match="arXiv 번호"):
+        paperhtml.start("Transformer")
+
+
+def test_HTML_API(vault, tmp_path, monkeypatch):
+    client = TestClient(main.create_app(web_dist=str(tmp_path / "dist")), base_url="http://127.0.0.1:8000")
+    client.put("/api/papers/vault", json={"path": vault}, headers=H)
+    assert client.get("/api/papers/LoRA/html").status_code == 404
+    assert client.get("/api/papers/LoRA/html/state").json() == {"state": "missing"}
+    paperhtml.fetch("LoRA", get=_html_get({"https://arxiv.org/html/2106.09685": PAGE, "https://arxiv.org/html/2106.09685v2/x1.png": b"png"}))
+    r = client.get("/api/papers/LoRA/html")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/plain") and "default-src 'none'" in r.headers["content-security-policy"]
+    assert client.get("/api/papers/LoRA/html/assets/a1.png").content == b"png"
+    assert client.get("/api/papers/LoRA/html/assets/meta.json").status_code == 404
+    assert client.get("/api/papers/없음/html/state").status_code == 404

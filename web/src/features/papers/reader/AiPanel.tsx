@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { runReaderAi } from '@/api/papers'
 import type { ExplainResult } from '@/api/papers'
 import type { CSSProperties, ReactNode } from 'react'
@@ -419,10 +419,31 @@ function MyNoteRow({
 }
 
 /** 채팅 탭 — 이 논문에 묻기 (Claude가 노트 · PDF를 읽기 전용으로). 대화는 저장하지 않아요 */
+/**
+ * "채팅" 탭 대화 — 탭을 옮기거나 패널을 접어도, 다른 논문에 갔다 와도 남아요(새로 고치면 비워져요).
+ * 화면 밖 저장소에 두고, 답이 늦게 와도 그 논문 대화에 넣어요.
+ */
+type ChatTurn = { role: 'user' | 'assistant'; text: string }
+const PAPER_CHATS = new Map<string, { log: ChatTurn[]; busy: boolean }>()
+const chatListeners = new Set<() => void>()
+const EMPTY_CHAT = { log: [] as ChatTurn[], busy: false }
+function setPaperChat(id: string, fn: (c: { log: ChatTurn[]; busy: boolean }) => { log: ChatTurn[]; busy: boolean }) {
+  PAPER_CHATS.set(id, fn(PAPER_CHATS.get(id) ?? EMPTY_CHAT))
+  chatListeners.forEach((l) => l())
+}
+function usePaperChatStore(id: string) {
+  return useSyncExternalStore(
+    (l) => {
+      chatListeners.add(l)
+      return () => chatListeners.delete(l)
+    },
+    () => PAPER_CHATS.get(id) ?? EMPTY_CHAT,
+  )
+}
+
 function PaperChat({ paperId, context }: { paperId: string; context: string | null }) {
-  const [log, setLog] = useState<{ role: 'user' | 'assistant'; text: string }[]>([])
+  const { log, busy } = usePaperChatStore(paperId)
   const [draft, setDraft] = useState('')
-  const [busy, setBusy] = useState(false)
   const end = useRef<HTMLDivElement>(null)
   // 중괄호로 감싸요 — 요즘 Chrome의 scrollIntoView는 Promise를 돌려줘서, 그대로 돌려주면
   // React가 정리 함수로 알고 불러서 화면이 깨져요 ("destroy is not a function")
@@ -433,13 +454,12 @@ function PaperChat({ paperId, context }: { paperId: string; context: string | nu
     const q = draft.trim()
     if (!q || busy) return
     const history = log
-    setLog((l) => [...l, { role: 'user', text: q }])
+    setPaperChat(paperId, (c) => ({ log: [...c.log, { role: 'user', text: q }], busy: true }))
     setDraft('')
-    setBusy(true)
+    const answer = (text: string) => setPaperChat(paperId, (c) => ({ log: [...c.log, { role: 'assistant', text }], busy: false }))
     runReaderAi<ExplainResult>(paperId, { kind: 'ask', question: q, history, text: context ?? '' })
-      .then((r) => setLog((l) => [...l, { role: 'assistant', text: (r.paragraphs ?? []).join('\n\n') || r.title }]))
-      .catch((e: unknown) => setLog((l) => [...l, { role: 'assistant', text: `답하지 못했어요 — ${e instanceof Error ? e.message : String(e)}` }]))
-      .finally(() => setBusy(false))
+      .then((r) => answer((r.paragraphs ?? []).join('\n\n') || r.title))
+      .catch((e: unknown) => answer(`답하지 못했어요 — ${e instanceof Error ? e.message : String(e)}`))
   }
   return (
     <div className={s.chatTab}>
@@ -452,6 +472,11 @@ function PaperChat({ paperId, context }: { paperId: string; context: string | nu
           </div>
         ))}
         {busy && <div className={s.chatAnswer}>논문을 읽는 중이에요…</div>}
+        {log.length > 0 && !busy && (
+          <button type="button" className={s.chatClear} onClick={() => setPaperChat(paperId, () => EMPTY_CHAT)}>
+            대화 지우기
+          </button>
+        )}
         <div ref={end} />
       </div>
       <div className={s.chatComposer}>

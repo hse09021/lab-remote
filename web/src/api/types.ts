@@ -39,6 +39,8 @@ export interface Paper {
   hasPdf?: boolean
   /** arXiv 번호 (실제 API) */
   arxiv?: string
+  /** arXiv HTML 본문 — 받음 · 받는 중 · arXiv에 없음 · 실패 · 아직 안 받음 (arXiv 논문만, 실제 API) */
+  htmlState?: PaperHtmlState
   /** 들어 있는 모음 이름 (실제 API) */
   collections?: string[]
 }
@@ -242,6 +244,23 @@ export interface InlineMemo {
   text: string
 }
 
+/**
+ * 그림 · 표 · 수식 옆 설명 버튼 (vault 논문 — PDF 글자 층의 캡션 · 식 번호에서 찾아요).
+ * 좌표는 pt, 위에서부터. 버튼은 x에서 시작해 y를 세로 가운데로 둬요.
+ */
+export interface ExplainSpot {
+  /** `el:<쪽>:<이름>` — 설명 대화의 키 */
+  key: string
+  kind: 'fig' | 'table' | 'eq'
+  page: number
+  x: number
+  y: number
+  /** "Figure 3" · "Table 2" · "식 (4)" */
+  label: string
+  /** 캡션이나 식 줄의 글자 — Claude에게 같이 보내요 */
+  text: string
+}
+
 export interface PaperReaderPayload {
   paperId: string
   title: string
@@ -266,6 +285,8 @@ export interface PaperReaderPayload {
   baseWidth: number
   zoomLevels: number[]
   explainZones: ExplainZone[]
+  /** 그림 · 표 · 수식 설명 버튼 (vault 논문) */
+  explainSpots?: ExplainSpot[]
   citeSpots: CiteSpot[]
   extractedConfig: ExtractedConfig
   discrepancy: DiscrepancyNote
@@ -320,3 +341,5 @@ export type ChatEntry =
   | { kind: 'loading' }
   | { kind: 'answer'; text: string; go?: string; src?: string }
 
+
+export type PaperHtmlState = 'done' | 'running' | 'none' | 'error' | 'missing' | ''
