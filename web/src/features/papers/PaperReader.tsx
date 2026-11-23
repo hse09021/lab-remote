@@ -650,6 +650,7 @@ export default function PaperReader() {
             onAnalyze={aiLive ? () => startAnalysis.mutate(undefined, { onError: (e) => toast.show(e instanceof Error ? e.message : String(e)) }) : undefined}
             analyzing={vault.analyzing || startAnalysis.isPending}
             analyzed={!!vault.analysis}
+            chatPaperId={aiLive ? id : undefined}
             summaryView={summaryView}
             onSummaryViewChange={setSummaryView}
             mdDraft={mdEdit ?? mdDrafts.data?.[id] ?? null}

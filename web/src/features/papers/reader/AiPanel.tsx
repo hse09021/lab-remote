@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { runReaderAi } from '@/api/papers'
+import type { ExplainResult } from '@/api/papers'
 import type { CSSProperties, ReactNode } from 'react'
 import type { UserAnnotation } from '@/api/annotations'
 import type {
@@ -37,6 +39,8 @@ interface Props {
   onAnalyze?: () => void
   analyzing?: boolean
   analyzed?: boolean
+  /** 채팅 탭을 실제 대화로 (vault 논문) */
+  chatPaperId?: string
   summaryView: SummaryView
   onSummaryViewChange: (v: SummaryView) => void
   mdDraft: string | null
@@ -71,6 +75,7 @@ export function AiPanel({
   onAnalyze,
   analyzing = false,
   analyzed = false,
+  chatPaperId,
   summaryView,
   onSummaryViewChange,
   mdDraft,
@@ -147,15 +152,18 @@ export function AiPanel({
             </div>
           ))}
 
-        {tab === 'chat' && (
-          <div className={s.pad}>
-            {chatContext && <span className={s.contextChip}>{chatContext}</span>}
-            <p className={s.todo}>
-              섹션 설명은 본문의 AI 버튼을 누르면 떠 있는 대화창으로 열려요.
-              <br />이 탭의 대화는 서버가 붙으면 이어져요.
-            </p>
-          </div>
-        )}
+        {tab === 'chat' &&
+          (chatPaperId ? (
+            <PaperChat paperId={chatPaperId} context={chatContext} />
+          ) : (
+            <div className={s.pad}>
+              {chatContext && <span className={s.contextChip}>{chatContext}</span>}
+              <p className={s.todo}>
+                섹션 설명은 본문의 AI 버튼을 누르면 떠 있는 대화창으로 열려요.
+                <br />이 탭의 대화는 서버가 붙으면 이어져요.
+              </p>
+            </div>
+          ))}
 
         {tab === 'cite' && <CitationsTab reader={reader} isRefSaved={isRefSaved} />}
 
@@ -405,6 +413,57 @@ function MyNoteRow({
             삭제
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** 채팅 탭 — 이 논문에 묻기 (Claude 가 노트 · PDF 를 읽기 전용으로). 대화는 저장하지 않아요 */
+function PaperChat({ paperId, context }: { paperId: string; context: string | null }) {
+  const [log, setLog] = useState<{ role: 'user' | 'assistant'; text: string }[]>([])
+  const [draft, setDraft] = useState('')
+  const [busy, setBusy] = useState(false)
+  const end = useRef<HTMLDivElement>(null)
+  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [log.length, busy])
+  const send = () => {
+    const q = draft.trim()
+    if (!q || busy) return
+    const history = log
+    setLog((l) => [...l, { role: 'user', text: q }])
+    setDraft('')
+    setBusy(true)
+    runReaderAi<ExplainResult>(paperId, { kind: 'ask', question: q, history, text: context ?? '' })
+      .then((r) => setLog((l) => [...l, { role: 'assistant', text: (r.paragraphs ?? []).join('\n\n') || r.title }]))
+      .catch((e: unknown) => setLog((l) => [...l, { role: 'assistant', text: `답하지 못했어요 — ${e instanceof Error ? e.message : String(e)}` }]))
+      .finally(() => setBusy(false))
+  }
+  return (
+    <div className={s.chatTab}>
+      <div className={s.chatLog}>
+        {context && <span className={s.contextChip}>{context}</span>}
+        {log.length === 0 && <p className={s.todo}>이 논문에 대해 물어보세요. 보내기를 누를 때만 Claude 가 노트와 PDF 를 읽고 답해요.</p>}
+        {log.map((m, i) => (
+          <div key={i} className={m.role === 'user' ? s.chatUser : s.chatAnswer}>
+            {m.text}
+          </div>
+        ))}
+        {busy && <div className={s.chatAnswer}>논문을 읽는 중이에요…</div>}
+        <div ref={end} />
+      </div>
+      <div className={s.chatComposer}>
+        <input
+          className={s.chatInput}
+          value={draft}
+          placeholder="이 논문에 묻기"
+          aria-label="이 논문에 묻기"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) send()
+          }}
+        />
+        <button type="button" className={s.analyzeBtn} disabled={busy || !draft.trim()} onClick={send}>
+          보내기
+        </button>
       </div>
     </div>
   )
