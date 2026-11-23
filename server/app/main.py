@@ -56,6 +56,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
 
     from . import runs, watch
     from .api import agents as agents_api
+    from .api import conda as conda_api
     from .api import files as files_api
     from .api import git as git_api
     from .api import ide as ide_api
@@ -153,6 +154,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     app.include_router(ide_api.router, prefix="/api")
     app.include_router(schedules_api.router, prefix="/api")
     app.include_router(scenarios_api.router, prefix="/api")
+    app.include_router(conda_api.router, prefix="/api")
 
     @app.get("/api/{rest:path}", include_in_schema=False)
     def api_missing(rest: str):

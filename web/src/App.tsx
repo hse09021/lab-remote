@@ -11,7 +11,7 @@ import SystemPage from './features/system/SystemPage'
 import DashboardPage from './features/dashboard/DashboardPage'
 import InboxPage from './features/inbox/InboxPage'
 import AdePage from './features/agents/AdePage'
-import { CondaShell } from './features/shells'
+import CondaPage from './features/conda/CondaPage'
 
 // IDE 만 따로 떼요 — Monaco가 무거워서 다른 화면 번들에 섞이면 안 돼요.
 const IdePage = lazy(() => import('./features/ide/IdePage'))
@@ -36,7 +36,7 @@ const router = createBrowserRouter([
 
       { path: 'inbox', element: <InboxPage /> },
 
-      { path: 'settings/conda', element: <CondaShell /> },
+      { path: 'settings/conda', element: <CondaPage /> },
       { path: 'settings/system', element: <SystemPage /> },
 
       // v1 주소 — 북마크가 깨지지 않게
