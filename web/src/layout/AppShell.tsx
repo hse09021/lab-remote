@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { AppHeader } from './AppHeader'
+import { useServerEvents } from '@/lib/useServerEvents'
 import s from './AppShell.module.css'
 
 /**
@@ -7,6 +8,8 @@ import s from './AppShell.module.css'
  * 좁은 폭에서 깨지지 않게만 해요. 헤더는 줄바꿈으로 버텨요.
  */
 export function AppShell() {
+  // 세션 메시지 · 승인 · 알림을 실시간으로 받아요 (SSE 하나)
+  useServerEvents()
   return (
     <div className={s.shell}>
       <AppHeader />

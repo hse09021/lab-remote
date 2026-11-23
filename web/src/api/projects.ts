@@ -27,6 +27,7 @@ export interface ProjectRow {
   activityAt: number | null
   git: GitSummary
   runs: ProjectRuns
+  agents: { total: number; ask: number; working: number }
 }
 
 export interface ProjectDetail extends ProjectRow {
@@ -168,3 +169,30 @@ export const useUpload = (name: string) =>
       ),
     ),
   )
+
+export type GitStatus =
+  | {
+      state: 'ok'
+      branch: string
+      head: string
+      ahead: number
+      behind: number
+      changed: number
+      changes: { path: string; xy: string; label: string }[]
+    }
+  | { state: 'none' | 'missing' | 'refused' | 'error'; reason?: string }
+
+export const gitStatusQuery = (name: string, tree: string) =>
+  queryOptions({
+    queryKey: ['projects', name, 'git', 'status', tree],
+    queryFn: () => get<GitStatus>(`/projects/${enc(name)}/git/status${q({ tree })}`),
+    refetchInterval: 10_000,
+  })
+
+export const gitDiffQuery = (name: string, tree: string, path: string) =>
+  queryOptions({
+    queryKey: ['projects', name, 'git', 'diff', tree, path],
+    queryFn: () =>
+      get<{ state: string; diff?: string; truncated?: boolean; reason?: string }>(`/projects/${enc(name)}/git/diff${q({ tree, path })}`),
+    enabled: !!path,
+  })

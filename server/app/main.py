@@ -55,6 +55,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     from contextlib import asynccontextmanager
 
     from . import runs, watch
+    from .api import agents as agents_api
     from .api import files as files_api
     from .api import git as git_api
     from .api import inbox as inbox_api
@@ -64,6 +65,14 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
 
     @asynccontextmanager
     async def lifespan(_app):
+        import asyncio
+
+        from .agents.manager import manager
+        from .events import bus
+
+        bus.bind(asyncio.get_running_loop())
+        # 작업 중이던 에이전트 세션은 "연결 끊김" 으로 — 메시지를 보내면 이어 간다
+        manager.recover()
         # 실행 감시 — 끝남·실패·끊김을 알아채 Inbox·Discord 로 알린다 (watch.py)
         watcher = None
         if os.environ.get("LAB_NO_WATCH") != "1":
@@ -74,6 +83,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
         finally:
             if watcher:
                 watcher.stop()
+            await manager.shutdown()
 
     app = FastAPI(title="lab.remote", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.port = port
@@ -108,6 +118,12 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     async def _run_error(_request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=400)
 
+    from .git.worktree import WorktreeError
+
+    @app.exception_handler(WorktreeError)
+    async def _worktree_error(_request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
     @app.exception_handler(GitRefused)
     async def _git_refused(_request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=409)
@@ -124,6 +140,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     app.include_router(system_api.router, prefix="/api")
     app.include_router(runs_api.router, prefix="/api")
     app.include_router(inbox_api.router, prefix="/api")
+    app.include_router(agents_api.router, prefix="/api")
 
     @app.get("/api/{rest:path}", include_in_schema=False)
     def api_missing(rest: str):

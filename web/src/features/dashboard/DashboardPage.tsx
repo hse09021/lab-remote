@@ -5,6 +5,9 @@ import { dashboardQuery } from '@/api/inbox'
 import type { DashboardPayload } from '@/api/inbox'
 import { resourcesQuery } from '@/api/system'
 import { useAckRun } from '@/api/runs'
+import { sessionsQuery } from '@/api/agents'
+import type { AgentSession } from '@/api/agents'
+import { AgentAside, Lanes, laneOf } from '../agents/SessionLanes'
 import type { Run } from '@/api/runs'
 import { ErrorState, LoadingState } from '@/components'
 import { duration, whenShort } from '@/lib/time'
@@ -56,6 +59,11 @@ const runHref = (r: Run, extra = '') => `/projects/${encodeURIComponent(r.projec
 
 function Overview({ onView }: { onView: (v: string) => void }) {
   const dash = useQuery(dashboardQuery())
+  const agents = useQuery(sessionsQuery())
+  // 답 필요가 위로
+  const sorted = [...(agents.data?.sessions ?? [])].sort(
+    (a, b) => Number(b.pending.length > 0) - Number(a.pending.length > 0) || b.updatedAt - a.updatedAt,
+  )
   const now = new Date()
   const date = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
 
@@ -63,10 +71,7 @@ function Overview({ onView }: { onView: (v: string) => void }) {
     <div className={s.page}>
       <aside aria-label="에이전트" className={s.aside}>
         <div className={s.asideTitle}>에이전트</div>
-        <div className={s.placeholder}>
-          <b>3단계에서 붙어요</b>
-          <span>프로젝트 › worktree › 세션 목록, 답 필요가 위로 와요.</span>
-        </div>
+        <AgentAside sessions={sorted} />
       </aside>
 
       <main className={s.main}>
@@ -74,7 +79,7 @@ function Overview({ onView }: { onView: (v: string) => void }) {
           <div>
             <div className={s.date}>{date}</div>
             <h1 className={s.title}>{greeting(now)}</h1>
-            {dash.data && <Summary d={dash.data} />}
+            {dash.data && <Summary d={dash.data} sessions={sorted} />}
           </div>
           <div className={s.headRight}>
             <div role="tablist" aria-label="대시보드 보기" className={s.views}>
@@ -91,9 +96,9 @@ function Overview({ onView }: { onView: (v: string) => void }) {
             <Link to="/projects?tab=work" className={s.headBtn}>
               새 실행
             </Link>
-            <span className={s.headBtnOff} title="에이전트 세션은 3단계에서 붙어요">
+            <Link to={sorted[0] ? `/projects/${encodeURIComponent(sorted[0].project)}/ade?new=1` : '/projects'} className={s.headBtnGhost}>
               새 세션
-            </span>
+            </Link>
           </div>
         </div>
 
@@ -102,10 +107,12 @@ function Overview({ onView }: { onView: (v: string) => void }) {
         {dash.data && (
           <>
             <CutBanner runs={dash.data.runs.cut} />
-            <Stats d={dash.data} />
+            <Stats d={dash.data} sessions={sorted} />
             <div className={s.columns}>
-              <section aria-label="실행" className={s.lanes}>
-                <div className={s.laneHead}>
+              <section aria-label="에이전트 진행 현황" className={s.lanes}>
+                <Lanes sessions={sorted} />
+
+                <div className={s.laneHead} aria-label="학습 실행">
                   <span aria-hidden="true" className={s.laneDot} data-tone="run" />
                   <h2 className={s.h2}>학습 실행</h2>
                   <span className={s.count}>{dash.data.runs.running.length}</span>
@@ -117,10 +124,6 @@ function Overview({ onView }: { onView: (v: string) => void }) {
                 {[...dash.data.runs.running, ...dash.data.runs.finishedToday].map((r) => (
                   <RunCard key={`${r.project}/${r.id}`} r={r} />
                 ))}
-                <div className={s.placeholder}>
-                  <b>에이전트 진행 현황 — 3단계에서 붙어요</b>
-                  <span>답이 필요해요 · 작업 중 · 끝남 카드.</span>
-                </div>
               </section>
               <aside aria-label="Git 과 자원" className={s.side}>
                 <section className={s.sideCard}>
@@ -141,8 +144,17 @@ function Overview({ onView }: { onView: (v: string) => void }) {
   )
 }
 
-function Summary({ d }: { d: DashboardPayload }) {
+function Summary({ d, sessions }: { d: DashboardPayload; sessions: AgentSession[] }) {
   const parts: ReactNode[] = []
+  const lanes = laneOf(sessions)
+  parts.push(
+    <span key="ask">
+      답이 필요한 에이전트 <b>{lanes.ask.length}</b>
+    </span>,
+    <span key="work">
+      작업 중 <b>{lanes.work.length}</b>
+    </span>,
+  )
   parts.push(
     <span key="run">
       학습 <b>{d.runs.running.length}</b> 실행 중
@@ -209,12 +221,24 @@ function lastEpoch(r: Run): { value: string; unit: string; sub: string } | null 
   return null
 }
 
-function Stats({ d }: { d: DashboardPayload }) {
+function Stats({ d, sessions }: { d: DashboardPayload; sessions: AgentSession[] }) {
   const run = d.runs.running[0]
   const prog = run ? lastEpoch(run) : null
+  const lanes = laneOf(sessions)
+  const oldest = sessions.flatMap((x) => x.pending).sort((a, b) => a.createdAt - b.createdAt)[0]
   const tiles = [
-    { label: '에이전트', value: '—', sub: '3단계에서 붙어요', tone: 'muted' },
-    { label: '답이 필요해요', value: '—', sub: '3단계에서 붙어요', tone: 'muted' },
+    {
+      label: '에이전트',
+      value: String(lanes.ask.length + lanes.work.length + lanes.done.length),
+      sub: `작업 중 ${lanes.work.length} · 답 필요 ${lanes.ask.length} · 끝남 ${lanes.done.length}`,
+      tone: 'default',
+    },
+    {
+      label: '답이 필요해요',
+      value: String(lanes.ask.length),
+      sub: oldest ? `가장 오래된 것 ${whenShort(oldest.createdAt)}` : '기다리는 승인이 없어요',
+      tone: lanes.ask.length ? 'attention' : 'default',
+    },
     run
       ? {
           label: `${run.name || run.id} 학습 중`,

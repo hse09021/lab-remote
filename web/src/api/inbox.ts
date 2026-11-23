@@ -14,7 +14,7 @@ export interface InboxItem {
   where: string
   body: string
   project: string | null
-  ref: { project?: string; run?: string }
+  ref: { project?: string; run?: string; session?: string; approval?: string }
   /** 내가 처리해야 하는 것 (답 필요 · 실패 · 끊김) */
   act: boolean
   unread: boolean

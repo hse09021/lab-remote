@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { sessionsQuery } from '@/api/agents'
 import { useQuery } from '@tanstack/react-query'
 import { runLogQuery, runMetricsQuery, runsQuery, useStartRun, useStopRun } from '@/api/runs'
 import type { Run } from '@/api/runs'
@@ -23,6 +24,7 @@ export function RunStatePill({ run }: { run: Pick<Run, 'state' | 'stateLabel'> }
 export function RunsTab({ project, trees }: { project: ProjectDetail; trees?: WorktreeList }) {
   const [params, setParams] = useSearchParams()
   const list = useQuery(runsQuery(project.name))
+  const sessions = useQuery(sessionsQuery(project.name))
   const selected = params.get('run') ?? ''
   const rerunId = params.get('rerun') ?? ''
   const [dialog, setDialog] = useState<{ open: boolean; from?: Run }>({ open: false })
@@ -53,8 +55,23 @@ export function RunsTab({ project, trees }: { project: ProjectDetail; trees?: Wo
     <div className={s.workWrap}>
       <div className={s.workGrid}>
         <section aria-label="세션" className={s.workCard}>
-          <h2 className={s.h2}>세션</h2>
-          <div className={s.muted}>에이전트 세션은 3단계(채팅)에서 붙어요.</div>
+          <div className={s.cardHead}>
+            <h2 className={s.h2}>세션</h2>
+            <Link to={`/projects/${encodeURIComponent(project.name)}/ade?new=1`} className={s.actBtnPlain}>
+              새 세션
+            </Link>
+          </div>
+          {(sessions.data?.sessions ?? []).length === 0 && <div className={s.muted}>세션이 없어요.</div>}
+          {(sessions.data?.sessions ?? []).slice(0, 12).map((x) => (
+            <Link key={x.id} to={`/projects/${encodeURIComponent(project.name)}/ade?session=${x.id}`} className={s.sessionRow}>
+              <span aria-hidden="true" className={s.itemDot} data-tone={x.pending.length ? 'ask' : x.state === 'working' ? 'work' : 'idle'} />
+              <span className={s.sessionTitle}>{x.title}</span>
+              <span className={s.runId}>{x.branch || x.tree}</span>
+              <span className={s.statePill} data-state={x.pending.length ? 'cut' : x.state === 'working' ? 'running' : 'done'}>
+                {x.pending.length ? '답 필요' : x.stateLabel}
+              </span>
+            </Link>
+          ))}
         </section>
         <section aria-label="실행" className={`${s.workCard} ${s.runsCard}`}>
           <div className={s.cardHead}>

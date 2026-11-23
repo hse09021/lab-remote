@@ -40,7 +40,23 @@ def _row(p: dict, *, with_git: bool = True) -> dict:
     out = dict(p)
     out["git"] = view.summary(p["root"]) if with_git and p["exists"] else {"state": "missing"}
     out["runs"] = _runs_line(p["name"]) if p["exists"] else {"running": [], "last": None, "total": 0}
+    out["agents"] = _agents_line(p["name"])
     return out
+
+
+def _agents_line(name: str) -> dict:
+    """목록 점 색 — 답 필요(승인 대기) · 작업 중 세션 수."""
+    from ..agents.manager import manager
+
+    try:
+        items = manager.list(name)
+    except Exception:
+        return {"total": 0, "ask": 0, "working": 0}
+    return {
+        "total": len(items),
+        "ask": sum(1 for x in items if x["pending"]),
+        "working": sum(1 for x in items if x.get("state") == "working" and not x["pending"]),
+    }
 
 
 @router.get("/projects")

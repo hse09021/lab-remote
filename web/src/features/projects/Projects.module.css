@@ -201,6 +201,11 @@
   white-space: nowrap;
 }
 
+.itemSub[data-tone='ask'] {
+  color: var(--attention-text);
+  font-weight: 700;
+}
+
 .itemAgo {
   font-size: 11px;
   color: var(--text-faint);
@@ -1042,6 +1047,29 @@ button.nameBtn:hover .fileName {
   .runsCard {
     grid-column: auto;
   }
+}
+
+.sessionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--border-soft);
+  text-decoration: none;
+  color: var(--text);
+}
+
+.sessionRow:hover {
+  background: var(--accent-row);
+}
+
+.sessionTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 좁은 폭 — 목록이 위로 올라가면 가로를 다 써요 */

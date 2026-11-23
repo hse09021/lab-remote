@@ -15,6 +15,9 @@ import type { InboxItem, InboxKind } from '@/api/inbox'
 import { ApiError } from '@/api/client'
 import { Dialog, dialogStyles as ds, ErrorState, LoadingState } from '@/components'
 import { whenShort } from '@/lib/time'
+import { sessionsQuery } from '@/api/agents'
+import type { PendingApproval } from '@/api/agents'
+import { QuickAllow } from '../agents/SessionLanes'
 import s from './Inbox.module.css'
 
 /** Inbox — docs/v3/mockups/Inbox.dc.html */
@@ -37,6 +40,8 @@ export default function InboxPage() {
   const list = useQuery(inboxQuery(kind, unread))
   const all = useQuery(inboxQuery('', false))
   const markRead = useMarkRead()
+  const agents = useQuery(sessionsQuery())
+  const pending = agents.data?.pending ?? []
 
   const set = (key: string, value: string) => {
     const next = new URLSearchParams(params)
@@ -78,7 +83,9 @@ export default function InboxPage() {
         <section aria-label="알림 목록">
           {list.isPending && <LoadingState label="알림을 불러오는 중이에요" />}
           {list.isError && <ErrorState error={list.error} onRetry={() => list.refetch()} />}
-          {list.data?.items.map((it) => <Item key={it.id} it={it} onRead={() => markRead.mutate([it.id])} />)}
+          {list.data?.items.map((it) => (
+            <Item key={it.id} it={it} pending={pending.find((x) => x.id === it.ref.approval)} onRead={() => markRead.mutate([it.id])} />
+          ))}
           {list.data && list.data.items.length === 0 && <div className={s.empty}>알림이 없어요.</div>}
         </section>
       </main>
@@ -91,6 +98,9 @@ export default function InboxPage() {
 function actions(it: InboxItem): { primary?: [string, string, boolean]; secondary?: [string, string] } {
   const p = it.ref.project
   const r = it.ref.run
+  if (it.kind === 'ask' && p && it.ref.session) {
+    return { primary: [`/projects/${encodeURIComponent(p)}/ade?session=${encodeURIComponent(it.ref.session)}`, 'ADE 에서 답하기', true], secondary: ['/dashboard', '대시보드'] }
+  }
   if (it.kind === 'run' && p && r) {
     const base = `/projects/${encodeURIComponent(p)}?tab=work&run=${encodeURIComponent(r)}`
     if (it.title.endsWith('끊김')) return { primary: [`${base}&rerun=${encodeURIComponent(r)}`, '이어서 실행…', false], secondary: [base, '로그 보기'] }
@@ -101,7 +111,7 @@ function actions(it: InboxItem): { primary?: [string, string, boolean]; secondar
   return {}
 }
 
-function Item({ it, onRead }: { it: InboxItem; onRead: () => void }) {
+function Item({ it, pending, onRead }: { it: InboxItem; pending?: PendingApproval; onRead: () => void }) {
   const a = actions(it)
   const at = new Date(it.at)
   return (
@@ -133,6 +143,8 @@ function Item({ it, onRead }: { it: InboxItem; onRead: () => void }) {
               읽음
             </button>
           )}
+          {pending && <QuickAllow p={pending} via="Inbox" />}
+          {it.kind === 'ask' && it.ref.approval && !pending && <span className={s.sent}>답했어요</span>}
           {it.sent && <span className={s.sent}>{it.sent}</span>}
         </div>
       </div>

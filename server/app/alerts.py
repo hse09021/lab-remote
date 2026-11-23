@@ -203,4 +203,7 @@ def post(
                 sent = f"Discord 실패{f' · {status}' if status else ''}"
         if sent:
             inbox.set_sent(conn, item_id, sent)
+    from .events import bus
+
+    bus.publish("inbox.new", {"id": item_id, "kind": kind})
     return {"id": item_id, "sent": sent, "result": {k: v for k, v in result.items() if k != "reason"}}

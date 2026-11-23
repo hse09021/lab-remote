@@ -14,7 +14,7 @@ const MOCK_MODE = import.meta.env.VITE_USE_MOCK
 const BASE = import.meta.env.VITE_API_BASE ?? '/api'
 
 /** 서버 API 가 생긴 경로. 단계마다 늘어나요 (PLAN 6장). */
-const LIVE_PREFIXES = ['/health', '/projects', '/system', '/inbox', '/notify', '/dashboard'] as const
+const LIVE_PREFIXES = ['/health', '/projects', '/system', '/inbox', '/notify', '/dashboard', '/agents', '/approvals', '/events'] as const
 
 /** 바꾸는 요청에 붙이는 헤더 — 서버가 다른 사이트에서 온 요청을 거절하는 근거예요 */
 const MUTATION_HEADER = { 'X-Lab-Remote': '1' }

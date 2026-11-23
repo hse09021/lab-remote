@@ -10,6 +10,7 @@ import {
 } from '@/api/projects'
 import type { GitSummary, ProjectRow } from '@/api/projects'
 import { ApiError } from '@/api/client'
+import { sessionsQuery } from '@/api/agents'
 import { Dialog, dialogStyles as ds, ErrorState, LoadingState } from '@/components'
 import { agoShort, whenShort } from '@/lib/time'
 import { FilesTab } from './FilesTab'
@@ -34,10 +35,12 @@ export function gitLine(git: GitSummary, { long = false } = {}): string {
   return 'git 을 못 읽었어요'
 }
 
-const toneOf = (p: ProjectRow) => (p.runs.running.length > 0 ? 'work' : 'idle')
+const toneOf = (p: ProjectRow) => (p.agents.ask > 0 ? 'ask' : p.runs.running.length > 0 || p.agents.working > 0 ? 'work' : 'idle')
 
 /** 실행 한 줄 — 돌고 있으면 그것, 아니면 마지막 실행이 실패·끊김일 때만 */
 function runLine(p: ProjectRow): string | null {
+  if (p.agents.ask > 0) return `답 필요 ${p.agents.ask}${p.runs.running.length ? ' · 학습 중' : ''}`
+  if (p.agents.working > 0 && !p.runs.running.length) return `작업 중 ${p.agents.working}`
   const running = p.runs.running
   if (running.length === 1) return `${running[0].name || running[0].id} 학습 중`
   if (running.length > 1) return `학습 ${running.length}개 실행 중`
@@ -168,7 +171,7 @@ function ProjectItem({ p, current }: { p: ProjectRow; current: boolean }) {
       <span aria-hidden="true" className={s.itemDot} data-tone={toneOf(p)} />
       <span className={s.itemText}>
         <span className={s.itemName}>{p.name}</span>
-        <span className={s.itemSub}>{!p.exists ? '폴더가 없어요' : (runLine(p) ?? gitLine(p.git))}</span>
+        <span className={s.itemSub} data-tone={toneOf(p)}>{!p.exists ? '폴더가 없어요' : (runLine(p) ?? gitLine(p.git))}</span>
       </span>
       <span className={s.itemAgo}>{agoShort(p.activityAt)}</span>
     </Link>
@@ -238,6 +241,11 @@ function ProjectDetail({ name }: { name: string }) {
   const detail = useQuery(projectQuery(name))
   const trees = useQuery(worktreesQuery(name))
   const pin = usePinProject()
+  const sess = useQuery(sessionsQuery(name))
+  const sessionCount = {
+    total: sess.data?.sessions.length ?? 0,
+    ask: (sess.data?.sessions ?? []).filter((x) => x.pending.length > 0).length,
+  }
 
   if (detail.isPending) return <LoadingState label="프로젝트를 불러오는 중이에요" />
   if (detail.isError) return <ErrorState error={detail.error} onRetry={() => detail.refetch()} />
@@ -280,8 +288,8 @@ function ProjectDetail({ name }: { name: string }) {
             <span className={s.chip}>
               conda · <span className={s.mono}>{p.settings.condaEnv || '없음'}</span>
             </span>
-            <span className={s.chip} title="세션은 3단계에서 붙어요">
-              세션 —
+            <span className={s.chip} data-on={sessionCount.ask > 0}>
+              {sessionCount.total === 0 ? '세션 없음' : `세션 ${sessionCount.total}${sessionCount.ask ? ` · 답 필요 ${sessionCount.ask}` : ''}`}
             </span>
             <span className={s.chip} data-on={p.runs.running.length > 0}>
               {runChip(p)}
