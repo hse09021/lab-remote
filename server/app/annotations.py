@@ -1,4 +1,4 @@
-"""리더의 내 하이라이트 · 주석 — 데이터 폴더 `annotations.json` 에 논문별로 둔다.
+"""리더의 내 하이라이트 · 주석 — 데이터 폴더 `annotations.json`에 논문별로 둔다.
 
 예전에는 브라우저(localStorage)에만 있어서 휴대폰과 데스크톱이 따로 놀았다. vault 노트는
 고치지 않는다(PDF 좌표 · HTML 앵커는 lab.remote 리더만 쓰는 값이라).

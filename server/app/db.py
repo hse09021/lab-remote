@@ -27,7 +27,7 @@ __all__ = [
     "now",
 ]
 
-#: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS` 에 줄을 더한다.
+#: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS`에 줄을 더한다.
 #:
 #: 판 5 는 **v3 의 첫 판**이다. v1 은 판 1~4 를 썼다. 판 6에서 Inbox, 판 7에서 예약이 생겼다.
 SCHEMA_VERSION = 7
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS schedules (
 ''',
     # 판 6 — Inbox (v3 2단계)
     5: '''
--- Inbox — 사람이 보는 알림. Discord 로 보냈는지는 `sent` 에 사람 말로 남긴다
+-- Inbox — 사람이 보는 알림. Discord로 보냈는지는 `sent`에 사람 말로 남긴다
 -- (주소는 남기지 않는다). `act` 가 1 이면 "내가 처리해야 하는 것" 이라
 -- 헤더 배지에 센다(답 필요 · 실행 실패 · 끊김).
 CREATE TABLE IF NOT EXISTS inbox (
@@ -126,8 +126,8 @@ def connect(db_path: str | None = None) -> sqlite3.Connection:
     """PRAGMA 를 맞춘 연결. 이행은 하지 않는다 (`open_db` 가 한다)."""
     target = db_path or path()
     os.makedirs(os.path.dirname(target) or ".", exist_ok=True)
-    # isolation_level=None 으로 자동 커밋을 끄고 트랜잭션을 우리가 연다.
-    # 큐 lease 에 BEGIN IMMEDIATE 가 꼭 필요하다.
+    # isolation_level=None으로 자동 커밋을 끄고 트랜잭션을 우리가 연다.
+    # 큐 lease에 BEGIN IMMEDIATE 가 꼭 필요하다.
     conn = sqlite3.connect(target, timeout=BUSY_TIMEOUT_MS / 1000, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
@@ -213,8 +213,8 @@ def immediate(conn: sqlite3.Connection):
     """`BEGIN IMMEDIATE` 트랜잭션. 쓰기 잠금을 바로 잡는다.
 
     큐에서 작업 하나를 집어가는 동작(lease)은 읽고 나서 쓰기 때문에,
-    `DEFERRED` 로 두면 두 워커가 같은 작업을 집었다가 하나가
-    `SQLITE_BUSY_SNAPSHOT` 으로 밀린다. 처음부터 쓰기 잠금을 잡는다.
+    `DEFERRED`로 두면 두 워커가 같은 작업을 집었다가 하나가
+    `SQLITE_BUSY_SNAPSHOT`으로 밀린다. 처음부터 쓰기 잠금을 잡는다.
     """
     conn.execute("BEGIN IMMEDIATE")
     try:

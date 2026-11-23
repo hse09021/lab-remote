@@ -9,7 +9,7 @@ v3 의 실행(`labremote run`)은 `systemd-run --user --scope` + tmux + 로그
 > ⚠ **`setsid`(`start_new_session=True`) 는 cgroup 을 바꾸지 않습니다**
 > (실측 2026-11-05). 세션 ID 는 떨어지지만 cgroup 은 그대로라 서버 유닛의
 > cgroup 안에 남고, 유닛을 재시작할 때 같이 죽을 수 있습니다. scope 는
-> `/user.slice/…/app.slice/<이름>.scope` 로 **아예 다른 자리**라 서버와
+> `/user.slice/…/app.slice/<이름>.scope`로 **아예 다른 자리**라 서버와
 > 무관하게 살아남습니다.
 
 ### 종료코드 파일
@@ -116,7 +116,7 @@ def scope_available(env: dict | None = None) -> bool:
 
 
 def scope_prefix(unit: str, description: str = "") -> list[str]:
-    """명령을 **자기 cgroup** 에 담는 접두사.
+    """명령을 **자기 cgroup**에 담는 접두사.
 
     같은 이름의 scope 가 이미 돌고 있으면 `systemd-run` 이 거절한다 — 같은
     실행을 두 번 띄우는 사고를 막는다.
@@ -129,15 +129,15 @@ def scope_prefix(unit: str, description: str = "") -> list[str]:
 
 
 def service_prefix(unit: str, description: str = "", env: dict[str, str] | None = None) -> list[str]:
-    """tmux 처럼 **스스로 뒤로 빠지는(fork) 명령**을 사용자 서비스로 띄우는 접두사.
+    """tmux처럼 **스스로 뒤로 빠지는(fork) 명령**을 사용자 서비스로 띄우는 접두사.
 
-    scope 와 달리 서비스는 사용자 systemd 가 새로 띄운다 — 그래서 **서버의
+    scope와 달리 서비스는 사용자 systemd 가 새로 띄운다 — 그래서 **서버의
     nice 19 · ionice idle 을 물려받지 않는다**(실측 2026-11-23: scope 는 19·idle,
     서비스 `Nice=0` 은 0·기본). 학습이 최하위 우선순위로 도는 사고를 막는다.
 
     - `Type=forking`: `tmux new-session -d` 가 서버를 띄우고 빠지면 그 서버를
-      주 프로세스로 삼는다. tmux 가 끝나면 유닛도 끝나고 `--collect` 로 정리된다.
-    - 서비스는 호출한 쪽의 환경을 물려받지 않아서 `env` 를 `--setenv` 로 넘긴다.
+      주 프로세스로 삼는다. tmux 가 끝나면 유닛도 끝나고 `--collect`로 정리된다.
+    - 서비스는 호출한 쪽의 환경을 물려받지 않아서 `env` 를 `--setenv`로 넘긴다.
     - 같은 이름의 유닛이 이미 돌고 있으면 거절된다(두 번 띄우기 방지).
     """
     out = [
@@ -174,7 +174,7 @@ def starttime_of(pid: int) -> int | None:
 
 
 def alive(pid: int | None, starttime: int | None = None) -> bool:
-    """그 프로세스가 아직 살아 있는가. pid 재사용을 starttime 으로 가른다."""
+    """그 프로세스가 아직 살아 있는가. pid 재사용을 starttime으로 가른다."""
     if not pid:
         return False
     try:
@@ -194,7 +194,7 @@ def alive(pid: int | None, starttime: int | None = None) -> bool:
 def group_alive(pgid: int | None) -> bool:
     """그룹에 **아직 뭐가 남아 있나.** 손자까지 정리됐는지 보는 데 쓴다.
 
-    ⚠ 좀비도 "남아 있음" 으로 보인다. 우리가 그 프로세스의 부모라면 `wait`
+    ⚠ 좀비도 "남아 있음"으로 보인다. 우리가 그 프로세스의 부모라면 `wait`
     로 거둬야 이 값이 거짓이 된다.
     """
     if not pgid:

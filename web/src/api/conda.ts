@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { get, send } from './client'
 
-/* server/app/conda.py 와 짝 */
+/* server/app/conda.py와 짝 */
 
 export interface CondaEnv {
   name: string

@@ -203,13 +203,13 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         )}
         {!isMain && (
           <button type="button" className={s.ghostBtn} onClick={() => setAsking(true)}>
-            main 에 합치기…
+            main에 합치기…
           </button>
         )}
       </div>
       {commit.isError && <div className={s.errText}>{errText(commit.error)}</div>}
       {commit.data && <div className={s.okText}>커밋했어요 · {commit.data.sha}</div>}
-      {merge.data && <div className={s.okText}>{merge.data.main} 에 합쳤어요 · {merge.data.sha}</div>}
+      {merge.data && <div className={s.okText}>{merge.data.main}에 합쳤어요 · {merge.data.sha}</div>}
       <span className={s.groupLabel}>변경 내용 · {st.changed}</span>
       {st.changes.map((c) => (
         <button key={c.path} type="button" className={s.fileRow} onClick={() => onDiff(c.path)}>
@@ -221,7 +221,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
       ))}
       <Dialog
         open={asking}
-        title={`${st.branch} 을 main 에 합칠까요?`}
+        title={`${st.branch} 을 main에 합칠까요?`}
         confirmLabel="합치기"
         busy={merge.isPending}
         error={errText(merge.error) || undefined}
@@ -295,7 +295,7 @@ export function RunPanel({
       <details className={s.details}>
         <summary>실제 실행 명령 보기</summary>
         <pre className={s.code}>{shown}</pre>
-        <span className={s.muted}>tmux 안에서 돌고 로그·종료코드는 .labremote/runs/ 에 남아요. 지표 파일은 설정의 규칙으로 찾아요.</span>
+        <span className={s.muted}>tmux 안에서 돌고 로그·종료코드는 .labremote/runs/에 남아요. 지표 파일은 설정의 규칙으로 찾아요.</span>
       </details>
       <div className={s.row}>
         <button

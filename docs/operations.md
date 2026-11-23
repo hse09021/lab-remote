@@ -11,7 +11,7 @@
 | `<프로젝트>/.labremote/` | `settings.json` · `runs/EXP-NNN/` (명령 · 로그 · 종료코드) · `sessions/` (에이전트 세션) · `scenarios/` · `worktrees/` |
 | `~/.config/systemd/user/labremote-session.service` | 자동 시작을 켰을 때만 |
 
-vault(Papers 화면에서 정한 Obsidian 폴더)는 읽기만 해요. 논문을 추가할 때만 `Papers/<이름>.md` 와 `Papers/pdf/<이름>.pdf` 를 **새로** 만들고, 있는 노트는 덮지 않아요.
+vault(Papers 화면에서 정한 Obsidian 폴더)는 읽기만 해요. 논문을 추가할 때만 `Papers/<이름>.md`와 `Papers/pdf/<이름>.pdf` 를 **새로** 만들고, 있는 노트는 덮지 않아요.
 
 데이터 폴더를 통째로 복사하면 백업이에요. `lab.db` 는 서버를 끈 뒤 복사하는 게 안전해요.
 
@@ -28,7 +28,7 @@ labremote-session.service (자동 시작을 켰을 때)
 code tunnel VS Code 가 따로 (code tunnel service install)
 ```
 
-- 학습과 터미널은 서버와 다른 서비스라 서버를 다시 켜도 살아요. 재부팅하면 끊기고, 다음에 "끊김" 으로 보여요.
+- 학습과 터미널은 서버와 다른 서비스라 서버를 다시 켜도 살아요. 재부팅하면 끊기고, 다음에 "끊김"으로 보여요.
 - 에이전트 세션은 서버와 같이 끝나요. 다시 뜨면 세션 목록에서 골라 이어 가요.
 - 예약은 서버가 시간을 재요. 서버가 꺼져 있던 동안의 예약은 10분이 지나면 건너뛰어요.
 
@@ -59,10 +59,10 @@ code tunnel VS Code 가 따로 (code tunnel service install)
 
 ## 보안 규칙 (코드에 박혀 있는 것)
 
-- 서버는 `127.0.0.1` 에만 열어요. 다른 주소로 여는 옵션은 없어요.
+- 서버는 `127.0.0.1`에만 열어요. 다른 주소로 여는 옵션은 없어요.
 - `Host` 가 `127.0.0.1` · `localhost` · `::1` · 적어 둔 바깥 주소 · `LAB_ALLOWED_HOSTS` 가 아니면 거절해요 (DNS rebinding 막기).
 - 바꾸는 요청에는 `X-Lab-Remote: 1` 헤더가 있어야 하고 `Origin` 도 같은 규칙으로 봐요. WebSocket(터미널)도 같아요.
-- Discord 웹훅 주소는 데이터 폴더에 600 으로만, 로그 · 화면 · 에러에 원문을 찍지 않아요.
+- Discord 웹훅 주소는 데이터 폴더에 600으로만, 로그 · 화면 · 에러에 원문을 찍지 않아요.
 - 에이전트는 `--dangerously-skip-permissions` 같은 모드를 쓰지 않아요. 승인은 화면 · Inbox · Discord 링크 중 먼저 온 답이에요.
 - AI 자동화 없음: 연구 루프 · 실험 큐 · 연쇄 실행이 없어요. 예약은 사람이 건 시각에만 돌아요.
 - 터널이 열려 있으면 GitHub 계정이 곧 이 데스크톱 열쇠예요 — 2단계 인증을 켜 두세요.

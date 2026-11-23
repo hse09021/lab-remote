@@ -99,7 +99,7 @@ export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
   const submit = () => {
     const answers: Record<string, string | string[]> = {}
     for (const q of questions) {
-      // "기타" 에 적은 글은 'Other' 가 아니라 그 글 자체를 답으로 (문서: user-input)
+      // "기타"에 적은 글은 'Other' 가 아니라 그 글 자체를 답으로 (문서: user-input)
       const labels = [...(picked[q.question] ?? []), ...(other[q.question]?.trim() ? [other[q.question].trim()] : [])]
       if (labels.length) answers[q.question] = q.multiSelect ? labels : labels[labels.length - 1]
     }
@@ -165,7 +165,7 @@ export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
         >
           건너뛰기
         </button>
-        <span className={s.muted}>같은 질문이 대시보드 · Inbox 에도 떠요. 먼저 답한 곳이 적용돼요.</span>
+        <span className={s.muted}>같은 질문이 대시보드 · Inbox에도 떠요. 먼저 답한 곳이 적용돼요.</span>
       </div>
       {err && (
         <div role="alert" className={s.errText}>
@@ -223,7 +223,7 @@ function PermissionCard({ p, via }: { p: PendingApproval; via: string }) {
         <button type="button" className={s.denyBtn} disabled={answer.isPending} onClick={() => answer.mutate({ id: p.id, choice: 'deny', reason, via })}>
           거부
         </button>
-        <span className={s.muted}>같은 요청이 대시보드 · Inbox · Discord 에도 떠요. 먼저 답한 곳이 적용돼요.</span>
+        <span className={s.muted}>같은 요청이 대시보드 · Inbox · Discord에도 떠요. 먼저 답한 곳이 적용돼요.</span>
       </div>
       {err && (
         <div role="alert" className={s.errText}>

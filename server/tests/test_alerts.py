@@ -34,7 +34,7 @@ def test_규칙대로_보낸다(conn):
     assert alerts.post(conn, "run", "fail", "c 실패", act=True, poster=ok_poster, now=night)["sent"] == "Discord 보냄"
     alerts.save_rules({"done": False})
     assert alerts.post(conn, "run", "done", "d 끝남", poster=ok_poster, now=noon)["sent"] == "보내지 않음 · 꺼 둔 알림"
-    # 규칙이 없으면 Inbox 에만
+    # 규칙이 없으면 Inbox에만
     assert alerts.post(conn, "run", None, "e 중지함", poster=ok_poster)["sent"] == ""
     assert inbox.badge(conn) == 1
     assert inbox.counts(conn)["run"] == {"total": 5, "unread": 5}

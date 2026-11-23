@@ -3,7 +3,7 @@ import type { editor } from 'monaco-editor'
 /**
  * tokens.css 값을 그대로 옮긴 Monaco 라이트 테마.
  * Monaco는 CSS 변수를 못 읽어서 여기서만 hex를 직접 써요 —
- * 값이 바뀌면 tokens.css 와 함께 고쳐야 해요.
+ * 값이 바뀌면 tokens.css와 함께 고쳐야 해요.
  */
 const T = {
   text: '141A19',

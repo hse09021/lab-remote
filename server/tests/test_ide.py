@@ -1,4 +1,4 @@
-"""IDE — 검색 · 커밋 · main 에 합치기 · 터미널(WebSocket ↔ tmux)."""
+"""IDE — 검색 · 커밋 · main에 합치기 · 터미널(WebSocket ↔ tmux)."""
 
 import os
 import subprocess
@@ -110,7 +110,7 @@ def test_웹소켓_터미널(project, tmp_path):
     try:
         terminals.create("demo")
         # Origin 이 없거나 다른 사이트면 거절 — cross-site WebSocket hijacking
-        # (TestClient 의 WebSocket 은 Host 를 testserver 로 보내서 직접 넣는다)
+        # (TestClient 의 WebSocket 은 Host 를 testserver로 보내서 직접 넣는다)
         for headers in ({"host": "127.0.0.1:8000"}, {"host": "127.0.0.1:8000", "origin": "https://evil.example"}):
             with pytest.raises(Exception):
                 with client.websocket_connect("/api/terminals/ws?project=demo&name=t-1", headers=headers) as ws:

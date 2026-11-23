@@ -35,7 +35,7 @@ export interface Paper {
   access: string
   /** vault 안 요약 MD 경로. 없으면 null */
   path: string | null
-  /** vault 에 PDF 가 있나 (실제 API) */
+  /** vault에 PDF 가 있나 (실제 API) */
   hasPdf?: boolean
   /** arXiv 번호 (실제 API) */
   arxiv?: string
@@ -272,7 +272,7 @@ export interface PaperReaderPayload {
   inlineMemo: InlineMemo
   /** 섹션·그림·수식별 미리 써 둔 설명 */
   topics: Record<string, Topic>
-  /** [[용어]] 에 붙는 뜻풀이 */
+  /** [[용어]]에 붙는 뜻풀이 */
   terms: Record<string, string>
   selectionSpot: SelectionSpot
 }

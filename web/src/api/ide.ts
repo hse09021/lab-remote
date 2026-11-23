@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, send } from './client'
 
-/* server/app/api/ide.py · files.py 와 짝 */
+/* server/app/api/ide.py · files.py와 짝 */
 
 const enc = encodeURIComponent
 const q = (params: Record<string, string>) => {

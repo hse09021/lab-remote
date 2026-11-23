@@ -6,7 +6,7 @@ import s from './ImagePdfRenderer.module.css'
 
 /**
  * 미리 뽑아 둔 쪽 이미지로 PDF를 흉내 내는 렌더러.
- * 개발용 fixtures 를 쓰고, 3단계에서 PdfJsRenderer 로 바뀌어요.
+ * 개발용 fixtures 를 쓰고, 3단계에서 PdfJsRenderer로 바뀌어요.
  */
 export function ImagePdfRenderer({
   source,
@@ -36,7 +36,7 @@ export function ImagePdfRenderer({
             left: `${(x / size.width) * 100}%`,
             top: `${(y / size.height) * 100}%`,
           }),
-          // 이미지에는 텍스트 레이어가 없어요. pdfjs 로 바꾸면 실제 선택을 돌려줘요
+          // 이미지에는 텍스트 레이어가 없어요. pdfjs로 바꾸면 실제 선택을 돌려줘요
           getSelectionRects: () => null,
         }
 

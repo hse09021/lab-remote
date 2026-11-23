@@ -4,7 +4,7 @@ PLAN 4.1 scenarios:
 - **사람이 요청할 때만** 그린다. 에이전트를 계획 모드로, 도구는 읽기만(`Read` · `Glob` ·
   `Grep`) 열어서 파일을 읽고, 정해진 JSON 모양(`output_format`)으로 답하게 한다.
   명령을 돌리거나 파일을 고치지 못한다.
-- `<프로젝트>/.labremote/scenarios/main.json` 에 단계와 **분석한 파일들의 해시**를 저장한다.
+- `<프로젝트>/.labremote/scenarios/main.json`에 단계와 **분석한 파일들의 해시**를 저장한다.
   열 때마다 해시를 다시 재서 바뀐 파일을 알려 준다 — **저절로 다시 그리지 않는다.**
 - 단계를 이어서 자동으로 돌리지 않는다(AI 자동화 없음). "실행 탭에 채우기" 는 명령만 채운다.
 """
@@ -53,7 +53,7 @@ PROMPT = """이 프로젝트의 실행 순서(시나리오)를 그려 주세요.
 - 코드를 읽어서 데이터 준비 → 학습 → 추론 → 평가 → 정리 같은 단계를 실제 파일에 맞게 나눠 주세요.
 - 각 단계마다 돌리는 명령(프로젝트 루트 기준), 받는 파일, 내는 파일, 필요한 환경, 그 단계의 코드 파일을 적어 주세요.
 - 명령은 README · 스크립트 · argparse 기본값에서 확인한 것만 적고, 모르면 빈 문자열로 두세요. 지어내지 마세요.
-- 파일을 고치거나 명령을 돌리지 말고 읽기만 하세요. 읽은 파일 목록을 files 에 적어 주세요.
+- 파일을 고치거나 명령을 돌리지 말고 읽기만 하세요. 읽은 파일 목록을 files에 적어 주세요.
 - 이름 · 설명은 한국어로 짧게 써 주세요.
 """
 
@@ -134,7 +134,7 @@ async def _ask_agent(root: str, model: str, *, query_fn=None) -> tuple[dict, lis
     from .agents.claude import SETTING_SOURCES, _scrub_env, cli_path
 
     async def read_only(tool_name, tool_input, _ctx):
-        # tools 로 이미 읽기만 열었지만 한 겹 더 — 읽기 도구가 아니면 거부
+        # tools로 이미 읽기만 열었지만 한 겹 더 — 읽기 도구가 아니면 거부
         if tool_name in READ_TOOLS:
             return PermissionResultAllow()
         return PermissionResultDeny(message="시나리오는 읽기만 해요.")

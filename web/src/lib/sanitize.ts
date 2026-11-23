@@ -28,9 +28,9 @@ export function sanitizePaperHtml(raw: string): string {
     ],
     /*
      * 바깥 주소로 나가는 건 막아요 (이미지는 같은 출처 fixtures 만).
-     * DOMPurify 는 URI-safe 로 알려진 속성(alt·class·id·style·title·xmlns …)이
+     * DOMPurify 는 URI-safe로 알려진 속성(alt·class·id·style·title·xmlns …)이
      * 아니면 **모든** 속성 값을 이 정규식으로 검사해서 떨어뜨려요.
-     * 그래서 주소가 아닌 구조 속성은 아래 ADD_URI_SAFE_ATTR 로 빼 둬야 해요.
+     * 그래서 주소가 아닌 구조 속성은 아래 ADD_URI_SAFE_ATTR로 빼 둬야 해요.
      */
     ALLOWED_URI_REGEXP: /^(?:\/|#)/,
     ADD_URI_SAFE_ATTR: [

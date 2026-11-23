@@ -28,9 +28,9 @@ def isolated_data(tmp_path, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def no_systemd_scope(monkeypatch):
-    """시험에서는 실행을 systemd scope 에 담지 않는다.
+    """시험에서는 실행을 systemd scope에 담지 않는다.
 
-    시험이 `systemd-run --user --scope` 를 쓰면 user systemd 에 매이고
+    시험이 `systemd-run --user --scope` 를 쓰면 user systemd에 매이고
     transient 유닛이 기계에 남는다.
     """
     from app.runner import process as process_mod

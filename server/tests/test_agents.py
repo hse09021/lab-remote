@@ -369,7 +369,7 @@ def test_학습이_쓰는_환경에_설치하려_하면_경고만(project, monke
     running = [{"id": "EXP-007", "name": "", "state": "running", "env": "lora-env"}]
     monkeypatch.setattr(runs, "list_runs", lambda name, refresh_running=True: running)
     w = mgr_mod.install_warning("demo", req("pip install peft"))
-    assert "EXP-007 이 lora-env 로 학습 중" in w
+    assert "EXP-007 이 lora-env로 학습 중" in w
     assert mgr_mod.install_warning("demo", req("conda run -n lora-env python -m pip install -U timm"))
     assert mgr_mod.install_warning("demo", req("conda install -n other-env tqdm")) == ""  # 다른 환경
     assert mgr_mod.install_warning("demo", req("python train.py")) == ""  # 설치가 아님

@@ -29,7 +29,7 @@ export default function AdePage() {
   const sid = params.get('session') ?? ''
   const [side, setSide] = useState<Side>('sessions')
   const [sideOpen, setSideOpen] = useState(true)
-  // IDE 와 같은 패널 너비 조절
+  // IDE와 같은 패널 너비 조절
   const sidePane = usePaneResize({ initial: 280, min: 200, max: 560, dir: 1 })
   const rightPane = usePaneResize({ initial: 340, min: 260, max: 760, dir: -1 })
   const pickSide = (k: Side) => {
@@ -53,7 +53,7 @@ export default function AdePage() {
 
   const navigate = useNavigate()
   const pick = (x: AgentSession) => {
-    // 다른 프로젝트의 세션이면 그 프로젝트의 ADE 로 가요
+    // 다른 프로젝트의 세션이면 그 프로젝트의 ADE로 가요
     navigate(`/projects/${encodeURIComponent(x.project)}/ade?session=${encodeURIComponent(x.id)}`)
     setDiffPath('')
   }
@@ -74,7 +74,7 @@ export default function AdePage() {
         </Link>
         {branch && <span className={s.barBranch}>⎇ {branch}</span>}
         <div role="group" aria-label="작업 화면 전환" className={s.switch}>
-          {/* 같은 worktree 를 들고 IDE 로 */}
+          {/* 같은 worktree 를 들고 IDE로 */}
           <Link to={`/projects/${encodeURIComponent(project)}/ide${tree ? `?tree=${encodeURIComponent(tree)}` : ''}`}>IDE</Link>
           <Link to="#" aria-current="page">
             ADE
@@ -119,7 +119,7 @@ export default function AdePage() {
               <div className={s.muted}>
                 {branch || '(브랜치 없음)'} · 커밋 안 한 변경 {changes.length}
               </div>
-              <div className={s.muted}>커밋 · PR · main 에 합치기는 4단계(소스 제어)에서 붙어요.</div>
+              <div className={s.muted}>커밋 · PR · main에 합치기는 4단계(소스 제어)에서 붙어요.</div>
               <span className={s.groupLabel}>변경 내용 · {changes.length}</span>
               {changes.map((c) => (
                 <button key={c.path} type="button" className={s.fileBtn} onClick={() => openDiff(c.path)}>
@@ -133,6 +133,26 @@ export default function AdePage() {
         {sideOpen && <Resizer handle={sidePane.resizerProps} label="사이드바 너비 조절" />}
 
         <main className={s.center}>
+          {/* 휴대폰 — 옆 목록 대신 위에서 세션 고르기 */}
+          <div className={s.mobileSessions}>
+            <select
+              aria-label="세션 고르기"
+              value={current?.id ?? ''}
+              onChange={(e) => {
+                const x = sessions.find((y) => y.id === e.target.value)
+                if (x) pick(x)
+                else navigate(`/projects/${encodeURIComponent(project)}/ade`)
+              }}
+            >
+              <option value="">+ 새 세션</option>
+              {sessions.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.state === 'ask' ? '● ' : ''}
+                  {x.project} · {x.title}
+                </option>
+              ))}
+            </select>
+          </div>
           {all.isPending && <LoadingState label="세션을 불러오는 중이에요" />}
           {all.isError && <ErrorState error={all.error} onRetry={() => all.refetch()} />}
           {current ? (
@@ -254,7 +274,7 @@ function SessionList({
             ))}
           </div>
         ))}
-        {sessions.length === 0 && <div className={s.muted}>세션이 없어요. + 로 시작해요.</div>}
+        {sessions.length === 0 && <div className={s.muted}>세션이 없어요. +로 시작해요.</div>}
         <button type="button" className={s.closedToggle} aria-expanded={showClosed} onClick={() => setShowClosed((v) => !v)}>
           {showClosed ? '▾' : '▸'} 닫은 세션{closed.data ? ` ${closed.data.length}` : ''}
         </button>
@@ -290,7 +310,7 @@ export function NewSession({
   project: string
   defaultTree: string
   draft?: string
-  /** IDE에서 "새 세션" 으로 열었을 때 — 원래 세션으로 돌아가기 */
+  /** IDE에서 "새 세션"으로 열었을 때 — 원래 세션으로 돌아가기 */
   onCancel?: () => void
 }) {
   const navigate = useNavigate()
@@ -327,7 +347,7 @@ export function NewSession({
         </label>
         {where === '__new' && (
           <label className={s.field}>
-            새 브랜치 이름 (.labremote/worktrees/ 에 만들어요)
+            새 브랜치 이름 (.labremote/worktrees/에 만들어요)
             <input className={s.reason} value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="exp/early-stop" />
           </label>
         )}

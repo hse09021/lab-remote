@@ -28,7 +28,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
       {q.isPending && <span className={s.muted}>불러오는 중이에요…</span>}
       {sc && (
         <span className={s.muted}>
-          Claude 가 {new Date(sc.createdAt * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })} 에 그림 · 파일{' '}
+          Claude 가 {new Date(sc.createdAt * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}에 그림 · 파일{' '}
           {Object.keys(sc.hashes).length}개 분석 · <span className={s.mono}>{data?.path}</span>
         </span>
       )}
@@ -43,7 +43,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
         </div>
       )}
       <button type="button" className={s.drawBtn} disabled={running || draw.isPending} onClick={() => setAsking(true)}>
-        {sc ? 'Claude 로 다시 그리기' : 'Claude 로 그리기'}
+        {sc ? 'Claude로 다시 그리기' : 'Claude로 그리기'}
       </button>
       {draw.error && <div className={s.warn}>{draw.error instanceof ApiError ? draw.error.message : String(draw.error)}</div>}
 
@@ -95,7 +95,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
 
       <Dialog
         open={asking}
-        title="Claude 로 시나리오를 그릴까요?"
+        title="Claude로 시나리오를 그릴까요?"
         confirmLabel="그리기"
         busy={draw.isPending}
         onClose={() => setAsking(false)}

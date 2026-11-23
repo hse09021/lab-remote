@@ -3,15 +3,15 @@
 ## 왜 필요한가
 
 lab.remote 의 git 은 사람이 화면에서 누를 때 **사용자 권한으로** 돈다. 그런데
-에이전트 세션이 쓴 코드는 프로젝트 안 `.git/` 에도 쓸 수 있다. `.git/config`
+에이전트 세션이 쓴 코드는 프로젝트 안 `.git/`에도 쓸 수 있다. `.git/config`
 에 필터 드라이버를 심어 두면, 사람이 Files 탭을 여는 순간의 `git status` 가
 그 명령을 실행한다.
 
 그래서 **두 겹**이다.
 
-1. `ops.safe_config()` — 명령줄 `-c` 로 덮는다. `-c` 는 저장소 설정을 **이긴다.**
+1. `ops.safe_config()` — 명령줄 `-c`로 덮는다. `-c` 는 저장소 설정을 **이긴다.**
    훅 폴더는 빈 폴더를 가리키고, fsmonitor·pager·editor·askpass 는 끈다.
-2. 이 모듈 — `-c` 로 **못 덮는 것**(`filter.X.clean` 처럼 이름 가운데가 바뀌는
+2. 이 모듈 — `-c`로 **못 덮는 것**(`filter.X.clean`처럼 이름 가운데가 바뀌는
    드라이버, 다른 파일을 끌어오는 `include.path`, `protocol.<이름>.allow` …)을
    찾아 **git 을 아예 안 돌린다.**
 
@@ -22,16 +22,16 @@ lab.remote 의 git 은 사람이 화면에서 누를 때 **사용자 권한으�
 | 있는 것 | 왜 괜찮나 |
 |---|---|
 | `.git/hooks/*` 실행 파일 (pre-commit·husky) | `core.hooksPath` 를 빈 폴더로 덮는다 |
-| `core.hooksPath`·`core.fsmonitor`·`core.pager` 등 | `-c` 로 덮는다 |
+| `core.hooksPath`·`core.fsmonitor`·`core.pager` 등 | `-c`로 덮는다 |
 | `.gitattributes` 의 `filter=lfs` 등 | 드라이버(`filter.X.*`)가 없으면 아무것도 안 돈다. 드라이버는 위에서 막고, 전역·시스템 설정은 끊는다 |
 | 서브모듈 · `alias.*` | 우리가 부르는 읽기 명령은 이것들을 실행하지 않는다 |
 
-이것들은 `notes` 로 돌려준다.
+이것들은 `notes`로 돌려준다.
 
-## 설정은 git 으로 읽는다
+## 설정은 git으로 읽는다
 
 `.git/config` 를 손으로 파싱하면 `include.path` 가 끌어온 값을 놓친다. 그래서
-`git config --list --local` 로 **효과 있는 값**을 읽는다.
+`git config --list --local`로 **효과 있는 값**을 읽는다.
 """
 
 from __future__ import annotations
@@ -93,9 +93,9 @@ NOTED_KEYS = frozenset(
     }
 )
 
-#: 하위 이름이 붙는 것. 와일드카드라 `-c` 로 덮을 수 없다.
+#: 하위 이름이 붙는 것. 와일드카드라 `-c`로 덮을 수 없다.
 FORBIDDEN_PATTERNS = (
-    # add·checkout 할 때 실행된다. `.gitattributes` 의 `filter=X` 와 짝이다.
+    # add·checkout 할 때 실행된다. `.gitattributes` 의 `filter=X`와 짝이다.
     re.compile(r"^filter\..*\.(clean|smudge|process)$"),
     # `diff=X` 속성이 붙은 파일을 볼 때 실행된다
     re.compile(r"^diff\..*\.(command|textconv|external)$"),
@@ -108,7 +108,7 @@ FORBIDDEN_PATTERNS = (
     re.compile(r"^url\..*\.(insteadof|pushinsteadof)$"),
     re.compile(r"^http\..*\.proxy$"),
     re.compile(r"^credential\..*\.helper$"),
-    # `protocol.<이름>.allow` 는 `protocol.allow=never` 보다 우선한다
+    # `protocol.<이름>.allow` 는 `protocol.allow=never`보다 우선한다
     re.compile(r"^protocol\..+\.allow$"),
 )
 
@@ -133,7 +133,7 @@ def config_entries(root: str, *, git: str = "git", config_args=(), env=None) -> 
     """`git config --list --local` 의 결과. `{소문자 키: 값}`.
 
     `include.path` 가 끌어온 값까지 **효과 있는 그대로** 본다. 못 읽으면 빈
-    dict 가 아니라 **예외**다 — "못 읽었으니 괜찮다" 로 넘어가면 안 된다.
+    dict 가 아니라 **예외**다 — "못 읽었으니 괜찮다"로 넘어가면 안 된다.
     """
     local = os.path.join(_git_dir(root), "config")
     if not os.path.exists(local):
@@ -179,7 +179,7 @@ def noted_config(entries: dict) -> list[str]:
 
 
 def bad_hooks(root: str) -> list[str]:
-    """`.git/hooks` 에 **실행 권한이 있는** 파일. `*.sample` 은 봐준다."""
+    """`.git/hooks`에 **실행 권한이 있는** 파일. `*.sample` 은 봐준다."""
     folder = os.path.join(_git_dir(root), "hooks")
     out = []
     try:
@@ -204,7 +204,7 @@ def bad_attributes(root: str) -> list[str]:
 
     드라이버 정의(`filter.X.*`)가 없으면 아무것도 안 돈다 — 드라이버는
     `bad_config` 가 막는다. 저장소 전체를 걷지 않는다(큰 연구 저장소에서
-    git 을 부를 때마다 걸으면 느리다). 맨 위 `.gitattributes` 와
+    git 을 부를 때마다 걸으면 느리다). 맨 위 `.gitattributes`와
     `.git/info/attributes` 만 본다.
     """
     out = []

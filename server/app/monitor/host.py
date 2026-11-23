@@ -1,4 +1,4 @@
-"""CPU·RAM·디스크 — `/proc` 와 `statvfs` 만.
+"""CPU·RAM·디스크 — `/proc`와 `statvfs` 만.
 
 `psutil` 이 없고 ② 범위 밖이다. 같은 인터페이스 뒤에 나중에 붙일 수 있다.
 
@@ -50,7 +50,7 @@ def cpu_pct(before: tuple[int, int] | None, after: tuple[int, int] | None) -> fl
 
 def memory() -> dict:
     """`/proc/meminfo` 기준. `MemAvailable` 을 쓴다 — `MemFree` 는 캐시를
-    빼서 "거의 꽉 찼다" 로 보이게 한다."""
+    빼서 "거의 꽉 찼다"로 보이게 한다."""
     values: dict[str, int] = {}
     try:
         with open(PROC_MEMINFO, encoding="utf-8") as fh:

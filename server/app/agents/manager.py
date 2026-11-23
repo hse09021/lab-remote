@@ -4,7 +4,7 @@
 서버가 다시 떠도 목록과 에이전트 쪽 세션 id 가 남아 **이어 갈 수 있다**
 (PLAN 4.1). 대화 원문은 에이전트(Claude Code)도 따로 갖고 있다.
 
-승인: 연결 부품이 도구를 쓰기 전에 묻으면 "대기 중 승인" 으로 올리고
+승인: 연결 부품이 도구를 쓰기 전에 묻으면 "대기 중 승인"으로 올리고
 (화면 SSE · Inbox · Discord), **먼저 온 답**을 돌려준다. 어느 화면에서 답해도
 같다. "이 세션에서 계속 허용" 은 lab.remote 가 이 세션 안에서만 기억한다 —
 Claude Code 설정 파일에 쓰지 않는다.
@@ -116,7 +116,7 @@ def install_warning(project: str, req: ApprovalRequest) -> str:
             busy.append(f"{r.get('name') or r['id']} 이 {r.get('env') or 'conda 없이'}")
     if not busy:
         return ""
-    return f"{', '.join(busy[:3])} 로 학습 중이에요. 지금 패키지를 바꾸면 학습이 깨질 수 있어요."
+    return f"{', '.join(busy[:3])}로 학습 중이에요. 지금 패키지를 바꾸면 학습이 깨질 수 있어요."
 
 
 def _allow_key(req: ApprovalRequest) -> tuple:

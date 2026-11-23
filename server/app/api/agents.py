@@ -54,6 +54,31 @@ def _bad(exc: Exception, status: int = 400) -> JSONResponse:
     return JSONResponse({"detail": str(exc)}, status_code=status)
 
 
+_account: tuple[float, dict] | None = None
+
+
+@router.get("/agents/account")
+async def account():
+    """Claude Code 설치 · 로그인 여부 (처음 실행 안내 · 로그인 만료 안내). 연결만 해서 본다, 5분 캐시.
+
+    이메일은 돌려주지 않는다 — 구독 종류만.
+    """
+    global _account
+    import time
+
+    from ..agents.claude import probe_account
+    from .. import registry
+
+    if _account and time.time() - _account[0] < 300:
+        return _account[1]
+    try:
+        got = await probe_account(registry.data_dir())
+    except Exception as exc:  # 확인 자체가 실패 — 모른다고 말한다
+        got = {"installed": True, "loggedIn": None, "plan": "", "error": str(exc)[:200]}
+    _account = (time.time(), got)
+    return got
+
+
 @router.get("/agents/info")
 async def info():
     try:
@@ -64,7 +89,7 @@ async def info():
         **got,
         "modes": [{"id": m, "label": MODE_LABELS[m]} for m in MODES],
         "maxLive": MAX_LIVE,
-        # Ultracode — Claude Code 설정 키를 세션마다 --settings 로 넘긴다.
+        # Ultracode — Claude Code 설정 키를 세션마다 --settings로 넘긴다.
         # xhigh 를 지원하는 모델에서만 켤 수 있다(문서: model-config)
         "ultracode": {"needsEffort": "xhigh"},
     }

@@ -1,7 +1,7 @@
 """Dashboard 의 "열린 PR" · "최근 머지" (v3 4단계에서 미뤄 둔 것).
 
 - 머지: 등록한 프로젝트마다 main 의 첫 부모 줄기에서 **머지 커밋**만 최근 7일 (`git log`).
-  빨리 감기(fast-forward)로 합친 것은 머지 커밋이 없어 안 나온다 — lab.remote 의 "main 에
+  빨리 감기(fast-forward)로 합친 것은 머지 커밋이 없어 안 나온다 — lab.remote 의 "main에
   합치기" 는 `--no-ff` 라 늘 나온다.
 - PR: `gh` 가 깔려 있고 로그인돼 있을 때만 `gh pr list`. 없으면 없다고 말한다(지어내지 않는다).
 - 느린 명령이라 60초 캐시하고, Dashboard 본문과 따로 받는다.

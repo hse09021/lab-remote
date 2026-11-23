@@ -14,6 +14,7 @@ import { duration, whenShort } from '@/lib/time'
 import { AgentsGraph } from '../agents/AgentsGraph'
 import { ScheduleView } from '../schedule/ScheduleView'
 import { RunStatePill } from '../projects/RunsTab'
+import { StartGuide } from './StartGuide'
 import s from './Dashboard.module.css'
 
 /** Dashboard — docs/v3/mockups/MissionControl.dc.html. Overview 만 2단계에서 실제 데이터 */
@@ -91,6 +92,7 @@ function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; 
         {dash.data && view === 'schedule' && <ScheduleView running={dash.data.runs.running} />}
         {dash.data && view === 'overview' && (
           <>
+            <StartGuide projects={dash.data.projects} />
             <CutBanner runs={dash.data.runs.cut} />
             <Stats d={dash.data} sessions={sorted} git={git.data} />
             <div className={s.columns}>
@@ -110,7 +112,7 @@ function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; 
                   <RunCard key={`${r.project}/${r.id}`} r={r} />
                 ))}
               </section>
-              <aside aria-label="Git 과 자원" className={s.side}>
+              <aside aria-label="Git과 자원" className={s.side}>
                 <GitCards feed={git.data} failed={git.isError} />
                 <Resources self={dash.data.self} />
               </aside>
@@ -385,7 +387,7 @@ function GitCards({ feed, failed }: { feed?: GitFeed; failed?: boolean }) {
         <h2 className={s.h2}>
           최근 머지 {feed && <span className={s.muted}>이번 주 {feed.merges.week} · 오늘 {feed.merges.today}</span>}
         </h2>
-        {feed && feed.merges.items.length === 0 && <div className={s.muted}>이번 주에 main 에 합친 게 없어요.</div>}
+        {feed && feed.merges.items.length === 0 && <div className={s.muted}>이번 주에 main에 합친 게 없어요.</div>}
         {feed?.merges.items.map((m) => (
           <div key={`${m.project}${m.at}${m.title}`} className={s.gitRow}>
             <span className={s.gitTitle}>{m.branch || m.title}</span>

@@ -1,4 +1,4 @@
-"""IDE — 검색 · 커밋 · main 에 합치기 · 터미널(WebSocket ↔ tmux)."""
+"""IDE — 검색 · 커밋 · main에 합치기 · 터미널(WebSocket ↔ tmux)."""
 
 from __future__ import annotations
 
@@ -86,7 +86,7 @@ def kill_terminal(name: str, term: str):
 
 
 def _ws_allowed(ws: WebSocket) -> bool:
-    """🔑 WebSocket 은 HTTP 미들웨어를 안 지난다 — Host 와 Origin 을 여기서 본다.
+    """🔑 WebSocket 은 HTTP 미들웨어를 안 지난다 — Host와 Origin 을 여기서 본다.
 
     다른 사이트의 페이지도 브라우저로 이 주소에 WebSocket 을 열 수 있다
     (cross-site WebSocket hijacking). 브라우저는 Origin 을 반드시 붙이므로,

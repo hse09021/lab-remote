@@ -228,7 +228,7 @@ export function HtmlView({
     if (!el) return
     const max = el.scrollHeight - el.clientHeight
     if (max <= 4) return
-    // 소수점 높이 때문에 끝에서 99% 로 멈추는 걸 막아요
+    // 소수점 높이 때문에 끝에서 99%로 멈추는 걸 막아요
     const pct = el.scrollTop >= max - 2 ? 100 : Math.round((el.scrollTop / max) * 100)
     onProgress(pct)
   }, [onProgress])
@@ -313,7 +313,7 @@ export function HtmlView({
         ) : (
           <div
             ref={bodyRef}
-            // loadPaperHtml 이 DOMPurify 로 정리한 결과만 들어와요
+            // loadPaperHtml 이 DOMPurify로 정리한 결과만 들어와요
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )}

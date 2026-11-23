@@ -5,10 +5,10 @@
           └ labremote serve   (127.0.0.1 · nice 19 · ionice idle — serve 가 스스로 낮춰요)
 
 - 이 모듈은 유닛 **내용을 만들고 읽기만** 한다. 켜고 끄는 건 `autostart.py`
-  (사람이 `labremote autostart install|uninstall` 로 부를 때만).
+  (사람이 `labremote autostart install|uninstall`로 부를 때만).
 - code tunnel 은 여기서 띄우지 않는다 — 사람이 `code tunnel service install`
   (VS Code 공식 명령)로 켜고, lab.remote 는 상태만 읽는다 (2026-11-23 결정).
-- tmux 안에 두는 까닭: `tmux -L labremote attach -t labremote` 로 서버 출력을
+- tmux 안에 두는 까닭: `tmux -L labremote attach -t labremote`로 서버 출력을
   바로 볼 수 있다. serve 가 끝나면 창이 닫히고 tmux 가 끝나서 systemd 가 다시 띄운다.
 - **`ANTHROPIC_*` 를 넣지 않고, 사용자 매니저 환경에 있어도 지운다.** 키가 섞이면
   구독이 아니라 종량제로 과금된다.
@@ -127,7 +127,7 @@ def render(*, python: str = "", port: int = DEFAULT_PORT) -> str:
     port = int(port)
     if not 1024 <= port <= 65535:
         raise ValueError("포트는 1024~65535 사이로 정해 주세요.")
-    # tmux 에는 셸 명령 한 줄로 넘긴다 (systemd 는 큰따옴표 하나를 인자 하나로 본다)
+    # tmux에는 셸 명령 한 줄로 넘긴다 (systemd 는 큰따옴표 하나를 인자 하나로 본다)
     command = '"' + shlex.join(["exec", py, "-m", "app.cli", "serve", "--port", str(port)]) + '"'
     return _TEMPLATE.format(
         description=UNITS[NAME],

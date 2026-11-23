@@ -4,7 +4,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { apiUrl, isMockMode } from '@/api/client'
 import type { AgentEvent, SessionDetail } from '@/api/agents'
 
-/** 서버가 보내는 이벤트 이름 (server/app/events.py 와 짝) */
+/** 서버가 보내는 이벤트 이름 (server/app/events.py와 짝) */
 const KINDS = [
   'session.event',
   'session.state',
@@ -23,7 +23,7 @@ const CHANNEL = 'labremote-events'
  *
  * SSE 는 끝나지 않는 연결이라, 탭마다 하나씩 열면 같은 주소로 6개까지인 브라우저 연결을
  * 차지해서 다른 요청이 끝없이 기다려요 (실측 2026-11-24: 탭 7개에서 Inbox 가 멈춤).
- * 그래서 탭 하나가 Web Locks 로 "연결 담당" 이 되고, 받은 이벤트를 BroadcastChannel 로
+ * 그래서 탭 하나가 Web Locks로 "연결 담당" 이 되고, 받은 이벤트를 BroadcastChannel로
  * 다른 탭에 나눠 줘요. 담당 탭이 닫히면 다음 탭이 이어받아요.
  * 둘 중 하나라도 없는 브라우저에서는 예전처럼 탭마다 열어요.
  */
@@ -68,7 +68,7 @@ export function useServerEvents() {
   }, [qc])
 }
 
-/** EventSource 하나를 열고 받은 이벤트를 `handle` 로. 닫는 함수를 돌려줘요 */
+/** EventSource 하나를 열고 받은 이벤트를 `handle`로. 닫는 함수를 돌려줘요 */
 function open(handle: (kind: string, data: unknown) => void): () => void {
   const es = new EventSource(apiUrl('/events'))
   // 다시 붙으면 끊긴 사이 놓친 이벤트가 있을 수 있어요 — 통째로 다시 읽어요

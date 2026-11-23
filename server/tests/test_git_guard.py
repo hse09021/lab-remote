@@ -2,7 +2,7 @@
 
 오케스트레이터의 git 은 **샌드박스 밖에서 사용자 권한으로** 돈다(의도된
 비대칭 — 커밋·브랜치는 훅을 거치지 않는다). 그런데 샌드박스는 작업 디렉터리
-쓰기를 못 막으므로(M4) AI 가 쓴 코드가 `.git/` 에 쓸 수 있다.
+쓰기를 못 막으므로(M4) AI 가 쓴 코드가 `.git/`에 쓸 수 있다.
 
     .git/hooks/post-commit      커밋할 때 실행된다
     .git/config  core.hooksPath / filter.X.process / core.fsmonitor / include.path
@@ -162,7 +162,7 @@ def test_core_hooksPath_를_심어도_이긴다(repo, tmp_path):
 
 
 def test_filter_설정이면_git_을_안_돌린다(repo, tmp_path):
-    """`-c` 로 덮을 수 없다(와일드카드) — 그래서 **멈춘다.**"""
+    """`-c`로 덮을 수 없다(와일드카드) — 그래서 **멈춘다.**"""
     mark = _mark_path(tmp_path)
     _append_config(
         repo, f"\n[filter \"evil\"]\n\tclean = sh -c 'echo pwned > {mark}; cat'\n"
@@ -206,7 +206,7 @@ def test_fsmonitor_를_심어도_status_에서_안_돈다(repo, tmp_path):
 
 
 def test_include_path_자체를_거부한다(repo, tmp_path):
-    """`include.path` 는 파싱 시점에 끼어든다 — `-c` 로 못 막는다.
+    """`include.path` 는 파싱 시점에 끼어든다 — `-c`로 못 막는다.
 
     ⚠ 그리고 `git config --list --local` 은 **include 가 끌어온 값을 보여
     주지 않는다**(실측). 그래서 끌어온 `filter.x.process` 는 우리 목록에
@@ -249,7 +249,7 @@ def test_sshCommand_는_알리고_insteadOf_는_거부한다(repo):
 
 
 def test_protocol_이름별_허용은_거부한다(repo):
-    """`protocol.<이름>.allow` 는 `protocol.allow=never` 보다 우선한다."""
+    """`protocol.<이름>.allow` 는 `protocol.allow=never`보다 우선한다."""
     _append_config(repo, "\n[protocol \"ext\"]\n\tallow = always\n")
     with pytest.raises(G.GitRefused) as err:
         ops.guard(repo)
@@ -263,7 +263,7 @@ def test_alias_와_credential_helper_는_알리기만(repo):
     os.truncate(os.path.join(repo, ".git", "config"), 0)
     _append_config(repo, "[credential]\n\thelper = !sh -c 'echo pwned'\n")
     assert any("credential.helper" in n for n in ops.guard(repo)["notes"])
-    # URL 별 helper 는 `-c` 로 못 비운다 — 거부
+    # URL 별 helper 는 `-c`로 못 비운다 — 거부
     os.truncate(os.path.join(repo, ".git", "config"), 0)
     _append_config(repo, "[credential \"https://x\"]\n\thelper = !sh -c 'echo pwned'\n")
     with pytest.raises(G.GitRefused):

@@ -92,7 +92,7 @@ def test_쿨다운_기본값과_덮어쓰기():
     assert config.cooldown_sec("모르는-종류") == 300
     config.save({"cooldownSec": {"failure": 10, "gpu": True}})
     assert config.cooldown_sec("failure") == 10
-    # true 를 1 로 읽지 않는다
+    # true 를 1로 읽지 않는다
     assert config.cooldown_sec("gpu") == config.COOLDOWN_DEFAULTS["gpu"]
 
 

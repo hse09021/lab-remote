@@ -2,7 +2,7 @@
 
 ## 왜 이 파일이 있나
 
-`.pth` 파일은 **인터프리터가 뜰 때 실행된다.** `site-packages` 에 한 줄
+`.pth` 파일은 **인터프리터가 뜰 때 실행된다.** `site-packages`에 한 줄
 `import os; os.system(...)` 이 든 `.pth` 가 있으면, 그 환경의 파이썬이 뜨는
 순간 돈다 — `import` 를 안 해도 된다.
 
@@ -15,14 +15,14 @@ lab.remote 서버는 `labremote` 환경에서 돈다. `conda` 명령은 `base` �
 
 | | |
 |---|---|
-| 비교 기준 | **이름이 아니라 실제 경로(`realpath`)** — 심볼릭 링크나 `../` 로 가리킬 수 있다 |
+| 비교 기준 | **이름이 아니라 실제 경로(`realpath`)** — 심볼릭 링크나 `../`로 가리킬 수 있다 |
 | 막는 것 | 지금 이 프로세스의 환경 · `base`(conda 설치 폴더 자신) · 시스템 파이썬 |
 
 ## 환경 이름을 **실행 없이** 푼다
 
-`conda run -n <이름> python -c "print(sys.prefix)"` 로 풀면 **그 파이썬이
+`conda run -n <이름> python -c "print(sys.prefix)"`로 풀면 **그 파이썬이
 뜨면서 `.pth` 가 이미 돈다.** 그래서 conda 설치 폴더에서 경로를 계산한다 —
-`<root>/envs/<이름>` 과 `<root>`(= `base`).
+`<root>/envs/<이름>`과 `<root>`(= `base`).
 """
 
 from __future__ import annotations
@@ -56,8 +56,8 @@ class EnvRefused(RuntimeError):
 #: 시스템 파이썬. 여기 깔면 기계 전체에 영향이 간다.
 SYSTEM_PREFIXES = ("/usr", "/usr/local", "/opt", "/bin", "/sbin", "/lib", "/etc")
 
-#: `conda run -n` 에 넘길 수 있는 이름. **경로는 받지 않는다** —
-#: `../labremote` 처럼 올라가는 이름으로 우리 환경을 가리키는 길을 막는다.
+#: `conda run -n`에 넘길 수 있는 이름. **경로는 받지 않는다** —
+#: `../labremote`처럼 올라가는 이름으로 우리 환경을 가리키는 길을 막는다.
 #: 경로로 환경을 지정하려면 `conda run -p` 인데 우리는 쓰지 않는다.
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
@@ -114,7 +114,7 @@ def candidates(name: str) -> list[str]:
             out.append(paths.real(root))
         else:
             out.append(paths.real(os.path.join(root, "envs", text)))
-    # `CONDA_ENVS_PATH` 로 다른 자리를 쓸 수 있다
+    # `CONDA_ENVS_PATH`로 다른 자리를 쓸 수 있다
     for folder in (os.environ.get("CONDA_ENVS_PATH") or "").split(os.pathsep):
         if folder.strip():
             out.append(paths.real(os.path.join(folder.strip(), text)))
@@ -126,7 +126,7 @@ def protected_prefixes() -> dict[str, list[str]]:
     """실험용으로 쓸 수 없는 환경 경로들. 전부 `realpath` 다.
 
     **종류마다 비교 규칙이 다르다.** 모든 환경이 conda 루트 **안**에 있으니
-    루트를 "포함" 으로 비교하면 정상 환경까지 전부 거부된다.
+    루트를 "포함"으로 비교하면 정상 환경까지 전부 거부된다.
 
     | 종류 | 거부하는 경우 |
     |---|---|

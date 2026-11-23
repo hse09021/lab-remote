@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { get, send } from './client'
 import type { ModeId } from './agents'
 
-/* server/app/schedules.py 와 짝 */
+/* server/app/schedules.py와 짝 */
 
 export type ScheduleKind = 'command' | 'agent'
 export type Repeat = 'once' | 'daily' | 'weekly'

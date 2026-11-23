@@ -13,6 +13,7 @@ import { sessionsQuery } from '@/api/agents'
 import { ApiError } from '@/api/client'
 import { ErrorState, LoadingState, Resizer } from '@/components'
 import { usePaneResize } from '@/lib/usePaneResize'
+import { useIsMobile } from '@/lib/useMediaQuery'
 import { FilesIcon, GearIcon, PlusIcon, GitIcon, HistoryIcon, NewSessionIcon, RunIcon, ScenarioIcon, SearchIcon } from '@/components/icons'
 import { ChatPanel } from '../agents/ChatPanel'
 import { NewSession } from '../agents/AdePage'
@@ -43,10 +44,11 @@ export default function IdePage() {
   const terms = useQuery(terminalsQuery(project))
   const termActions = useTerminalActions(project)
 
-  // ADE 의 Scenario에서 "실행 탭에 채우기" 로 오면 ?side=run&fill=<명령>
+  // ADE 의 Scenario에서 "실행 탭에 채우기"로 오면 ?side=run&fill=<명령>
   const [side, setSide] = useState<Side>((params.get('side') as Side) || 'explorer')
   // 목업처럼 지금 열린 아이콘을 다시 누르면 사이드바를 접어요
   const [sideOpen, setSideOpen] = useState(true)
+  const mobile = useIsMobile()
   // 목업의 패널 너비 조절 — 끌거나 경계선에 초점을 두고 ←→
   const sidePane = usePaneResize({ initial: 270, min: 200, max: 560, dir: 1 })
   const chatPane = usePaneResize({ initial: 380, min: 300, max: 760, dir: -1 })
@@ -150,6 +152,19 @@ export default function IdePage() {
   )
   const activeTab = tabs.find((t) => tabKey(t) === active)
 
+  if (mobile) {
+    return (
+      <main style={{ padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <h1 style={{ margin: 0, fontSize: 20 }}>IDE 는 넓은 화면에서 써요</h1>
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--text-soft)' }}>
+          편집기 · 터미널은 휴대폰 화면에 맞지 않아요. 에이전트에게 시키고 답하는 건 ADE에서 돼요.
+        </p>
+        <Link to={`/projects/${encodeURIComponent(project)}/ade${tree ? `?tree=${encodeURIComponent(tree)}` : ''}`} style={{ fontSize: 14 }}>
+          ADE로 가기
+        </Link>
+      </main>
+    )
+  }
   if (detail.isPending) return <LoadingState label="프로젝트를 불러오는 중이에요" />
   if (detail.isError) return <ErrorState error={detail.error} onRetry={() => detail.refetch()} />
 

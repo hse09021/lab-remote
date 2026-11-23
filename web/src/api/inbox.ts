@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { get, send } from './client'
 import type { Run } from './runs'
 
-/* server/app/inbox.py · alerts.py · dashboard.py 와 짝 */
+/* server/app/inbox.py · alerts.py · dashboard.py와 짝 */
 
 export type InboxKind = 'ask' | 'run' | 'sched' | 'pr' | 'sys'
 

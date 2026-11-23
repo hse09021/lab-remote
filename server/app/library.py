@@ -2,10 +2,10 @@
 
 - 사람이 보내기를 눌렀을 때만 돈다. 에이전트를 vault 폴더에서 계획 모드로, 도구는 읽기만
   (`Read` · `Glob` · `Grep`) 열고, 정해진 JSON 모양(답 + 근거 논문)으로 답하게 한다.
-  Scenario 와 같은 방식이다. 파일을 고치거나 명령을 돌리지 못한다.
+  Scenario와 같은 방식이다. 파일을 고치거나 명령을 돌리지 못한다.
 - 답은 오래 걸릴 수 있어서 작업으로 돌리고 화면은 상태를 물어본다. 작업은 메모리에만 둔다
   (대화를 저장하지 않는다). 한 번에 하나만.
-- 근거는 vault 에 실제로 있는 논문만 남긴다 (지어낸 이름은 버린다).
+- 근거는 vault에 실제로 있는 논문만 남긴다 (지어낸 이름은 버린다).
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ __all__ = ["AskError", "start", "job", "SCHEMA"]
 SCHEMA = {
     "type": "object",
     "properties": {
-        "answer": {"type": "string", "description": "질문에 대한 답 (한국어, 해요체). vault 에서 찾은 내용만"},
+        "answer": {"type": "string", "description": "질문에 대한 답 (한국어, 해요체). vault에서 찾은 내용만"},
         "sources": {
             "type": "array",
             "items": {
@@ -59,7 +59,7 @@ def _prompt(question: str, history: list[dict], listing: list[dict]) -> str:
         "- vault 의 파일을 읽어서 확인한 내용으로만 답하세요. 모르면 모른다고 하세요. 지어내지 마세요.",
         "- 먼저 노트(MD)를 보고, 필요할 때만 PDF 를 읽으세요.",
         "- 파일을 고치거나 명령을 돌리지 말고 읽기만 하세요.",
-        "- 답은 한국어 해요체로 짧고 분명하게. 근거로 쓴 논문은 sources 에 노트 파일 이름으로 적으세요.",
+        "- 답은 한국어 해요체로 짧고 분명하게. 근거로 쓴 논문은 sources에 노트 파일 이름으로 적으세요.",
         "",
         "vault 의 논문 (파일 이름 · 제목):",
     ]
@@ -131,7 +131,7 @@ def start(question: str, history: list | None = None, *, model: str = "", query_
     if len(question) > MAX_QUESTION:
         raise AskError("질문이 너무 길어요.")
     if not os.path.isdir(papers.vault_path()):
-        raise AskError("vault 폴더가 없어요 — 사이드바의 'vault 위치' 에서 정해 주세요.")
+        raise AskError("vault 폴더가 없어요 — 사이드바의 'vault 위치'에서 정해 주세요.")
     if any(j["state"] == "running" for j in _jobs.values()):
         raise AskError("앞 질문에 답하는 중이에요. 끝나면 다시 보내 주세요.")
     clean = [

@@ -25,8 +25,8 @@ export function reloadOnce(): boolean {
   return true
 }
 
-/** `lazy` 와 같지만, 옛 빌드라 조각을 못 받으면 페이지를 한 번 새로 고쳐요 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- React.lazy 와 같은 제약
+/** `lazy`와 같지만, 옛 빌드라 조각을 못 받으면 페이지를 한 번 새로 고쳐요 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- React.lazy와 같은 제약
 export function lazyReload<T extends ComponentType<any>>(load: () => Promise<{ default: T }>) {
   return lazy(() =>
     load().catch((err: unknown) => {

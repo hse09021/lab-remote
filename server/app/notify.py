@@ -19,8 +19,8 @@ import urllib.request
 
 __all__ = ["USER_AGENT", "HEADERS", "webhook_url", "send", "send_payload"]
 
-#: 🔑 보내는 쪽 이름. **Discord 가 파이썬 기본 User-Agent 를 403 으로 막는다**
-#: (실측 2026-11-05: 같은 URL 에 `curl` 은 204, `urllib` 기본값은
+#: 🔑 보내는 쪽 이름. **Discord 가 파이썬 기본 User-Agent 를 403으로 막는다**
+#: (실측 2026-11-05: 같은 URL에 `curl` 은 204, `urllib` 기본값은
 #: `HTTP Error 403: Forbidden`). 고정값을 쓴다.
 #:
 #: 개인 정보를 넣지 않는다 — 이메일·호스트 이름·프로젝트 이름을 싣지 않는다.
@@ -58,7 +58,7 @@ def send(text: str, kind: str = "") -> dict:
 
 
 def send_payload(payload: dict, *, kind: str = "", url: str = "") -> dict:
-    """Discord 에 JSON 한 덩어리를 보낸다 (임베드는 `app/notifier.py` 가 만든다).
+    """Discord에 JSON 한 덩어리를 보낸다 (임베드는 `app/notifier.py` 가 만든다).
 
     **어떤 경우에도 예외를 올리지 않는다.**
     """
@@ -71,7 +71,7 @@ def send_payload(payload: dict, *, kind: str = "", url: str = "") -> dict:
     try:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     except (TypeError, ValueError) as exc:
-        return {"sent": False, "reason": f"보낼 내용을 JSON 으로 만들 수 없어요: {exc}"}
+        return {"sent": False, "reason": f"보낼 내용을 JSON으로 만들 수 없어요: {exc}"}
     request = urllib.request.Request(target, data=body, headers=dict(HEADERS))
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SEC) as resp:

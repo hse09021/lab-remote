@@ -9,7 +9,7 @@ from __future__ import annotations
 
 __all__ = ["COLORS", "build"]
 
-#: 임베드 왼쪽 띠 색. 목업의 tone 과 뜻을 맞춘다.
+#: 임베드 왼쪽 띠 색. 목업의 tone과 뜻을 맞춘다.
 COLORS = {
     "approval": 0xF0B429,
     "start": 0x4C6EF5,

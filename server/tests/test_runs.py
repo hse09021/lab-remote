@@ -1,4 +1,4 @@
-"""실행 — 진짜 tmux 로 띄운다 (scope 는 conftest 가 끈다)."""
+"""실행 — 진짜 tmux로 띄운다 (scope 는 conftest 가 끈다)."""
 
 import os
 import shutil

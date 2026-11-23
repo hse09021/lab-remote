@@ -1,4 +1,4 @@
-"""Conda — 가짜 conda 로 보호 · 잠금 · 미리 보기 · 삭제 백업 · 입력 검사를 시험한다."""
+"""Conda — 가짜 conda로 보호 · 잠금 · 미리 보기 · 삭제 백업 · 입력 검사를 시험한다."""
 
 import json
 import os

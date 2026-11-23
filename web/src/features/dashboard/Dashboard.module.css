@@ -522,3 +522,14 @@
   background: var(--attention-tint);
   color: var(--attention-text);
 }
+
+/* 휴대폰 — 옆 에이전트 목록은 숨기고 답 필요 · 실행이 먼저 */
+@media (max-width: 768px) {
+  .aside {
+    display: none;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

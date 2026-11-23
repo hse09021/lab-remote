@@ -24,7 +24,7 @@ const NOTE_COLOR = 'var(--purple)'
 
 const BOX = { pad: 30, padRight: 170 }
 
-/** 그래프 위 이름은 짧게 — "LoRA: Low-Rank …" 는 "LoRA" 로. 전체 이름은 오른쪽 칸에 */
+/** 그래프 위 이름은 짧게 — "LoRA: Low-Rank …" 는 "LoRA"로. 전체 이름은 오른쪽 칸에 */
 function shortName(n: GraphNode) {
   if (n.kind !== 'paper') return n.name.length > 28 ? `${n.name.slice(0, 27)}…` : n.name
   const head = n.name.split(/:\s/)[0]
@@ -165,7 +165,7 @@ export default function PaperGraph() {
   const vault = graph.data.vault
   const askDraft = sel
     ? [
-        `지식그래프에서 "${sel.name}" 과 이어진 것들 사이의 관계를 정리해 줘.`,
+        `지식그래프에서 "${sel.name}"과 이어진 것들 사이의 관계를 정리해 줘.`,
         sel.path ? `- ${sel.name} · ${vault}/${sel.path}` : `- ${sel.name}`,
         ...links.map((l) => `- ${l.other.name} (${l.why})${l.other.path ? ` · ${vault}/${l.other.path}` : ''}`),
         '',

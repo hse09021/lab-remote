@@ -3,7 +3,7 @@
 모든 호출이 `ops.run()` 을 지난다(안전 옵션 + `.git` 검사). 여기서는 **읽기만**
 한다 — 커밋·합치기·worktree 만들기/정리는 뒤 단계에서 붙는다.
 
-git 저장소가 아니거나 `.git` 검사에 걸리면 예외 대신 `{"state": ...}` 로
+git 저장소가 아니거나 `.git` 검사에 걸리면 예외 대신 `{"state": ...}`로
 알려 준다. 화면은 그 상태를 그대로 보여 준다.
 """
 
@@ -160,7 +160,7 @@ def marks_for(base: str, rel_dir: str) -> dict[str, str]:
             continue
         rest = path[len(prefix):]
         head, sep, tail = rest.partition("/")
-        # 하위 폴더 안의 변경은 그 폴더 칸에 "수정" 으로 모은다
+        # 하위 폴더 안의 변경은 그 폴더 칸에 "수정"으로 모은다
         if sep and tail:
             key = prefix + head + "/"
             label = "gitignore" if change["label"] == "gitignore" else "수정"
@@ -222,7 +222,7 @@ def _parse_worktrees(out: str) -> list[dict]:
 
 
 def worktrees(root: str) -> dict:
-    """worktree 목록. `main` 에 합쳐진 것은 `merged` 로 **표시만** 한다."""
+    """worktree 목록. `main`에 합쳐진 것은 `merged`로 **표시만** 한다."""
     bad = _state_of(root)
     if bad:
         return bad
@@ -238,7 +238,7 @@ def worktrees(root: str) -> dict:
         return {"state": "error", "reason": str(exc)}
 
     def worked_on(branch: str) -> bool:
-        """만든 뒤 커밋이 있었나 — 막 만든 브랜치는 main 과 같은 커밋이라 `--merged` 에 걸린다.
+        """만든 뒤 커밋이 있었나 — 막 만든 브랜치는 main과 같은 커밋이라 `--merged`에 걸린다.
 
         reflog 가 "만들었음" 한 줄뿐이면 아직 아무 일도 안 한 것이다. reflog 가 없으면 판단하지 않는다(합쳐짐으로 둔다).
         """

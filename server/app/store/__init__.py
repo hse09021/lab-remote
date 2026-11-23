@@ -6,7 +6,7 @@
    여러 표를 고쳐야 하는 일(작업을 끝내고 실험 상태도 바꾸는 등)이 많아서,
    함수가 각자 연결을 열면 그게 안 된다.
 2. 돌려주는 값은 **`dict`** 다. `sqlite3.Row` 를 그대로 내보내면 호출부가
-   DB 모양에 묶이고 JSON 으로 바로 못 나간다.
+   DB 모양에 묶이고 JSON으로 바로 못 나간다.
 3. 시각은 전부 `db.now()` (ISO8601 현지 시각).
 """
 
@@ -26,7 +26,7 @@ def rows(cursor) -> list[dict]:
 
 
 def dumps(value) -> str | None:
-    """payload·result 칸에 넣을 JSON. None 은 None 으로 둔다."""
+    """payload·result 칸에 넣을 JSON. None 은 None으로 둔다."""
     if value is None:
         return None
     if isinstance(value, str):

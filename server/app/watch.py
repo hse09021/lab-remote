@@ -3,7 +3,7 @@
 **AI 자동화가 아니다**(PLAN 1.4): 보고 알리기만 한다. 다시 돌리거나 이어서
 돌리지 않는다.
 
-- 10초마다 "실행 중" 으로 적힌 기록만 본다(종료코드 파일·tmux 세션 확인).
+- 10초마다 "실행 중"으로 적힌 기록만 본다(종료코드 파일·tmux 세션 확인).
   실행이 없으면 거의 아무것도 안 한다.
 - 서버가 뜰 때 한 번 훑어서 **재부팅으로 끊긴 실행**을 알아챈다.
 - 자원 경고(VRAM · 디스크 · 드라이버)는 실행이 돌고 있을 때 5분마다만 본다
@@ -27,7 +27,7 @@ INTERVAL_SEC = 10
 RESOURCE_EVERY_SEC = 300
 VRAM_WARN_PCT = 90.0
 DISK_WARN_GB = 10.0
-#: 같은 시스템 경고를 다시 Inbox 에 넣기까지
+#: 같은 시스템 경고를 다시 Inbox에 넣기까지
 SYS_COOLDOWN_SEC = 6 * 3600
 
 
@@ -45,7 +45,7 @@ def _run_title(record: dict) -> str:
 
 
 def announce(conn, record: dict, *, poster=None) -> dict | None:
-    """끝난 실행 하나를 Inbox(+Discord) 에 알린다."""
+    """끝난 실행 하나를 Inbox(+Discord)에 알린다."""
     state = record.get("state")
     title = _run_title(record)
     ref = {"project": record.get("project"), "run": record["id"]}

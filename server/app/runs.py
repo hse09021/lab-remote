@@ -1,4 +1,4 @@
-"""실행 — `labremote run` 과 화면의 "새 실행" 이 같은 함수를 쓴다.
+"""실행 — `labremote run`과 화면의 "새 실행" 이 같은 함수를 쓴다.
 
     systemd-run --user -p Type=forking -p Nice=0 -- tmux -L <소켓> new-session -d -s <세션> bash run.sh
     run.sh:  cd <위치> ; conda run -s -p <환경> bash -c <명령> 2>&1 | tee -a output.log
@@ -6,13 +6,13 @@
 
 - **접속이 끊겨도, 서버가 다시 떠도 학습은 계속된다**(PLAN 1.5). scope 가
   서버와 다른 cgroup 의 사용자 서비스이고(서버의 nice 19 를 물려받지 않음), tmux 서버는 실행마다 **따로**(`-L`) 띄운다 — 이미
-  떠 있는 tmux 서버에 세션을 만들면 학습이 그 서버의 cgroup 으로 들어가
+  떠 있는 tmux 서버에 세션을 만들면 학습이 그 서버의 cgroup으로 들어가
   scope 가 소용없어진다.
-- 실행 기록은 프로젝트 안 `<root>/.labremote/runs/<EXP-NNN>/` 에 있다
+- 실행 기록은 프로젝트 안 `<root>/.labremote/runs/<EXP-NNN>/`에 있다
   (`run.json` · `run.sh` · `output.log` · `exit_code`). 그래서 프로젝트를
   옮기면 기록도 같이 간다.
 - **AI 자동화 없음**(PLAN 1.4): 끝난 실행을 다시 돌리거나 이어서 돌리지 않는다.
-  재부팅으로 끊긴 실행은 "끊김" 으로 **표시만** 한다.
+  재부팅으로 끊긴 실행은 "끊김"으로 **표시만** 한다.
 
 상태: `running` 실행 중 · `done` 끝남 · `failed` 실패 · `stopped` 중지됨 ·
 `cut` 끊김(재부팅·프로세스가 사라짐).
@@ -193,7 +193,7 @@ def _script(*, cwd: str, folder: str, command: str, conda: str, prefix: str, run
     return f"""#!/usr/bin/env bash
 # lab.remote 실행 {run_id} — lab.remote 가 만든 파일이에요. 고쳐도 이미 시작한 실행에는 안 먹어요.
 # 중지(Ctrl+C)는 프로그램에만 가게 한다 — 이 셸은 끝까지 남아 종료코드를 적고,
-# tee 는 SIGINT 를 무시해 프로그램이 정리하며 찍는 출력도 받는다(안 그러면 SIGPIPE 로 죽는다).
+# tee 는 SIGINT 를 무시해 프로그램이 정리하며 찍는 출력도 받는다(안 그러면 SIGPIPE로 죽는다).
 trap 'true' INT
 cd -- {q(cwd)} || {{ echo 97 > {q(os.path.join(folder, "exit_code"))}; exit 97; }}
 echo $$ > {q(os.path.join(folder, "pid"))}
@@ -209,7 +209,7 @@ exit "$code"
 def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str = "") -> dict:
     """실행을 띄운다. 띄우기만 하고 기다리지 않는다.
 
-    `env` 가 비면 conda 없이 `bash -c` 로 돈다. `cwd` 는 프로젝트 안 상대 경로
+    `env` 가 비면 conda 없이 `bash -c`로 돈다. `cwd` 는 프로젝트 안 상대 경로
     (worktree 등)다.
     """
     root = projects.require(project)
@@ -283,7 +283,7 @@ def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str
         "reason": "",
         "stopRequested": False,
         "ack": False,
-        # 끝난 걸 Inbox·Discord 로 알렸나. 누가 먼저 알아채든(화면·CLI·감시)
+        # 끝난 걸 Inbox·Discord로 알렸나. 누가 먼저 알아채든(화면·CLI·감시)
         # 감시(watch.tick)가 이 값을 보고 한 번만 알린다.
         "announced": False,
     }
@@ -339,7 +339,7 @@ def _pid_alive(folder: str) -> bool:
 def refresh(root: str, record: dict) -> tuple[dict, bool]:
     """실행 중으로 적힌 기록의 실제 상태를 본다. `(기록, 바뀌었나)`.
 
-    끝난 걸 처음 알아챈 쪽이 `run.json` 에 적는다 — 알림을 한 번만 보내려고.
+    끝난 걸 처음 알아챈 쪽이 `run.json`에 적는다 — 알림을 한 번만 보내려고.
     """
     if record.get("state") != "running":
         return record, False
@@ -377,7 +377,7 @@ def refresh(root: str, record: dict) -> tuple[dict, bool]:
             ended = now
         record["endedAt"] = ended
     _save(root, record)
-    # 끝난 실행의 tmux 소켓 파일이 /tmp 에 남지 않게
+    # 끝난 실행의 tmux 소켓 파일이 /tmp에 남지 않게
     try:
         clear_socket((record.get("tmux") or {}).get("socket", ""))
     except (OSError, subprocess.SubprocessError):
@@ -408,7 +408,7 @@ def clear_socket(sock: str) -> bool:
 
 
 def view(root: str, record: dict) -> dict:
-    """화면에 내보낼 모양. tmux 에 붙는 명령도 같이."""
+    """화면에 내보낼 모양. tmux에 붙는 명령도 같이."""
     out = dict(record)
     out["stateLabel"] = STATE_LABELS.get(record.get("state", ""), record.get("state", ""))
     t = record.get("tmux") or {}

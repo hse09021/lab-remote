@@ -1,14 +1,14 @@
 """FastAPI 앱 — `labremote serve` 가 띄운다. 빌드된 웹(`web/dist`)도 같이 내준다.
 
-### 🔑 127.0.0.1 에만 열지만, 그것만으로는 모자라다
+### 🔑 127.0.0.1에만 열지만, 그것만으로는 모자라다
 
-브라우저에서 연 **아무 웹 페이지**나 `http://127.0.0.1:8000` 으로 요청을 보낼
+브라우저에서 연 **아무 웹 페이지**나 `http://127.0.0.1:8000`으로 요청을 보낼
 수 있다. 그래서 두 겹을 더 둔다.
 
 1. **Host 검사** — `Host` 가 `127.0.0.1`·`localhost`·`[::1]`(포트 무관)이
-   아니면 거절한다. DNS rebinding(공격자 도메인을 127.0.0.1 로 돌려 응답까지
+   아니면 거절한다. DNS rebinding(공격자 도메인을 127.0.0.1로 돌려 응답까지
    읽는 것)을 막는다. 터널로 전달한 바깥 주소는 `labremote remote set` (데이터 폴더
-   `remote.json`) 이나 환경 변수 `LAB_ALLOWED_HOSTS` 로 더한다 (remote.py).
+   `remote.json`) 이나 환경 변수 `LAB_ALLOWED_HOSTS`로 더한다 (remote.py).
 2. **바꾸는 요청에는 `X-Lab-Remote: 1` 헤더** — 다른 출처의 페이지가 이
    헤더를 붙이려면 CORS 사전 요청이 필요한데, 이 서버는 CORS 를 허락하지
    않는다. `Origin` 이 있으면 그 호스트도 같은 규칙으로 본다.
@@ -78,14 +78,14 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
         from .events import bus
 
         bus.bind(asyncio.get_running_loop())
-        # 작업 중이던 에이전트 세션은 "연결 끊김" 으로 — 메시지를 보내면 이어 간다
+        # 작업 중이던 에이전트 세션은 "연결 끊김"으로 — 메시지를 보내면 이어 간다
         manager.recover()
         # 예약 시계 — 사람이 시각으로 건 예약만 (scheduler.py). 시험에서는 끈다
         from . import scheduler
 
         if os.environ.get("LAB_NO_WATCH") != "1":
             scheduler.start()
-        # 실행 감시 — 끝남·실패·끊김을 알아채 Inbox·Discord 로 알린다 (watch.py)
+        # 실행 감시 — 끝남·실패·끊김을 알아채 Inbox·Discord로 알린다 (watch.py)
         watcher = None
         if os.environ.get("LAB_NO_WATCH") != "1":
             watcher = watch.Watcher()
@@ -184,8 +184,8 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
                 immutable = rest.startswith("assets/")
                 return FileResponse(target, headers={"Cache-Control": "public, max-age=31536000, immutable" if immutable else "no-cache"})
             if rest.startswith("assets/"):
-                # 새로 빌드돼 없어진 조각 — index.html 을 주면 브라우저가 "모듈을 못 불러와요" 로 터져요.
-                # 404 로 답하고 화면이 스스로 한 번 새로 고쳐요 (web/src/lib/lazyReload.ts)
+                # 새로 빌드돼 없어진 조각 — index.html 을 주면 브라우저가 "모듈을 못 불러와요"로 터져요.
+                # 404로 답하고 화면이 스스로 한 번 새로 고쳐요 (web/src/lib/lazyReload.ts)
                 return JSONResponse({"detail": "없는 파일이에요 (새로 빌드됐어요 — 새로 고침해 주세요)"}, status_code=404)
         # SPA — 화면 경로는 전부 index.html. 늘 새로 받게 (새 빌드의 조각 이름을 알도록)
         return FileResponse(index, headers={"Cache-Control": "no-cache"})

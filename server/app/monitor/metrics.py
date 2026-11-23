@@ -19,7 +19,7 @@
 | 진전 없음 | 로그 mtime 이 900초 동안 그대로 | 알림만 |
 | 디스크 부족 | 여유 < 10GB | 큐 정지 |
 
-`Config.yaml` 의 `monitor:` 로 덮어쓴다.
+`Config.yaml` 의 `monitor:`로 덮어쓴다.
 """
 
 from __future__ import annotations
@@ -76,7 +76,7 @@ def read_result(path: str) -> dict:
     """`result.csv` 를 읽는다. 없거나 깨졌으면 정상 반환 (던지지 않는다).
 
     `{"ok", "format", "rows", "warnings", "reason"}`. `rows` 는
-    `{"step", "split", "metric", "value", "flag"}` 로 **정규화**한 것이다.
+    `{"step", "split", "metric", "value", "flag"}`로 **정규화**한 것이다.
     """
     try:
         with open(path, encoding="utf-8", newline="") as fh:

@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, send } from './client'
 
-/* server/app/system.py 와 짝 */
+/* server/app/system.py와 짝 */
 
 export interface GpuSummary {
   available: boolean
@@ -74,7 +74,7 @@ export interface TunnelStatus {
   cli: string
   /** absent: CLI 없음 · off: 꺼짐 · up: 켜짐 · unknown: 못 읽음 */
   state: 'absent' | 'off' | 'up' | 'unknown'
-  /** `code tunnel service install` 로 설치됐나 */
+  /** `code tunnel service install`로 설치됐나 */
   service: boolean
   loggedIn: boolean | null
   name: string

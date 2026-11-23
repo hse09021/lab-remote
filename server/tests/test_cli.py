@@ -241,7 +241,7 @@ def test_remote_set_show_clear(monkeypatch, capsys):
 
 
 def test_setsid_는_cgroup_을_안_바꾼다():
-    """실측(2026-11-05)으로 고정한다 — 그래서 실행은 `systemd-run --scope` 로 돈다."""
+    """실측(2026-11-05)으로 고정한다 — 그래서 실행은 `systemd-run --scope`로 돈다."""
     import subprocess
     import time
 

@@ -102,7 +102,7 @@ function SessionCard({ x, kind }: { x: AgentSession; kind: 'ask' | 'work' | 'don
       )}
       <div className={s.actions}>
         <Link to={adeHref(x)} className={s.primary} data-strong={kind === 'ask'}>
-          {kind === 'ask' ? (p?.tool === 'AskUserQuestion' ? 'ADE에서 질문에 답하기' : 'ADE에서 답하기') : 'ADE 로 가기'}
+          {kind === 'ask' ? (p?.tool === 'AskUserQuestion' ? 'ADE에서 질문에 답하기' : 'ADE에서 답하기') : 'ADE로 가기'}
         </Link>
         {p && <QuickAllow p={p} />}
       </div>

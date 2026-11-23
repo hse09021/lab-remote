@@ -1,4 +1,4 @@
-"""/api/projects/{name}/runs — 실행 (CLI `labremote run` 과 같은 함수)."""
+"""/api/projects/{name}/runs — 실행 (CLI `labremote run`과 같은 함수)."""
 
 from __future__ import annotations
 

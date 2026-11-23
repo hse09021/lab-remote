@@ -111,7 +111,7 @@ def test_시스템(client, project):
 def test_웹_빌드를_내준다(client):
     assert "lab.remote" in client.get("/projects/demo?tab=files").text  # SPA 폴백
     assert client.get("/assets/app.js").text == "console.log(1)"
-    assert "lab.remote" in client.get("/../../etc/passwd").text  # 밖은 index 로
+    assert "lab.remote" in client.get("/../../etc/passwd").text  # 밖은 index로
     assert client.get("/api/nope").status_code == 404
 
 

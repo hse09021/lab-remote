@@ -20,7 +20,7 @@ const FILTERS: Array<{ id: 'recent' | ReadStatus; label: string }> = [
 ]
 
 export function MobilePapers() {
-  // /papers/:id 로 바로 들어와도 같은 목록 + 요약 시트예요
+  // /papers/:id로 바로 들어와도 같은 목록 + 요약 시트예요
   const { id: routeId } = useParams<{ id: string }>()
   const navigate = useNavigate()
 

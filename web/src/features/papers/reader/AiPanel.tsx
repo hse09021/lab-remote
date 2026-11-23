@@ -148,7 +148,7 @@ export function AiPanel({
                   요약 만들기
                 </button>
               )}
-              {onMakeSummary && <p className={s.todo}>vault 에 &lsquo;이름 요약.md&rsquo; 를 새로 만들어요. 원래 노트는 고치지 않아요.</p>}
+              {onMakeSummary && <p className={s.todo}>vault에 &lsquo;이름 요약.md&rsquo; 를 새로 만들어요. 원래 노트는 고치지 않아요.</p>}
             </div>
           ))}
 

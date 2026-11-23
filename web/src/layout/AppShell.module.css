@@ -16,3 +16,68 @@
   display: flex;
   align-items: stretch;
 }
+
+/* 연결 끊김 · 로그인 필요 */
+.banner {
+  padding: 8px 20px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.banner[data-tone='bad'] {
+  background: var(--attention);
+  color: var(--bg);
+}
+
+.banner[data-tone='warn'] {
+  background: var(--attention-tint);
+  color: var(--attention-text);
+}
+
+/* 휴대폰 — 아래 탭 막대 */
+.shell[data-mobile='true'] .body {
+  padding-bottom: 60px;
+}
+
+.tabs {
+  position: fixed;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.tab[aria-current='page'] {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tabBadge {
+  margin-left: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--attention);
+  color: var(--bg);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

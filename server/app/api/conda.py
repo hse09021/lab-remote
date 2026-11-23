@@ -50,7 +50,7 @@ def detail(name: str):
 
 @router.post("/conda/envs/{name}/changes")
 def change(name: str, body: ChangeBody):
-    """dry=true 면 바뀌는 것만 계산. 실제 설치는 dry=false 로 한 번 더."""
+    """dry=true 면 바뀌는 것만 계산. 실제 설치는 dry=false로 한 번 더."""
     try:
         return conda.start_job("change", name, tool=body.tool, action=body.action, packages=body.packages, dry=body.dry)
     except conda.CondaError as exc:

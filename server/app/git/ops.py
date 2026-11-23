@@ -46,8 +46,8 @@ TIMEOUT_SEC = 60
 #: `server/data/` 아래라 샌드박스 안 코드가 **여기엔 못 쓴다**(M1b).
 NOHOOKS_NAME = "nohooks"
 
-#: git 에 물려주는 환경. **화이트리스트다** — 오케스트레이터의 환경이 그대로
-#: 새면 `LAB_*` 로 우리 폴더 위치까지 알려 주는 셈이고, `GIT_*` 가 섞이면
+#: git에 물려주는 환경. **화이트리스트다** — 오케스트레이터의 환경이 그대로
+#: 새면 `LAB_*`로 우리 폴더 위치까지 알려 주는 셈이고, `GIT_*` 가 섞이면
 #: 아래 고정값을 덮어쓴다.
 ENV_KEEP = ("HOME", "USER", "LOGNAME", "PATH", "LANG", "LC_ALL", "TZ")
 
@@ -72,7 +72,7 @@ SAFE_ENV = {
 }
 
 #: 전역 설정도 안 읽으므로 커밋 신원이 사라진다. 사람의 신원을 **따로 읽어**
-#: `-c` 로 넘긴다 (설정을 읽는 것은 아무것도 실행하지 않는다). 못 찾으면
+#: `-c`로 넘긴다 (설정을 읽는 것은 아무것도 실행하지 않는다). 못 찾으면
 #: 이 값으로 커밋한다 — 루프가 신원 때문에 멈추면 안 된다.
 FALLBACK_IDENTITY = ("lab.remote", "labremote@localhost")
 
@@ -95,7 +95,7 @@ def identity(base: dict | None = None) -> tuple[str, str]:
     """커밋에 쓸 `(이름, 메일)`.
 
     `SAFE_ENV` 가 전역·시스템 설정을 끊으므로 신원도 같이 사라진다. 그래서
-    **신원만** 전역 설정에서 읽어 `-c user.*` 로 넘긴다. 설정을 읽는 것은
+    **신원만** 전역 설정에서 읽어 `-c user.*`로 넘긴다. 설정을 읽는 것은
     훅·필터를 돌리지 않는다.
 
     왜 전역 설정을 실행에는 안 쓰나: `~/.gitconfig` 는 AI 가 쓴 코드가 못
@@ -124,7 +124,7 @@ def identity(base: dict | None = None) -> tuple[str, str]:
 
 
 def safe_config() -> list[str]:
-    """명령줄 `-c` 로 덮는 값. **`-c` 는 저장소 설정을 이긴다.**
+    """명령줄 `-c`로 덮는 값. **`-c` 는 저장소 설정을 이긴다.**
 
     `.git/config` 는 AI 가 쓴 코드가 고칠 수 있다(M4) — 샌드박스는 작업
     디렉터리 쓰기를 못 막는다. 그리고 오케스트레이터의 git 은 **샌드박스
@@ -132,7 +132,7 @@ def safe_config() -> list[str]:
     우리가 정한다.
 
     와일드카드가 있는 것(`filter.*`·`diff.*.textconv`)과 파싱 시점에 끼어드는
-    것(`include.path`)은 `-c` 로 덮을 수 없다 — `git/guard.py` 가 찾아서
+    것(`include.path`)은 `-c`로 덮을 수 없다 — `git/guard.py` 가 찾아서
     **git 을 아예 안 돌린다.**
     """
     return [
@@ -201,7 +201,7 @@ def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True)
     if guarded:
         guard(root)
     # 커밋하는 명령에는 신원을 붙인다 — `SAFE_ENV` 가 전역 설정을 끊어서
-    # 그대로면 "who are you" 로 실패한다.
+    # 그대로면 "who are you"로 실패한다.
     config = commit_config() if args and args[0] in NEEDS_IDENTITY else safe_config()
     try:
         done = subprocess.run(
@@ -296,7 +296,7 @@ def commit(root: str, message: str, paths_list: list[str]) -> dict:
     ]
     if not staged:
         return {"committed": False, "reason": "바뀐 게 없어요", "paths": []}
-    # **담긴 파일만** 넘긴다. 빈 폴더를 pathspec 으로 주면 git 이 거절한다.
+    # **담긴 파일만** 넘긴다. 빈 폴더를 pathspec으로 주면 git 이 거절한다.
     run(root, ["commit", "-m", message, "--", *staged])
     return {"committed": True, "sha": head_sha(root), "paths": staged}
 

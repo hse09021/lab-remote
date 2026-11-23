@@ -14,7 +14,7 @@
 |---|---|
 | 커널 모듈 | `/proc/driver/nvidia/version` 의 `NVRM version:` |
 | 유저랜드 | `nvidia-smi --query-gpu=driver_version` |
-| 재부팅 대기 | `/var/run/reboot-required.pkgs` 에 `nvidia` 가 있나 |
+| 재부팅 대기 | `/var/run/reboot-required.pkgs`에 `nvidia` 가 있나 |
 | 이미 깨짐 | `nvidia-smi` stderr 의 `version mismatch` |
 
 앞 두 자리가 다르면 **불일치**다. 재부팅 대기만 있으면 아직 안 깨졌지만

@@ -1,4 +1,4 @@
-"""📦 패키지 설치 — 검증된 목록만 `conda run … pip install` 로.
+"""📦 패키지 설치 — 검증된 목록만 `conda run … pip install`로.
 
 들어가는 값은 `runner/pkgspec.py` 가 전부 검증한 것뿐이고, 환경은
 `runner/condaenv.py` 가 막는 곳(`base`·`labremote`)이 아니어야 한다.
@@ -35,15 +35,15 @@ __all__ = [
 
 
 class InstallError(RuntimeError):
-    """설치를 띄우지 못했을 때. 결과는 예외가 아니라 dict 로 돌려준다."""
+    """설치를 띄우지 못했을 때. 결과는 예외가 아니라 dict로 돌려준다."""
 
 
 #: 10분. 큰 휠(torch 류)은 내려받는 데 오래 걸린다.
 TIMEOUT_SEC = 600
 
-#: pip 에 물려주는 환경. **화이트리스트다.**
+#: pip에 물려주는 환경. **화이트리스트다.**
 #:
-#: 캐시 변수가 여기 **없는 것이 요점**이다. `ENV_KEEP` 에 없으면 물려받지
+#: 캐시 변수가 여기 **없는 것이 요점**이다. `ENV_KEEP`에 없으면 물려받지
 #: 않으므로, 서버의 환경에 `PIP_CACHE_DIR` 이 섞여 있어도 안 간다.
 ENV_KEEP = (
     "HOME", "USER", "LOGNAME", "PATH", "LANG", "LC_ALL", "TZ",
@@ -66,7 +66,7 @@ ENV_STRIP = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL")
 def build_argv(parsed: dict, env_name: str, *, allow_source: bool = False) -> list[str]:
     """`conda run -n <환경> python -m pip install …` 전체.
 
-    `shell=False` 로 넘긴다 — 인자에 `;` 가 있어도 셸이 해석하지 않는다.
+    `shell=False`로 넘긴다 — 인자에 `;` 가 있어도 셸이 해석하지 않는다.
     (애초에 `pkgspec` 이 그런 글자를 거부한다. 두 겹이다.)
     """
     name = str(env_name or "").strip()
@@ -74,7 +74,7 @@ def build_argv(parsed: dict, env_name: str, *, allow_source: bool = False) -> li
         raise InstallError(
             f"conda 환경 이름이 이상해요: {env_name!r}"
         )
-    # 🔑 lab.remote 가 도는 환경(`labremote`)과 `base` 에는 깔지 않는다.
+    # 🔑 lab.remote 가 도는 환경(`labremote`)과 `base`에는 깔지 않는다.
     # `.pth` 는 인터프리터가 뜰 때 실행된다 — 서버·conda 가 뜰 때 돌게 된다.
     try:
         condaenv.require(name)
@@ -125,9 +125,9 @@ def install(
     timeout_sec: int = TIMEOUT_SEC,
     runner=None,
 ) -> dict:
-    """실제로 설치한다. **던지지 않는다** — 결과를 dict 로 돌려준다.
+    """실제로 설치한다. **던지지 않는다** — 결과를 dict로 돌려준다.
 
-    실패해도 `blocked` 로 가지 않는다. Claude에게 결과를 그대로 알려 주고
+    실패해도 `blocked`로 가지 않는다. Claude에게 결과를 그대로 알려 주고
     다른 방법을 찾게 한다 (의존성 하나가 루프를 끝내면 안 된다).
     """
     try:

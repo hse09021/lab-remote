@@ -248,7 +248,7 @@ export function SelectionHotspot({
   onPick,
   /** 선택 메뉴·팝오버가 열려 있으면 파란 선택 틴트를 깔아요 */
   active = false,
-  /** 하이라이트 H 로 칠한 상태 */
+  /** 하이라이트 H로 칠한 상태 */
   highlighted = false,
   /** 주석 C 를 저장한 상태 — 보라 밑줄 */
   annotated = false,

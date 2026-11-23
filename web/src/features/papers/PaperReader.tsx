@@ -64,7 +64,7 @@ export default function PaperReader() {
   if (isMobile) return <MobilePapers />
 
   const { id = 'attn' } = useParams<{ id: string }>()
-  // `?section=` 으로 들어오면 그 섹션부터 보여 줘요
+  // `?section=`으로 들어오면 그 섹션부터 보여 줘요
   const [search] = useSearchParams()
   const wantSection = search.get('section')
 
@@ -160,7 +160,7 @@ export default function PaperReader() {
 
   /*
    * 단축키는 훅이라 조기 반환보다 앞에 있어야 해요.
-   * 핸들러는 렌더마다 바뀌니 ref 로 최신 것을 읽어요.
+   * 핸들러는 렌더마다 바뀌니 ref로 최신 것을 읽어요.
    */
   const actions = useRef<{
     selection: (a: SelectionAction) => void
@@ -198,7 +198,7 @@ export default function PaperReader() {
   /*
    * 바깥을 누르면 떠 있는 것들을 닫아요.
    * 메뉴 항목을 누를 때는 닫히면 안 되니, 떠 있는 것 안쪽은 지나쳐요.
-   * (누르는 순간 닫고 click 으로 동작하면 핸들러가 안 돌아요)
+   * (누르는 순간 닫고 click으로 동작하면 핸들러가 안 돌아요)
    */
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
@@ -218,7 +218,7 @@ export default function PaperReader() {
     { value: 'pdf', label: 'PDF' },
   ]
 
-  // vault에서 온 논문 — 미리 만든 리더 데이터가 없어요. PDF 가 있으면 PDF 로 같은 리더 화면을 그리고,
+  // vault에서 온 논문 — 미리 만든 리더 데이터가 없어요. PDF 가 있으면 PDF로 같은 리더 화면을 그리고,
   // PDF 도 없으면 노트만 보여 줘요
   const missing = reader.isError && reader.error instanceof ApiError && reader.error.status === 404
   if (missing && paper && vault.active && !vault.failed) {
@@ -361,7 +361,7 @@ export default function PaperReader() {
   actions.current = { selection: onSelectionAct, explain: openChat }
 
   /** 보관 여부는 라이브러리 캐시가 단일 출처예요 — /papers 목록과 늘 같아요 */
-  // 실제 API 에서는 arXiv 번호나 제목이 같은 논문이 vault 에 있으면 보관된 것으로 봐요
+  // 실제 API에서는 arXiv 번호나 제목이 같은 논문이 vault에 있으면 보관된 것으로 봐요
   const savedPaper = (r: { n: number; arxiv: string | null; title?: string }) =>
     (papers.data ?? []).find(
       (p) =>

@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { get, send, upload } from './client'
 import type { ProjectRuns } from './runs'
 
-/* ── 타입 (server/app/api/projects.py · files.py · git.py 와 짝) ─────────── */
+/* ── 타입 (server/app/api/projects.py · files.py · git.py와 짝) ─────────── */
 
 export type GitSummary =
   | { state: 'ok'; branch: string; head: string; changed: number; ahead: number; behind: number }
@@ -21,7 +21,7 @@ export interface ProjectSettings {
 export interface ProjectRow {
   name: string
   root: string
-  /** 홈을 ~ 로 줄인 경로 */
+  /** 홈을 ~로 줄인 경로 */
   path: string
   exists: boolean
   pinned: boolean
@@ -66,7 +66,7 @@ export interface Worktree {
   primary: boolean
   detached: boolean
   prunable: boolean
-  /** main 에 합쳐짐 — 정리 대상으로 표시만 해요 */
+  /** main에 합쳐짐 — 정리 대상으로 표시만 해요 */
   merged: boolean
   ahead: number | null
   changed: number | null
@@ -145,7 +145,7 @@ export const useSaveSettings = (name: string) =>
     send<ProjectSettings>('PUT', `/projects/${enc(name)}/settings`, v),
   )
 
-/** 새 worktree — `.labremote/worktrees/` 에 만들어요. 브랜치가 없으면 새로 만들어요 */
+/** 새 worktree — `.labremote/worktrees/`에 만들어요. 브랜치가 없으면 새로 만들어요 */
 export const useAddWorktree = (name: string) =>
   useProjectMutation((v: { branch: string }) =>
     send<{ path: string; rel: string; branch: string }>('POST', `/projects/${enc(name)}/git/worktrees`, v),

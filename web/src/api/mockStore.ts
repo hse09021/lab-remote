@@ -17,7 +17,7 @@ export interface UserAnnotation {
   kind: 'highlight' | 'note'
   /** 하이라이트면 고른 글, 주석이면 내가 쓴 메모 */
   text: string
-  /** 주석이 어떤 글에 달렸는지 (하이라이트는 text 와 같아요) */
+  /** 주석이 어떤 글에 달렸는지 (하이라이트는 text와 같아요) */
   source: string
   sectionId: string
   page: number
@@ -88,7 +88,7 @@ function update(fn: (prev: MockState) => MockState) {
   save(state)
 }
 
-/** 처음 상태로 — 개발 모드에서 ?reset-mock 으로도 불려요 */
+/** 처음 상태로 — 개발 모드에서 ?reset-mock으로도 불려요 */
 export function resetMockStore() {
   state = empty()
   try {

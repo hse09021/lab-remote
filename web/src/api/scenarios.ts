@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, send } from './client'
 
-/* server/app/scenarios.py 와 짝 */
+/* server/app/scenarios.py와 짝 */
 
 export interface ScenarioStep {
   name: string
@@ -37,7 +37,7 @@ export const scenarioQuery = (project: string) =>
   queryOptions({
     queryKey: ['scenario', project],
     queryFn: () => get<ScenarioPayload>(`/projects/${enc(project)}/scenario`),
-    // 그리는 동안만 자주 (끝나면 SSE scenario.updated 로도 다시 읽어요)
+    // 그리는 동안만 자주 (끝나면 SSE scenario.updated로도 다시 읽어요)
     refetchInterval: (q) => (q.state.data?.job.state === 'running' ? 4_000 : 60_000),
   })
 

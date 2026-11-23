@@ -35,7 +35,7 @@ export async function loadPaperHtml(paperId: string): Promise<LoadedPaperHtml> {
   }
 
   if (isMockPath(`/papers/${paperId}/html`)) {
-    // mock 으로 돌 때만 골격을 가져와요. 실제 서버를 볼 땐 번들에 안 들어가요
+    // mock으로 돌 때만 골격을 가져와요. 실제 서버를 볼 땐 번들에 안 들어가요
     const sample = await import('@/api/mock/attn.sample.html?raw')
     return { html: sanitizePaperHtml(sample.default), isReal: false }
   }

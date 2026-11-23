@@ -2,7 +2,7 @@
 
 데이터 폴더(`data_dir`)는 lab.remote 가 쓰는 곳 전부의 뿌리다 — 프로젝트
 목록, `lab.db`, Discord 설정(0600). 기본은 `server/data/` 이고
-`LAB_DATA_DIR` 로 바꿀 수 있다. `.gitignore` 에 걸려 있어 커밋되지 않는다.
+`LAB_DATA_DIR`로 바꿀 수 있다. `.gitignore`에 걸려 있어 커밋되지 않는다.
 
 표준 라이브러리만 쓴다.
 """
@@ -42,7 +42,7 @@ class InvalidName(ValueError):
 def valid_name(name: str) -> str:
     """이름을 검사해 그대로 돌려준다.
 
-    `../../x` 같은 값이 `policies/<이름>.json` 으로 들어가면 정책 파일을
+    `../../x` 같은 값이 `policies/<이름>.json`으로 들어가면 정책 파일을
     프로젝트 밖 아무 곳에나 쓸 수 있게 되므로 여기서 막는다.
     """
     if not isinstance(name, str) or not NAME_RE.match(name):
@@ -54,7 +54,7 @@ def valid_name(name: str) -> str:
 
 
 def data_dir() -> str:
-    """lab.remote 데이터 폴더. `.gitignore` 에 걸려 있어 커밋되지 않는다."""
+    """lab.remote 데이터 폴더. `.gitignore`에 걸려 있어 커밋되지 않는다."""
     return os.path.abspath(os.environ.get("LAB_DATA_DIR") or os.path.join(_SERVER_DIR, "data"))
 
 
@@ -107,7 +107,7 @@ def register(root: str, name: str) -> str:
             for other_root, other_name in projects.items():
                 if other_name == name and other_root != root_real:
                     raise InvalidName(
-                        f"이름 {name!r} 은 이미 {other_root} 에 쓰고 있어요. "
+                        f"이름 {name!r} 은 이미 {other_root}에 쓰고 있어요. "
                         "다른 이름을 쓰거나 먼저 등록을 지워 주세요."
                     )
             projects[root_real] = name

@@ -3,7 +3,7 @@
 세 가지:
 - 설명 · 질문 (`explain`): 섹션 · 고른 글 · 질문에 대한 풀이. 대화창에 나온다.
 - 번역 (`translate`): 고른 글을 한국어로.
-- AI 분석 (`analyze`): 핵심 · 방법 · 결과 · 확인 필요 구절과 참고문헌. 데이터 폴더 `analysis/` 에 저장.
+- AI 분석 (`analyze`): 핵심 · 방법 · 결과 · 확인 필요 구절과 참고문헌. 데이터 폴더 `analysis/`에 저장.
   구절 자리는 화면이 PDF 글자 층에서 찾는다(여기서는 쪽 번호와 원문 구절만 받는다).
 
 모두 작업으로 돌리고 화면이 상태를 물어본다. 작업은 메모리에만 둔다.
@@ -127,7 +127,7 @@ def _prompt(kind: str, p: dict, req: dict) -> tuple[str, dict]:
             base += [f"맥락 ({page}쪽): \"{text}\""]
         if hist:
             base += ["앞선 대화:", *hist]
-        base += [f"질문: {str(req.get('question') or '')[:2000]}", "답은 paragraphs 에, 제목은 짧게."]
+        base += [f"질문: {str(req.get('question') or '')[:2000]}", "답은 paragraphs에, 제목은 짧게."]
         return "\n".join(base), EXPLAIN
     if kind == "translate":
         return "\n".join([f"이 구절을 한국어로 번역해 주세요. 필요하면 {_where(p)} 를 읽어 맥락을 확인하세요.", f"\"{text}\""]), TRANSLATE
@@ -135,7 +135,7 @@ def _prompt(kind: str, p: dict, req: dict) -> tuple[str, dict]:
         "이 논문 PDF 를 읽고:",
         "1. 본문에서 핵심 주장(core) · 방법(method) · 결과(result) · 확인이 필요한 곳(check: 숫자가 안 맞거나 근거가 약한 곳) 구절을 그대로 옮겨 적으세요. 쪽 번호도.",
         "2. 참고문헌 목록을 번호 순으로 적고, 본문이 왜 인용했는지 한 줄씩.",
-        "구절은 PDF 에 있는 글자 그대로여야 해요 (화면이 그 글자를 찾아 칠해요).",
+        "구절은 PDF에 있는 글자 그대로여야 해요 (화면이 그 글자를 찾아 칠해요).",
     ]
     return "\n".join(base), ANALYZE
 

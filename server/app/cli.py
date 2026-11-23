@@ -46,7 +46,7 @@ def cmd_notify(args) -> int:
             project=args.name or "",
             subject=f"test-{int(time.time())}",
             title="알림이 닿았어요",
-            body="`labremote notify test` 로 보낸 시험 알림이에요.",
+            body="`labremote notify test`로 보낸 시험 알림이에요.",
             fields=[("보낸 쪽", notify.USER_AGENT)],
         )
     # `notifier.send` 는 `sent`·`status` 를 돌려준다 (`ok` 가 아니다).
@@ -221,7 +221,7 @@ def lower_priority() -> dict:
 
 
 def cmd_serve(args) -> int:
-    """`127.0.0.1` 에만 연다. 다른 주소로 여는 옵션은 일부러 없다."""
+    """`127.0.0.1`에만 연다. 다른 주소로 여는 옵션은 일부러 없다."""
     try:
         import uvicorn
 
@@ -327,7 +327,7 @@ def cmd_runs(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="labremote", description="lab.remote")
-    parser.add_argument("--json", action="store_true", help="JSON 으로 출력해요")
+    parser.add_argument("--json", action="store_true", help="JSON으로 출력해요")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("serve", help="서버를 띄워요 (127.0.0.1 만)")

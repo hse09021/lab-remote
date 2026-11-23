@@ -90,7 +90,7 @@ def _clean(label: str, value: str, *, allow_empty: bool = False) -> str:
         raise SpecError(f"{label} 앞뒤에 공백이 있어요: {value!r}")
     if any(bad in text for bad in BAD_SUBSTRINGS):
         raise SpecError(
-            f"{label} 에 쓸 수 없는 글자가 있어요: {text!r} · "
+            f"{label}에 쓸 수 없는 글자가 있어요: {text!r} · "
             "이름과 버전만 받아요 (URL·경로·옵션은 안 돼요)"
         )
     return text
@@ -117,7 +117,7 @@ def _one(item, index: int) -> dict:
     spec = _clean(f"{index + 1}번째 버전", item.get("spec"), allow_empty=True)
     if spec and not SPEC_RE.match(spec):
         raise SpecError(
-            f"버전 지정 규칙에 안 맞아요: {spec!r} · `==1.2.3` 처럼 비교 연산자와 "
+            f"버전 지정 규칙에 안 맞아요: {spec!r} · `==1.2.3`처럼 비교 연산자와 "
             "숫자로 시작해야 해요"
         )
 
@@ -129,7 +129,7 @@ def _one(item, index: int) -> dict:
 
 
 def parse(data) -> dict:
-    """요청을 검증해 **정규화된 dict** 로. 하나라도 어긋나면 `SpecError`.
+    """요청을 검증해 **정규화된 dict**로. 하나라도 어긋나면 `SpecError`.
 
     돌려주는 것: `{"packages": [...], "reason": str, "allowSource": bool}`
     """
@@ -179,7 +179,7 @@ def parse(data) -> dict:
 
 
 def requirements(parsed: dict) -> list[str]:
-    """`pip` 에 넘길 인자. **셸을 거치지 않는다** (`shell=False`)."""
+    """`pip`에 넘길 인자. **셸을 거치지 않는다** (`shell=False`)."""
     out = []
     for item in parsed["packages"]:
         extras = f"[{item['extras']}]" if item.get("extras") else ""

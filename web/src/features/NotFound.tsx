@@ -10,7 +10,7 @@ export default function NotFound() {
       <p className={s.note}>주소를 다시 확인해 주세요.</p>
       <div>
         <Button variant="primary" onClick={() => navigate('/dashboard')}>
-          Dashboard 로 가기
+          Dashboard로 가기
         </Button>
       </div>
     </main>

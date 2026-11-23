@@ -161,7 +161,7 @@ def test_종류별_채널로_보낸다(conn, monkeypatch):
     result = notifier.send(conn, "approval", project="p", title="승인", poster=poster)
     assert result["sent"] is True
     assert poster.calls[0][1] == "approval"
-    # 🔑 DB 에는 **채널 이름만** — 웹훅 주소는 0600 파일에만 둔다 (PLAN 1.7)
+    # 🔑 DB에는 **채널 이름만** — 웹훅 주소는 0600 파일에만 둔다 (PLAN 1.7)
     row = N.get(conn, result["id"])
     assert row["route"] == "routes.approval"
     assert "discord.test" not in str(dict(row))
@@ -171,7 +171,7 @@ def test_종류별_채널로_보낸다(conn, monkeypatch):
 
 
 def test_고정_User_Agent_를_보낸다(monkeypatch):
-    """같은 URL 에 `curl` 은 204 인데 `urllib` 기본값은 403 이었다.
+    """같은 URL에 `curl` 은 204 인데 `urllib` 기본값은 403 이었다.
 
     `HTTP Error 403: Forbidden` 때문에 **승인 알림이 한 건도 안 갔다.**
     배관은 돌고 있었고(훅이 전송을 시도하고 결과를 기록했다) 헤더만
@@ -203,7 +203,7 @@ def test_고정_User_Agent_를_보낸다(monkeypatch):
     got = notify.send_payload({"content": "x"})
 
     assert got["sent"] is True and got["status"] == 204
-    # urllib 은 헤더 이름을 Title-Case 로 바꾼다
+    # urllib 은 헤더 이름을 Title-Case로 바꾼다
     assert seen["headers"].get("User-agent") == notify.USER_AGENT
     assert seen["headers"].get("Content-type") == "application/json"
 

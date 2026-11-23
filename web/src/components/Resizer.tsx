@@ -5,7 +5,7 @@ import s from './Resizer.module.css'
 interface Props {
   /** usePaneResize가 준 props. 패널이 접혀 있으면 null이라 아무것도 안 그려요 */
   handle: ResizerProps | null
-  /** "라이브러리 메뉴 너비 조절" 처럼 무엇을 조절하는지 */
+  /** "라이브러리 메뉴 너비 조절"처럼 무엇을 조절하는지 */
   label: string
   className?: string
 }

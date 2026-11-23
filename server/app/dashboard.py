@@ -1,7 +1,7 @@
 """Dashboard Overview — 등록한 모든 프로젝트의 실행을 한데 모은다.
 
 PR · 머지는 느린 명령(gh · git log)이라 `/api/dashboard/git`(gitfeed.py)에서 따로 준다.
-에이전트는 `/api/agents/sessions` 에서 따로 받는다. 그래서 여기서는 `null` 로 둔다.
+에이전트는 `/api/agents/sessions`에서 따로 받는다. 그래서 여기서는 `null`로 둔다.
 """
 
 from __future__ import annotations

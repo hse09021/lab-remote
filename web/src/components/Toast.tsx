@@ -11,7 +11,7 @@ interface Props {
   message: string
   /** 데스크톱은 위쪽 가운데, 모바일은 아래쪽 */
   placement?: 'top' | 'bottom'
-  /** "되돌리기" 처럼 토스트 안에서 바로 누를 수 있는 것 */
+  /** "되돌리기"처럼 토스트 안에서 바로 누를 수 있는 것 */
   action?: ToastAction | null
 }
 

@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, send } from './client'
 
-/* server/app/runs.py 와 짝 */
+/* server/app/runs.py와 짝 */
 
 export type RunState = 'running' | 'done' | 'failed' | 'stopped' | 'cut'
 

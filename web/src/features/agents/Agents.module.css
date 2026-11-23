@@ -1290,3 +1290,41 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.mobileSessions {
+  display: none;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobileSessions select {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* 휴대폰 — 채팅만. 세션은 위에서 고르기 */
+@media (max-width: 768px) {
+  .rail,
+  .sidebar,
+  .rightPane {
+    display: none;
+  }
+
+  .mobileSessions {
+    display: flex;
+  }
+
+  /* 폭 조절 선도 숨겨요 */
+  .adeBody > [role='separator'] {
+    display: none;
+  }
+}
+

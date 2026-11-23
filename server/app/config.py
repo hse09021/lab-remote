@@ -6,7 +6,7 @@ v3 는 데이터 폴더(`registry.data_dir()`) 밖에 설정을 두지 않는다
     <data>/discord.json   Discord 웹훅 주소·채널 라우팅·알림 쿨다운 (권한 0600)
 
 **웹훅 주소는 비밀이다.** 로그·화면·에러에 원문을 찍지 않는다 — 화면에는
-`masked_webhook()` 으로 가려서 보인다.
+`masked_webhook()`으로 가려서 보인다.
 
 표준 라이브러리만 쓴다.
 """
@@ -35,7 +35,7 @@ __all__ = [
     "is_private",
 ]
 
-#: 알림 종류별 기본 쿨다운(초). `discord.json` 의 `cooldownSec` 로 덮어쓴다.
+#: 알림 종류별 기본 쿨다운(초). `discord.json` 의 `cooldownSec`로 덮어쓴다.
 COOLDOWN_DEFAULTS = {
     "approval": 0,  # 답이 필요한 건 묵히지 않는다
     "failure": 300,
@@ -78,7 +78,7 @@ def save(data: dict) -> str:
         os.fsync(fd)
     finally:
         os.close(fd)
-    os.chmod(tmp, SECRET_MODE)  # umask 와 상관없이
+    os.chmod(tmp, SECRET_MODE)  # umask와 상관없이
     os.replace(tmp, path)
     return path
 
@@ -156,7 +156,7 @@ def clear_webhook() -> str:
 def masked_webhook(url: str | None = None) -> str:
     """화면용으로 가린 주소. 원문은 **어디에도** 내보내지 않는다.
 
-    호스트만 남기고 경로(ID·토큰)는 `••••` 로 가린다.
+    호스트만 남기고 경로(ID·토큰)는 `••••`로 가린다.
     """
     url = discord_webhook() if url is None else url
     if not url:
@@ -172,7 +172,7 @@ def cooldown_sec(kind: str) -> int:
     """같은 알림을 다시 보내기까지 묵힐 시간(초)."""
     table = load().get("cooldownSec")
     value = table.get(kind) if isinstance(table, dict) else None
-    if isinstance(value, bool):  # true 를 1 로 읽지 않는다
+    if isinstance(value, bool):  # true 를 1로 읽지 않는다
         value = None
     if isinstance(value, int) and value >= 0:
         return value
@@ -188,6 +188,6 @@ def mode_of(path: str) -> int | None:
 
 
 def is_private(path: str) -> bool:
-    """남이 못 읽는가. 0600 보다 넓으면 거짓."""
+    """남이 못 읽는가. 0600보다 넓으면 거짓."""
     mode = mode_of(path)
     return mode is not None and mode & 0o077 == 0

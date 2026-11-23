@@ -9,7 +9,7 @@ lab.remote 가 바꾸는 시스템 설정은 **이것뿐**이고, 사람이 명�
            ③ linger 를 **lab.remote 가 켰을 때만** 원래대로(`disable-linger`)
            ④ 마지막에 멈추기 — 이 서버가 그 유닛 안에서 돌면 여기서 같이 끝난다
 
-sudo 는 필요 없다. 원래 linger 값은 데이터 폴더 `autostart.json` 에 둔다.
+sudo 는 필요 없다. 원래 linger 값은 데이터 폴더 `autostart.json`에 둔다.
 """
 
 from __future__ import annotations
@@ -131,7 +131,7 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
 
     rec = record()
     if rec.get("lingerBefore") is False and units.linger() is True and _tunnel_service():
-        # code tunnel 서비스도 linger 에 기대요 — 끄면 로그아웃할 때 터널도 내려가요
+        # code tunnel 서비스도 linger에 기대요 — 끄면 로그아웃할 때 터널도 내려가요
         done.append({"what": "linger", "ok": True, "detail": "code tunnel 서비스가 써서 그대로 둬요 (끄려면 loginctl disable-linger)"})
     elif rec.get("lingerBefore") is False and units.linger() is True:
         user = units._user()
@@ -145,7 +145,7 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
     except FileNotFoundError:
         pass
 
-    # 마지막: 멈추기. 이 서버가 그 안에 있으면 여기서 끝난다 — 화면에서 부를 때는 답을 돌려준 뒤 `later` 로
+    # 마지막: 멈추기. 이 서버가 그 안에 있으면 여기서 끝난다 — 화면에서 부를 때는 답을 돌려준 뒤 `later`로
     if stop:
         step("멈추기", [systemctl, "--user", "stop", "--no-block", f"{units.NAME}.service"], must=False)
     else:
@@ -162,7 +162,7 @@ def later(argv_tail: list[str], *, delay: float = 1.0) -> None:
 
 
 def _tunnel_service() -> bool:
-    """`code tunnel service install` 로 깐 터널 서비스가 있나 (linger 를 같이 쓴다)."""
+    """`code tunnel service install`로 깐 터널 서비스가 있나 (linger 를 같이 쓴다)."""
     try:
         from .. import tunnel
 
@@ -175,7 +175,7 @@ def restart(*, run: Runner = _run, now: bool = True) -> dict:
     """"세션 다시 켜기" — 자동 시작이 켜져 있을 때만. 답을 먼저 돌려주고 다시 뜬다."""
     systemctl = _systemctl()
     if not os.path.exists(units.unit_path()):
-        raise AutostartError("자동 시작이 꺼져 있어요 — labremote autostart install 로 켜요.")
+        raise AutostartError("자동 시작이 꺼져 있어요 — labremote autostart install로 켜요.")
     if not now:
         later(["restart", "--no-block"])
         return {"ok": True}

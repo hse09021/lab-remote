@@ -99,7 +99,7 @@ export function useSaveReference() {
   return useMutation({
     mutationFn: async ({ reference, save, savedId }: { reference: Reference; save: boolean; savedId?: string }) => {
       if (!isMockPath('/papers/reference', 'POST')) {
-        // 실제 API — arXiv 번호가 있으면 arXiv 로, 없으면 메타만으로 vault 에 새 노트. 취소는 휴지통으로
+        // 실제 API — arXiv 번호가 있으면 arXiv로, 없으면 메타만으로 vault에 새 노트. 취소는 휴지통으로
         if (!save) return savedId ? send<unknown>('PUT', `/papers/${encodeURIComponent(savedId)}/trash`, { on: true }) : undefined
         return send<unknown>('POST', '/papers/reference', {
           title: reference.title,
@@ -158,7 +158,7 @@ export const paperGraphQuery = () =>
     queryFn: () => get<PaperGraph>('/papers/graph'),
   })
 
-/* ── 논문 추가 (vault 에 새 파일만 · 있는 노트는 덮지 않아요) ─────────────── */
+/* ── 논문 추가 (vault에 새 파일만 · 있는 노트는 덮지 않아요) ─────────────── */
 
 export interface AddedPaper {
   id: string
@@ -186,7 +186,7 @@ export function useUploadPdf() {
   })
 }
 
-/** vault 에 있는 PDF 주소 (새 탭으로 열어요) */
+/** vault에 있는 PDF 주소 (새 탭으로 열어요) */
 export const paperPdfHref = (id: string) => apiUrl(`/papers/${encodeURIComponent(id)}/pdf`)
 
 /* ── 라이브러리에 묻기 (실제 API) ─────────────────────────────────────── */
@@ -219,7 +219,7 @@ export const askJobQuery = (id: string | null) =>
     refetchInterval: (q) => (q.state.data?.state === 'running' || !q.state.data ? 1500 : false),
   })
 
-/* ── 휴지통 · 모음 · BibTeX (lab.remote 에만 기록 — vault 는 그대로) ─────── */
+/* ── 휴지통 · 모음 · BibTeX (lab.remote에만 기록 — vault 는 그대로) ─────── */
 
 export const trashQuery = () =>
   queryOptions({ queryKey: ['papers', 'trash'], queryFn: () => get<Paper[]>('/papers?trash=true') })
@@ -265,7 +265,7 @@ export async function fetchBibtex(papers: Paper[]): Promise<string> {
   return res.text()
 }
 
-/* ── AI 요약 (누를 때만 · vault 에 `<이름> 요약.md` 새 파일) ──────────────────── */
+/* ── AI 요약 (누를 때만 · vault에 `<이름> 요약.md` 새 파일) ──────────────────── */
 
 /** 논문 노트 본문 (요약이 없을 때 보여 줄 것) */
 export const notesQuery = () =>

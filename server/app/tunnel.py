@@ -34,7 +34,7 @@ CACHE_SEC = 30.0
 _lock = threading.Lock()
 _cache: tuple[float, dict] | None = None
 
-#: 데스크톱 VS Code 에 딸린 터널 CLI · 따로 받은 CLI
+#: 데스크톱 VS Code에 딸린 터널 CLI · 따로 받은 CLI
 _CANDIDATES = (
     "/usr/share/code/bin/code-tunnel",
     "/usr/share/code-insiders/bin/code-tunnel-insiders",
@@ -59,7 +59,7 @@ def cli_path() -> str:
 
 def _run(argv: list[str]) -> tuple[int, str]:
     env = dict(os.environ)
-    for key in ("VSCODE_IPC_HOOK_CLI", "VSCODE_CLI"):  # 원격 창 셸에서 불려도 로컬 CLI 로 돌게
+    for key in ("VSCODE_IPC_HOOK_CLI", "VSCODE_CLI"):  # 원격 창 셸에서 불려도 로컬 CLI로 돌게
         env.pop(key, None)
     try:
         done = subprocess.run(argv, capture_output=True, text=True, timeout=15, env=env)
@@ -108,7 +108,7 @@ def _probe(run=_run) -> dict:
         else:
             out["state"] = "off"
     code, text = run([cli, "tunnel", "user", "show"])
-    # 실측: 로그인 안 했으면 "not logged in" 과 종료코드 1. 계정 이름은 내보내지 않는다 — 로그인했는지만
+    # 실측: 로그인 안 했으면 "not logged in"과 종료코드 1. 계정 이름은 내보내지 않는다 — 로그인했는지만
     if "not logged in" in text.lower():
         out["loggedIn"] = False
     elif code == 0 and text:

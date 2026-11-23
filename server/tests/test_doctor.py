@@ -1,6 +1,6 @@
 """🩺 `labremote doctor` (v3) — PLAN 4.1 의 점검 + GPU·비밀값.
 
-`doctor` 는 **읽기만 한다.** 고칠 명령은 `hint` 로 알려 준다.
+`doctor` 는 **읽기만 한다.** 고칠 명령은 `hint`로 알려 준다.
 """
 
 import os

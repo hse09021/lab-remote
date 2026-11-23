@@ -202,3 +202,30 @@
   align-items: center;
   justify-content: center;
 }
+
+/* 휴대폰 — 메뉴는 아래 탭 막대로, 헤더는 한 줄 */
+@media (max-width: 768px) {
+  .inner {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 0 12px;
+    min-height: 52px;
+  }
+
+  .nav,
+  .gpu,
+  .gotoText,
+  .kbd {
+    display: none;
+  }
+
+  .right {
+    margin-left: auto;
+    gap: 8px;
+  }
+
+  .goto {
+    min-width: 0;
+    padding: 0 10px;
+  }
+}

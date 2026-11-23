@@ -172,7 +172,7 @@ def test_conda_환경_이름을_검사한다():
 
 
 def test_셸을_안_거친다(monkeypatch):
-    """`shell=False` 로 넘긴다 — 인자에 `;` 가 있어도 해석되지 않는다."""
+    """`shell=False`로 넘긴다 — 인자에 `;` 가 있어도 해석되지 않는다."""
     seen = {}
 
     def fake(argv, **kw):

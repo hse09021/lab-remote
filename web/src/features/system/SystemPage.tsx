@@ -240,7 +240,7 @@ export default function SystemPage() {
         </h2>
         <p className={s.text}>
           터널이 늘 열려 있으면 그 GitHub 계정만 있으면 이 데스크톱의 터미널과 파일에 들어올 수 있어요. GitHub 2단계 인증을 켜 두세요. 서버는
-          127.0.0.1 에만 열려서 터널을 거치지 않으면 닿지 않고, 적어 둔 바깥 주소가 아닌 곳에서 온 요청은 거절해요.
+          127.0.0.1에만 열려서 터널을 거치지 않으면 닿지 않고, 적어 둔 바깥 주소가 아닌 곳에서 온 요청은 거절해요.
         </p>
       </section>
 
@@ -319,7 +319,7 @@ code tunnel service install --accept-server-license-terms
       </form>
       <p className={s.note}>
         적으면 이 주소로 오는 요청을 받고, Discord 알림에 &lsquo;답하기&rsquo; 링크가 붙어요.
-        {via && ` 지금 ${window.location.hostname} 으로 보고 있어요.`}
+        {via && ` 지금 ${window.location.hostname}으로 보고 있어요.`}
         {d.tunnel.envHosts.length > 0 && ` 환경 변수로 허용한 주소: ${d.tunnel.envHosts.join(', ')}`}
       </p>
       {save.isError && <p className={s.err}>{errText(save.error)}</p>}

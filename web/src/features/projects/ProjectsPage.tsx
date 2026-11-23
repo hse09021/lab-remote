@@ -17,6 +17,7 @@ import { FilesTab } from './FilesTab'
 import { WorktreesTab } from './WorktreesTab'
 import { SettingsTab } from './SettingsTab'
 import { RunsTab } from './RunsTab'
+import { useIsMobile } from '@/lib/useMediaQuery'
 import s from './Projects.module.css'
 
 type Tab = 'files' | 'worktrees' | 'work' | 'settings'
@@ -63,16 +64,18 @@ export default function ProjectsPage() {
   const list = useQuery(projectsQuery())
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<'recent' | 'name'>('recent')
-  const [registering, setRegistering] = useState(false)
+  const [registering, setRegistering] = useState<false | 'existing' | 'new'>(false)
 
   const projects = useMemo(() => list.data?.projects ?? [], [list.data])
 
-  // /projects 로 오면 가장 최근 프로젝트를 열어요
+  // /projects로 오면 가장 최근 프로젝트를 열어요
+  const mobile = useIsMobile()
   useEffect(() => {
-    // 쿼리(?tab=work 등)는 그대로 들고 가요 — Dashboard 의 "새 실행" 이 쓰는 길
-    if (!id && projects.length > 0)
+    // 쿼리(?tab=work 등)는 그대로 들고 가요 — Dashboard 의 "새 실행" 이 쓰는 길.
+    // 휴대폰은 목록을 먼저 보여 줘요 (목록과 상세 중 하나만 보여서)
+    if (!id && projects.length > 0 && (!mobile || window.location.search))
       navigate(`/projects/${encodeURIComponent(projects[0].name)}${window.location.search}`, { replace: true })
-  }, [id, projects, navigate])
+  }, [id, projects, navigate, mobile])
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -84,12 +87,12 @@ export default function ProjectsPage() {
   const rest = shown.filter((p) => !p.pinned)
 
   return (
-    <div className={s.page}>
+    <div className={s.page} data-detail={!!id} data-empty={list.isSuccess && projects.length === 0}>
       <aside aria-label="프로젝트 목록" className={s.aside}>
         <div className={s.asideHead}>
           <span className={s.asideTitle}>프로젝트</span>
           <span className={s.count}>{projects.length}</span>
-          <button type="button" className={s.addBtn} onClick={() => setRegistering(true)}>
+          <button type="button" className={s.addBtn} onClick={() => setRegistering('existing')}>
             + 폴더 등록
           </button>
         </div>
@@ -147,15 +150,25 @@ export default function ProjectsPage() {
                 연구 폴더를 등록하면 파일 · git · worktree 를 여기서 봐요. 폴더 안에는{' '}
                 <span className={s.mono}>.labremote/</span> 하나만 생겨요.
               </p>
-              <button type="button" className={s.primaryBtn} onClick={() => setRegistering(true)}>
-                폴더 등록
-              </button>
+              <div className={s.emptyActions}>
+                <button type="button" className={s.primaryBtn} onClick={() => setRegistering('existing')}>
+                  있는 폴더 등록
+                </button>
+                <button type="button" className={s.secondaryBtn} onClick={() => setRegistering('new')}>
+                  새 폴더 만들기
+                </button>
+              </div>
             </div>
           )
         )}
       </main>
 
-      <RegisterDialog open={registering} onClose={() => setRegistering(false)} />
+      <RegisterDialog
+        key={String(registering)}
+        open={!!registering}
+        initialMode={registering === 'new' ? 'new' : 'existing'}
+        onClose={() => setRegistering(false)}
+      />
     </div>
   )
 }
@@ -178,10 +191,10 @@ function ProjectItem({ p, current }: { p: ProjectRow; current: boolean }) {
   )
 }
 
-function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function RegisterDialog({ open, onClose, initialMode = 'existing' }: { open: boolean; onClose: () => void; initialMode?: 'existing' | 'new' }) {
   const navigate = useNavigate()
   const register = useRegisterProject()
-  const [mode, setMode] = useState<'existing' | 'new'>('existing')
+  const [mode, setMode] = useState<'existing' | 'new'>(initialMode)
   const [path, setPath] = useState('')
   const [name, setName] = useState('')
   const [gitInit, setGitInit] = useState(true)
@@ -285,6 +298,9 @@ function ProjectDetail({ name }: { name: string }) {
 
   return (
     <>
+      <Link to="/projects" className={s.mobileBack}>
+        ‹ 프로젝트 목록
+      </Link>
       <div className={s.detailHead}>
         <div className={s.detailMain}>
           <div className={s.titleRow}>

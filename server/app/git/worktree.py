@@ -1,4 +1,4 @@
-"""worktree 만들기 — `<프로젝트>/.labremote/worktrees/<이름>` 에만 만든다(PLAN 4.1).
+"""worktree 만들기 — `<프로젝트>/.labremote/worktrees/<이름>`에만 만든다(PLAN 4.1).
 
 정리(`remove`)는 사람이 누르고 한 번 더 확인했을 때만 부른다. `--force` 는 쓰지 않는다 —
 커밋 안 한 변경이 있으면 git 이 거절하고 그 문구를 그대로 보여 준다. 브랜치는 지우지 않는다.

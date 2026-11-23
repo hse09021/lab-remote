@@ -10,7 +10,7 @@ export interface SelectionPlace {
   boxes: PtRect[] | null
 }
 
-/** 블록 안에서 시작 지점까지의 글자 수 (TreeWalker 로 텍스트만 세요) */
+/** 블록 안에서 시작 지점까지의 글자 수 (TreeWalker로 텍스트만 세요) */
 function offsetWithin(block: HTMLElement, node: Node, nodeOffset: number): number | null {
   const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT)
   let count = 0
@@ -40,7 +40,7 @@ export function placeFromRange(range: Range): SelectionPlace['anchor'] {
   return { blockId: block.id, start: Math.min(from, to), end: Math.max(from, to) }
 }
 
-/** 블록 id + 오프셋 → 다시 Range 로 (본문에 그릴 때) */
+/** 블록 id + 오프셋 → 다시 Range로 (본문에 그릴 때) */
 export function rangeFromAnchor(
   root: HTMLElement,
   anchor: { blockId: string; start: number; end: number },

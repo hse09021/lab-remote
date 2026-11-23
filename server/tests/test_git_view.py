@@ -66,7 +66,7 @@ def test_worktree_와_합쳐진_표시(repo):
     _git(repo, "worktree", "add", "-q", "-b", "exp/done", os.path.join(wt, "done"))
     _git(repo, "worktree", "add", "-q", "-b", "exp/ahead", os.path.join(wt, "ahead"))
     _git(repo, "worktree", "add", "-q", "-b", "exp/fresh", os.path.join(wt, "fresh"))
-    # exp/done 은 커밋하고 main 에 합친다
+    # exp/done 은 커밋하고 main에 합친다
     with open(os.path.join(wt, "done", "d.txt"), "w") as fh:
         fh.write("d\n")
     _git(os.path.join(wt, "done"), "add", "d.txt")
@@ -83,7 +83,7 @@ def test_worktree_와_합쳐진_표시(repo):
     assert rows["main"]["primary"] is True and rows["main"]["merged"] is False
     assert rows["exp/done"]["merged"] is True and rows["exp/done"]["ahead"] == 0
     assert rows["exp/ahead"]["merged"] is False and rows["exp/ahead"]["ahead"] == 1
-    # 막 만든 브랜치는 main 과 같은 커밋이어도 "합쳐짐" 이 아니다 (정리 대상 아님)
+    # 막 만든 브랜치는 main과 같은 커밋이어도 "합쳐짐" 이 아니다 (정리 대상 아님)
     assert rows["exp/fresh"]["merged"] is False
     assert rows["exp/done"]["rel"] == ".labremote/worktrees/done"
     # 정리(지우기)는 하지 않는다 — 표시만

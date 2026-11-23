@@ -126,7 +126,7 @@ class SummaryStart(BaseModel):
 
 @router.post("/papers/{pid}/summary")
 async def start_summary(pid: str, body: SummaryStart):
-    """요약 만들기 — 시작만 하고 돌아온다. 화면이 GET 으로 물어본다."""
+    """요약 만들기 — 시작만 하고 돌아온다. 화면이 GET으로 물어본다."""
     try:
         return summaries.start(pid, model=body.model)
     except summaries.SummaryError as exc:
@@ -150,7 +150,7 @@ class ReaderAiBody(BaseModel):
 
 @router.post("/papers/{pid}/ai")
 async def reader_ai_start(pid: str, body: ReaderAiBody):
-    """리더 AI (설명 · 질문 · 번역 · 분석) — 시작만 하고 돌아온다. GET /papers/ai/{id} 로 물어본다."""
+    """리더 AI (설명 · 질문 · 번역 · 분석) — 시작만 하고 돌아온다. GET /papers/ai/{id}로 물어본다."""
     try:
         return reader_ai.start(pid, body.kind, body.model_dump(), model=body.model)
     except reader_ai.ReaderAiError as exc:
@@ -173,7 +173,7 @@ def reader_analysis(pid: str):
 
 @router.post("/papers/ask")
 async def ask(body: AskBody):
-    """라이브러리에 묻기 — 시작만 하고 바로 돌아온다. 화면이 GET /papers/ask/{id} 로 물어본다."""
+    """라이브러리에 묻기 — 시작만 하고 바로 돌아온다. 화면이 GET /papers/ask/{id}로 물어본다."""
     try:
         return library.start(body.question, body.history, model=body.model)
     except library.AskError as exc:
@@ -226,7 +226,7 @@ def get_bibtex(ids: str = ""):
 
 @router.post("/papers/reference")
 def add_reference(body: ReferenceBody):
-    """인용 카드의 "보관하기" — arXiv 번호가 있으면 arXiv 로, 없으면 메타만으로 노트를 만든다."""
+    """인용 카드의 "보관하기" — arXiv 번호가 있으면 arXiv로, 없으면 메타만으로 노트를 만든다."""
     try:
         if body.arxiv.strip():
             return papers.add_arxiv(body.arxiv)
@@ -279,7 +279,7 @@ def trash(pid: str, body: TrashBody):
 
 @router.post("/papers/arxiv")
 def add_arxiv(body: ArxivBody):
-    """arXiv 링크로 논문 추가 — vault 에 새 노트(+ PDF)만 쓴다."""
+    """arXiv 링크로 논문 추가 — vault에 새 노트(+ PDF)만 쓴다."""
     try:
         return papers.add_arxiv(body.url)
     except papers.PapersError as exc:

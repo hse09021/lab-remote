@@ -32,7 +32,7 @@ async def draw(name: str, body: DrawBody):
         try:
             await scenarios.draw(name, model=body.model)
         except Exception:
-            pass  # 사유는 job.error 에 남는다
+            pass  # 사유는 job.error에 남는다
 
     scenarios.projects.require(name)
     asyncio.create_task(go(), name=f"scenario-{name}")

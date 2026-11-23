@@ -61,8 +61,8 @@ def test_conda_설치_폴더를_가리키면_거부한다(fake_conda, monkeypatc
      "a/b", "a\\b", "", "[미정]", ".hidden", "-x"],
 )
 def test_경로와_이상한_이름을_거부한다(fake_conda, bad):
-    """🔑 비교는 이름이 아니라 실제 경로로 하지만, `conda run -n` 에 넘기는
-    이름 자체도 평범해야 한다 — `../labremote` 로 우리 환경을 가리키는 길."""
+    """🔑 비교는 이름이 아니라 실제 경로로 하지만, `conda run -n`에 넘기는
+    이름 자체도 평범해야 한다 — `../labremote`로 우리 환경을 가리키는 길."""
     assert C.check(bad)["ok"] is False, bad
 
 
@@ -87,7 +87,7 @@ def test_아직_없는_환경도_통과한다(fake_conda):
 
 
 def test_실행하지_않고_경로를_푼다(fake_conda, monkeypatch):
-    """`conda run -n <이름> python` 으로 풀면 **그 .pth 가 이미 돈다.**
+    """`conda run -n <이름> python`으로 풀면 **그 .pth 가 이미 돈다.**
     그래서 subprocess 를 쓰지 않는다."""
     import subprocess
 

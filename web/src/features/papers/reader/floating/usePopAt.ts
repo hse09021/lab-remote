@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 /**
- * 목업의 popAt 과 같은 자리 계산.
+ * 목업의 popAt과 같은 자리 계산.
  * 떠 있는 카드가 오른쪽으로 넘쳐 가로 스크롤을 만들지 않도록
  * left 를 담은 요소의 **보이는 폭** 안으로 묶어요.
  *

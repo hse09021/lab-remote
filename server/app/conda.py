@@ -1,7 +1,7 @@
 """Conda 화면 — 환경 · 패키지 보기, 미리 보기(dry-run) → 확인 → 설치, 보호와 잠금.
 
 PLAN 4.1 conda:
-- `conda env list --json`, `conda list --json -n <환경>` 으로 읽는다.
+- `conda env list --json`, `conda list --json -n <환경>`으로 읽는다.
 - 설치 · 업데이트 · 제거는 **먼저 바뀌는 것(dry-run)을 보여 주고** 사람이 확인한 뒤에만.
 - `base` · `labremote` 는 보호(`runner/condaenv.py`), 실행 중인 학습이 쓰는 환경은 잠금.
 - 삭제는 이름을 입력해야 하고, 지우기 전에 `environment.yml` 을 데이터 폴더에 남긴다.
@@ -244,14 +244,14 @@ def _changes_from(tool: str, action: str, names: list[str], out: str, env: str) 
 
 def start_job(kind: str, env: str, *, tool: str = "", action: str = "", packages=None, dry: bool = False,
               confirm: str = "", python: str = "", clone: str = "") -> dict:
-    """작업을 백그라운드로 시작하고 바로 돌아온다. 화면은 `job(id)` 로 읽는다."""
+    """작업을 백그라운드로 시작하고 바로 돌아온다. 화면은 `job(id)`로 읽는다."""
     if not condaenv.NAME_RE.match(env or ""):
         raise CondaError(f"환경 이름 규칙에 안 맞아요: {env!r}")
     specs: list[str] = []
     names: list[str] = []
     if kind == "change":
         if tool not in TOOLS or action not in ACTIONS:
-            raise CondaError("conda/pip 와 설치/업데이트/제거 중에 골라 주세요.")
+            raise CondaError("conda/pip와 설치/업데이트/제거 중에 골라 주세요.")
         specs, names = _specs(packages or [])
         if not dry:
             reason = _lock_reason(env)
@@ -266,7 +266,7 @@ def start_job(kind: str, env: str, *, tool: str = "", action: str = "", packages
         if clone and not any(e["name"] == clone for e in list_envs()):
             raise CondaError(f"복제할 환경이 없어요: {clone}")
         if python and not python.replace(".", "").isdigit():
-            raise CondaError("파이썬 버전은 3.11 처럼 숫자로 적어 주세요.")
+            raise CondaError("파이썬 버전은 3.11처럼 숫자로 적어 주세요.")
     elif kind == "delete":
         if confirm != env:
             raise CondaError("지우려면 환경 이름을 똑같이 적어 주세요.")

@@ -41,7 +41,7 @@ year: 2017
 category: 아키텍처
 ---
 """)
-    _write(str(root / "메모" / "아이디어.md"), "LoRA 랭크 실험은 [[LoRA|로라]] 와 [[demo]]에서.\n[[없는 노트]]\n")
+    _write(str(root / "메모" / "아이디어.md"), "LoRA 랭크 실험은 [[LoRA|로라]]와 [[demo]]에서.\n[[없는 노트]]\n")
     _write(str(root / "메모" / "외톨이.md"), "아무 링크 없음\n")
     _write(str(root / ".obsidian" / "x.md"), "[[LoRA]]\n")
     return str(root)
@@ -82,7 +82,7 @@ def test_지식그래프(vault, project):
     papers.set_vault(vault)
     g = papers.graph()
     ids = {n["id"]: n for n in g["nodes"]}
-    # 인용: 제목으로 적은 링크가 파일 이름 id 로 이어진다
+    # 인용: 제목으로 적은 링크가 파일 이름 id로 이어진다
     assert {"from": "LoRA", "to": "Transformer", "kind": "cite"} in g["edges"]
     # 메모: 별칭 링크 · 프로젝트 이름 링크. 외톨이 메모와 .obsidian 은 빠진다
     note = "note:메모/아이디어.md"
@@ -118,7 +118,7 @@ def test_API(vault, tmp_path, project):
     assert json.loads(open(os.path.join(str(tmp_path / "data"), "papers.json")).read())["status"]["LoRA"] == "done"
 
 
-# --- 논문 추가 (vault 에 새 파일만) ---------------------------------------------
+# --- 논문 추가 (vault에 새 파일만) ---------------------------------------------
 
 ATOM = """<?xml version='1.0' encoding='UTF-8'?>
 <feed xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
@@ -348,7 +348,7 @@ def test_하이라이트_주석_서버_저장(tmp_path):
     assert client.delete(f"{base}/없음", headers=H).status_code == 404
 
 
-# --- AI 요약 (vault 에 새 파일) ----------------------------------------------------
+# --- AI 요약 (vault에 새 파일) ----------------------------------------------------
 
 
 def test_요약_만들기(vault, monkeypatch):

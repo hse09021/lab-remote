@@ -70,7 +70,7 @@ def _clean_rel(rel: str) -> str:
 
 
 def base_of(root: str, tree: str = "") -> str:
-    """기준 폴더. `tree` 는 worktree 처럼 **프로젝트 안**의 하위 폴더다."""
+    """기준 폴더. `tree` 는 worktree처럼 **프로젝트 안**의 하위 폴더다."""
     root_real = paths.real(root)
     rel = _clean_rel(tree)
     if not rel:
@@ -319,7 +319,7 @@ def move(root: str, base: str, src: str, dst: str) -> dict:
 
 
 def delete(root: str, base: str, rel: str, *, confirm: str) -> dict:
-    """지우기. 화면이 한 번 더 물은 뒤 **이름을 그대로** `confirm` 으로 보낸다.
+    """지우기. 화면이 한 번 더 물은 뒤 **이름을 그대로** `confirm`으로 보낸다.
 
     링크는 링크 자신만 지운다.
     """

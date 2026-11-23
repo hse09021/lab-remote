@@ -4,7 +4,7 @@ docs/v3/PLAN.md 4.1 의 점검 목록: conda 환경, Claude Code 설치·로그�
 systemd --user, 자동 시작(linger), 터널. 거기에 웹 빌드 · GPU·드라이버 · 비밀값 권한을 더 본다.
 
 **읽기만 한다.** `~/.claude`·`.bashrc`·`.condarc`·apt 설정을 고치지 않는다 —
-고칠 명령은 `hint` 로 알려 준다.
+고칠 명령은 `hint`로 알려 준다.
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ def conda_env_check() -> Check:
 
 
 def _login_probe() -> dict:
-    """SDK 로 연결만 해서 계정 정보를 본다(메시지를 보내지 않아 사용량을 안 쓴다)."""
+    """SDK로 연결만 해서 계정 정보를 본다(메시지를 보내지 않아 사용량을 안 쓴다)."""
     import asyncio
 
     from . import registry
@@ -87,7 +87,7 @@ def _login_probe() -> dict:
 def claude_check() -> Check:
     """Claude Code 가 설치돼 있고 로그인돼 있나.
 
-    로그인은 `claude-agent-sdk` 로 **연결만** 해서 Claude Code 가 알려 주는 계정
+    로그인은 `claude-agent-sdk`로 **연결만** 해서 Claude Code 가 알려 주는 계정
     정보(구독 종류)로 본다. 자격 증명 파일은 읽지 않고, 이메일은 찍지 않는다.
     """
     binary = shutil.which("claude")
@@ -107,7 +107,7 @@ def claude_check() -> Check:
                     hint="터미널에서 claude 를 한 번 열어 로그인돼 있는지 봐 주세요.")
     if not got.get("loggedIn"):
         return Check(False, "Claude Code", f"{head} · 로그인이 안 돼 있어요",
-                     hint="터미널에서 claude 를 열고 /login 으로 로그인해 주세요 (lab.remote 는 로그인을 대신하지 않아요).")
+                     hint="터미널에서 claude 를 열고 /login으로 로그인해 주세요 (lab.remote 는 로그인을 대신하지 않아요).")
     return Check(True, "Claude Code", f"{head} · 로그인됨 · {got.get('plan') or '구독 종류 모름'}")
 
 
@@ -127,7 +127,7 @@ def tmux_check() -> Check:
 
 
 def systemd_scope_check() -> Check:
-    """`systemd-run --user --scope` 가 실제로 되나 — 실행을 자기 cgroup 에 담는 길."""
+    """`systemd-run --user --scope` 가 실제로 되나 — 실행을 자기 cgroup에 담는 길."""
     from .runner import process
 
     if process.scope_available():
@@ -262,7 +262,7 @@ def schema_check() -> Check:
 # --- GPU -------------------------------------------------------------------
 
 
-#: `apt-config dump`에서 `Unattended-Upgrade::Package-Blacklist` 에 꼭 있어야
+#: `apt-config dump`에서 `Unattended-Upgrade::Package-Blacklist`에 꼭 있어야
 #: 하는 접두사. 드라이버가 저절로 올라가고 재부팅이 안 되면 `nvidia-smi` 가
 #: 통째로 죽는다 — 실제로 당했다.
 NVIDIA_BLACKLIST = (
@@ -303,7 +303,7 @@ def nvidia_hold_note() -> str | None:
 
     점검(✔ ⚠ ✘)이 아니다. 시스템 설정(apt)을 바꾸라는 권유라서, lab.remote 는
     바꾸지 않고 원하는 사람이 직접 하도록 알려 주기만 한다(사람이 고름, 2026-11-23).
-    드라이버가 실제로 어긋났을 때는 `gpu_driver_check` 가 ✘ 로 알린다.
+    드라이버가 실제로 어긋났을 때는 `gpu_driver_check` 가 ✘로 알린다.
     """
     got = apt_blacklist()
     if not got["ok"]:
@@ -314,7 +314,7 @@ def nvidia_hold_note() -> str | None:
         return None
     why = []
     if missing:
-        why.append(f"Unattended-Upgrade::Package-Blacklist 에 {', '.join(missing[:4])}{' 등' if len(missing) > 4 else ''} 이 없어요")
+        why.append(f"Unattended-Upgrade::Package-Blacklist에 {', '.join(missing[:4])}{' 등' if len(missing) > 4 else ''} 이 없어요")
     if auto_reboot_on:
         why.append("Automatic-Reboot 가 켜져 있어요")
     return (
@@ -324,7 +324,7 @@ def nvidia_hold_note() -> str | None:
 
 
 def gpu_check() -> Check:
-    """GPU 를 조회할 수 있나. 조회 실패는 ⚠ 다 (화면에 "조회 불가" 로 나간다)."""
+    """GPU 를 조회할 수 있나. 조회 실패는 ⚠ 다 (화면에 "조회 불가"로 나간다)."""
     from .monitor import gpu
 
     got = gpu.probe()

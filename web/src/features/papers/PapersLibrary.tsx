@@ -247,7 +247,7 @@ function PapersList() {
             type="button"
             className={s.makeSummary}
             disabled={makeSummary.isPending}
-            title="Claude 가 노트와 PDF 를 읽고 요약해요 · vault 에 '이름 요약.md' 를 새로 만들어요"
+            title="Claude 가 노트와 PDF 를 읽고 요약해요 · vault에 '이름 요약.md' 를 새로 만들어요"
             onClick={() =>
               makeSummary.mutate(p.id, {
                 onSuccess: () => setAdded({ text: `${p.title} 요약을 만드는 중이에요 · 1~2분 걸려요`, tone: 'ok' }),
@@ -409,7 +409,7 @@ function PapersList() {
             minWidth={820}
             emptyMessage={
               papers.data.length === 0
-                ? `vault 에 논문 노트가 없어요 — ${vault.data?.path ?? 'vault'}/Papers/ 에 MD 를 두거나, 사이드바의 'vault 위치'에서 폴더를 정해 주세요.`
+                ? `vault에 논문 노트가 없어요 — ${vault.data?.path ?? 'vault'}/Papers/에 MD 를 두거나, 사이드바의 'vault 위치'에서 폴더를 정해 주세요.`
                 : '조건에 맞는 논문이 없어요.'
             }
           />
@@ -514,7 +514,7 @@ function PapersList() {
             모음 이름
             <input className={ds.input} value={colName} onChange={(e) => setColName(e.target.value)} placeholder="LoRA 계열" autoFocus />
           </label>
-          <span>모음은 lab.remote 에만 저장돼요. vault 파일은 옮기지 않아요. 논문을 고른 뒤 아래 막대에서 넣어요.</span>
+          <span>모음은 lab.remote에만 저장돼요. vault 파일은 옮기지 않아요. 논문을 고른 뒤 아래 막대에서 넣어요.</span>
         </Dialog>
         <Dialog
           open={typeof colDialog === 'object'}
@@ -669,7 +669,7 @@ function UrlUploadRow({ busy, onAdd }: { busy: boolean; onAdd: (url: string) => 
           {busy ? '받는 중…' : '추가'}
         </Button>
       </div>
-      <span>제목 · 저자 · 초록을 받아 vault 의 Papers/ 에 노트를 만들고 PDF 도 받아 둬요</span>
+      <span>제목 · 저자 · 초록을 받아 vault 의 Papers/에 노트를 만들고 PDF 도 받아 둬요</span>
     </>
   )
 }

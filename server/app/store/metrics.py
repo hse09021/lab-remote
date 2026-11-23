@@ -1,6 +1,6 @@
 """학습 지표. 출처는 `experiments/EXP-NNN/result.csv` 다 (W&B 는 ② 범위 밖).
 
-**NaN·Inf 는 `value` 를 NULL 로 두고 `flag` 에 적는다.** SQLite 의 REAL 에
+**NaN·Inf 는 `value` 를 NULL로 두고 `flag`에 적는다.** SQLite 의 REAL에
 NaN 을 넣으면 왕복이 깨지고(비교가 전부 거짓이 된다) 그래프가 조용히 틀어진다.
 NaN 자체가 "즉시 중단" 신호라서 잃어버려서는 안 되는 값이다.
 """

@@ -3,7 +3,7 @@ import { applyMockWrite } from './mock/writes'
 import { resetMockStore } from './mockStore'
 
 /**
- * 어느 API 를 서버에서 받나 (v3 는 화면을 한 단계씩 실제 API 로 옮겨요).
+ * 어느 API 를 서버에서 받나 (v3 는 화면을 한 단계씩 실제 API로 옮겨요).
  *
  * - `VITE_USE_MOCK=true`(또는 안 줌) — **섞어 써요**: `LIVE_PREFIXES` 는 서버, 나머지는 mock.
  *   v1 의 `.env`(`true`)를 그대로 둬도 실제 API 가 생긴 화면은 서버로 가요.
@@ -20,19 +20,19 @@ const LIVE_PREFIXES = ['/health', '/projects', '/system', '/inbox', '/notify', '
 const MUTATION_HEADER = { 'X-Lab-Remote': '1' }
 
 /**
- * 일부만 서버로 가는 경로 — Papers 는 vault 로 만드는 목록 · 읽음 상태 · 그래프만 실제예요 (8단계).
+ * 일부만 서버로 가는 경로 — Papers 는 vault로 만드는 목록 · 읽음 상태 · 그래프만 실제예요 (8단계).
  * 리더 · AI 요약 · 라이브러리 대화 · 참고문헌 보관은 아직 mock 이에요.
  */
 const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers$/, ['GET']],
   [/^\/papers\/(graph|vault|summary-md|summaries|notes)$/, ['GET', 'PUT']],
-  // AI 요약 (누를 때만 · vault 에 새 파일) · 요약 MD 수정 (요약 파일만)
+  // AI 요약 (누를 때만 · vault에 새 파일) · 요약 MD 수정 (요약 파일만)
   [/^\/papers\/[^/]+\/summary$/, ['GET', 'POST']],
   [/^\/papers\/[^/]+\/summary-md$/, ['PUT']],
   [/^\/papers\/[^/]+$/, ['PATCH']],
-  // 논문 추가 (vault 에 새 노트 · PDF) · PDF 내려받기
+  // 논문 추가 (vault에 새 노트 · PDF) · PDF 내려받기
   [/^\/papers\/arxiv$/, ['POST']],
-  // 휴지통 · 모음 · BibTeX · 참고문헌 보관 (lab.remote 에만 기록)
+  // 휴지통 · 모음 · BibTeX · 참고문헌 보관 (lab.remote에만 기록)
   [/^\/papers\/collections$/, ['GET', 'POST']],
   [/^\/papers\/collections\/[^/]+$/, ['DELETE']],
   [/^\/papers\/collections\/[^/]+\/papers$/, ['POST']],
@@ -93,7 +93,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 /**
  * 화면은 이 함수(와 features별 query 헬퍼)만 써요.
  * mock JSON을 화면에서 직접 import하지 않는 게 규칙이에요 — FastAPI가
- * 준비되면 VITE_USE_MOCK=false 로 바꾸는 것만으로 넘어가야 하니까요.
+ * 준비되면 VITE_USE_MOCK=false로 바꾸는 것만으로 넘어가야 하니까요.
  */
 export async function get<T>(path: string): Promise<T> {
   if (useMockFor(path)) {

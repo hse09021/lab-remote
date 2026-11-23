@@ -58,7 +58,7 @@ def test_루트_자체가_심볼릭_링크여도_안쪽은_안쪽(tmp_path):
     link = tmp_path / "proj"
     os.symlink(str(realroot), str(link))
 
-    # 훅은 cwd 로 링크 경로를 받을 수 있다. 양쪽을 해소하면 안쪽으로 나와야 한다.
+    # 훅은 cwd로 링크 경로를 받을 수 있다. 양쪽을 해소하면 안쪽으로 나와야 한다.
     tgt = paths.safe_resolve("src/train.py", str(link))
     assert paths.rel_or_none(str(link), tgt) == "src/train.py"
     assert paths.rel_or_none(str(realroot), tgt) == "src/train.py"

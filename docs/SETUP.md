@@ -1,7 +1,7 @@
 # lab.remote 설치
 
 데스크톱(GPU)에서 연구를 돌리고, 어디서든 브라우저로 보고 · 실행하고 · 알림 받는 개인용 도구예요.
-설치는 clone 하고 몇 줄이면 끝나요. 끝났는지는 `labremote doctor` 로 확인해요 — `✘` 가 없으면 돼요.
+설치는 clone 하고 몇 줄이면 끝나요. 끝났는지는 `labremote doctor`로 확인해요 — `✘` 가 없으면 돼요.
 
 ## lab.remote 가 바꾸는 것 (전부)
 
@@ -10,7 +10,7 @@
 | conda 환경 `labremote` | `./install.sh` | `conda env remove -n labremote` |
 | 사용자 서비스 `~/.config/systemd/user/labremote-session.service` | `labremote autostart install` | `labremote autostart uninstall` |
 | linger (`loginctl enable-linger`) — 꺼져 있을 때만 | `labremote autostart install` | uninstall 이 원래 값으로 돌려요 (code tunnel 서비스가 있으면 그대로) |
-| 등록한 프로젝트마다 `<프로젝트>/.labremote/` (스스로 git 에서 빠져요) | 프로젝트를 등록할 때 | 등록 해제 때 지울지 골라요 |
+| 등록한 프로젝트마다 `<프로젝트>/.labremote/` (스스로 git에서 빠져요) | 프로젝트를 등록할 때 | 등록 해제 때 지울지 골라요 |
 
 `~/.bashrc` · `~/.claude/` · `.condarc` · cron · systemd 타이머 · 프로젝트의 `.gitignore` 는 고치지 않아요.
 나머지 상태는 전부 lab.remote 데이터 폴더(기본 `server/data/`)에 있어요.
@@ -54,7 +54,7 @@ cd ~/lab-remote
 labremote serve          # http://127.0.0.1:8000 · nice 19 · ionice idle
 ```
 
-이 데스크톱 브라우저에서 `http://127.0.0.1:8000` 을 열어요. 서버는 `127.0.0.1` 에만 열려요.
+이 데스크톱 브라우저에서 `http://127.0.0.1:8000` 을 열어요. 서버는 `127.0.0.1`에만 열려요.
 
 ## 4. 켜 두기 (자동 시작)
 
@@ -77,9 +77,9 @@ code tunnel user login --provider github
 code tunnel service install --accept-server-license-terms     # 재부팅 뒤에도 켜져 있게
 ```
 
-1. 휴대폰 · 다른 PC 에서 `https://vscode.dev/tunnel/<이름>` 을 열고 같은 GitHub 계정으로 로그인해요.
-2. Ports 보기에서 **Forward a Port** → `8000`. 기본은 Private 이라 같은 계정으로 로그인해야 열려요 (Public 으로 바꾸지 마세요).
-3. 나온 **Forwarded Address** 를 lab.remote 에 알려 줘요.
+1. 휴대폰 · 다른 PC에서 `https://vscode.dev/tunnel/<이름>` 을 열고 같은 GitHub 계정으로 로그인해요.
+2. Ports 보기에서 **Forward a Port** → `8000`. 기본은 Private 이라 같은 계정으로 로그인해야 열려요 (Public으로 바꾸지 마세요).
+3. 나온 **Forwarded Address** 를 lab.remote에 알려 줘요.
 
    ```bash
    labremote remote set https://<Forwarded Address>
@@ -96,15 +96,15 @@ code tunnel service install --accept-server-license-terms     # 재부팅 뒤에
 > 필요해요 — 자동 시작을 켰다면 이미 켜져 있어요. 그래서 `labremote autostart uninstall` 은 터널 서비스가 있으면
 > linger 를 끄지 않아요.
 >
-> VS Code Server 문서의 FAQ 에는 "서비스로 호스팅은 라이선스상 허용되지 않는다" 는 문장이 있는데 라이선스 원문에는
+> VS Code Server 문서의 FAQ에는 "서비스로 호스팅은 라이선스상 허용되지 않는다" 는 문장이 있는데 라이선스 원문에는
 > 그 문구가 없어요 — 판단은 사람이 해요. 서비스로 두기 싫으면 쓸 때만 터미널에서 `code tunnel` 을 띄워도 돼요.
 >
 > 전달한 포트 주소는 vscode.dev 창을 닫은 뒤에도 계속 열려요 (실측 2026-11-23, 휴대폰). 주소는 `https://<id>-8000.<지역>.devtunnels.ms` 모양이에요.
 
 ## 6. 알림 (Discord)
 
-Inbox 화면 › 알림 설정에서 웹훅 주소를 넣어요. 주소는 데이터 폴더에 권한 600 으로만 저장되고
-화면 · 로그에는 가려서 보여요. `labremote notify test` 로 시험해요.
+Inbox 화면 › 알림 설정에서 웹훅 주소를 넣어요. 주소는 데이터 폴더에 권한 600으로만 저장되고
+화면 · 로그에는 가려서 보여요. `labremote notify test`로 시험해요.
 
 ## 7. 점검
 
@@ -113,7 +113,7 @@ labremote doctor
 ```
 
 `✘` 는 고쳐야 하는 것, `⚠` 는 알려 주기만 하는 것(종료코드를 바꾸지 않아요)이에요.
-터널 · 자동 시작은 쓰지 않으면 `⚠` 나 "꺼져 있어요" 로 나와도 괜찮아요.
+터널 · 자동 시작은 쓰지 않으면 `⚠` 나 "꺼져 있어요"로 나와도 괜찮아요.
 
 ## 8. 지우기
 

@@ -7,8 +7,8 @@ vault (Obsidian 폴더):
 
 - vault 위치는 사람이 정한다(설정, 2026-11-23). 정하지 않으면 데이터 폴더의 `vault/`.
 - **있는 노트 파일을 고치지 않는다.** 읽음 상태처럼 lab.remote 가 기억할 것은 데이터 폴더의
-  `papers.json` 에 둔다.
-- 논문 추가(2026-11-24 결정)만 vault 에 **새 파일을 쓴다** — `Papers/<이름>.md` 와
+  `papers.json`에 둔다.
+- 논문 추가(2026-11-24 결정)만 vault에 **새 파일을 쓴다** — `Papers/<이름>.md`와
   `Papers/pdf/<이름>.pdf`. 같은 이름이 있으면 뒤에 번호를 붙이고, 덮어쓰지 않는다.
   - arXiv 링크: arXiv API(export.arxiv.org)에서 제목 · 저자 · 연도 · 분야 · 초록을 받고 PDF 도 받는다
   - PDF 올리기: 파일을 두고 파일 이름으로 노트를 만든다(메타는 사람이 채운다)
@@ -74,7 +74,7 @@ def set_vault(path: str) -> dict:
         if not os.path.isdir(real):
             raise PapersError(f"폴더가 없어요: {real}")
         if real in (os.sep, paths.real("~")):
-            raise PapersError("홈 폴더나 / 전체는 vault 로 쓸 수 없어요.")
+            raise PapersError("홈 폴더나 / 전체는 vault로 쓸 수 없어요.")
         data["vault"] = real
     _save(data)
     return info()
@@ -260,7 +260,7 @@ def list_papers(*, trash: bool = False) -> list[dict]:
 
 
 def body_of(pid: str) -> str:
-    """요약 MD 로 보여 줄 논문 노트 본문 (앞쪽 메타 제외)."""
+    """요약 MD로 보여 줄 논문 노트 본문 (앞쪽 메타 제외)."""
     for p in scan()["papers"]:
         if p["id"] == pid:
             return _front(_read(os.path.join(vault_path(), p["path"])))[1]
@@ -272,7 +272,7 @@ def graph() -> dict:
     data = scan()
     hidden = _hidden()
     papers = [p for p in data["papers"] if p["id"] not in hidden]
-    # [[링크]] 를 논문 id 로 — 파일 이름 · 제목 · 별칭 무엇으로 적어도
+    # [[링크]] 를 논문 id로 — 파일 이름 · 제목 · 별칭 무엇으로 적어도
     alias: dict[str, str] = {}
     for p in papers:
         for name in [p["id"], p["title"], *p["aliases"]]:
@@ -309,7 +309,7 @@ def graph() -> dict:
     return {"nodes": nodes, "edges": edges, "vault": vault_path()}
 
 
-# --- 추가 (vault 에 새 파일만) --------------------------------------------------
+# --- 추가 (vault에 새 파일만) --------------------------------------------------
 
 ARXIV_API = "https://export.arxiv.org/api/query?id_list={id}"
 ARXIV_PDF = "https://arxiv.org/pdf/{id}"
@@ -340,7 +340,7 @@ def _papers_dir() -> str:
 
 
 def _safe_name(title: str) -> str:
-    """노트 파일 이름 — "LoRA: Low-Rank …" 처럼 콜론 앞이 짧으면 그것만."""
+    """노트 파일 이름 — "LoRA: Low-Rank …"처럼 콜론 앞이 짧으면 그것만."""
     head = title.split(":")[0].strip()
     name = head if 2 <= len(head) <= 40 else title
     name = _BAD_NAME.sub(" ", name)
@@ -393,7 +393,7 @@ def _get(url: str, *, limit: int, timeout: int = 30) -> bytes:
     except urllib.error.HTTPError as exc:
         raise PapersError(f"arXiv 가 거절했어요 ({exc.code}). 잠시 뒤 다시 해 주세요.") from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise PapersError(f"arXiv 에 닿지 못했어요: {getattr(exc, 'reason', exc)}") from None
+        raise PapersError(f"arXiv에 닿지 못했어요: {getattr(exc, 'reason', exc)}") from None
     if len(data) > limit:
         raise PapersError("파일이 너무 커요.")
     return data
@@ -430,7 +430,7 @@ def add_arxiv(link: str, *, fetch=_get) -> dict:
     entry = root.find("a:entry", ns)
     entry_id = (entry.findtext("a:id", "", ns) if entry is not None else "") or ""
     if entry is None or "/abs/" not in entry_id:
-        raise PapersError(f"arXiv 에 없는 번호예요: {aid}")
+        raise PapersError(f"arXiv에 없는 번호예요: {aid}")
     clean = lambda t: re.sub(r"\s+", " ", t or "").strip()  # noqa: E731
     title = clean(entry.findtext("a:title", "", ns)) or aid
     authors = [clean(a.findtext("a:name", "", ns)) for a in entry.findall("a:author", ns)]
@@ -466,7 +466,7 @@ def add_arxiv(link: str, *, fetch=_get) -> dict:
 
 
 def add_pdf(filename: str, data: bytes) -> dict:
-    """올린 PDF 를 vault 에 두고 파일 이름으로 노트를 만든다."""
+    """올린 PDF 를 vault에 두고 파일 이름으로 노트를 만든다."""
     if not data.startswith(b"%PDF-"):
         raise PapersError("PDF 파일이 아니에요.")
     if len(data) > MAX_PDF:
@@ -496,7 +496,7 @@ def pdf_of(pid: str) -> str:
         if p["id"] == pid:
             meta, _ = _front(_read(os.path.join(vault_path(), p["path"])))
             rel = str(meta.get("pdf") or "").strip()
-            rel = WIKI_RE.sub(lambda m: m.group(1), rel)  # [[pdf/x.pdf]] 로 적어도
+            rel = WIKI_RE.sub(lambda m: m.group(1), rel)  # [[pdf/x.pdf]]로 적어도
             if not rel:
                 break
             root = paths.real(vault_path())
@@ -508,7 +508,7 @@ def pdf_of(pid: str) -> str:
     raise PapersError("이 논문에는 PDF 가 없어요.")
 
 
-# --- 휴지통 · 모음 · BibTeX (lab.remote 에만 기록 — vault 는 그대로) ----------------------
+# --- 휴지통 · 모음 · BibTeX (lab.remote에만 기록 — vault 는 그대로) ----------------------
 
 COLLECTION_RE = re.compile(r"\A[^/\\\x00-\x1f]{1,40}\Z")
 

@@ -11,7 +11,7 @@ import s from './Projects.module.css'
 
 function aheadText(w: Worktree, main: string): string {
   if (w.primary || w.branch === main) return '—'
-  if (w.merged) return `${main} 에 합쳐짐`
+  if (w.merged) return `${main}에 합쳐짐`
   const parts: string[] = []
   if (w.ahead) parts.push(`${w.ahead} 커밋 앞섬`)
   if (w.changed) parts.push(`변경 ${w.changed} (커밋 전)`)
@@ -88,7 +88,7 @@ export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees
         </table>
       </div>
       <p className={`${s.muted} ${s.treesFoot}`}>
-        정리는 {data.main || 'main'} 에 합쳐진 worktree 에만 나와요. 폴더만 지우고 브랜치는 남겨요.
+        정리는 {data.main || 'main'}에 합쳐진 worktree에만 나와요. 폴더만 지우고 브랜치는 남겨요.
       </p>
       <AddDialog name={project.name} open={adding} onClose={() => setAdding(false)} />
       {cleaning && <CleanDialog name={project.name} tree={cleaning} onClose={() => setCleaning(null)} />}

@@ -4,9 +4,9 @@
   만든다. 브라우저를 닫아도 셸이 남고, 다시 열면 그대로 붙는다.
 - tmux 서버는 **사용자 서비스로** 띄운다(`process.service_prefix`) — 서버의
   nice 19 · ionice idle 을 물려받지 않게(터미널에서 학습을 돌릴 수 있다).
-- 학습 실행에 붙을 때는 그 실행의 tmux 에 붙는다. 기본은 **보기 전용**(`-r`) —
-  잘못 누른 Ctrl+C 로 학습이 멈추지 않게. 입력을 허용하려면 화면에서 켠다.
-- 화면 쪽 tmux 클라이언트는 PTY 하나로 띄우고 WebSocket 과 잇는다.
+- 학습 실행에 붙을 때는 그 실행의 tmux에 붙는다. 기본은 **보기 전용**(`-r`) —
+  잘못 누른 Ctrl+C로 학습이 멈추지 않게. 입력을 허용하려면 화면에서 켠다.
+- 화면 쪽 tmux 클라이언트는 PTY 하나로 띄우고 WebSocket과 잇는다.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def socket_of(project: str) -> str:
 
 def _env() -> dict[str, str]:
     env = dict(os.environ)
-    # 키가 섞이면 종량제로 과금된다 · 안쪽 tmux 로 착각하지 않게
+    # 키가 섞이면 종량제로 과금된다 · 안쪽 tmux로 착각하지 않게
     for key in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "TMUX", "TMUX_PANE"):
         env.pop(key, None)
     env["TERM"] = "xterm-256color"
@@ -117,7 +117,7 @@ def attach_argv(project: str, *, name: str = "", run: str = "", write: bool = Fa
 
 
 class Pty:
-    """tmux 클라이언트를 PTY 에 띄우고 바이트를 주고받는다."""
+    """tmux 클라이언트를 PTY에 띄우고 바이트를 주고받는다."""
 
     def __init__(self, argv: list[str], cols: int = 120, rows: int = 32) -> None:
         self.master, slave = pty.openpty()

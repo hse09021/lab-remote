@@ -35,7 +35,7 @@ export interface ScheduleSeed {
 }
 
 /**
- * 예약 만들기 · 고치기 — Dashboard Schedule 과 IDE 실행 탭의 "시간 정해서 실행…" 이 같은 창을 써요.
+ * 예약 만들기 · 고치기 — Dashboard Schedule과 IDE 실행 탭의 "시간 정해서 실행…" 이 같은 창을 써요.
  * 시각으로만 걸어요(연쇄 예약 없음).
  */
 export function ScheduleDialog({

@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, send } from './client'
 
-/* server/app/agents/*.py · api/agents.py 와 짝. 이름은 에이전트 공통이에요(Claude 전용 아님). */
+/* server/app/agents/*.py · api/agents.py와 짝. 이름은 에이전트 공통이에요(Claude 전용 아님). */
 
 export type ModeId = 'manual' | 'edit' | 'plan' | 'auto'
 export type SessionState = 'ask' | 'working' | 'idle' | 'error'
@@ -191,3 +191,12 @@ export const useRenameSession = () =>
 /** 닫기(closed=true) · 다시 열기(false) — 기록은 지우지 않아요 */
 export const useCloseSession = () =>
   useAgentMutation((v: { sid: string; closed: boolean }) => send<AgentSession>('POST', `/agents/sessions/${enc(v.sid)}/close`, { closed: v.closed }))
+
+/** Claude Code 설치 · 로그인 (처음 실행 안내 · 로그인 필요 안내). 서버가 5분 캐시 */
+export const accountQuery = () =>
+  queryOptions({
+    queryKey: ['agents', 'account'],
+    queryFn: () => get<{ installed: boolean; loggedIn: boolean | null; plan: string; error?: string }>('/agents/account'),
+    staleTime: 5 * 60_000,
+    retry: false,
+  })

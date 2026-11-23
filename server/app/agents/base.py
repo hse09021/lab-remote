@@ -1,7 +1,7 @@
 """에이전트 공통 규칙 — Claude 전용 이름을 쓰지 않는다(나중에 Codex 를 붙일 수 있게).
 
 연결 부품(`claude.py` 등)은 `AgentBackend` 를 구현하고, 무슨 일이 생길 때마다
-`emit(event)` 로 **공통 모양의 이벤트**를 낸다. 화면과 저장은 이 모양만 안다.
+`emit(event)`로 **공통 모양의 이벤트**를 낸다. 화면과 저장은 이 모양만 안다.
 
 이벤트 (`type` 별 칸):
 - `user`       {text}
@@ -15,7 +15,7 @@
 - `system`     {text}                          연결·오류 등
 
 승인: 도구를 쓰기 전 `ask(request) -> Decision` 을 부른다. manager 가 화면·
-Inbox·Discord 에 올리고, 먼저 온 답을 돌려준다.
+Inbox·Discord에 올리고, 먼저 온 답을 돌려준다.
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ class AgentBackend(abc.ABC):
 
     @abc.abstractmethod
     async def send(self, text: str) -> None:
-        """메시지를 보내고 바로 돌아온다. 응답은 `emit` 으로 흘러온다."""
+        """메시지를 보내고 바로 돌아온다. 응답은 `emit`으로 흘러온다."""
 
     @abc.abstractmethod
     async def wait_idle(self) -> None:

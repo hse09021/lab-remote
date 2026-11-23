@@ -173,7 +173,7 @@ export function PdfView({
     // 쪽 이미지가 붙기 전에는 스크롤 길이가 0이에요.
     // 그때 100%로 보고하면 완료 안내가 바로 떠 버려요.
     if (max <= 4) return
-    // 소수점 높이 때문에 끝에서 99% 로 멈추는 걸 막아요
+    // 소수점 높이 때문에 끝에서 99%로 멈추는 걸 막아요
     const pct = el.scrollTop >= max - 2 ? 100 : Math.round((el.scrollTop / max) * 100)
     onProgress(pct)
   }, [onProgress])

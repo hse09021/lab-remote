@@ -175,7 +175,7 @@ function DiscordPanel() {
           {w.set ? w.masked : '아직 연결하지 않았어요'}
         </div>
         <p className={s.note}>
-          웹훅 주소는 lab.remote 데이터 폴더에만 저장해요 (나만 읽기{w.private === false ? ' — ⚠ 지금 권한이 넓어요' : ''}). repo 에는
+          웹훅 주소는 lab.remote 데이터 폴더에만 저장해요 (나만 읽기{w.private === false ? ' — ⚠ 지금 권한이 넓어요' : ''}). repo에는
           올라가지 않아요.
           {w.last && ` 마지막 전송 · ${whenShort(new Date(w.last.at).getTime() / 1000)} ${w.last.state === 'sent' ? '성공' : '실패'}`}
         </p>
@@ -194,14 +194,14 @@ function DiscordPanel() {
         </div>
         {test.data && (
           <div role="status" className={s.note}>
-            {test.data.sent ? 'Discord 로 보냈어요.' : test.data.detail}
+            {test.data.sent ? 'Discord로 보냈어요.' : test.data.detail}
           </div>
         )}
         {test.isError && <div role="alert" className={s.errText}>{errText(test.error)}</div>}
       </section>
 
       <section className={s.card}>
-        <h2 className={s.h2}>Discord 로 보낼 알림</h2>
+        <h2 className={s.h2}>Discord로 보낼 알림</h2>
         {d.rules.map((r) => (
           <button
             key={r.key}
@@ -243,7 +243,7 @@ function DiscordPanel() {
         onClose={() => setConfirmClear(false)}
         onConfirm={() => clear.mutate(undefined, { onSuccess: () => setConfirmClear(false) })}
       >
-        <span>저장한 웹훅 주소를 지워요. Inbox 알림은 계속 쌓이고 Discord 로만 안 가요.</span>
+        <span>저장한 웹훅 주소를 지워요. Inbox 알림은 계속 쌓이고 Discord로만 안 가요.</span>
       </Dialog>
       <QuietDialog key={String(quietOpen)} open={quietOpen} quiet={d.quiet} busy={setQuiet.isPending} error={errText(setQuiet.error)}
         onClose={() => setQuietOpen(false)}
@@ -285,7 +285,7 @@ function WebhookDialog({ open, onClose }: { open: boolean; onClose: () => void }
           required
         />
       </label>
-      <span>저장하면 데이터 폴더의 discord.json 에 권한 600 으로만 써요. 화면·로그에는 가린 주소만 보여요.</span>
+      <span>저장하면 데이터 폴더의 discord.json에 권한 600으로만 써요. 화면·로그에는 가린 주소만 보여요.</span>
     </Dialog>
   )
 }
@@ -312,7 +312,7 @@ function QuietDialog({
     <Dialog open={open} title="조용한 시간" confirmLabel="저장" busy={busy} error={error} onClose={onClose} onConfirm={() => onSave({ on, start, end })}>
       <label className={ds.check}>
         <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
-        <span>조용한 시간 쓰기 — 이때는 답 필요와 실패만 Discord 로 보내요.</span>
+        <span>조용한 시간 쓰기 — 이때는 답 필요와 실패만 Discord로 보내요.</span>
       </label>
       <label className={ds.field}>
         시작
