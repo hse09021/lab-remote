@@ -159,3 +159,10 @@ def test_옛_기록은_한꺼번에_알리지_않는다(proj, project, conn):
     record.pop("announced")
     runs._save(project, record)
     assert watch.tick(conn) == []
+
+
+def test_끝난_실행의_tmux_소켓을_치운다(proj):
+    runs.start(proj, "true")
+    wait_state(proj, "EXP-001", {"done"})
+    sock, _ = runs._session("EXP-001", "demo")
+    assert not os.path.exists(runs.socket_path(sock))

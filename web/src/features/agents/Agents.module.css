@@ -1200,3 +1200,12 @@ kbd {
   font-weight: 700;
   color: var(--accent-dark);
 }
+
+.approvalWarn {
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--attention);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 700;
+}

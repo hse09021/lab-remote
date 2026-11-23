@@ -196,6 +196,11 @@ function PermissionCard({ p, via }: { p: PendingApproval; via: string }) {
         </span>
         <span className={s.muted}>{ago(p.createdAt)} 기다리는 중</span>
       </div>
+      {p.warning && (
+        <div role="alert" className={s.approvalWarn}>
+          ⚠ {p.warning}
+        </div>
+      )}
       {(p.title || p.reason) && <div className={s.approvalWhy}>{p.title || p.reason}</div>}
       <DiffView tool={p.tool} input={p.input} />
       <label htmlFor={`reason-${p.id}`} className={s.srOnly}>

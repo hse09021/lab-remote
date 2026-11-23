@@ -125,6 +125,7 @@ export function QuickAllow({ p, via = 'Dashboard' }: { p: PendingApproval; via?:
   }
   return (
     <div className={s.quick}>
+      {p.warning && <div className={s.warn}>⚠ {p.warning}</div>}
       <DiffView tool={p.tool} input={p.input} />
       <div className={s.quickActions}>
         <button type="button" className={s.allow} disabled={answer.isPending} onClick={() => answer.mutate({ id: p.id, choice: 'allow', via })}>

@@ -377,7 +377,34 @@ def refresh(root: str, record: dict) -> tuple[dict, bool]:
             ended = now
         record["endedAt"] = ended
     _save(root, record)
+    # 끝난 실행의 tmux 소켓 파일이 /tmp 에 남지 않게
+    try:
+        clear_socket((record.get("tmux") or {}).get("socket", ""))
+    except (OSError, subprocess.SubprocessError):
+        pass
     return record, True
+
+
+def socket_path(sock: str) -> str:
+    """tmux 소켓 파일 자리 (`TMUX_TMPDIR` 또는 /tmp 아래 `tmux-<uid>/`)."""
+    base = os.environ.get("TMUX_TMPDIR") or "/tmp"
+    return os.path.join(base, f"tmux-{os.getuid()}", sock)
+
+
+def clear_socket(sock: str) -> bool:
+    """tmux 서버가 끝났는데 소켓 파일이 남았으면 치운다. 살아 있으면 건드리지 않는다."""
+    tmux = tmux_bin()
+    if not sock or not tmux:
+        return False
+    alive = subprocess.run([tmux, "-L", sock, "list-sessions"], capture_output=True, timeout=5, env=_run_env())
+    path = socket_path(sock)
+    if alive.returncode == 0 or not os.path.exists(path):
+        return False
+    try:
+        os.unlink(path)
+        return True
+    except OSError:
+        return False
 
 
 def view(root: str, record: dict) -> dict:

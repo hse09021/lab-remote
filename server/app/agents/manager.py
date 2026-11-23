@@ -65,6 +65,8 @@ class Pending:
     future: asyncio.Future
     created: float
     inbox_id: int | None = None
+    #: 승인 카드에 띄울 경고 (학습이 쓰는 환경에 설치 등)
+    warning: str = ""
 
 
 @dataclass
@@ -73,6 +75,48 @@ class Live:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     allow_keys: set = field(default_factory=set)
     last_used: float = field(default_factory=time.time)
+
+
+#: 패키지를 바꾸는 명령처럼 보이나 — **경고용 짐작**이다. 막는 데 쓰지 않는다
+#: (명령 글자로는 빠짐없이 가를 수 없다 — v1 에서 62가지 중 52가지가 빠져나갔다).
+INSTALL_RE = re.compile(
+    r"\b(?:pip3?|python[0-9.]*\s+-m\s+pip|conda|mamba|micromamba|uv)\b[^;&|]*?\b"
+    r"(?:install|add|update|upgrade|remove|uninstall)\b"
+)
+ENV_NAME_RE = re.compile(r"(?:-n|--name)\s+([A-Za-z0-9][A-Za-z0-9._-]*)")
+
+
+def install_warning(project: str, req: ApprovalRequest) -> str:
+    """학습이 쓰고 있는 conda 환경에 설치하려는 것 같으면 경고 한 줄. 아니면 "".
+
+    명령에 `-n 환경` 이 있으면 그 환경을 쓰는 학습(모든 프로젝트)을, 없으면 이 프로젝트에서
+    도는 학습을 본다. 사람이 승인 카드에서 판단하도록 알려 주기만 한다(사람이 고름, 2026-11-23).
+    """
+    if req.tool != "Bash":
+        return ""
+    command = str(req.input.get("command") or "")
+    if not INSTALL_RE.search(command):
+        return ""
+    from .. import runs
+
+    named = ENV_NAME_RE.search(command)
+    busy = []
+    for _root, name in registry.load().items():
+        if not named and name != project:
+            continue
+        try:
+            items = runs.list_runs(name, refresh_running=False)
+        except Exception:
+            continue
+        for r in items:
+            if r["state"] != "running":
+                continue
+            if named and r.get("env") != named.group(1):
+                continue
+            busy.append(f"{r.get('name') or r['id']} 이 {r.get('env') or 'conda 없이'}")
+    if not busy:
+        return ""
+    return f"{', '.join(busy[:3])} 로 학습 중이에요. 지금 패키지를 바꾸면 학습이 깨질 수 있어요."
 
 
 def _allow_key(req: ApprovalRequest) -> tuple:
@@ -163,6 +207,7 @@ class Manager:
             "title": r.title,
             "reason": r.reason,
             "createdAt": p.created,
+            "warning": p.warning,
         }
 
     def list(self, project: str = "") -> list[dict]:
@@ -404,6 +449,10 @@ class Manager:
         aid = "a-" + secrets.token_hex(5)
         loop = asyncio.get_running_loop()
         pending = Pending(id=aid, session=sid, project=rec["project"], request=req, future=loop.create_future(), created=time.time())
+        try:
+            pending.warning = await asyncio.to_thread(install_warning, rec["project"], req)
+        except Exception:
+            pending.warning = ""
         self.pending[aid] = pending
         view = self._pending_view(pending)
         self._append(root, sid, {"type": "approval", "approvalId": aid, "state": "pending", **{k: view[k] for k in ("tool", "summary", "input", "title", "reason")}})

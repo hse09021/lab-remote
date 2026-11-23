@@ -23,7 +23,7 @@ def test_run_은_v3_점검만_돈다(monkeypatch):
     names = [
         "conda_env_check", "claude_check", "tmux_check", "systemd_scope_check",
         "linger_check", "api_key_check", "webhook_check", "schema_check",
-        "gpu_check", "gpu_driver_check", "nvidia_hold_check",
+        "gpu_check", "gpu_driver_check",
     ]
     for name in names:
         monkeypatch.setattr(doctor, name, lambda n=name: doctor.Check(True, n))
@@ -181,30 +181,24 @@ def _apt(entries, auto="false", ok=True, reason=""):
     return {"ok": ok, "entries": list(entries), "autoReboot": auto, "reason": reason}
 
 
-def test_묶여_있으면_통과한다(monkeypatch):
+def test_묶여_있으면_참고가_없다(monkeypatch):
     monkeypatch.setattr(doctor, "apt_blacklist", lambda: _apt(doctor.NVIDIA_BLACKLIST))
-    got = doctor.nvidia_hold_check()
-    assert got["ok"] is True
-    assert f"{len(doctor.NVIDIA_BLACKLIST)}개 다" in got["detail"]
+    assert doctor.nvidia_hold_note() is None
 
 
-def test_빠진_항목을_이름으로_알려_준다(monkeypatch):
+def test_빠졌으면_참고_한_줄_점검은_아니다(monkeypatch):
     partial = [i for i in doctor.NVIDIA_BLACKLIST if i != "cuda-"]
-    monkeypatch.setattr(doctor, "apt_blacklist", lambda: _apt(partial))
-    got = doctor.nvidia_hold_check()
-    assert got["level"] == "warn" and "cuda-" in got["detail"]
+    monkeypatch.setattr(doctor, "apt_blacklist", lambda: _apt(partial, auto="true"))
+    note = doctor.nvidia_hold_note()
+    assert "cuda-" in note and "Automatic-Reboot" in note and "lab.remote 는 바꾸지 않아요" in note
+    # 점검 목록에는 없다 — 경고 수를 늘리지 않는다
+    monkeypatch.setattr(doctor, "run", doctor.run)
+    assert "nvidia_hold_check" not in dir(doctor)
 
 
-def test_Automatic_Reboot_가_켜져_있으면_경고한다(monkeypatch):
-    monkeypatch.setattr(doctor, "apt_blacklist", lambda: _apt(doctor.NVIDIA_BLACKLIST, auto="true"))
-    got = doctor.nvidia_hold_check()
-    assert got["level"] == "warn" and "Automatic-Reboot" in got["detail"]
-
-
-def test_apt_가_없는_기계에서는_경고만(monkeypatch):
+def test_apt_가_없는_기계에서는_말하지_않는다(monkeypatch):
     monkeypatch.setattr(doctor, "apt_blacklist", lambda: _apt([], auto=None, ok=False, reason="없는 명령"))
-    got = doctor.nvidia_hold_check()
-    assert got["level"] == "warn" and "우분투가 아닌" in got["hint"]
+    assert doctor.nvidia_hold_note() is None
 
 
 def test_apt_blacklist_가_dump_를_파싱한다(monkeypatch):

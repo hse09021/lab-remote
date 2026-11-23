@@ -256,32 +256,29 @@ def apt_blacklist() -> dict:
     return {"ok": True, "entries": entries, "autoReboot": auto, "reason": ""}
 
 
-def nvidia_hold_check() -> Check:
-    """nvidia 드라이버가 **저절로 올라가지 않게** 묶여 있나. ⚠ 만 낸다."""
+def nvidia_hold_note() -> str | None:
+    """참고 한 줄 — nvidia 드라이버가 **저절로 올라가지 않게** 묶여 있나.
+
+    점검(✔ ⚠ ✘)이 아니다. 시스템 설정(apt)을 바꾸라는 권유라서, lab.remote 는
+    바꾸지 않고 원하는 사람이 직접 하도록 알려 주기만 한다(사람이 고름, 2026-11-23).
+    드라이버가 실제로 어긋났을 때는 `gpu_driver_check` 가 ✘ 로 알린다.
+    """
     got = apt_blacklist()
     if not got["ok"]:
-        return warn(
-            "nvidia 자동 업데이트 제외",
-            "apt-config 를 읽지 못했어요: " + str(got["reason"])[:120],
-            hint="우분투가 아닌 기계면 정상이에요.",
-        )
+        return None  # 우분투가 아닌 기계 — 할 말이 없다
     missing = [item for item in NVIDIA_BLACKLIST if item not in got["entries"]]
     auto_reboot_on = got["autoReboot"] in ("true", "1", "yes")
-    if missing or auto_reboot_on:
-        detail = []
-        if missing:
-            detail.append("빠진 항목: " + ", ".join(missing))
-        if auto_reboot_on:
-            detail.append("Automatic-Reboot 가 켜져 있어요")
-        return warn(
-            "nvidia 자동 업데이트 제외",
-            " · ".join(detail)[:200],
-            hint="드라이버가 저절로 올라가고 재부팅이 안 되면 nvidia-smi 가 죽어요.",
-        )
-    detail = f"{len(NVIDIA_BLACKLIST)}개 다 묶여 있어요"
-    if got["autoReboot"] is not None:
-        detail += f" · Automatic-Reboot {got['autoReboot']}"
-    return Check(True, "nvidia 자동 업데이트 제외", detail)
+    if not missing and not auto_reboot_on:
+        return None
+    why = []
+    if missing:
+        why.append(f"Unattended-Upgrade::Package-Blacklist 에 {', '.join(missing[:4])}{' 등' if len(missing) > 4 else ''} 이 없어요")
+    if auto_reboot_on:
+        why.append("Automatic-Reboot 가 켜져 있어요")
+    return (
+        "참고 · 드라이버 자동 업데이트를 막고 싶으면 직접 설정해요 (" + " · ".join(why) + "). "
+        "lab.remote 는 바꾸지 않아요 — 방법은 docs/v1/SETUP.md 의 Package-Blacklist 예시."
+    )
 
 
 def gpu_check() -> Check:
@@ -351,11 +348,12 @@ def run() -> dict:
         schema_check(),
         gpu_check(),
         gpu_driver_check(),
-        nvidia_hold_check(),
     ]
+    notes = [n for n in (nvidia_hold_note(),) if n]
     return {
         "ok": all(c["level"] != "bad" for c in checks),
         "checks": checks,
+        "notes": notes,
         "limitations": list(LIMITATIONS),
     }
 
@@ -377,6 +375,8 @@ def render(report: dict) -> str:
             + ("  (⚠ 는 종료코드를 바꾸지 않아요)" if counts["warn"] else "")
         )
         lines.append("")
+    for note in report.get("notes") or []:
+        lines.append(f"· {note}")
     for note in report["limitations"]:
         lines.append(f"· {note}")
     return "\n".join(lines)

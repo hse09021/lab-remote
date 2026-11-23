@@ -13,7 +13,7 @@ export const MODE_INFO: Record<ModeId, { name: string; desc: string; icon: strin
   manual: { name: 'Manual', desc: '파일을 고치기 전에 매번 승인을 받아요.', icon: '✋' },
   edit: { name: 'Edit automatically', desc: '파일 수정은 바로 하고, 명령 실행은 물어봐요.', icon: '</>' },
   plan: { name: 'Plan', desc: '코드를 살펴보고 계획을 먼저 보여 준 뒤 고쳐요.', icon: '☰' },
-  auto: { name: 'Auto', desc: '안전 검사를 통과한 작업은 승인하고, 위험해 보이면 멈추고 물어봐요.', icon: 'ϟ' },
+  auto: { name: 'Auto', desc: '안전 검사를 통과한 작업은 승인하고, 위험해 보이면 멈추고 물어봐요. 학습이 도는 동안에는 Manual 로 지켜보는 게 좋아요(묻지 않고 돈 명령엔 경고가 안 떠요).', icon: 'ϟ' },
 }
 const EFFORT_NAMES: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' }
 

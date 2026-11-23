@@ -90,6 +90,7 @@ function EnvPanel({ name, onClone }: { name: string; onClone: () => void }) {
           <b>사용 중이라 잠겨 있어요</b>
           <span>
             {d.usedBy.join(', ')} 이 이 환경으로 학습 중이에요. 패키지를 바꾸면 학습이 깨질 수 있어서 끝날 때까지 설치 · 제거 · 삭제를 막아요.
+            에이전트가 이 환경에 설치하려 하면 승인 카드에 경고가 떠요.
           </span>
           <Link to={`/projects/${encodeURIComponent(d.usedBy[0].split(' · ')[0])}?tab=work&run=${d.usedBy[0].split(' · ')[1]}`}>학습 보기</Link>
         </div>

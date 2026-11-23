@@ -96,6 +96,8 @@ def kill(project: str, name: str) -> None:
     if not NAME_RE.match(name or ""):
         raise TerminalError("터미널 이름이 올바르지 않아요.")
     _tmux("-L", socket_of(project), "kill-session", "-t", name)
+    # 마지막 터미널이었으면 tmux 서버도 끝난다 — 남은 소켓 파일을 치운다
+    runs.clear_socket(socket_of(project))
 
 
 def attach_argv(project: str, *, name: str = "", run: str = "", write: bool = False) -> list[str]:

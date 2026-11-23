@@ -36,6 +36,8 @@ export interface PendingApproval {
   title: string
   reason: string
   createdAt: number
+  /** 학습이 쓰는 환경에 설치하려는 것 같을 때 경고 (막지는 않아요) */
+  warning?: string
 }
 
 export type AgentEvent = { at: number } & (
