@@ -61,10 +61,13 @@ export function CheckNote({
   data,
   target,
   onPick,
+  savedNote,
 }: {
   data: DiscrepancyNote
   target: string | null
   onPick: (value: string) => void
+  /** 고른 뒤 붙는 글 (기본은 목업 문구) */
+  savedNote?: string
 }) {
   return (
     <div className={clsx(s.card, s.check)}>
@@ -84,7 +87,7 @@ export function CheckNote({
         ))}
         {target && (
           <span className={s.checkNote}>
-            재현 목표를 {target}로 정했어요 · 요약 MD에도 남겼어요
+            {savedNote ?? `재현 목표를 ${target}로 정했어요 · 요약 MD에도 남겼어요`}
           </span>
         )}
       </div>

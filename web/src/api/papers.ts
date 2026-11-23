@@ -78,9 +78,13 @@ export function useChooseDiscrepancy(paperId: string) {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: (target: string) =>
-      send<unknown>('PUT', `/papers/${paperId}/discrepancy`, { target }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers', paperId, 'reader'] }),
+    mutationFn: ({ target, index = 0 }: { target: string; index?: number }) =>
+      send<{ summary?: boolean }>('PUT', `/papers/${encodeURIComponent(paperId)}/discrepancy`, { target, index }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['papers', paperId, 'reader'] })
+      qc.invalidateQueries({ queryKey: ['papers', paperId, 'analysis'] })
+      qc.invalidateQueries({ queryKey: ['papers', 'summary-md'] })
+    },
   })
 }
 
@@ -278,6 +282,15 @@ export interface SummaryJob {
   error: string
 }
 
+/** 노트에 PDF가 없는 arXiv 논문 — arXiv에서 받아 데이터 폴더에 (vault는 그대로) */
+export function useFetchPaperPdf() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => send<{ id: string; size: number }>('POST', `/papers/${encodeURIComponent(id)}/pdf/fetch`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers'], exact: true }),
+  })
+}
+
 /* ── arXiv HTML 본문 (데이터 폴더에 받아 둬요) ───────────────────────────── */
 
 /** 받기 시작 — 예전에 넣은 arXiv 논문을 리더에서 처음 HTML로 볼 때 */
@@ -361,6 +374,8 @@ export async function runReaderAi<T>(paperId: string, body: ReaderAiBody): Promi
 export interface PaperAnalysis {
   highlights: { category: 'core' | 'method' | 'result' | 'check'; quote: string; page: number; note: string }[]
   references: { n: number; title: string; authors: string; year: number; venue: string; arxiv: string; why: string }[]
+  /** 본문과 표 · 그림이 서로 다르게 적은 수치 — 재현 목표를 사람이 골라요 */
+  discrepancies?: { title: string; text: string; page: number; options: { value: string; label: string }[]; chosen: string | null }[]
 }
 
 export const analysisQuery = (paperId: string, enabled: boolean) =>

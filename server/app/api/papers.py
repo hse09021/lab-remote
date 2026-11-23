@@ -345,6 +345,29 @@ async def add_pdf(request: Request, name: str = ""):
         return _bad(exc)
 
 
+class TargetBody(BaseModel):
+    target: str
+    index: int = 0
+
+
+@router.put("/papers/{pid}/discrepancy")
+def choose_target(pid: str, body: TargetBody):
+    """재현 목표 고르기 (AI 분석이 찾은 수치 불일치)"""
+    try:
+        return reader_ai.choose_target(pid, body.index, body.target)
+    except reader_ai.ReaderAiError as exc:
+        return _bad(exc)
+
+
+@router.post("/papers/{pid}/pdf/fetch")
+async def fetch_pdf(pid: str):
+    """노트에 PDF가 없는 arXiv 논문 — arXiv에서 받아 데이터 폴더에 (vault는 그대로)"""
+    try:
+        return await asyncio.to_thread(papers.fetch_pdf, pid)
+    except papers.PapersError as exc:
+        return _bad(exc)
+
+
 @router.get("/papers/{pid}/pdf")
 def get_pdf(pid: str):
     try:

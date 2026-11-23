@@ -13,6 +13,7 @@ import {
   runReaderAi,
   useStartAnalysis,
   useFetchPaperHtml,
+  useFetchPaperPdf,
   usePaperHtmlState,
   refPaperId,
   summaryDraftsQuery,
@@ -62,10 +63,17 @@ import s from './PaperReader.module.css'
 import { useIsMobile } from '@/lib/useMediaQuery'
 import { MobilePapers } from '../mobile/MobilePapers'
 
+/**
+ * 휴대폰이면 목록 + 요약 시트, 아니면 리더.
+ * 둘을 다른 컴포넌트로 나눠요 — 한 컴포넌트에서 훅 앞에 돌려주면, 창 폭이 바뀌는 순간
+ * 훅 개수가 달라져 화면이 깨져요 (React #300).
+ */
 export default function PaperReader() {
   const isMobile = useIsMobile()
-  if (isMobile) return <MobilePapers />
+  return isMobile ? <MobilePapers /> : <DesktopReader />
+}
 
+function DesktopReader() {
   const { id = 'attn' } = useParams<{ id: string }>()
   // `?section=`으로 들어오면 그 섹션부터 보여 줘요
   const [search] = useSearchParams()
@@ -87,7 +95,8 @@ export default function PaperReader() {
   })
 
   const [source, setSource] = useState<PaperSource>('pdf')
-  const [activeId, setActiveId] = useState<string | null>('abs')
+  // 보던 섹션 — 처음에는 없어요 (스크롤하면 본문이 알려 줘요)
+  const [activeId, setActiveId] = useState<string | null>(null)
   const [tab, setTab] = useState<AiTab>('summary')
   const [summaryView, setSummaryView] = useState<SummaryView>('nice')
   /** 아직 저장 전인 수정 중 글 (저장하면 저장소로 가요) */
@@ -163,6 +172,7 @@ export default function PaperReader() {
   const startAnalysis = useStartAnalysis(id)
   // vault의 arXiv 논문 — HTML 본문은 데이터 폴더에 받아 둬요 (안 받았으면 누를 때)
   const fetchHtml = useFetchPaperHtml()
+  const fetchPdf = useFetchPaperPdf()
   const vaultHtml = !reader.data && !!paper?.arxiv
   const htmlNeeded = vaultHtml && source === 'arxiv-html' && paper?.htmlState !== 'done'
   const htmlQ = usePaperHtmlState(id, htmlNeeded)
@@ -266,8 +276,17 @@ export default function PaperReader() {
             />
           </div>
           <p className={s.noteHint}>
-            PDF가 없어서 vault 노트만 보여요 · {paper.path}. arXiv 링크로 추가한 논문은 PDF · HTML을 같이 받아서 리더로 열려요.
+            PDF가 없어서 vault 노트만 보여요 · {paper.path}.
+            {paper.arxiv ? ' arXiv에서 PDF를 받으면 리더로 열려요. 노트는 고치지 않고 데이터 폴더에 받아 둬요.' : ' 라이브러리에서 PDF를 올리면 리더로 열려요.'}
           </p>
+          {paper.arxiv && (
+            <div className={s.noteActions}>
+              <Button variant="primary" size="md" disabled={fetchPdf.isPending} onClick={() => fetchPdf.mutate(id)}>
+                {fetchPdf.isPending ? 'arXiv에서 받는 중…' : 'arXiv에서 PDF 받기'}
+              </Button>
+              {fetchPdf.error && <span className={s.noteHint}>{fetchPdf.error instanceof Error ? fetchPdf.error.message : String(fetchPdf.error)}</span>}
+            </div>
+          )}
           {paper.hasPdf && (
             <a href={paperPdfHref(id)} target="_blank" rel="noreferrer" className={s.graphLink}>
               PDF 열기 (새 탭)
@@ -319,6 +338,8 @@ export default function PaperReader() {
   }
 
   /** 위치 표기. 번호가 없는 섹션(Abstract·References)은 § 을 붙이지 않아요 */
+  // 새 메모 · 주석 자리 — 보던 섹션이 이 논문에 없으면(목차 없는 PDF 등) 첫 섹션
+  const hereId = activeId && data.sections.some((x) => x.id === activeId) ? activeId : (data.sections[0]?.id ?? '')
   const sectionLabel = (sectionId: string) => {
     const sec = data.sections.find((x) => x.id === sectionId)
     if (!sec) return sectionId
@@ -432,7 +453,7 @@ export default function PaperReader() {
       }}
       onSaveNote={(body) => {
         const pop = overlays.popover
-        const sid = pop?.sectionId ?? activeId ?? data.sections[0].id
+        const sid = pop?.sectionId ?? hereId
         addAnn.mutate({
           kind: 'note',
           text: body,
@@ -664,7 +685,7 @@ export default function PaperReader() {
                 onToast={toast.show}
                 target={data.discrepancy.chosen}
                 onTargetChange={(v) => {
-                  chooseTarget.mutate(v)
+                  chooseTarget.mutate({ target: v })
                   toast.show(`재현 목표를 ${v}로 정했어요 · 요약 MD에도 남겼어요`)
                 }}
                 nudge={{
@@ -697,6 +718,16 @@ export default function PaperReader() {
             onAnalyze={aiLive ? () => startAnalysis.mutate(undefined, { onError: (e) => toast.show(e instanceof Error ? e.message : String(e)) }) : undefined}
             analyzing={vault.analyzing || startAnalysis.isPending}
             analyzed={!!vault.analysis}
+            checks={vault.analysis?.discrepancies ?? []}
+            onPickTarget={(index, value) =>
+              chooseTarget.mutate(
+                { target: value, index },
+                {
+                  onSuccess: (r) => toast.show(`재현 목표를 ${value}로 정했어요${r.summary ? ' · 요약 MD에도 남겼어요' : ''}`),
+                  onError: (e) => toast.show(e instanceof Error ? e.message : String(e)),
+                },
+              )
+            }
             chatPaperId={aiLive ? id : undefined}
             summaryView={summaryView}
             onSummaryViewChange={setSummaryView}
@@ -717,9 +748,9 @@ export default function PaperReader() {
               toast.show('주석을 고쳤어요')
             }}
             onDeleteNote={deleteAnnotation}
-            currentLabel={activeId ? sectionLabel(activeId) : ''}
+            currentLabel={hereId ? sectionLabel(hereId) : ''}
             onAddNote={(text) => {
-              const sid = activeId ?? data.sections[0]?.id ?? ''
+              const sid = hereId
               addAnn.mutate({
                 kind: 'note',
                 text,

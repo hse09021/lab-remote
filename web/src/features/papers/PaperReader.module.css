@@ -248,3 +248,11 @@
 .htmlWait p {
   margin: 0;
 }
+
+/* 노트만 있는 논문 — arXiv에서 PDF 받기 */
+.noteActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}

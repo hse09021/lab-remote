@@ -253,7 +253,7 @@ def list_papers(*, trash: bool = False) -> list[dict]:
             "summaryState": "done" if p["id"] in made else "running" if p["id"] in running else "none",
             "access": _ago(p["mtime"]),
             "path": f"vault/{p['path']}",
-            "hasPdf": p.get("hasPdf", False),
+            "hasPdf": p.get("hasPdf", False) or os.path.isfile(cached_pdf_path(p["id"])),
             "arxiv": p.get("arxiv") or "",
             # arXiv HTML 본문 — done · running · none(arXiv에 없음) · error · missing(아직 안 받음)
             "htmlState": html.get(p["id"], ""),
@@ -486,11 +486,41 @@ def add_pdf(filename: str, data: bytes) -> dict:
 
 
 def pdf_rel(pid: str) -> str:
-    """vault 안 PDF의 상대 경로 (없으면 "")."""
+    """PDF 경로 — vault 안이면 상대 경로, 데이터 폴더에 받아 둔 사본이면 절대 경로 (없으면 "")."""
     try:
-        return os.path.relpath(pdf_of(pid), paths.real(vault_path())).replace(os.sep, "/")
+        target = pdf_of(pid)
     except PapersError:
         return ""
+    root = paths.real(vault_path())
+    return os.path.relpath(target, root).replace(os.sep, "/") if paths.is_inside(root, target) else target
+
+
+def cached_pdf_path(pid: str) -> str:
+    """노트에 PDF가 없는 arXiv 논문 — 데이터 폴더에 받아 둔 사본 자리 (vault는 고치지 않아요)."""
+    import hashlib
+
+    return os.path.join(registry.data_dir(), "papers_pdf", hashlib.sha1(pid.encode()).hexdigest()[:16] + ".pdf")
+
+
+def fetch_pdf(pid: str, *, fetch=None) -> dict:
+    """arXiv에서 PDF를 받아 데이터 폴더에 둔다. 노트의 `pdf:`는 고치지 않는다."""
+    fetch = fetch or _get
+    p = next((x for x in scan()["papers"] if x["id"] == pid), None)
+    if p is None:
+        raise PapersError("그런 논문이 없어요.")
+    aid = arxiv_id_or_none(p.get("arxiv") or "")
+    if not aid:
+        raise PapersError("arXiv 번호가 없는 논문이에요. PDF를 직접 올려 주세요.")
+    data = fetch(ARXIV_PDF.format(id=aid), limit=MAX_PDF, timeout=120)
+    if not data.startswith(b"%PDF-"):
+        raise PapersError("arXiv가 PDF가 아닌 걸 돌려줬어요. 잠시 뒤 다시 해 주세요.")
+    target = cached_pdf_path(pid)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    tmp = target + ".tmp"
+    with open(tmp, "wb") as fh:
+        fh.write(data)
+    os.replace(tmp, target)
+    return {"id": pid, "size": len(data)}
 
 
 def pdf_of(pid: str) -> str:
@@ -508,6 +538,10 @@ def pdf_of(pid: str) -> str:
                 if paths.is_inside(root, target) and os.path.isfile(target) and target.lower().endswith(".pdf"):
                     return target
             break
+    # 노트에 PDF가 없으면 데이터 폴더에 받아 둔 arXiv 사본
+    cached = cached_pdf_path(pid)
+    if os.path.isfile(cached):
+        return cached
     raise PapersError("이 논문에는 PDF가 없어요.")
 
 

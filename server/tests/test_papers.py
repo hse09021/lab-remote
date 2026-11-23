@@ -398,6 +398,17 @@ def test_요약_만들기(vault, monkeypatch):
     s = summaries.load_all()["LoRA"]
     assert s["lines"][0] == {"text": "저랭크 어댑터", "ref": "p.2"} and s["file"] == "LoRA.pdf"
     assert {f["label"] for f in s["fields"]} == {"Field", "Base Model", "Paper URL"}
+    # 재현 목표를 고르면 lab.remote가 만든 요약 MD에도 적어요 (다시 골라도 한 절만)
+    from app import reader_ai, registry
+
+    os.makedirs(os.path.dirname(reader_ai._analysis_path("LoRA")), exist_ok=True)
+    registry.write_json(reader_ai._analysis_path("LoRA"), {"highlights": [], "references": [], "discrepancies": [
+        {"title": "GLUE", "text": "", "page": 5, "options": [{"value": "88.7", "label": "88.7 · 표 2"}, {"value": "89.0", "label": "89.0 · 본문"}], "chosen": None}]})
+    assert reader_ai.choose_target("LoRA", 0, "89.0")["summary"] is True
+    assert reader_ai.choose_target("LoRA", 0, "88.7")["summary"] is True
+    md = open(os.path.join(vault, "Papers", "LoRA 요약.md"), encoding="utf-8").read()
+    assert md.count("## 재현 목표") == 1 and "- GLUE: **88.7** (88.7 · 표 2)" in md and "89.0 · 본문" not in md
+    assert open(note, encoding="utf-8").read() == before
     assert {p["id"]: p for p in papers.list_papers()}["LoRA"]["summaryState"] == "done"
     # 수정은 요약 파일만, None 이면 되돌리기
     summaries.save_markdown("LoRA", "고친 요약")
@@ -447,11 +458,28 @@ def test_리더_AI(vault, monkeypatch):
         an = _fake_agent({"highlights": [
             {"category": "core", "quote": "We propose LoRA", "page": 1, "note": "핵심"},
             {"category": "bogus", "quote": "x", "page": 1, "note": ""},
-        ], "references": [{"n": 1, "title": "Attention", "authors": "Vaswani", "year": 2017, "venue": "NeurIPS", "arxiv": "1706.03762", "why": "기반"}]})
+        ], "references": [{"n": 1, "title": "Attention", "authors": "Vaswani", "year": 2017, "venue": "NeurIPS", "arxiv": "1706.03762", "why": "기반"}],
+            "discrepancies": [
+                {"title": "GLUE 점수", "text": "본문 89.0 · 표 2 88.7", "page": 5,
+                 "options": [{"value": "88.7", "label": "88.7 · 표 2"}, {"value": "89.0", "label": "89.0 · 본문"}]},
+                {"title": "고를 게 하나뿐", "text": "", "page": 1, "options": [{"value": "1", "label": "1"}]},
+            ]})
         got = await wait(reader_ai.start("LoRA", "analyze", query_fn=an)["id"])
         assert got["result"] == {"highlights": 1, "references": 1}
         stored = reader_ai.analysis("LoRA")
         assert stored["highlights"][0]["quote"] == "We propose LoRA" and stored["references"][0]["arxiv"] == "1706.03762"
+        # 고를 값이 둘 이상인 것만 남아요
+        assert [d["title"] for d in stored["discrepancies"]] == ["GLUE 점수"] and stored["discrepancies"][0]["chosen"] is None
+        assert "3. 같은 수치를" in an.seen["prompt"]
+        # 재현 목표 고르기 — 요약 MD가 없으면 분석 기록에만
+        assert reader_ai.choose_target("LoRA", 0, "88.7") == {"index": 0, "chosen": "88.7", "summary": False}
+        with pytest.raises(reader_ai.ReaderAiError):
+            reader_ai.choose_target("LoRA", 0, "70.0")
+        with pytest.raises(reader_ai.ReaderAiError):
+            reader_ai.choose_target("LoRA", 3, "88.7")
+        # 다시 분석해도 같은 항목에서 고른 값은 남아요
+        await wait(reader_ai.start("LoRA", "analyze", query_fn=an)["id"])
+        assert reader_ai.analysis("LoRA")["discrepancies"][0]["chosen"] == "88.7"
 
     asyncio.run(go())
 
@@ -530,3 +558,30 @@ def test_HTML_API(vault, tmp_path, monkeypatch):
     assert client.get("/api/papers/LoRA/html/assets/a1.png").content == b"png"
     assert client.get("/api/papers/LoRA/html/assets/meta.json").status_code == 404
     assert client.get("/api/papers/없음/html/state").status_code == 404
+
+
+def test_PDF_없는_arXiv_논문은_데이터_폴더로_받아요(vault, tmp_path):
+    papers.set_vault(vault)
+    with pytest.raises(papers.PapersError):
+        papers.pdf_of("LoRA")
+    assert not {p["id"]: p for p in papers.list_papers()}["LoRA"]["hasPdf"]
+    calls = []
+
+    def fetch(url, *, limit, timeout=30):
+        calls.append(url)
+        return b"%PDF-1.5 lora"
+
+    assert papers.fetch_pdf("LoRA", fetch=fetch)["size"] == len(b"%PDF-1.5 lora")
+    assert calls == ["https://arxiv.org/pdf/2106.09685"]
+    target = papers.pdf_of("LoRA")
+    assert open(target, "rb").read() == b"%PDF-1.5 lora"
+    # vault에는 아무것도 안 생기고 노트도 그대로예요
+    assert not os.path.isdir(os.path.join(vault, "Papers", "pdf"))
+    assert "pdf:" not in open(os.path.join(vault, "Papers", "LoRA.md"), encoding="utf-8").read()
+    assert {p["id"]: p for p in papers.list_papers()}["LoRA"]["hasPdf"]
+    assert papers.pdf_rel("LoRA") == target  # vault 밖이라 절대 경로
+    # arXiv 번호가 없거나 PDF가 아니면 거절
+    with pytest.raises(papers.PapersError, match="arXiv 번호"):
+        papers.fetch_pdf("Transformer", fetch=fetch)
+    with pytest.raises(papers.PapersError, match="PDF가 아닌"):
+        papers.fetch_pdf("LoRA", fetch=lambda url, **_: b"<html>")
