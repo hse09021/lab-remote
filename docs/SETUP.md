@@ -65,7 +65,7 @@ labremote autostart uninstall
 ```
 
 켜면 `labremote-session` 서비스가 tmux `labremote` 안에서 `labremote serve` 를 띄워요.
-재부팅하거나 로그아웃해도 떠 있어요. 서버 출력은 `tmux -L labremote attach -t labremote` (나올 때 `Ctrl+b d`).
+재부팅하거나 로그아웃해도 떠 있어요. 서버 출력은 `/usr/bin/tmux -L labremote attach -t labremote` (터미널 창에서 · 나올 때 `Ctrl+b d`), 터미널 없이 지금 화면만 보려면 `/usr/bin/tmux -L labremote capture-pane -p -t labremote`.
 학습 실행은 이 서비스와 따로 돌아서 서비스를 다시 켜도 살아요. 끄기와 다시 켜기는 System 화면에서도 돼요.
 
 ## 5. 밖에서 접속 (code tunnel)

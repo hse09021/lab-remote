@@ -115,7 +115,7 @@ def autostart() -> dict:
         "systemctl": bool(st.get("systemctl")),
         # 이 서버가 그 유닛 안에서 도는가 — 아니면 "세션 다시 켜기" 가 이 서버를 다시 켜지 않는다
         "inside": units.inside(),
-        "tmux": f"tmux -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}",
+        "tmux": f"{units._tmux() or 'tmux'} -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}",
         "installCommand": "labremote autostart install",
     }
 

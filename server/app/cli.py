@@ -93,7 +93,9 @@ def cmd_autostart(args) -> int:
               + (f" · 재시작 {row['restarts']}회" if row.get("restarts") is not None else ""))
         linger = got["linger"]
         print("linger    " + ("켜져 있어요" if linger else "꺼져 있어요" if linger is False else "못 읽었어요"))
-        print(f"서버 출력  tmux -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}   (나올 때 Ctrl+b d)")
+        tmux = units._tmux() or "tmux"
+        print(f"서버 출력  {tmux} -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}   (터미널 창에서 · 나올 때 Ctrl+b d)")
+        print(f"          {tmux} -L {units.TMUX_SOCKET} capture-pane -p -t {units.TMUX_SOCKET}   (터미널 없이 지금 화면만)")
         return 0
 
     try:
@@ -126,7 +128,7 @@ def cmd_autostart(args) -> int:
     for st in steps:
         print(f"{'✔' if st['ok'] else '⚠'} {st['what']}" + (f" — {st['detail']}" if st.get("detail") else ""))
     if args.action == "install":
-        print(f"\n서버 출력 보기: tmux -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}")
+        print(f"\n서버 출력 보기: {units._tmux() or 'tmux'} -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}   (터미널 창에서)")
     return 0
 
 

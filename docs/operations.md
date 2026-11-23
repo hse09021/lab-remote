@@ -35,7 +35,7 @@ code tunnel VS Code 가 따로 (code tunnel service install)
 | 하려는 것 | 명령 |
 |---|---|
 | 상태 한눈에 | `labremote doctor` · System 화면 |
-| 서버 출력 보기 | `tmux -L labremote attach -t labremote` (나올 때 `Ctrl+b d`) |
+| 서버 출력 보기 | `/usr/bin/tmux -L labremote attach -t labremote` (터미널 창에서 · 나올 때 `Ctrl+b d`), 터미널 없이 지금 화면만 보려면 `/usr/bin/tmux -L labremote capture-pane -p -t labremote` |
 | 서비스 로그 | `journalctl --user -u labremote-session -n 100` · `server/data/logs/session.log` |
 | 서버 다시 켜기 | System › "세션 다시 켜기" 또는 `systemctl --user restart labremote-session` |
 | 업데이트 | `git pull && ./install.sh` 뒤에 다시 켜기 |
