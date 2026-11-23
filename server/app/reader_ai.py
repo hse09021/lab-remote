@@ -124,7 +124,8 @@ def _prompt(kind: str, p: dict, req: dict) -> tuple[str, dict]:
         label = str(req.get("section") or "그림")[:80]
         base += [
             f"{str(page) + '쪽의 ' if page else ''}{label}을(를) 처음 보는 사람에게 풀어서 설명해 주세요.",
-            "PDF에서 그 자리를 직접 보고 — 무엇을 보여 주는지, 축 · 열 · 기호가 뜻하는 것, 본문이 여기서 끌어내는 결론을 짚어 주세요.",
+            (f"Read 도구로 원문 PDF를 pages: \"{page}\" 로 열어 그 쪽을 이미지로 직접 보세요(앞뒤 쪽에 걸쳐 있으면 같이)." if page else "Read 도구로 원문 PDF에서 그 그림 · 표 · 식이 있는 쪽을 찾아 이미지로 직접 보세요."),
+            "그다음 — 무엇을 보여 주는지, 축 · 열 · 기호가 뜻하는 것, 본문이 여기서 끌어내는 결론을 짚어 주세요.",
             f"캡션 · 식 글자: \"{text}\"" if text else "",
         ]
         return "\n".join(base), EXPLAIN
