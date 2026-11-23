@@ -116,7 +116,8 @@ def cmd_autostart(args) -> int:
             if not os.path.exists(units.unit_path()) and not autostart.record():
                 print("자동 시작이 이미 꺼져 있어요.")
                 return 0
-            print("자동 시작을 끄면 서비스를 멈추고 유닛 파일을 지워요. linger 는 lab.remote 가 켰을 때만 원래대로 돌려요.")
+            print("자동 시작을 끄면 서비스를 멈추고 유닛 파일을 지워요. linger 는 lab.remote 가 켰을 때만 원래대로 돌려요"
+                  " (code tunnel 서비스가 있으면 그것도 linger 를 써서 그대로 둬요).")
             print("학습 실행은 서비스와 따로 돌아서 계속 돌아요.")
             if not _confirm("끌까요?", args.yes):
                 print("그만뒀어요. 아무것도 바꾸지 않았어요.")

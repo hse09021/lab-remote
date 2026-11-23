@@ -8,7 +8,13 @@ lab.remote 가 부르는 것은 두 가지뿐이다 (둘 다 로그인 · 상태
     code tunnel status      → {"tunnel": null | {...}, "service_installed": bool}   (실측: 꺼져 있을 때)
     code tunnel user show   → "not logged in"(종료코드 1, 실측) | 로그인한 계정
 
-- 켜져 있을 때 `tunnel` 안의 모양은 아직 실측하지 못했다 — `name` 이 있으면 쓰고, 없으면 이름 없이 보인다.
+- 켜져 있을 때 (실측 2026-11-23, VS Code CLI 1.131):
+      {"tunnel": {"name": "...", "started_at": "...", "tunnel": "Connected",
+                  "last_connected_at": "...", "last_disconnected_at": null, "last_fail_reason": null},
+       "service_installed": true}
+  안쪽 `tunnel` 이 "Connected" 일 때만 켜짐으로 본다. 그 밖의 값이면 그 값과 실패 사유를 보여 준다.
+- `code tunnel service install` 은 사용자 서비스 `~/.config/systemd/user/code-tunnel.service`
+  (→ `~/.vscode/cli/code-tunnel.service`)를 만들고 켠다. 로그아웃 뒤에도 돌려면 linger 가 필요하다.
 - VS Code 원격 창 안의 셸에는 `.../remote-cli/code` 가 PATH 앞에 있는데, 그건 터널 CLI 가 아니라 건너뛴다.
 - 느린 명령이라 30초 캐시한다. 화면을 볼 때만 불린다.
 """
@@ -86,16 +92,19 @@ def _probe(run=_run) -> dict:
     else:
         out["service"] = bool(data.get("service_installed"))
         tun = data.get("tunnel")
-        if tun:
+        if isinstance(tun, dict):
+            inner = tun.get("tunnel")
+            name = tun.get("name") or (inner.get("name") if isinstance(inner, dict) else "") or ""
+            out["name"] = str(name)
+            word = inner if isinstance(inner, str) else (next(iter(inner), "") if isinstance(inner, dict) else "")
+            if word == "Connected" or (not word and not tun.get("last_fail_reason")):
+                out["state"] = "up"
+            else:
+                out["state"] = "off"
+                reason = tun.get("last_fail_reason") or ""
+                out["detail"] = " · ".join(x for x in (str(word), str(reason)) if x)[:200]
+        elif tun:
             out["state"] = "up"
-            if isinstance(tun, dict):
-                name = tun.get("name") or ""
-                inner = tun.get("tunnel")
-                if not name and isinstance(inner, dict):
-                    name = inner.get("name") or ""
-                out["name"] = str(name)
-                if isinstance(inner, str):
-                    out["detail"] = inner
         else:
             out["state"] = "off"
     code, text = run([cli, "tunnel", "user", "show"])

@@ -130,7 +130,10 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
     step("daemon-reload", [systemctl, "--user", "daemon-reload"], must=False)
 
     rec = record()
-    if rec.get("lingerBefore") is False and units.linger() is True:
+    if rec.get("lingerBefore") is False and units.linger() is True and _tunnel_service():
+        # code tunnel 서비스도 linger 에 기대요 — 끄면 로그아웃할 때 터널도 내려가요
+        done.append({"what": "linger", "ok": True, "detail": "code tunnel 서비스가 써서 그대로 둬요 (끄려면 loginctl disable-linger)"})
+    elif rec.get("lingerBefore") is False and units.linger() is True:
         user = units._user()
         step("linger 원래대로 (끄기)", ["loginctl", "disable-linger", user], must=False)
     elif "lingerBefore" not in rec:
@@ -156,6 +159,16 @@ def later(argv_tail: list[str], *, delay: float = 1.0) -> None:
 
     systemctl = _systemctl()
     threading.Timer(delay, _run, args=([systemctl, "--user", *argv_tail, f"{units.NAME}.service"],)).start()
+
+
+def _tunnel_service() -> bool:
+    """`code tunnel service install` 로 깐 터널 서비스가 있나 (linger 를 같이 쓴다)."""
+    try:
+        from .. import tunnel
+
+        return bool(tunnel.status().get("service"))
+    except Exception:
+        return False
 
 
 def restart(*, run: Runner = _run, now: bool = True) -> dict:

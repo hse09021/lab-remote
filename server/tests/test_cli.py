@@ -178,6 +178,17 @@ def test_autostart_켜고_끄면_linger_가_원래대로(user_config, monkeypatc
     assert not os.path.exists(user_config.unit_path()) and autostart.record() == {}
 
 
+def test_터널_서비스가_있으면_linger_를_끄지_않는다(user_config, monkeypatch):
+    from app.service import autostart
+
+    fake = FakeSystem(linger=False)
+    monkeypatch.setattr(user_config, "linger", lambda: fake.linger)
+    autostart.install(run=fake)
+    monkeypatch.setattr(autostart, "_tunnel_service", lambda: True)
+    steps = autostart.uninstall(run=fake)
+    assert fake.linger is True and any("code tunnel" in s["detail"] for s in steps)
+
+
 def test_원래_linger_가_켜져_있었으면_끄지_않는다(user_config, monkeypatch):
     from app.service import autostart
 

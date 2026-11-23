@@ -266,7 +266,11 @@ export default function SystemPage() {
       >
         <span>
           labremote-session 서비스를 멈추고 유닛 파일을 지워요.{' '}
-          {a.lingerBefore === false ? 'linger 는 원래대로(no) 돌려요.' : 'linger 는 lab.remote 가 켠 게 아니라 그대로 둬요.'}
+          {a.lingerBefore === false
+            ? d.tunnel.service
+              ? 'linger 는 code tunnel 서비스도 써서 그대로 둬요.'
+              : 'linger 는 원래대로(no) 돌려요.'
+            : 'linger 는 lab.remote 가 켠 게 아니라 그대로 둬요.'}
         </span>
         <span>학습 실행은 따로 돌아서 계속 돌아요. {a.inside && '지금 보고 있는 이 서버도 꺼져서 화면이 끊겨요.'} 다시 켜려면 터미널에서 labremote autostart install.</span>
       </Dialog>

@@ -119,3 +119,16 @@ def test_Discord_알림에_답하기_링크(conn, monkeypatch):
     remote.set_url("https://h.example")
     alerts.post(conn, "ask", "ask", "질문", where="p · main", project="p", ref={"project": "p", "session": "s9"})
     assert ("답하기", "https://h.example/projects/p/ade?session=s9") in sent["fields"]
+
+
+def test_터널_실측_모양(monkeypatch):
+    """VS Code CLI 1.131 에서 켜진 터널 (2026-11-23 실측)."""
+    monkeypatch.setattr(tunnel, "cli_path", lambda: "/x/code")
+    body = json.dumps({"tunnel": {"name": "hse09021-desktop", "started_at": "2026-11-23T14:50:04Z", "tunnel": "Connected",
+                                  "last_connected_at": "2026-11-23T14:50:04Z", "last_disconnected_at": None, "last_fail_reason": None},
+                       "service_installed": True})
+    got = tunnel.status(run=_runner(body, "Logged in as someone"))
+    assert got["state"] == "up" and got["url"] == "https://vscode.dev/tunnel/hse09021-desktop" and got["service"] is True
+    body = json.dumps({"tunnel": {"name": "d", "tunnel": "Disconnected", "last_fail_reason": "network"}, "service_installed": True})
+    got = tunnel.status(run=_runner(body, "Logged in"))
+    assert got["state"] == "off" and "network" in got["detail"]

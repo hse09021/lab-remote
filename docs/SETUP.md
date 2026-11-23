@@ -9,7 +9,7 @@
 |---|---|---|
 | conda 환경 `labremote` | `./install.sh` | `conda env remove -n labremote` |
 | 사용자 서비스 `~/.config/systemd/user/labremote-session.service` | `labremote autostart install` | `labremote autostart uninstall` |
-| linger (`loginctl enable-linger`) — 꺼져 있을 때만 | `labremote autostart install` | uninstall 이 원래 값으로 돌려요 |
+| linger (`loginctl enable-linger`) — 꺼져 있을 때만 | `labremote autostart install` | uninstall 이 원래 값으로 돌려요 (code tunnel 서비스가 있으면 그대로) |
 | 등록한 프로젝트마다 `<프로젝트>/.labremote/` (스스로 git 에서 빠져요) | 프로젝트를 등록할 때 | 등록 해제 때 지울지 골라요 |
 
 `~/.bashrc` · `~/.claude/` · `.condarc` · cron · systemd 타이머 · 프로젝트의 `.gitignore` 는 고치지 않아요.
@@ -91,11 +91,15 @@ code tunnel service install --accept-server-license-terms     # 재부팅 뒤에
 > **보안** — 터널이 열려 있으면 그 GitHub 계정만 있으면 이 데스크톱의 터미널과 파일에 들어올 수 있어요.
 > **GitHub 2단계 인증을 켜 두세요.**
 
-> [확인 필요] `code tunnel service install` 이 Linux 에서 무엇을 만드는지(사용자 서비스인지, linger 가 필요한지)는
-> VS Code 문서에 없어요. 미리 보기(Preview) 기능이에요. 또 VS Code Server 문서의 FAQ 에는 "서비스로 호스팅은
-> 라이선스상 허용되지 않는다" 는 문장이 있는데 라이선스 원문에는 그 문구가 없어요 — 판단은 사람이 해요.
-> 서비스로 두기 싫으면 쓸 때만 터미널에서 `code tunnel` 을 띄워도 돼요(재부팅하면 다시 띄워야 해요).
-> 전달한 주소가 계속 유지되는지(클라이언트를 닫은 뒤에도)도 아직 실측하지 않았어요.
+> `code tunnel service install` 은 사용자 서비스 `~/.config/systemd/user/code-tunnel.service`
+> (→ `~/.vscode/cli/code-tunnel.service`)를 만들고 켜요 (실측 2026-11-23). 로그아웃 뒤에도 돌려면 linger 가
+> 필요해요 — 자동 시작을 켰다면 이미 켜져 있어요. 그래서 `labremote autostart uninstall` 은 터널 서비스가 있으면
+> linger 를 끄지 않아요.
+>
+> VS Code Server 문서의 FAQ 에는 "서비스로 호스팅은 라이선스상 허용되지 않는다" 는 문장이 있는데 라이선스 원문에는
+> 그 문구가 없어요 — 판단은 사람이 해요. 서비스로 두기 싫으면 쓸 때만 터미널에서 `code tunnel` 을 띄워도 돼요.
+>
+> [확인 필요] 전달한 포트 주소가 VS Code 창을 닫은 뒤에도 계속 열리는지는 아직 실측하지 않았어요.
 
 ## 6. 알림 (Discord)
 

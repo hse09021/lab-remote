@@ -132,7 +132,8 @@
 | Ultracode | Effort 단계가 아니라 Claude Code 설정 키 `"ultracode": true`. 세션마다 `settings`(인라인 JSON → `--settings`)로 켬. xhigh 를 지원하는 모델에서만 | 문서 model-config · settings-reference |
 | 로그인 확인 | 연결만 해서 `account.subscriptionType` 으로 봄(자격 증명 파일 안 읽음, 이메일 안 찍음) | 실측 |
 | 터널 (9단계) | 터널은 사람이 `code tunnel service install` 로 켜고 lab.remote 는 `code tunnel status` · `code tunnel user show` 로 읽기만 (2026-11-23 결정). 전달한 바깥 주소는 `labremote remote set` 으로 적으면 Host 허용 + Discord "답하기" 링크 | VS Code CLI 1.131 도움말 · 실측(꺼진 상태) |
-| 남은 것 | 터널이 켜졌을 때 `status` 의 모양 · 전달 주소가 유지되는지(로그인한 뒤 실측), Ultracode 를 실제로 돌린 결과(사용량이 커서 안 돌려 봄) | — |
+| 터널 실측 (켜짐) | `status` = `{"tunnel":{"name","started_at","tunnel":"Connected","last_connected_at","last_disconnected_at","last_fail_reason"},"service_installed":true}`. `service install` 은 사용자 서비스 `code-tunnel.service` 를 만들고 linger 를 권함 → 자동 시작을 꺼도 터널 서비스가 있으면 linger 유지 | 실측 2026-11-23 · CLI 1.131 |
+| 남은 것 | 전달 주소가 VS Code 창을 닫은 뒤에도 유지되는지, Ultracode 를 실제로 돌린 결과(사용량이 커서 안 돌려 봄) | — |
 
 ---
 
