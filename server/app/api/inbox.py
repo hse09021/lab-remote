@@ -135,6 +135,7 @@ def git_feed():
 def session_cards():
     """세션 카드의 git 상태 (+/− · 파일 수 · 열린 PR) — 15초 캐시"""
     from .. import gitfeed
+    from ..agents.manager import manager
 
     return {"sessions": gitfeed.session_cards(manager.list())}
 

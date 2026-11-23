@@ -261,6 +261,13 @@ def test_세션_카드_git_상태(repo, monkeypatch):
     assert got["s2"] == {"add": 0, "del": 0, "files": 0, "pr": None}
 
 
+def test_세션_카드_API(repo, tmp_path):
+    # 라우트까지 한 번 — 예전에 import가 빠져 500이 났어요
+    client = TestClient(main.create_app(web_dist=str(tmp_path)), base_url="http://127.0.0.1:8000")
+    r = client.get("/api/dashboard/cards")
+    assert r.status_code == 200 and "sessions" in r.json()
+
+
 def test_파일_되돌리기(repo):
     with open(os.path.join(repo, "src", "train.py"), "a") as fh:
         fh.write("bad = 1\n")
