@@ -336,8 +336,15 @@ export default function PaperReader() {
   actions.current = { selection: onSelectionAct, explain: openChat }
 
   /** 보관 여부는 라이브러리 캐시가 단일 출처예요 — /papers 목록과 늘 같아요 */
-  const isRefSaved = (r: { n: number; arxiv: string | null }) =>
-    (papers.data ?? []).some((p) => p.id === refPaperId(r))
+  // 실제 API 에서는 arXiv 번호나 제목이 같은 논문이 vault 에 있으면 보관된 것으로 봐요
+  const savedPaper = (r: { n: number; arxiv: string | null; title?: string }) =>
+    (papers.data ?? []).find(
+      (p) =>
+        p.id === refPaperId(r) ||
+        (!!r.arxiv && p.arxiv === r.arxiv) ||
+        (!!r.title && p.title.trim().toLowerCase() === r.title.trim().toLowerCase()),
+    )
+  const isRefSaved = (r: { n: number; arxiv: string | null; title?: string }) => !!savedPaper(r)
 
   const myAnnotations = annotations.data ?? []
   const myHighlights = myAnnotations.filter((a) => a.kind === 'highlight')
@@ -409,8 +416,11 @@ export default function PaperReader() {
         const reference = data.references.find((r) => r.n === n)
         if (!reference) return
         const save = !isRefSaved(reference)
-        saveRef.mutate({ reference, save })
-        toast.show(save ? '라이브러리에 보관했어요 · 요약 대기열에 넣었어요' : '보관을 취소했어요')
+        saveRef.mutate(
+          { reference, save, savedId: savedPaper(reference)?.id },
+          { onError: (e) => toast.show(e instanceof Error ? e.message : String(e)) },
+        )
+        toast.show(save ? '라이브러리에 보관했어요' : '보관을 취소했어요 · 휴지통에서 되돌릴 수 있어요')
       }}
       onWorth={(n) => {
         const anchor = overlays.cite?.anchor

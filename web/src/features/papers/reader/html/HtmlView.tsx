@@ -60,7 +60,7 @@ export function HtmlView({
   onMyHighlight,
   onHover,
   floating,
-  onToast,
+  onToast: _onToast,
   target,
   onTargetChange,
   nudge,
@@ -366,10 +366,7 @@ export function HtmlView({
           )}
         {slots.memo &&
           createPortal(
-            <MemoCard
-              data={reader.inlineMemo}
-              onEdit={() => onToast('메모 수정은 다음 단계에서 붙여요')}
-            />,
+            <MemoCard data={reader.inlineMemo} paperId={reader.paperId} />,
             slots.memo,
           )}
 

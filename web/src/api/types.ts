@@ -39,6 +39,8 @@ export interface Paper {
   hasPdf?: boolean
   /** arXiv 번호 (실제 API) */
   arxiv?: string
+  /** 들어 있는 모음 이름 (실제 API) */
+  collections?: string[]
 }
 
 /** 요약 한 줄 + 원문 근거 위치 */

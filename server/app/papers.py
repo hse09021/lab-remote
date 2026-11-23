@@ -196,6 +196,8 @@ def scan() -> dict:
                 "mtime": os.path.getmtime(f),
                 "hasBody": bool(body.strip()),
                 "hasPdf": bool(str(meta.get("pdf") or "").strip()),
+                "authorList": [str(a) for a in meta.get("authors")] if isinstance(meta.get("authors"), list) else [a.strip() for a in str(meta.get("authors") or "").split(",") if a.strip()],
+                "year": year,
             })
         else:
             heading = next((ln[2:].strip() for ln in body.splitlines() if ln.startswith("# ")), "")
@@ -214,11 +216,24 @@ def _ago(ts: float) -> str:
     return time.strftime("%m/%d", time.localtime(ts))
 
 
-def list_papers() -> list[dict]:
-    """라이브러리 목록 — 화면의 Paper 모양에 맞춘다."""
+def _hidden() -> set[str]:
+    return {str(x) for x in (settings().get("hidden") or [])}
+
+
+def _collections() -> dict[str, list[str]]:
+    raw = settings().get("collections") or {}
+    return {str(k): [str(x) for x in v] for k, v in raw.items() if isinstance(v, list)} if isinstance(raw, dict) else {}
+
+
+def list_papers(*, trash: bool = False) -> list[dict]:
+    """라이브러리 목록 — 화면의 Paper 모양에 맞춘다. 휴지통에 넣은 건 `trash=True` 일 때만."""
     status = settings().get("status") or {}
+    hidden = _hidden()
+    cols = _collections()
     out = []
     for p in scan()["papers"]:
+        if (p["id"] in hidden) != trash:
+            continue
         out.append({
             "id": p["id"],
             "title": p["title"],
@@ -233,6 +248,7 @@ def list_papers() -> list[dict]:
             "path": f"vault/{p['path']}",
             "hasPdf": p.get("hasPdf", False),
             "arxiv": p.get("arxiv") or "",
+            "collections": sorted(name for name, ids in cols.items() if p["id"] in ids),
         })
     return out
 
@@ -248,7 +264,8 @@ def body_of(pid: str) -> str:
 def graph() -> dict:
     """노드: 논문 · 프로젝트 · 내 메모. 연결: 인용 · 프로젝트에서 사용 · 내 메모 링크."""
     data = scan()
-    papers = data["papers"]
+    hidden = _hidden()
+    papers = [p for p in data["papers"] if p["id"] not in hidden]
     # [[링크]] 를 논문 id 로 — 파일 이름 · 제목 · 별칭 무엇으로 적어도
     alias: dict[str, str] = {}
     for p in papers:
@@ -475,3 +492,114 @@ def pdf_of(pid: str) -> str:
                     return target
             break
     raise PapersError("이 논문에는 PDF 가 없어요.")
+
+
+# --- 휴지통 · 모음 · BibTeX (lab.remote 에만 기록 — vault 는 그대로) ----------------------
+
+COLLECTION_RE = re.compile(r"\A[^/\\\x00-\x1f]{1,40}\Z")
+
+
+def _known(pid: str) -> None:
+    if pid not in {p["id"] for p in scan()["papers"]}:
+        raise PapersError(f"없는 논문이에요: {pid}")
+
+
+def set_trashed(pid: str, on: bool) -> dict:
+    """휴지통 — 목록 · 그래프에서만 뺀다. vault 파일은 그대로다."""
+    _known(pid)
+    data = settings()
+    hidden = [x for x in (data.get("hidden") or []) if x != pid]
+    if on:
+        hidden.append(pid)
+    data["hidden"] = hidden
+    _save(data)
+    return {"id": pid, "trashed": on}
+
+
+def collections() -> list[dict]:
+    cols = _collections()
+    known = {p["id"] for p in scan()["papers"]} - _hidden()
+    return [{"name": n, "count": len([i for i in ids if i in known])} for n, ids in sorted(cols.items())]
+
+
+def add_collection(name: str) -> list[dict]:
+    name = (name or "").strip()
+    if not COLLECTION_RE.match(name):
+        raise PapersError("모음 이름은 1~40자, / 없이 적어 주세요.")
+    data = settings()
+    cols = data.setdefault("collections", {})
+    if name in cols:
+        raise PapersError(f"이미 있는 모음이에요: {name}")
+    cols[name] = []
+    _save(data)
+    return collections()
+
+
+def remove_collection(name: str) -> list[dict]:
+    """모음만 지운다 — 안의 논문은 그대로."""
+    data = settings()
+    if name not in (data.get("collections") or {}):
+        raise PapersError(f"없는 모음이에요: {name}")
+    del data["collections"][name]
+    _save(data)
+    return collections()
+
+
+def set_in_collection(name: str, ids: list[str], on: bool) -> list[dict]:
+    data = settings()
+    cols = data.get("collections") or {}
+    if name not in cols:
+        raise PapersError(f"없는 모음이에요: {name}")
+    for pid in ids:
+        _known(pid)
+    current = [x for x in cols[name] if x not in ids]
+    cols[name] = current + list(dict.fromkeys(ids)) if on else current
+    data["collections"] = cols
+    _save(data)
+    return collections()
+
+
+def _bib_key(p: dict) -> str:
+    first = (p.get("authorList") or ["paper"])[0]
+    last = re.sub(r"[^A-Za-z]", "", first.split()[-1] if first.split() else first) or "paper"
+    word = re.sub(r"[^A-Za-z]", "", (p["title"].split() or ["x"])[0]) or "x"
+    return f"{last.lower()}{p.get('year') or ''}{word.lower()}"
+
+
+def bibtex(ids: list[str]) -> str:
+    """고른 논문의 BibTeX — 노트 앞쪽 메타로 만든다."""
+    by_id = {p["id"]: p for p in scan()["papers"]}
+    out = []
+    for pid in ids:
+        p = by_id.get(pid)
+        if not p:
+            continue
+        esc = lambda t: str(t).replace("{", "\\{").replace("}", "\\}")  # noqa: E731
+        fields = [("title", "{" + esc(p["title"]) + "}"), ("author", " and ".join(esc(a) for a in p.get("authorList") or []))]
+        if p.get("year"):
+            fields.append(("year", p["year"]))
+        if p.get("arxiv"):
+            fields += [("eprint", p["arxiv"]), ("archivePrefix", "arXiv")]
+            if p.get("venue") in ("", "arXiv"):
+                fields.append(("journal", f"arXiv preprint arXiv:{p['arxiv']}"))
+        if p.get("venue") and p.get("venue") != "arXiv":
+            fields.append(("booktitle", esc(p["venue"])))
+        body = ",\n".join(f"  {k:<13} = {{{v}}}" for k, v in fields if v)
+        out.append(f"@article{{{_bib_key(p)},\n{body}\n}}")
+    return "\n\n".join(out) + ("\n" if out else "")
+
+
+def add_reference(title: str, authors: str = "", year: str = "", venue: str = "") -> dict:
+    """arXiv 번호가 없는 참고문헌 — 메타만으로 노트를 만든다 (PDF 없음)."""
+    title = re.sub(r"\s+", " ", title or "").strip()
+    if not title:
+        raise PapersError("제목이 없어요.")
+    for p in scan()["papers"]:
+        if p["title"].strip().lower() == title.lower():
+            return {"id": p["id"], "created": False, "path": f"vault/{p['path']}"}
+    folder = _papers_dir()
+    names = [a.strip() for a in re.split(r",| and |&", authors or "") if a.strip() and a.strip().lower() not in ("et al.", "et al")]
+    meta = {"title": title, "authors": names, "year": int(year) if str(year).isdigit() else "", "venue": venue, "category": "", "cites": []}
+    note = _create(os.path.join(folder, f"{_safe_name(title)}.md"), _note(meta, ""))
+    stem = os.path.splitext(os.path.basename(note))[0]
+    return {"id": stem, "created": True, "path": "vault/" + os.path.relpath(note, vault_path()).replace(os.sep, "/"), "pdf": False}

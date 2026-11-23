@@ -29,6 +29,16 @@ const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers\/[^/]+$/, ['PATCH']],
   // 논문 추가 (vault 에 새 노트 · PDF) · PDF 내려받기
   [/^\/papers\/arxiv$/, ['POST']],
+  // 휴지통 · 모음 · BibTeX · 참고문헌 보관 (lab.remote 에만 기록)
+  [/^\/papers\/collections$/, ['GET', 'POST']],
+  [/^\/papers\/collections\/[^/]+$/, ['DELETE']],
+  [/^\/papers\/collections\/[^/]+\/papers$/, ['POST']],
+  [/^\/papers\/bibtex$/, ['GET']],
+  [/^\/papers\/reference$/, ['POST']],
+  [/^\/papers\/[^/]+\/trash$/, ['PUT']],
+  // 내 하이라이트 · 주석 (데이터 폴더에 — 기기끼리 같이 봐요)
+  [/^\/papers\/[^/]+\/annotations$/, ['GET', 'POST']],
+  [/^\/papers\/[^/]+\/annotations\/[^/]+$/, ['PATCH', 'DELETE']],
   // 라이브러리에 묻기 (vault 를 읽기 전용으로)
   [/^\/papers\/ask$/, ['POST']],
   [/^\/papers\/ask\/[^/]+$/, ['GET']],

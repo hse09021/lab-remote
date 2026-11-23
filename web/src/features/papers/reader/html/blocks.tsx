@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { annotationsQuery, useRestoreAnnotation, useUpdateAnnotation } from '@/api/annotations'
 import clsx from 'clsx'
 import type {
   DiscrepancyNote,
@@ -90,17 +93,62 @@ export function CheckNote({
 }
 
 /** 사용자가 남긴 메모 */
-export function MemoCard({ data, onEdit }: { data: InlineMemo; onEdit: () => void }) {
+/** 고친 인라인 메모의 주석 id — 논문마다 하나 */
+const MEMO_ID = 'memo-inline'
+
+export function MemoCard({ data, paperId }: { data: InlineMemo; paperId: string }) {
+  // 고친 메모는 내 주석 저장소에 같은 id 로 남겨요 (기기끼리 같이 봐요)
+  const notes = useQuery(annotationsQuery(paperId))
+  // 정해 둔 id 로 만들어요 (되돌리기와 같은 길 — id 를 그대로 넘겨요)
+  const add = useRestoreAnnotation(paperId)
+  const update = useUpdateAnnotation(paperId)
+  const saved = notes.data?.find((a) => a.id === MEMO_ID)
+  const text = saved?.text ?? data.text
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(text)
+  const save = () => {
+    const next = draft.trim()
+    if (!next) return
+    if (saved) update.mutate({ id: MEMO_ID, text: next }, { onSuccess: () => setEditing(false) })
+    else
+      add.mutate(
+        { id: MEMO_ID, paperId, kind: 'note', text: next, source: data.title, sectionId: 'memo', page: 0, anchor: null, boxes: null, createdAt: Date.now() },
+        { onSuccess: () => setEditing(false) },
+      )
+  }
   return (
     <div className={clsx(s.card, s.memo)}>
       <div className={s.memoHead}>
         <span className={s.memoTitle}>{data.title}</span>
         <span className={s.memoMeta}>{data.meta}</span>
-        <button type="button" onClick={onEdit} className={clsx(s.ref, s.memoEdit)}>
-          수정
-        </button>
+        {!editing && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(text)
+              setEditing(true)
+            }}
+            className={clsx(s.ref, s.memoEdit)}
+          >
+            수정
+          </button>
+        )}
       </div>
-      <span className={s.memoText}>{data.text}</span>
+      {editing ? (
+        <>
+          <textarea className={s.memoInput} value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} autoFocus aria-label="메모 고치기" />
+          <div className={s.memoActions}>
+            <button type="button" className={s.ref} onClick={() => setEditing(false)}>
+              취소
+            </button>
+            <button type="button" className={s.ref} disabled={add.isPending || update.isPending || !draft.trim()} onClick={save}>
+              저장
+            </button>
+          </div>
+        </>
+      ) : (
+        <span className={s.memoText}>{text}</span>
+      )}
     </div>
   )
 }

@@ -61,17 +61,17 @@ export function applyMockWrite(method: string, path: string, body: unknown): unk
       restoreAnnotation(input)
       return input
     }
-    return addAnnotation({ ...input, paperId: anns[1] })
+    return addAnnotation({ ...input, paperId: decodeURIComponent(anns[1]) })
   }
 
   const ann = path.match(/^\/papers\/([^/]+)\/annotations\/([^/]+)$/)
   if (ann && method === 'PATCH') {
     const { text } = body as { text: string }
-    updateAnnotation(ann[1], ann[2], text)
+    updateAnnotation(decodeURIComponent(ann[1]), ann[2], text)
     return body
   }
   if (ann && method === 'DELETE') {
-    removeAnnotation(ann[1], ann[2])
+    removeAnnotation(decodeURIComponent(ann[1]), ann[2])
     return body
   }
 

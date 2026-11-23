@@ -4,7 +4,7 @@ import { CollapsibleSidebar, IconButton, VisuallyHidden } from '@/components'
 import { Skeleton } from '@/components/StateMessage'
 import s from './LibrarySidebar.module.css'
 
-export type LibraryView = 'recent' | 'all' | 'todo' | 'reading' | 'done' | `field:${string}`
+export type LibraryView = 'recent' | 'all' | 'todo' | 'reading' | 'done' | 'trash' | `field:${string}` | `col:${string}`
 
 const FIXED: Record<string, { title: string; test: (p: Paper) => boolean }> = {
   recent: { title: '최근 열어본 논문', test: () => true },
@@ -12,10 +12,16 @@ const FIXED: Record<string, { title: string; test: (p: Paper) => boolean }> = {
   todo: { title: '읽을 예정', test: (p) => p.status === 'todo' },
   reading: { title: '읽는 중', test: (p) => p.status === 'reading' },
   done: { title: '완료', test: (p) => p.status === 'done' },
+  // 휴지통은 목록 자체가 달라요 (서버의 trash 목록) — 거르는 규칙은 모두 통과
+  trash: { title: '휴지통', test: () => true },
 }
 
 /** 보기의 제목과 거르는 규칙. 분야(Research Field)는 vault 노트의 category에서 와요 */
 export function libraryView(v: LibraryView): { title: string; test: (p: Paper) => boolean } {
+  if (v.startsWith('col:')) {
+    const name = v.slice('col:'.length)
+    return { title: name, test: (p) => (p.collections ?? []).includes(name) }
+  }
   if (v.startsWith('field:')) {
     const field = v.slice('field:'.length)
     return { title: `# ${field}`, test: (p) => p.field === field }
@@ -41,6 +47,11 @@ interface Props {
   /** vault 위치 (없으면 아직 모름) */
   vaultPath?: string
   onVault: () => void
+  /** lab.remote 모음 (vault 는 그대로) */
+  collections?: { name: string; count: number }[]
+  onAddCollection?: () => void
+  onRemoveCollection?: (name: string) => void
+  trashCount?: number
 }
 
 export function LibrarySidebar({
@@ -53,6 +64,10 @@ export function LibrarySidebar({
   onSearchChange,
   vaultPath,
   onVault,
+  collections = [],
+  onAddCollection,
+  onRemoveCollection,
+  trashCount,
 }: Props) {
   /** 목업은 개수가 마크업에 박혀 있었어요. 여기서는 데이터로 세요 */
   const count = (id: LibraryView) => papers?.filter(libraryView(id).test).length ?? 0
@@ -115,7 +130,7 @@ export function LibrarySidebar({
           <BookIcon />
           라이브러리
         </span>
-        <IconButton label="폴더 추가" variant="tint">
+        <IconButton label="모음 추가" variant="tint" onClick={onAddCollection}>
           <PlusIcon />
         </IconButton>
       </div>
@@ -125,6 +140,21 @@ export function LibrarySidebar({
       {item('reading', '읽는 중')}
       {item('done', '완료')}
 
+      {collections.length > 0 && <span className={s.groupLabel}>모음</span>}
+      {collections.map((c) => (
+        <div key={c.name} className={s.colRow}>
+          <button type="button" aria-pressed={view === `col:${c.name}`} onClick={() => onViewChange(`col:${c.name}`)} className={s.item}>
+            <span className={s.label}>{c.name}</span>
+            <span className={s.count}>{c.count}</span>
+          </button>
+          {onRemoveCollection && (
+            <button type="button" aria-label={`${c.name} 모음 지우기`} title="모음만 지워요 (논문은 그대로)" className={s.colRemove} onClick={() => onRemoveCollection(c.name)}>
+              ×
+            </button>
+          )}
+        </div>
+      ))}
+
       {fieldsOf(papers).length > 0 && <span className={s.groupLabel}>Research Field</span>}
       {fieldsOf(papers).map((f) => item(`field:${f}`, `# ${f}`))}
 
@@ -133,9 +163,10 @@ export function LibrarySidebar({
           <FolderIcon />
           <span className={s.label}>vault 위치</span>
         </button>
-        <button type="button" className={s.item}>
+        <button type="button" className={s.item} aria-pressed={view === 'trash'} onClick={() => onViewChange('trash')}>
           <TrashIcon />
-          휴지통
+          <span className={s.label}>휴지통</span>
+          {!!trashCount && <span className={s.count}>{trashCount}</span>}
         </button>
       </div>
     </CollapsibleSidebar>

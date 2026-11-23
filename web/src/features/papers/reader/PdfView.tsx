@@ -265,8 +265,36 @@ export function PdfView({
     if (z.latex) {
       await copyText(z.latex)
       onToast('LaTeX를 복사했어요')
-    } else {
-      onToast('그림 복사는 다음 단계에서 붙여요')
+      return
+    }
+    // 그림 — 화면에 그려진 쪽(canvas)에서 그 영역만 잘라 이미지로
+    const canvas = pageEls.current.get(z.page)?.querySelector('canvas')
+    if (!canvas || !canvas.width) {
+      onToast('이 쪽이 아직 그려지지 않았어요 — 그 쪽으로 스크롤한 뒤 다시 눌러 주세요')
+      return
+    }
+    const k = canvas.width / reader.pageSize.width
+    const [x0, y0, x1, y1] = z.box
+    const out = document.createElement('canvas')
+    out.width = Math.max(1, Math.round((x1 - x0) * k))
+    out.height = Math.max(1, Math.round((y1 - y0) * k))
+    out.getContext('2d')?.drawImage(canvas, x0 * k, y0 * k, out.width, out.height, 0, 0, out.width, out.height)
+    const blob = await new Promise<Blob | null>((res) => out.toBlob(res, 'image/png'))
+    if (!blob) {
+      onToast('그림을 만들지 못했어요')
+      return
+    }
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      onToast('그림을 복사했어요')
+    } catch {
+      // 클립보드에 그림을 못 넣는 브라우저 — 파일로 받아요
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `${reader.title.slice(0, 40)} p${z.page}.png`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+      onToast('클립보드 대신 PNG 파일로 내려받았어요')
     }
   }
 

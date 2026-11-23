@@ -22,7 +22,7 @@ const MOCKS: Record<string, () => Promise<{ default: unknown }>> = {
  */
 function loadFromStore<T>(path: string): T | undefined {
   const anns = path.match(/^\/papers\/([^/]+)\/annotations$/)
-  if (anns) return readAnnotations(anns[1]) as T
+  if (anns) return readAnnotations(decodeURIComponent(anns[1])) as T
 
   if (path === '/papers/summary-md') return readMockState().summaryMd as T
 

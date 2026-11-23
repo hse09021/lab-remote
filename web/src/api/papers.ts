@@ -97,7 +97,18 @@ export function useSaveReference() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ reference, save }: { reference: Reference; save: boolean }) => {
+    mutationFn: async ({ reference, save, savedId }: { reference: Reference; save: boolean; savedId?: string }) => {
+      if (!isMockPath('/papers/reference', 'POST')) {
+        // 실제 API — arXiv 번호가 있으면 arXiv 로, 없으면 메타만으로 vault 에 새 노트. 취소는 휴지통으로
+        if (!save) return savedId ? send<unknown>('PUT', `/papers/${encodeURIComponent(savedId)}/trash`, { on: true }) : undefined
+        return send<unknown>('POST', '/papers/reference', {
+          title: reference.title,
+          authors: reference.authors,
+          year: String(reference.year ?? ''),
+          venue: reference.venue,
+          arxiv: reference.arxiv ?? '',
+        })
+      }
       const id = refPaperId(reference)
       if (!save) return send<unknown>('DELETE', `/papers/${id}`)
 
@@ -207,3 +218,49 @@ export const askJobQuery = (id: string | null) =>
     enabled: !!id,
     refetchInterval: (q) => (q.state.data?.state === 'running' || !q.state.data ? 1500 : false),
   })
+
+/* ── 휴지통 · 모음 · BibTeX (lab.remote 에만 기록 — vault 는 그대로) ─────── */
+
+export const trashQuery = () =>
+  queryOptions({ queryKey: ['papers', 'trash'], queryFn: () => get<Paper[]>('/papers?trash=true') })
+
+export const collectionsQuery = () =>
+  queryOptions({
+    queryKey: ['papers', 'collections'],
+    queryFn: () => get<{ name: string; count: number }[]>('/papers/collections'),
+  })
+
+export function usePaperActions() {
+  const qc = useQueryClient()
+  const done = () => qc.invalidateQueries({ queryKey: ['papers'] })
+  return {
+    trash: useMutation({
+      mutationFn: ({ ids, on }: { ids: string[]; on: boolean }) =>
+        Promise.all(ids.map((id) => send<unknown>('PUT', `/papers/${encodeURIComponent(id)}/trash`, { on }))),
+      onSuccess: done,
+    }),
+    addCollection: useMutation({
+      mutationFn: (name: string) => send<unknown>('POST', '/papers/collections', { name }),
+      onSuccess: done,
+    }),
+    removeCollection: useMutation({
+      mutationFn: (name: string) => send<unknown>('DELETE', `/papers/collections/${encodeURIComponent(name)}`),
+      onSuccess: done,
+    }),
+    setMembers: useMutation({
+      mutationFn: ({ name, ids, on }: { name: string; ids: string[]; on: boolean }) =>
+        send<unknown>('POST', `/papers/collections/${encodeURIComponent(name)}/papers`, { ids, on }),
+      onSuccess: done,
+    }),
+  }
+}
+
+/** 고른 논문의 BibTeX 글 (실제 API). mock 이면 제목만으로 만들어요 */
+export async function fetchBibtex(papers: Paper[]): Promise<string> {
+  if (isMockPath('/papers/bibtex')) {
+    return papers.map((p) => `@article{${p.id},\n  title = {${p.title}},\n  author = {${p.authors}}\n}`).join('\n\n')
+  }
+  const res = await fetch(apiUrl(`/papers/bibtex?ids=${papers.map((p) => encodeURIComponent(p.id)).join(',')}`))
+  if (!res.ok) throw new Error(`BibTeX 를 만들지 못했어요 (${res.status})`)
+  return res.text()
+}

@@ -28,7 +28,7 @@ const key = (paperId: string) => ['papers', paperId, 'annotations'] as const
 export const annotationsQuery = (paperId: string) =>
   queryOptions({
     queryKey: key(paperId),
-    queryFn: () => get<UserAnnotation[]>(`/papers/${paperId}/annotations`),
+    queryFn: () => get<UserAnnotation[]>(`/papers/${encodeURIComponent(paperId)}/annotations`),
   })
 
 /** 저장소를 고친 다음 쿼리를 무효화해요 — 화면 상태로 들고 있지 않아요 */
@@ -45,7 +45,7 @@ function useAnnotationMutation<V>(
 
 export function useAddAnnotation(paperId: string) {
   return useAnnotationMutation(paperId, (input: NewAnnotation) =>
-    send<UserAnnotation>('POST', `/papers/${paperId}/annotations`, {
+    send<UserAnnotation>('POST', `/papers/${encodeURIComponent(paperId)}/annotations`, {
       ...input,
       paperId,
       anchor: input.anchor ?? null,
@@ -57,19 +57,19 @@ export function useAddAnnotation(paperId: string) {
 /** 주석 글 고치기 (하이라이트는 고칠 내용이 없어요) */
 export function useUpdateAnnotation(paperId: string) {
   return useAnnotationMutation(paperId, ({ id, text }: { id: string; text: string }) =>
-    send<unknown>('PATCH', `/papers/${paperId}/annotations/${id}`, { text }),
+    send<unknown>('PATCH', `/papers/${encodeURIComponent(paperId)}/annotations/${id}`, { text }),
   )
 }
 
 export function useRemoveAnnotation(paperId: string) {
   return useAnnotationMutation(paperId, (id: string) =>
-    send<unknown>('DELETE', `/papers/${paperId}/annotations/${id}`),
+    send<unknown>('DELETE', `/papers/${encodeURIComponent(paperId)}/annotations/${id}`),
   )
 }
 
 /** 되돌리기 — 지운 것을 id·만든 시각 그대로 되살려요 */
 export function useRestoreAnnotation(paperId: string) {
   return useAnnotationMutation(paperId, (annotation: UserAnnotation) =>
-    send<unknown>('POST', `/papers/${paperId}/annotations`, annotation),
+    send<unknown>('POST', `/papers/${encodeURIComponent(paperId)}/annotations`, annotation),
   )
 }

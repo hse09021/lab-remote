@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from .. import library, papers
+from .. import annotations, library, papers
 
 router = APIRouter()
 
@@ -25,6 +25,27 @@ class ArxivBody(BaseModel):
     url: str
 
 
+class TrashBody(BaseModel):
+    on: bool = True
+
+
+class CollectionBody(BaseModel):
+    name: str
+
+
+class MembersBody(BaseModel):
+    ids: list[str]
+    on: bool = True
+
+
+class ReferenceBody(BaseModel):
+    title: str
+    authors: str = ""
+    year: str = ""
+    venue: str = ""
+    arxiv: str = ""
+
+
 class AskBody(BaseModel):
     question: str
     history: list[dict] = []
@@ -36,8 +57,8 @@ def _bad(exc: Exception, status: int = 400) -> JSONResponse:
 
 
 @router.get("/papers")
-def list_papers():
-    return papers.list_papers()
+def list_papers(trash: bool = False):
+    return papers.list_papers(trash=trash)
 
 
 @router.get("/papers/vault")
@@ -84,6 +105,95 @@ def ask_job(jid: str):
     try:
         return library.job(jid)
     except library.AskError as exc:
+        return _bad(exc, 404)
+
+
+@router.get("/papers/collections")
+def get_collections():
+    return papers.collections()
+
+
+@router.post("/papers/collections")
+def new_collection(body: CollectionBody):
+    try:
+        return papers.add_collection(body.name)
+    except papers.PapersError as exc:
+        return _bad(exc)
+
+
+@router.delete("/papers/collections/{name}")
+def delete_collection(name: str):
+    try:
+        return papers.remove_collection(name)
+    except papers.PapersError as exc:
+        return _bad(exc, 404)
+
+
+@router.post("/papers/collections/{name}/papers")
+def collection_members(name: str, body: MembersBody):
+    try:
+        return papers.set_in_collection(name, body.ids, body.on)
+    except papers.PapersError as exc:
+        return _bad(exc)
+
+
+@router.get("/papers/bibtex")
+def get_bibtex(ids: str = ""):
+    from fastapi.responses import PlainTextResponse
+
+    return PlainTextResponse(papers.bibtex([i for i in ids.split(",") if i]), media_type="text/plain; charset=utf-8")
+
+
+@router.post("/papers/reference")
+def add_reference(body: ReferenceBody):
+    """인용 카드의 "보관하기" — arXiv 번호가 있으면 arXiv 로, 없으면 메타만으로 노트를 만든다."""
+    try:
+        if body.arxiv.strip():
+            return papers.add_arxiv(body.arxiv)
+        return papers.add_reference(body.title, body.authors, body.year, body.venue)
+    except papers.PapersError as exc:
+        return _bad(exc)
+
+
+@router.get("/papers/{pid}/annotations")
+def get_annotations(pid: str):
+    return annotations.list_for(pid)
+
+
+@router.post("/papers/{pid}/annotations")
+def add_annotation(pid: str, body: dict):
+    try:
+        return annotations.add(pid, body)
+    except (annotations.AnnotationError, ValueError, TypeError) as exc:
+        return _bad(exc)
+
+
+class AnnotationText(BaseModel):
+    text: str
+
+
+@router.patch("/papers/{pid}/annotations/{aid}")
+def edit_annotation(pid: str, aid: str, body: AnnotationText):
+    try:
+        return annotations.update(pid, aid, body.text)
+    except annotations.AnnotationError as exc:
+        return _bad(exc, 404)
+
+
+@router.delete("/papers/{pid}/annotations/{aid}")
+def delete_annotation(pid: str, aid: str):
+    try:
+        annotations.remove(pid, aid)
+        return {"ok": True}
+    except annotations.AnnotationError as exc:
+        return _bad(exc, 404)
+
+
+@router.put("/papers/{pid}/trash")
+def trash(pid: str, body: TrashBody):
+    try:
+        return papers.set_trashed(pid, body.on)
+    except papers.PapersError as exc:
         return _bad(exc, 404)
 
 

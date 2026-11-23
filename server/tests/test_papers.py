@@ -279,3 +279,68 @@ def test_묻기_거절(vault, monkeypatch, tmp_path):
     monkeypatch.setattr(papers, "vault_path", lambda: str(tmp_path / "없음"))
     with pytest.raises(library.AskError, match="vault 폴더가 없어요"):
         library.start("x")
+
+
+# --- 휴지통 · 모음 · BibTeX · 참고문헌 보관 -----------------------------------------
+
+
+def test_휴지통은_lab_remote_에서만(vault):
+    papers.set_vault(vault)
+    before = sorted(os.listdir(os.path.join(vault, "Papers")))
+    papers.set_trashed("LoRA", True)
+    assert "LoRA" not in {p["id"] for p in papers.list_papers()}
+    assert [p["id"] for p in papers.list_papers(trash=True)] == ["LoRA"]
+    assert "LoRA" not in {n["id"] for n in papers.graph()["nodes"]}
+    assert sorted(os.listdir(os.path.join(vault, "Papers"))) == before  # vault 그대로
+    papers.set_trashed("LoRA", False)
+    assert "LoRA" in {p["id"] for p in papers.list_papers()}
+    with pytest.raises(papers.PapersError):
+        papers.set_trashed("없음", True)
+
+
+def test_모음(vault):
+    papers.set_vault(vault)
+    assert papers.add_collection("읽을 것") == [{"name": "읽을 것", "count": 0}]
+    with pytest.raises(papers.PapersError):
+        papers.add_collection("읽을 것")
+    with pytest.raises(papers.PapersError):
+        papers.add_collection("a/b")
+    papers.set_in_collection("읽을 것", ["LoRA", "Transformer"], True)
+    assert {p["id"]: p["collections"] for p in papers.list_papers()}["LoRA"] == ["읽을 것"]
+    papers.set_in_collection("읽을 것", ["LoRA"], False)
+    assert papers.collections() == [{"name": "읽을 것", "count": 1}]
+    papers.remove_collection("읽을 것")
+    assert papers.collections() == []
+
+
+def test_BibTeX(vault):
+    papers.set_vault(vault)
+    text = papers.bibtex(["LoRA", "없음"])
+    assert text.startswith("@article{hu2021lora,") and "author        = {Hu and Shen and Wallis and Allen-Zhu}" in text
+    assert "eprint        = {2106.09685}" in text and "booktitle     = {ICLR 2022}" in text
+
+
+def test_참고문헌_보관(vault):
+    papers.set_vault(vault)
+    got = papers.add_reference("Long Short-Term Memory", "Hochreiter & Schmidhuber", "1997", "Neural Computation")
+    assert got["created"] and got["id"] == "Long Short-Term Memory"
+    row = {p["id"]: p for p in papers.list_papers()}[got["id"]]
+    assert row["authors"] == "Hochreiter, Schmidhuber · 1997"
+    assert papers.add_reference("long short-term memory")["created"] is False
+
+
+def test_하이라이트_주석_서버_저장(tmp_path):
+    client = TestClient(main.create_app(web_dist=str(tmp_path / "dist")), base_url="http://127.0.0.1:8000")
+    base = "/api/papers/QLoRA (2)/annotations"
+    r = client.post(base, json={"kind": "highlight", "text": "4-bit", "source": "4-bit", "sectionId": "o1", "page": 1, "boxes": [[1, 2, 3, 4]]}, headers=H)
+    assert r.status_code == 200, r.text
+    made = r.json()
+    assert made["id"].startswith("u-") and made["boxes"] == [[1.0, 2.0, 3.0, 4.0]]
+    assert client.post(base, json={"kind": "x", "text": "a"}, headers=H).status_code == 400
+    note = client.post(base, json={"kind": "note", "text": "메모", "source": "4-bit", "page": 1}, headers=H).json()
+    assert client.patch(f"{base}/{note['id']}", json={"text": "고친 메모"}, headers=H).json()["text"] == "고친 메모"
+    assert [a["id"] for a in client.get(base).json()] == [note["id"], made["id"]]
+    assert client.delete(f"{base}/{made['id']}", headers=H).status_code == 200
+    # 되돌리기 — 같은 id · 시각으로
+    assert client.post(base, json=made, headers=H).json()["id"] == made["id"]
+    assert client.delete(f"{base}/없음", headers=H).status_code == 404

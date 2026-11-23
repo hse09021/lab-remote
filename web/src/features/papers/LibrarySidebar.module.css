@@ -97,3 +97,38 @@
   border-top: 1px solid var(--border);
   padding-top: 10px;
 }
+
+/* 모음 한 줄 — 지우기 × 는 올려 놓을 때만 */
+.colRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.colRow .item {
+  flex: 1;
+  min-width: 0;
+}
+
+.colRemove {
+  position: absolute;
+  right: 34px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.colRow:hover .colRemove,
+.colRemove:focus-visible {
+  opacity: 1;
+}
+
+.colRemove:hover {
+  background: var(--hover);
+  color: var(--text);
+}

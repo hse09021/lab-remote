@@ -7,7 +7,11 @@ import {
   paperSummariesQuery,
   papersQuery,
   summaryDraftsQuery,
+  collectionsQuery,
+  fetchBibtex,
+  trashQuery,
   useAddArxiv,
+  usePaperActions,
   useSaveSummaryMd,
   useSetReadStatus,
   useUploadPdf,
@@ -19,6 +23,8 @@ import type { Paper, ReadStatus } from '@/api/types'
 import {
   Button,
   CollapsedRail,
+  Dialog,
+  dialogStyles as ds,
   DataTable,
   ErrorState,
   IconButton,
@@ -41,6 +47,7 @@ import type { SummaryView } from './PaperSummaryPane'
 import s from './PapersLibrary.module.css'
 import { useIsMobile } from '@/lib/useMediaQuery'
 import { MobilePapers } from '../mobile/MobilePapers'
+import { copyText } from '@/lib/clipboard'
 import { VaultDialog } from './VaultDialog'
 
 type Density = 'list' | 'compact'
@@ -76,6 +83,14 @@ function PapersList() {
   const uploadPdf = useUploadPdf()
   const fileInput = useRef<HTMLInputElement>(null)
   const [added, setAdded] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null)
+  const cols = useQuery(collectionsQuery())
+  const trash = useQuery(trashQuery())
+  const act = usePaperActions()
+  const [colDialog, setColDialog] = useState<'' | 'add' | { remove: string }>('')
+  const [colName, setColName] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [filters, setFilters] = useState({ source: 'all' as 'all' | 'arxiv-html' | 'pdf', hasPdf: false, hasSummary: false })
+  const filterCount = (filters.source !== 'all' ? 1 : 0) + (filters.hasPdf ? 1 : 0) + (filters.hasSummary ? 1 : 0)
   const onAdded = (r: AddedPaper) => {
     setAdded({
       text: r.created
@@ -99,8 +114,12 @@ function PapersList() {
   const vault = useQuery(vaultQuery())
 
   const query = search.trim().toLowerCase()
-  const rows = (papers.data ?? [])
+  const source = view === 'trash' ? trash.data : papers.data
+  const rows = (source ?? [])
     .filter(libraryView(view).test)
+    .filter((p) => filters.source === 'all' || p.source === filters.source)
+    .filter((p) => !filters.hasPdf || p.hasPdf)
+    .filter((p) => !filters.hasSummary || p.summaryState === 'done')
     .filter(
       (p) =>
         !query ||
@@ -241,6 +260,13 @@ function PapersList() {
         onSearchChange={setSearch}
         vaultPath={vault.data?.path}
         onVault={() => setVaultOpen(true)}
+        collections={cols.data}
+        onAddCollection={() => {
+          setColName('')
+          setColDialog('add')
+        }}
+        onRemoveCollection={(name) => setColDialog({ remove: name })}
+        trashCount={trash.data?.length}
       />
       <Resizer handle={nav.resizerProps} label="라이브러리 메뉴 너비 조절" />
 
@@ -258,7 +284,7 @@ function PapersList() {
               label="보기 방식"
               variant="icon"
             />
-            <IconButton label="필터" size={42}>
+            <IconButton label={filterCount ? `필터 ${filterCount}개 켜짐` : '필터'} size={42} aria-expanded={filterOpen} onClick={() => setFilterOpen((v) => !v)}>
               <FilterIcon />
             </IconButton>
             <input
@@ -292,6 +318,46 @@ function PapersList() {
             />
           </div>
         </div>
+
+        {filterOpen && (
+          <div className={s.filterBar} role="group" aria-label="필터">
+            <span className={s.filterLabel}>출처</span>
+            {(
+              [
+                ['all', '모두'],
+                ['arxiv-html', 'arXiv'],
+                ['pdf', 'PDF'],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={filters.source === v}
+                className={s.filterChip}
+                onClick={() => setFilters((f) => ({ ...f, source: v }))}
+              >
+                {label}
+              </button>
+            ))}
+            <label className={s.filterCheck}>
+              <input type="checkbox" checked={filters.hasPdf} onChange={(e) => setFilters((f) => ({ ...f, hasPdf: e.target.checked }))} />
+              PDF 있음
+            </label>
+            <label className={s.filterCheck}>
+              <input
+                type="checkbox"
+                checked={filters.hasSummary}
+                onChange={(e) => setFilters((f) => ({ ...f, hasSummary: e.target.checked }))}
+              />
+              요약 있음
+            </label>
+            {filterCount > 0 && (
+              <button type="button" className={s.filterReset} onClick={() => setFilters({ source: 'all', hasPdf: false, hasSummary: false })}>
+                필터 끄기
+              </button>
+            )}
+          </div>
+        )}
 
         {added && (
           <div role="status" className={s.addedBar} data-tone={added.tone}>
@@ -331,11 +397,121 @@ function PapersList() {
         {selectedCount > 0 && (
           <div className={s.selectionBar}>
             <span className={s.selectionCount}>{selectedCount}편 선택됨</span>
-            <button type="button" className={s.onDark}>
-              BibTeX
+            {view !== 'trash' && (cols.data?.length ?? 0) > 0 && (
+              <select
+                aria-label="모음에 넣기"
+                className={s.onDarkSelect}
+                value=""
+                onChange={(e) => {
+                  const name = e.target.value
+                  if (!name) return
+                  act.setMembers.mutate({ name, ids: selectedIds, on: true }, { onSuccess: () => setAdded({ text: `${selectedCount}편을 '${name}' 모음에 넣었어요`, tone: 'ok' }) })
+                }}
+              >
+                <option value="">모음에 넣기…</option>
+                {cols.data?.map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {view.startsWith('col:') && (
+              <button
+                type="button"
+                className={s.onDark}
+                onClick={() => {
+                  act.setMembers.mutate({ name: view.slice(4), ids: selectedIds, on: false })
+                  setSelected({})
+                }}
+              >
+                모음에서 빼기
+              </button>
+            )}
+            {view === 'trash' ? (
+              <button
+                type="button"
+                className={s.onDark}
+                onClick={() => {
+                  act.trash.mutate({ ids: selectedIds, on: false })
+                  setSelected({})
+                }}
+              >
+                되돌리기
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={s.onDark}
+                onClick={() => {
+                  act.trash.mutate({ ids: selectedIds, on: true })
+                  setAdded({ text: `${selectedCount}편을 휴지통에 넣었어요 · vault 파일은 그대로예요`, tone: 'ok' })
+                  setSelected({})
+                }}
+              >
+                휴지통
+              </button>
+            )}
+            <button
+              type="button"
+              className={s.onDark}
+              onClick={() => {
+                const chosen = (source ?? []).filter((p) => selectedIds.includes(p.id))
+                fetchBibtex(chosen)
+                  .then((text) => copyText(text))
+                  .then(() => setAdded({ text: `BibTeX ${chosen.length}편을 복사했어요`, tone: 'ok' }))
+                  .catch(onFail)
+              }}
+            >
+              BibTeX 복사
             </button>
           </div>
         )}
+
+        <Dialog
+          open={colDialog === 'add'}
+          title="새 모음"
+          confirmLabel="만들기"
+          busy={act.addCollection.isPending}
+          error={act.addCollection.error instanceof ApiError ? act.addCollection.error.message : undefined}
+          onClose={() => {
+            act.addCollection.reset()
+            setColDialog('')
+          }}
+          onConfirm={() =>
+            act.addCollection.mutate(colName.trim(), {
+              onSuccess: () => {
+                setColDialog('')
+                setView(`col:${colName.trim()}`)
+              },
+            })
+          }
+        >
+          <label className={ds.field}>
+            모음 이름
+            <input className={ds.input} value={colName} onChange={(e) => setColName(e.target.value)} placeholder="LoRA 계열" autoFocus />
+          </label>
+          <span>모음은 lab.remote 에만 저장돼요. vault 파일은 옮기지 않아요. 논문을 고른 뒤 아래 막대에서 넣어요.</span>
+        </Dialog>
+        <Dialog
+          open={typeof colDialog === 'object'}
+          title={typeof colDialog === 'object' ? `'${colDialog.remove}' 모음 지우기` : ''}
+          confirmLabel="지우기"
+          tone="danger"
+          busy={act.removeCollection.isPending}
+          onClose={() => setColDialog('')}
+          onConfirm={() => {
+            if (typeof colDialog !== 'object') return
+            act.removeCollection.mutate(colDialog.remove, {
+              onSuccess: () => {
+                if (view === `col:${colDialog.remove}`) setView('all')
+                setColDialog('')
+              },
+            })
+          }}
+        >
+          <span>모음만 지워요. 안에 있던 논문은 라이브러리에 그대로 있어요.</span>
+        </Dialog>
 
         <AskLibrary
           chat={chat.data}
