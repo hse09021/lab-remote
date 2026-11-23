@@ -116,7 +116,9 @@ def test_실행_중인_학습이_쓰는_폴더는_못_지운다(base, monkeypatc
     with pytest.raises(files.FileRefused, match="실행 중"):
         files.delete(base, base, "src", confirm="src")
     with pytest.raises(files.FileRefused, match="실행 중"):
-        files.delete(base, base, "src/a.py", confirm="a.py")
+        files.move(base, base, "src", "src2")
+    # 실행 위치 안의 파일 하나는 지울 수 있다
+    files.delete(base, base, "src/a.py", confirm="a.py")
 
 
 def test_worktree_기준_폴더는_프로젝트_안이어야(base):

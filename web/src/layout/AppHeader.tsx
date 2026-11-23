@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { gpuQuery, healthQuery } from '@/api/system'
+import { badgeQuery } from '@/api/inbox'
 import { useOutsideClick } from '@/lib/useOutsideClick'
 import s from './AppHeader.module.css'
 
@@ -18,6 +19,8 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 export function AppHeader() {
   const gpu = useQuery(gpuQuery())
   const health = useQuery(healthQuery())
+  const badge = useQuery(badgeQuery())
+  const inboxCount = badge.data?.badge ?? 0
 
   // 터널 상태는 9단계에서 붙어요. 지금은 서버 연결만 보여 줘요.
   const connected = health.isSuccess
@@ -34,7 +37,12 @@ export function AppHeader() {
           {TABS.map((tab) => (
             <NavLink key={tab.to} to={tab.to} className={s.tab}>
               {tab.label}
-              {/* Inbox 배지는 2단계(알림 저장)에서 "내가 처리해야 하는 것" 수로 붙어요 */}
+              {/* 배지는 "내가 처리해야 하는 것"(답 필요 · 실행 실패·끊김) 중 안 읽은 것만 (2026-11-23 결정) */}
+              {tab.to === '/inbox' && inboxCount > 0 && (
+                <span className={s.badge} aria-label={`처리할 알림 ${inboxCount}`}>
+                  {inboxCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

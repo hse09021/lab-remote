@@ -11,10 +11,11 @@ import {
 import type { GitSummary, ProjectRow } from '@/api/projects'
 import { ApiError } from '@/api/client'
 import { Dialog, dialogStyles as ds, ErrorState, LoadingState } from '@/components'
-import { agoShort } from '@/lib/time'
+import { agoShort, whenShort } from '@/lib/time'
 import { FilesTab } from './FilesTab'
 import { WorktreesTab } from './WorktreesTab'
 import { SettingsTab } from './SettingsTab'
+import { RunsTab } from './RunsTab'
 import s from './Projects.module.css'
 
 type Tab = 'files' | 'worktrees' | 'work' | 'settings'
@@ -33,6 +34,26 @@ export function gitLine(git: GitSummary, { long = false } = {}): string {
   return 'git 을 못 읽었어요'
 }
 
+const toneOf = (p: ProjectRow) => (p.runs.running.length > 0 ? 'work' : 'idle')
+
+/** 실행 한 줄 — 돌고 있으면 그것, 아니면 마지막 실행이 실패·끊김일 때만 */
+function runLine(p: ProjectRow): string | null {
+  const running = p.runs.running
+  if (running.length === 1) return `${running[0].name || running[0].id} 학습 중`
+  if (running.length > 1) return `학습 ${running.length}개 실행 중`
+  const last = p.runs.last
+  if (last && (last.state === 'failed' || last.state === 'cut')) return `${last.name || last.id} ${last.stateLabel}`
+  return null
+}
+
+function runChip(p: ProjectRow): string {
+  const running = p.runs.running
+  if (running.length) return running.map((r) => `${r.name || r.id} 실행 중`).join(' · ')
+  const last = p.runs.last
+  if (!last) return '실행 없음'
+  return `${last.name || last.id} ${last.stateLabel} · ${whenShort(last.endedAt ?? last.startedAt)}`
+}
+
 export default function ProjectsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -45,7 +66,9 @@ export default function ProjectsPage() {
 
   // /projects 로 오면 가장 최근 프로젝트를 열어요
   useEffect(() => {
-    if (!id && projects.length > 0) navigate(`/projects/${encodeURIComponent(projects[0].name)}`, { replace: true })
+    // 쿼리(?tab=work 등)는 그대로 들고 가요 — Dashboard 의 "새 실행" 이 쓰는 길
+    if (!id && projects.length > 0)
+      navigate(`/projects/${encodeURIComponent(projects[0].name)}${window.location.search}`, { replace: true })
   }, [id, projects, navigate])
 
   const shown = useMemo(() => {
@@ -141,11 +164,11 @@ function ProjectItem({ p, current }: { p: ProjectRow; current: boolean }) {
       aria-current={current ? 'page' : undefined}
       className={s.item}
     >
-      {/* 상태 점: 답 필요/작업 중은 세션이 붙는 3단계부터 — 지금은 모두 쉼 */}
-      <span aria-hidden="true" className={s.itemDot} data-tone="idle" />
+      {/* 상태 점: 학습이 돌면 작업 중. 답 필요는 세션이 붙는 3단계부터 */}
+      <span aria-hidden="true" className={s.itemDot} data-tone={toneOf(p)} />
       <span className={s.itemText}>
         <span className={s.itemName}>{p.name}</span>
-        <span className={s.itemSub}>{p.exists ? gitLine(p.git) : '폴더가 없어요'}</span>
+        <span className={s.itemSub}>{!p.exists ? '폴더가 없어요' : (runLine(p) ?? gitLine(p.git))}</span>
       </span>
       <span className={s.itemAgo}>{agoShort(p.activityAt)}</span>
     </Link>
@@ -240,7 +263,7 @@ function ProjectDetail({ name }: { name: string }) {
       <div className={s.detailHead}>
         <div className={s.detailMain}>
           <div className={s.titleRow}>
-            <span aria-hidden="true" className={s.bigDot} data-tone="idle" />
+            <span aria-hidden="true" className={s.bigDot} data-tone={toneOf(p)} />
             <h1 className={s.title}>{p.name}</h1>
             <button
               type="button"
@@ -260,8 +283,8 @@ function ProjectDetail({ name }: { name: string }) {
             <span className={s.chip} title="세션은 3단계에서 붙어요">
               세션 —
             </span>
-            <span className={s.chip} title="실행 기록은 2단계에서 붙어요">
-              실행 —
+            <span className={s.chip} data-on={p.runs.running.length > 0}>
+              {runChip(p)}
             </span>
           </div>
         </div>
@@ -288,16 +311,7 @@ function ProjectDetail({ name }: { name: string }) {
       ) : tab === 'worktrees' ? (
         <WorktreesTab project={p} trees={trees} />
       ) : tab === 'work' ? (
-        <div className={s.workGrid}>
-          <section aria-label="세션" className={s.workCard}>
-            <h2 className={s.h2}>세션</h2>
-            <div className={s.muted}>에이전트 세션은 3단계(채팅)에서 붙어요.</div>
-          </section>
-          <section aria-label="실행" className={s.workCard}>
-            <h2 className={s.h2}>실행</h2>
-            <div className={s.muted}>실행 기록은 2단계(labremote run)에서 붙어요.</div>
-          </section>
-        </div>
+        <RunsTab project={p} trees={trees.data} />
       ) : (
         <SettingsTab project={p} />
       )}

@@ -17,6 +17,7 @@ COLORS = {
     "failure": 0xE03131,
     "driver": 0xE03131,
     "gpu": 0xF0B429,
+    "system": 0x868E96,
     "test": 0x868E96,
 }
 

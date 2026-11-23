@@ -8,7 +8,9 @@ import PapersLibrary from './features/papers/PapersLibrary'
 import PaperReader from './features/papers/PaperReader'
 import ProjectsPage from './features/projects/ProjectsPage'
 import SystemPage from './features/system/SystemPage'
-import { AdeShell, CondaShell, DashboardShell, InboxShell } from './features/shells'
+import DashboardPage from './features/dashboard/DashboardPage'
+import InboxPage from './features/inbox/InboxPage'
+import { AdeShell, CondaShell } from './features/shells'
 
 // IDE 만 따로 떼요 — Monaco가 무거워서 다른 화면 번들에 섞이면 안 돼요.
 const CodeEditorPage = lazy(() => import('./features/code/CodeEditorPage'))
@@ -21,7 +23,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
 
-      { path: 'dashboard', element: <DashboardShell /> },
+      { path: 'dashboard', element: <DashboardPage /> },
 
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'projects/:id', element: <ProjectsPage /> },
@@ -31,7 +33,7 @@ const router = createBrowserRouter([
       { path: 'papers', element: <PapersLibrary /> },
       { path: 'papers/:id', element: <PaperReader /> },
 
-      { path: 'inbox', element: <InboxShell /> },
+      { path: 'inbox', element: <InboxPage /> },
 
       { path: 'settings/conda', element: <CondaShell /> },
       { path: 'settings/system', element: <SystemPage /> },

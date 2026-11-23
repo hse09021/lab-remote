@@ -27,6 +27,7 @@ __all__ = [
     "discord_webhook",
     "route_label",
     "set_webhook",
+    "check_webhook",
     "clear_webhook",
     "masked_webhook",
     "cooldown_sec",
@@ -113,11 +114,33 @@ def route_label(kind: str = "") -> str:
     return "default" if isinstance(default, str) and default.strip() else ""
 
 
-def set_webhook(url: str) -> str:
-    """기본 주소를 바꾼다. 다른 칸(라우팅·쿨다운)은 그대로 둔다."""
+#: 받는 웹훅 주소 꼴. 화면에서 붙여 넣은 값이 엉뚱한 곳으로 새지 않게.
+WEBHOOK_HOSTS = ("discord.com", "discordapp.com", "ptb.discord.com", "canary.discord.com")
+
+
+def check_webhook(url: str) -> str:
+    """Discord 웹훅 주소인지. 아니면 `ValueError` — **문구에 주소를 싣지 않는다.**"""
+    from urllib.parse import urlsplit
+
     url = (url or "").strip()
     if not url:
         raise ValueError("웹훅 주소가 비어 있어요")
+    parts = urlsplit(url)
+    if (
+        parts.scheme != "https"
+        or (parts.hostname or "") not in WEBHOOK_HOSTS
+        or not parts.path.startswith("/api/webhooks/")
+        or parts.username
+        or parts.password
+        or any(c.isspace() for c in url)
+    ):
+        raise ValueError("Discord 웹훅 주소가 아니에요 (https://discord.com/api/webhooks/… 꼴)")
+    return url
+
+
+def set_webhook(url: str) -> str:
+    """기본 주소를 바꾼다. 다른 칸(라우팅·쿨다운)은 그대로 둔다."""
+    url = check_webhook(url)
     data = load()
     data["webhook"] = url
     return save(data)

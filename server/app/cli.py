@@ -3,8 +3,8 @@
 서브커맨드는 라이브러리 함수를 얇게 감싼다. 로직은 모듈에 있고 여기는 인자
 해석과 출력만 맡는다 — 서버(FastAPI)가 같은 함수를 부를 수 있게.
 
-지금 있는 것: `serve`, `doctor`, `notify test`, `service install|status`,
-`monitor once`. `run`(2단계), `autostart`(9단계)는 해당 단계에서 더한다
+지금 있는 것: `serve`, `run`, `runs`, `doctor`, `notify test`,
+`service install|status`, `monitor once`. `autostart`(9단계)는 그 단계에서 더한다
 (docs/v3/PLAN.md 4.1 · 6장).
 """
 
@@ -13,10 +13,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import sys
 import time
 
-from . import doctor, registry
+from . import doctor, projects, registry
 
 __all__ = ["main", "build_parser"]
 
@@ -173,6 +174,78 @@ def cmd_serve(args) -> int:
     return 0
 
 
+def _project_here(name: str | None) -> tuple[str, str, str]:
+    """`(이름, 루트, 지금 폴더의 루트 기준 상대 경로)`. 이름을 안 주면 지금 폴더로 찾는다."""
+    from . import paths
+
+    if name:
+        root = projects.require(name)
+        return name, root, ""
+    hit = registry.lookup(os.getcwd())
+    if not hit:
+        raise RuntimeError("등록한 프로젝트 폴더 안에서 돌리거나 -p <이름> 을 붙여 주세요.")
+    root, found = hit
+    rel = paths.rel_or_none(root, paths.real(os.getcwd())) or ""
+    return found, root, "" if rel == "." else rel
+
+
+def cmd_run(args) -> int:
+    """`labremote run [-p 이름] [--env E | --no-env] [--name N] -- 명령…`"""
+    from . import runs
+
+    command = list(args.command or [])
+    if command and command[0] == "--":
+        command = command[1:]
+    if not command:
+        print("✘ 실행할 명령을 -- 뒤에 적어 주세요: labremote run -- python train.py", file=sys.stderr)
+        return 2
+    name, root, here = _project_here(args.project)
+    env = "" if args.no_env else (args.env or projects.load_settings(root).get("condaEnv") or "")
+    text = command[0] if len(command) == 1 else " ".join(shlex.quote(c) for c in command)
+    try:
+        run = runs.start(name, text, env=env, cwd=args.cwd if args.cwd is not None else here, name=args.name or "")
+    except runs.RunError as exc:
+        print(f"✘ {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(run, ensure_ascii=False, indent=2))
+    else:
+        print(f"▶ {name} · {run['id']} 를 시작했어요 ({'conda ' + env if env else 'conda 없이'})")
+        print(f"  로그     {run['log']}")
+        print(f"  붙기     {run['attach']}")
+    return 0
+
+
+def cmd_runs(args) -> int:
+    from . import runs
+
+    name, _root, _here = _project_here(args.project)
+    try:
+        if args.action == "list":
+            items = runs.list_runs(name)
+            if args.json:
+                print(json.dumps(items, ensure_ascii=False, indent=2))
+            else:
+                for r in items:
+                    code = "" if r.get("exitCode") is None else f" · 종료코드 {r['exitCode']}"
+                    print(f"{r['id']:<9} {r['stateLabel']:<5} {r.get('name') or ''} {r['command'][:60]}{code}")
+                if not items:
+                    print("실행 기록이 없어요.")
+            return 0
+        if not args.id:
+            print("✘ 실행 번호(EXP-…)를 적어 주세요.", file=sys.stderr)
+            return 2
+        if args.action == "stop":
+            r = runs.stop(name, args.id, force=args.force)
+            print(f"■ {r['id']} · {r['stateLabel']}")
+            return 0
+        print(runs.log_tail(name, args.id, lines=args.lines)["text"])
+        return 0
+    except runs.RunError as exc:
+        print(f"✘ {exc}", file=sys.stderr)
+        return 2
+
+
 # --- 파서 -------------------------------------------------------------------
 
 
@@ -184,6 +257,23 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("serve", help="서버를 띄워요 (127.0.0.1 만)")
     p.add_argument("--port", type=int, default=8000)
     p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser("run", help="명령을 실행해요 (접속이 끊겨도 계속)")
+    p.add_argument("-p", "--project", help="프로젝트 이름 (안 주면 지금 폴더)")
+    p.add_argument("--env", help="conda 환경 (안 주면 프로젝트 설정의 기본 환경)")
+    p.add_argument("--no-env", action="store_true", help="conda 없이 돌려요")
+    p.add_argument("--cwd", help="프로젝트 안 실행 위치 (안 주면 지금 폴더)")
+    p.add_argument("--name", help="실행 이름 (안 주면 EXP 번호만)")
+    p.add_argument("command", nargs=argparse.REMAINDER, help="-- 뒤에 명령")
+    p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("runs", help="실행 기록 보기 · 중지 · 로그")
+    p.add_argument("action", choices=["list", "stop", "log"], nargs="?", default="list")
+    p.add_argument("id", nargs="?", help="EXP-…")
+    p.add_argument("-p", "--project")
+    p.add_argument("--force", action="store_true", help="stop: tmux 를 통째로 꺼요")
+    p.add_argument("--lines", type=int, default=200)
+    p.set_defaults(func=cmd_runs)
 
     p = sub.add_parser("doctor", help="설치와 환경 점검")
     p.set_defaults(func=cmd_doctor)
@@ -208,7 +298,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(list(sys.argv[1:] if argv is None else argv))
     try:
         return args.func(args)
-    except (registry.InvalidName, RuntimeError) as exc:
+    except (registry.InvalidName, RuntimeError, projects.ProjectError) as exc:
         print(f"✘ {exc}", file=sys.stderr)
         return 2
 

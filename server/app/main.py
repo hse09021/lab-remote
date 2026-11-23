@@ -52,12 +52,30 @@ def _refuse(reason: str) -> JSONResponse:
 
 
 def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastAPI:
+    from contextlib import asynccontextmanager
+
+    from . import runs, watch
     from .api import files as files_api
     from .api import git as git_api
+    from .api import inbox as inbox_api
     from .api import projects as projects_api
+    from .api import runs as runs_api
     from .api import system as system_api
 
-    app = FastAPI(title="lab.remote", docs_url=None, redoc_url=None, openapi_url=None)
+    @asynccontextmanager
+    async def lifespan(_app):
+        # 실행 감시 — 끝남·실패·끊김을 알아채 Inbox·Discord 로 알린다 (watch.py)
+        watcher = None
+        if os.environ.get("LAB_NO_WATCH") != "1":
+            watcher = watch.Watcher()
+            watcher.start()
+        try:
+            yield
+        finally:
+            if watcher:
+                watcher.stop()
+
+    app = FastAPI(title="lab.remote", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.port = port
     dist = paths.real(web_dist or WEB_DIST)
 
@@ -86,6 +104,10 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     async def _project_error(_request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=400)
 
+    @app.exception_handler(runs.RunError)
+    async def _run_error(_request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
     @app.exception_handler(GitRefused)
     async def _git_refused(_request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=409)
@@ -100,6 +122,8 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     app.include_router(files_api.router, prefix="/api")
     app.include_router(git_api.router, prefix="/api")
     app.include_router(system_api.router, prefix="/api")
+    app.include_router(runs_api.router, prefix="/api")
+    app.include_router(inbox_api.router, prefix="/api")
 
     @app.get("/api/{rest:path}", include_in_schema=False)
     def api_missing(rest: str):

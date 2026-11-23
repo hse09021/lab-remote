@@ -73,3 +73,22 @@ CREATE TABLE IF NOT EXISTS notifications (
   http_status INTEGER,
   error       TEXT
 );
+
+-- Inbox — 사람이 보는 알림. Discord 로 보냈는지는 `sent` 에 사람 말로 남긴다
+-- (주소는 남기지 않는다). `act` 가 1 이면 "내가 처리해야 하는 것" 이라
+-- 헤더 배지에 센다(답 필요 · 실행 실패 · 끊김).
+CREATE TABLE IF NOT EXISTS inbox (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  at         TEXT NOT NULL,
+  kind       TEXT NOT NULL,
+  title      TEXT NOT NULL,
+  where_text TEXT NOT NULL DEFAULT '',
+  body       TEXT NOT NULL DEFAULT '',
+  project    TEXT,
+  ref        TEXT,
+  act        INTEGER NOT NULL DEFAULT 0,
+  read_at    TEXT,
+  sent       TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS ix_inbox_kind ON inbox(kind, id);

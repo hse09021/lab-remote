@@ -21,6 +21,8 @@ def isolated_data(tmp_path, monkeypatch):
     monkeypatch.setenv("LAB_DATA_DIR", str(data))
     # 진짜 웹훅으로 새지 않게
     monkeypatch.delenv("LAB_DISCORD_WEBHOOK", raising=False)
+    # 서버의 실행 감시 스레드를 시험에서는 띄우지 않는다
+    monkeypatch.setenv("LAB_NO_WATCH", "1")
     return data
 
 

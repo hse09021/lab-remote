@@ -7,7 +7,7 @@ import os
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from .. import projects
+from .. import projects, runs
 from ..git import view
 
 router = APIRouter()
@@ -22,9 +22,24 @@ class PinBody(BaseModel):
     pinned: bool
 
 
+def _runs_line(name: str) -> dict:
+    """목록·헤더용 실행 요약 — 실행 중인 것과 마지막 실행."""
+    try:
+        items = runs.list_runs(name)
+    except Exception:
+        return {"running": [], "last": None, "total": 0}
+    keep = ("id", "name", "state", "stateLabel", "startedAt", "endedAt", "exitCode")
+    return {
+        "running": [{k: r.get(k) for k in keep} for r in items if r["state"] == "running"],
+        "last": {k: items[0].get(k) for k in keep} if items else None,
+        "total": len(items),
+    }
+
+
 def _row(p: dict, *, with_git: bool = True) -> dict:
     out = dict(p)
     out["git"] = view.summary(p["root"]) if with_git and p["exists"] else {"state": "missing"}
+    out["runs"] = _runs_line(p["name"]) if p["exists"] else {"running": [], "last": None, "total": 0}
     return out
 
 

@@ -145,7 +145,7 @@ export default function SystemPage() {
             알림
           </h2>
           <p className={s.text}>
-            Discord 웹훅 상태와 보낼 알림은 2단계에서 <Link to="/inbox">Inbox</Link> 와 함께 붙어요. 웹훅 주소는 데이터 폴더에
+            Discord 웹훅 · 보낼 알림 · 조용한 시간은 <Link to="/inbox">Inbox</Link> 에서 바꿔요. 웹훅 주소는 데이터 폴더에
             권한 600 으로만 두고 화면에는 가려서 보여요.
           </p>
         </section>

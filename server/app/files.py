@@ -110,8 +110,10 @@ def _rel_of(base: str, target: str) -> str:
 
 
 def busy_paths(root: str) -> list[str]:
-    """실행 중인 학습이 쓰는 폴더(절대 경로). **2단계에서 실행 기록과 잇는다.**"""
-    return []
+    """실행 중인 학습이 쓰는 폴더(절대 경로) — 실행 위치와 그 실행의 기록 폴더."""
+    from . import runs  # runs 가 files 를 쓰므로 여기서 부른다
+
+    return runs.busy_dirs(root)
 
 
 # --- 읽기 --------------------------------------------------------------------
@@ -297,9 +299,12 @@ def _guard_mutation(root: str, base: str, target: str) -> None:
     top = rel.split("/", 1)[0]
     if top in PROTECTED_TOP:
         raise FileRefused(f"{top} 은 옮기거나 지울 수 없어요.")
+    # 실행 위치 **자신이나 그걸 품은 폴더**를 막는다. 그 안의 파일 하나를
+    # 지우는 건 막지 않는다 — 실행 위치가 프로젝트 루트면 학습 내내 아무것도
+    # 못 지우게 된다.
     for busy in busy_paths(root):
-        if paths.is_inside(target, busy) or paths.is_inside(busy, target):
-            raise FileRefused("실행 중인 학습이 쓰는 곳이라 지금은 바꿀 수 없어요.")
+        if paths.is_inside(target, busy):
+            raise FileRefused("실행 중인 학습이 쓰는 폴더라 지금은 옮기거나 지울 수 없어요.")
 
 
 def move(root: str, base: str, src: str, dst: str) -> dict:

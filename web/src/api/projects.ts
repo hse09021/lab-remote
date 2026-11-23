@@ -1,5 +1,6 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, send, upload } from './client'
+import type { ProjectRuns } from './runs'
 
 /* ── 타입 (server/app/api/projects.py · files.py · git.py 와 짝) ─────────── */
 
@@ -25,6 +26,7 @@ export interface ProjectRow {
   /** 초 (epoch) */
   activityAt: number | null
   git: GitSummary
+  runs: ProjectRuns
 }
 
 export interface ProjectDetail extends ProjectRow {

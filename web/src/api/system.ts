@@ -79,3 +79,11 @@ export const systemQuery = () =>
     queryFn: () => get<SystemOverview>('/system'),
     refetchInterval: 10_000,
   })
+
+export const resourcesQuery = () =>
+  queryOptions({
+    queryKey: ['system', 'resources'],
+    queryFn: () => get<Pick<SystemOverview, 'gpu' | 'host'>>('/system/resources'),
+    // 화면을 보는 동안만 5초마다 (목업: "화면을 볼 때만 5초마다")
+    refetchInterval: 5_000,
+  })

@@ -29,8 +29,8 @@ __all__ = [
 
 #: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS` 에 줄을 더한다.
 #:
-#: 판 5 는 **v3 의 첫 판**이다. v1 은 판 1~4 를 썼다.
-SCHEMA_VERSION = 5
+#: 판 5 는 **v3 의 첫 판**이다. v1 은 판 1~4 를 썼다. 판 6 에서 Inbox 가 생겼다.
+SCHEMA_VERSION = 6
 
 #: v3 가 시작하는 판. 이보다 낮은 판은 **v1 DB** 다.
 V3_BASE = 5
@@ -39,7 +39,29 @@ V3_BASE = 5
 #:
 #: v1 판(1~4)에서 오는 이행은 **두지 않는다.** v1 표(승인·큐·루프·앵커…)를
 #: 지우는 이행은 되돌릴 수 없어서, 조용히 하지 않고 `migrate` 가 거절한다.
-MIGRATIONS: dict[int, str] = {}
+MIGRATIONS: dict[int, str] = {
+    # 판 6 — Inbox (v3 2단계)
+    5: '''
+-- Inbox — 사람이 보는 알림. Discord 로 보냈는지는 `sent` 에 사람 말로 남긴다
+-- (주소는 남기지 않는다). `act` 가 1 이면 "내가 처리해야 하는 것" 이라
+-- 헤더 배지에 센다(답 필요 · 실행 실패 · 끊김).
+CREATE TABLE IF NOT EXISTS inbox (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  at         TEXT NOT NULL,
+  kind       TEXT NOT NULL,
+  title      TEXT NOT NULL,
+  where_text TEXT NOT NULL DEFAULT '',
+  body       TEXT NOT NULL DEFAULT '',
+  project    TEXT,
+  ref        TEXT,
+  act        INTEGER NOT NULL DEFAULT 0,
+  read_at    TEXT,
+  sent       TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS ix_inbox_kind ON inbox(kind, id);
+''',
+}
 
 
 _SCHEMA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")

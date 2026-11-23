@@ -24,6 +24,7 @@ KINDS = (
     "failure",  # 실행이 실패했거나 끊겼어요
     "driver",  # GPU 드라이버 불일치
     "gpu",  # GPU 조회 상태가 바뀜
+    "system",  # 시스템 경고 (VRAM · 디스크 · 드라이버)
     "test",  # labremote notify test
 )
 
