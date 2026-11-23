@@ -214,3 +214,68 @@ def test_추가_API(vault, tmp_path, monkeypatch):
     assert r.status_code == 200 and r.json()["id"] == "my paper"
     assert client.get("/api/papers/my paper/pdf").content == b"%PDF-1.4 x"
     assert client.get("/api/papers/LoRA/pdf").status_code == 404
+
+
+# --- 라이브러리에 묻기 ------------------------------------------------------------
+
+
+def _fake_agent(answer):
+    from claude_agent_sdk import ResultMessage
+
+    seen = {}
+
+    async def run(opts, prompt):
+        seen["opts"], seen["prompt"] = opts, prompt
+        yield ResultMessage(
+            subtype="success", duration_ms=1, duration_api_ms=1, is_error=False, num_turns=1,
+            session_id="s", structured_output=answer,
+        )
+
+    run.seen = seen
+    return run
+
+
+def test_묻기_읽기_전용과_근거_정리(vault, monkeypatch):
+    import asyncio
+
+    from app import library
+    from app.agents import claude as claude_mod
+
+    papers.set_vault(vault)
+    monkeypatch.setattr(claude_mod, "cli_path", lambda: "/usr/bin/true")
+    run = _fake_agent({"answer": "LoRA 는 저랭크 어댑터예요.", "sources": [
+        {"paper": "LoRA", "why": "초록"},
+        {"paper": "Papers/LoRA.md", "why": "중복"},
+        {"paper": "Attention Is All You Need", "why": "제목으로 적음"},
+        {"paper": "없는 논문", "why": "지어냄"},
+    ]})
+
+    async def go():
+        got = library.start("LoRA 가 뭐야?", [{"role": "user", "text": "앞 질문"}], query_fn=run)
+        assert got["state"] == "running"
+        with pytest.raises(library.AskError, match="답하는 중"):
+            library.start("또", query_fn=run)
+        for _ in range(50):
+            await asyncio.sleep(0.01)
+            if library.job(got["id"])["state"] != "running":
+                break
+        return library.job(got["id"])
+
+    done = asyncio.run(go())
+    assert done["state"] == "done" and "저랭크" in done["answer"]
+    assert [s["paperId"] for s in done["sources"]] == ["LoRA", "Transformer"]
+    opts = run.seen["opts"]
+    assert opts.permission_mode == "plan" and opts.tools == ["Read", "Glob", "Grep"]
+    assert os.path.realpath(opts.cwd) == os.path.realpath(vault)
+    assert "LoRA · LoRA: Low-Rank Adaptation" in run.seen["prompt"] and "[질문] 앞 질문" in run.seen["prompt"]
+
+
+def test_묻기_거절(vault, monkeypatch, tmp_path):
+    from app import library
+
+    with pytest.raises(library.AskError, match="질문을"):
+        library.start("  ")
+    papers.set_vault(vault)
+    monkeypatch.setattr(papers, "vault_path", lambda: str(tmp_path / "없음"))
+    with pytest.raises(library.AskError, match="vault 폴더가 없어요"):
+        library.start("x")

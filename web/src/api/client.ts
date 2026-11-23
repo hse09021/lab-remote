@@ -29,6 +29,9 @@ const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers\/[^/]+$/, ['PATCH']],
   // 논문 추가 (vault 에 새 노트 · PDF) · PDF 내려받기
   [/^\/papers\/arxiv$/, ['POST']],
+  // 라이브러리에 묻기 (vault 를 읽기 전용으로)
+  [/^\/papers\/ask$/, ['POST']],
+  [/^\/papers\/ask\/[^/]+$/, ['GET']],
   [/^\/papers\/[^/]+\/pdf$/, ['GET']],
 ]
 
@@ -126,7 +129,7 @@ export async function upload<T>(path: string, file: Blob): Promise<T> {
 export const apiUrl = (path: string) => BASE + path
 
 export const isMockMode = () => MOCK_MODE === 'all'
-export const isMockPath = (path: string) => useMockFor(path)
+export const isMockPath = (path: string, method = 'GET') => useMockFor(path, method)
 
 /**
  * 개발 모드에서 ?reset-mock 을 붙이면 목업 저장소를 처음 상태로 돌려요.

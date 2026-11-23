@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from .. import papers
+from .. import library, papers
 
 router = APIRouter()
 
@@ -23,6 +23,12 @@ class StatusBody(BaseModel):
 
 class ArxivBody(BaseModel):
     url: str
+
+
+class AskBody(BaseModel):
+    question: str
+    history: list[dict] = []
+    model: str = ""
 
 
 def _bad(exc: Exception, status: int = 400) -> JSONResponse:
@@ -62,6 +68,23 @@ def summaries():
         except papers.PapersError:
             continue
     return out
+
+
+@router.post("/papers/ask")
+async def ask(body: AskBody):
+    """라이브러리에 묻기 — 시작만 하고 바로 돌아온다. 화면이 GET /papers/ask/{id} 로 물어본다."""
+    try:
+        return library.start(body.question, body.history, model=body.model)
+    except library.AskError as exc:
+        return _bad(exc, 409 if "답하는 중" in str(exc) else 400)
+
+
+@router.get("/papers/ask/{jid}")
+def ask_job(jid: str):
+    try:
+        return library.job(jid)
+    except library.AskError as exc:
+        return _bad(exc, 404)
 
 
 @router.post("/papers/arxiv")

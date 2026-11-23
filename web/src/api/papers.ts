@@ -1,5 +1,5 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiUrl, get, send, upload } from './client'
+import { apiUrl, get, isMockPath, send, upload } from './client'
 import type {
   LibraryChat,
   Paper,
@@ -177,3 +177,33 @@ export function useUploadPdf() {
 
 /** vault 에 있는 PDF 주소 (새 탭으로 열어요) */
 export const paperPdfHref = (id: string) => apiUrl(`/papers/${encodeURIComponent(id)}/pdf`)
+
+/* ── 라이브러리에 묻기 (실제 API) ─────────────────────────────────────── */
+
+export interface AskJob {
+  id: string
+  state: 'running' | 'done' | 'failed'
+  question: string
+  answer: string
+  sources: { paperId: string; label: string; why: string }[]
+  error: string
+}
+
+/** 전부 mock 일 때만 목업의 예시 대화를 보여 줘요 */
+export const askIsLive = () => !isMockPath('/papers/ask', 'POST')
+
+export function useAskLibrary() {
+  return useMutation({
+    mutationFn: (v: { question: string; history: { role: 'user' | 'assistant'; text: string }[] }) =>
+      send<AskJob>('POST', '/papers/ask', v),
+  })
+}
+
+/** 답이 올 때까지 1.5초마다 물어봐요 */
+export const askJobQuery = (id: string | null) =>
+  queryOptions({
+    queryKey: ['papers', 'ask', id],
+    queryFn: () => get<AskJob>(`/papers/ask/${id}`),
+    enabled: !!id,
+    refetchInterval: (q) => (q.state.data?.state === 'running' || !q.state.data ? 1500 : false),
+  })
