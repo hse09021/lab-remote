@@ -4,38 +4,116 @@ import type { QueryClient } from '@tanstack/react-query'
 import { apiUrl, isMockMode } from '@/api/client'
 import type { AgentEvent, SessionDetail } from '@/api/agents'
 
+/** 서버가 보내는 이벤트 이름 (server/app/events.py 와 짝) */
+const KINDS = [
+  'session.event',
+  'session.state',
+  'session.created',
+  'approval.new',
+  'approval.done',
+  'inbox.new',
+  'scenario.updated',
+] as const
+
+const LOCK = 'labremote-events'
+const CHANNEL = 'labremote-events'
+
 /**
- * 서버 → 화면 실시간 이벤트(SSE) 하나를 앱 전체에서 열어 둬요.
- * 받은 이벤트로 해당 쿼리를 다시 읽거나, 채팅에는 바로 이어 붙여요.
- * 끊기면 브라우저가 알아서 다시 붙어요(서버가 retry 3초를 알려 줘요).
+ * 서버 → 화면 실시간 이벤트(SSE)를 **브라우저 전체에서 하나만** 열어요.
+ *
+ * SSE 는 끝나지 않는 연결이라, 탭마다 하나씩 열면 같은 주소로 6개까지인 브라우저 연결을
+ * 차지해서 다른 요청이 끝없이 기다려요 (실측 2026-11-24: 탭 7개에서 Inbox 가 멈춤).
+ * 그래서 탭 하나가 Web Locks 로 "연결 담당" 이 되고, 받은 이벤트를 BroadcastChannel 로
+ * 다른 탭에 나눠 줘요. 담당 탭이 닫히면 다음 탭이 이어받아요.
+ * 둘 중 하나라도 없는 브라우저에서는 예전처럼 탭마다 열어요.
  */
 export function useServerEvents() {
   const qc = useQueryClient()
   useEffect(() => {
     if (isMockMode() || typeof EventSource === 'undefined') return
-    const es = new EventSource(apiUrl('/events'))
-    // 다시 붙으면 끊긴 사이 놓친 이벤트가 있을 수 있어요 — 통째로 다시 읽어요
-    es.onopen = () => qc.invalidateQueries({ queryKey: ['agents'] })
-    const on = (kind: string, handle: (data: never) => void) =>
-      es.addEventListener(kind, (e) => handle(JSON.parse((e as MessageEvent).data) as never))
+    const handle = (kind: string, data: unknown) => dispatch(qc, kind, data)
 
-    on('session.event', (d: { session: string; event: AgentEvent }) => appendEvent(qc, d.session, d.event))
-    on('session.state', (d: { session: string }) => {
+    const shared = typeof BroadcastChannel !== 'undefined' && typeof navigator !== 'undefined' && 'locks' in navigator
+    if (!shared) return open(handle)
+
+    const channel = new BroadcastChannel(CHANNEL)
+    // 다른 탭(담당)이 나눠 준 이벤트. 보낸 탭 자신에게는 오지 않아요
+    channel.onmessage = (e: MessageEvent<{ kind: string; data: unknown }>) => handle(e.data.kind, e.data.data)
+    const stop = new AbortController()
+    navigator.locks
+      .request(LOCK, { signal: stop.signal }, () =>
+        new Promise<void>((resolve) => {
+          // 이 탭이 담당이 됐어요 — 연결을 열고 받은 것을 나눠 줘요
+          const close = open((kind, data) => {
+            handle(kind, data)
+            try {
+              channel.postMessage({ kind, data })
+            } catch {
+              // 닫힌 채널 — 탭이 닫히는 중이에요
+            }
+          })
+          stop.signal.addEventListener('abort', () => {
+            close()
+            resolve()
+          })
+        }),
+      )
+      .catch(() => {
+        // 기다리다 그만둠(탭을 닫거나 화면이 바뀜) — 할 일 없어요
+      })
+    return () => {
+      stop.abort()
+      channel.close()
+    }
+  }, [qc])
+}
+
+/** EventSource 하나를 열고 받은 이벤트를 `handle` 로. 닫는 함수를 돌려줘요 */
+function open(handle: (kind: string, data: unknown) => void): () => void {
+  const es = new EventSource(apiUrl('/events'))
+  // 다시 붙으면 끊긴 사이 놓친 이벤트가 있을 수 있어요 — 통째로 다시 읽어요
+  es.onopen = () => handle('open', null)
+  for (const kind of KINDS) {
+    es.addEventListener(kind, (e) => handle(kind, JSON.parse((e as MessageEvent).data)))
+  }
+  return () => es.close()
+}
+
+function dispatch(qc: QueryClient, kind: string, data: unknown) {
+  const approvals = () => {
+    qc.invalidateQueries({ queryKey: ['agents', 'sessions'] })
+    qc.invalidateQueries({ queryKey: ['inbox'] })
+    qc.invalidateQueries({ queryKey: ['dashboard'] })
+  }
+  switch (kind) {
+    case 'open':
+      qc.invalidateQueries({ queryKey: ['agents'] })
+      break
+    case 'session.event': {
+      const d = data as { session: string; event: AgentEvent }
+      appendEvent(qc, d.session, d.event)
+      break
+    }
+    case 'session.state': {
+      const d = data as { session: string }
       qc.invalidateQueries({ queryKey: ['agents', 'sessions'] })
       qc.invalidateQueries({ queryKey: ['agents', 'session', d.session], refetchType: 'none' })
-    })
-    on('session.created', () => qc.invalidateQueries({ queryKey: ['agents', 'sessions'] }))
-    const approvals = () => {
-      qc.invalidateQueries({ queryKey: ['agents', 'sessions'] })
-      qc.invalidateQueries({ queryKey: ['inbox'] })
-      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      break
     }
-    on('approval.new', approvals)
-    on('approval.done', approvals)
-    on('inbox.new', () => qc.invalidateQueries({ queryKey: ['inbox'] }))
-    on('scenario.updated', (d: { project: string }) => qc.invalidateQueries({ queryKey: ['scenario', d.project] }))
-    return () => es.close()
-  }, [qc])
+    case 'session.created':
+      qc.invalidateQueries({ queryKey: ['agents', 'sessions'] })
+      break
+    case 'approval.new':
+    case 'approval.done':
+      approvals()
+      break
+    case 'inbox.new':
+      qc.invalidateQueries({ queryKey: ['inbox'] })
+      break
+    case 'scenario.updated':
+      qc.invalidateQueries({ queryKey: ['scenario', (data as { project: string }).project] })
+      break
+  }
 }
 
 function appendEvent(qc: QueryClient, sid: string, event: AgentEvent) {
