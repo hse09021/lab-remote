@@ -424,7 +424,11 @@ function PaperChat({ paperId, context }: { paperId: string; context: string | nu
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const end = useRef<HTMLDivElement>(null)
-  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [log.length, busy])
+  // 중괄호로 감싸요 — 요즘 Chrome의 scrollIntoView는 Promise를 돌려줘서, 그대로 돌려주면
+  // React가 정리 함수로 알고 불러서 화면이 깨져요 ("destroy is not a function")
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'end' })
+  }, [log.length, busy])
   const send = () => {
     const q = draft.trim()
     if (!q || busy) return

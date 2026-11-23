@@ -76,7 +76,9 @@ export function GotoPalette({ open, onClose }: { open: boolean; onClose: () => v
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean)
   const shown = (words.length ? items.filter((it) => words.every((w) => `${it.label} ${it.hay}`.toLowerCase().includes(w))) : items).slice(0, 50)
 
-  useEffect(() => setPick(0), [q])
+  useEffect(() => {
+    setPick(0)
+  }, [q])
   useEffect(() => {
     listRef.current?.querySelector('[data-picked="true"]')?.scrollIntoView({ block: 'nearest' })
   }, [pick])
