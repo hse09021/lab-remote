@@ -76,7 +76,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true },
+      // ws: 터미널(WebSocket ↔ tmux)도 같은 길로
+      '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true, ws: true },
     },
   },
   build: {

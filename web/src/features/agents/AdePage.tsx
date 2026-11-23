@@ -60,7 +60,8 @@ export default function AdePage() {
         </Link>
         {branch && <span className={s.barBranch}>⎇ {branch}</span>}
         <div role="group" aria-label="작업 화면 전환" className={s.switch}>
-          <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE</Link>
+          {/* 같은 worktree 를 들고 IDE 로 */}
+          <Link to={`/projects/${encodeURIComponent(project)}/ide${tree ? `?tree=${encodeURIComponent(tree)}` : ''}`}>IDE</Link>
           <Link to="#" aria-current="page">
             ADE
           </Link>
@@ -229,7 +230,7 @@ function SessionList({
   )
 }
 
-function NewSession({ project, defaultTree }: { project: string; defaultTree: string }) {
+export function NewSession({ project, defaultTree }: { project: string; defaultTree: string }) {
   const navigate = useNavigate()
   const create = useCreateSession()
   const trees = useQuery(worktreesQuery(project))
