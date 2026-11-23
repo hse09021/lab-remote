@@ -237,6 +237,18 @@ def worktrees(root: str) -> dict:
     except (GitRefused, ops.GitError) as exc:
         return {"state": "error", "reason": str(exc)}
 
+    def worked_on(branch: str) -> bool:
+        """만든 뒤 커밋이 있었나 — 막 만든 브랜치는 main 과 같은 커밋이라 `--merged` 에 걸린다.
+
+        reflog 가 "만들었음" 한 줄뿐이면 아직 아무 일도 안 한 것이다. reflog 가 없으면 판단하지 않는다(합쳐짐으로 둔다).
+        """
+        try:
+            out = ops.run(root, ["reflog", "show", "--format=%H", f"refs/heads/{branch}", "--"])
+        except (GitRefused, ops.GitError):
+            return True
+        n = len([line for line in out.splitlines() if line.strip()])
+        return n != 1
+
     out_rows = []
     for i, row in enumerate(rows):
         path = paths.real(row.get("path", ""))
@@ -250,7 +262,7 @@ def worktrees(root: str) -> dict:
             "primary": i == 0,
             "detached": bool(row.get("detached")),
             "prunable": bool(row.get("prunable")),
-            "merged": bool(branch) and branch != main and branch in merged,
+            "merged": bool(branch) and branch != main and branch in merged and worked_on(branch),
             "ahead": None,
             "changed": None,
         }

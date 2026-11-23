@@ -19,13 +19,24 @@ const LIVE_PREFIXES = ['/health', '/projects', '/system', '/inbox', '/notify', '
 /** 바꾸는 요청에 붙이는 헤더 — 서버가 다른 사이트에서 온 요청을 거절하는 근거예요 */
 const MUTATION_HEADER = { 'X-Lab-Remote': '1' }
 
-const isLive = (path: string) =>
-  LIVE_PREFIXES.some((p) => path === p || path.startsWith(p + '/') || path.startsWith(p + '?'))
+/**
+ * 일부만 서버로 가는 경로 — Papers 는 vault 로 만드는 목록 · 읽음 상태 · 그래프만 실제예요 (8단계).
+ * 리더 · AI 요약 · 라이브러리 대화 · 참고문헌 보관은 아직 mock 이에요.
+ */
+const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
+  [/^\/papers$/, ['GET']],
+  [/^\/papers\/(graph|vault|summary-md)$/, ['GET', 'PUT']],
+  [/^\/papers\/[^/]+$/, ['PATCH']],
+]
 
-function useMockFor(path: string) {
+const isLive = (path: string, method = 'GET') =>
+  LIVE_PREFIXES.some((p) => path === p || path.startsWith(p + '/') || path.startsWith(p + '?')) ||
+  LIVE_PATTERNS.some(([re, methods]) => re.test(path.split('?')[0]) && methods.includes(method))
+
+function useMockFor(path: string, method = 'GET') {
   if (MOCK_MODE === 'all') return true
   if (MOCK_MODE === 'false') return false
-  return !isLive(path)
+  return !isLive(path, method)
 }
 
 /** 서버가 준 `{detail}` 을 그대로 보여 줘요 (한국어 해요체로 와요) */
@@ -80,7 +91,7 @@ export async function send<T>(
   path: string,
   body?: unknown,
 ): Promise<T> {
-  if (useMockFor(path)) {
+  if (useMockFor(path, method)) {
     await sleep(MOCK_DELAY_MS)
     // 목업 모드에서는 모듈 저장소를 고쳐요. 부른 쪽이 쿼리를 무효화해요.
     return applyMockWrite(method, path, body) as T

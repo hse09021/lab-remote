@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
+import { condaEnvsQuery } from '@/api/conda'
+import { papersQuery } from '@/api/papers'
 import { useSaveSettings, useUnregisterProject } from '@/api/projects'
 import type { ProjectDetail } from '@/api/projects'
 import { ApiError } from '@/api/client'
@@ -23,10 +26,23 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
   const [env, setEnv] = useState(st.condaEnv)
   const [cmds, setCmds] = useState(st.commands.join('\n'))
   const [globs, setGlobs] = useState(st.metricGlobs.join('\n'))
+  const [used, setUsed] = useState<string[]>(st.papers ?? [])
+  const [paperFind, setPaperFind] = useState('')
   const [asking, setAsking] = useState(false)
+  const envs = useQuery(condaEnvsQuery())
+  const papers = useQuery(papersQuery())
 
-  const dirty = env !== st.condaEnv || cmds !== st.commands.join('\n') || globs !== st.metricGlobs.join('\n')
-  const payload = (share: boolean) => ({ condaEnv: env.trim(), commands: lines(cmds), metricGlobs: lines(globs), share })
+  const samePapers = used.length === (st.papers ?? []).length && used.every((p) => (st.papers ?? []).includes(p))
+  const dirty = env !== st.condaEnv || cmds !== st.commands.join('\n') || globs !== st.metricGlobs.join('\n') || !samePapers
+  const payload = (share: boolean) => ({ condaEnv: env.trim(), commands: lines(cmds), metricGlobs: lines(globs), papers: used, share })
+
+  // conda 환경 목록 — 지금 값이 목록에 없어도(지운 환경 · 다른 PC) 그대로 보여 줘요
+  const envNames = (envs.data?.envs ?? []).map((e) => e.name)
+  const envOptions = env && !envNames.includes(env) ? [env, ...envNames] : envNames
+  const q = paperFind.trim().toLowerCase()
+  const paperRows = (papers.data ?? []).filter((p) => !q || p.title.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))
+  const missing = used.filter((id) => papers.data && !papers.data.some((p) => p.id === id))
+  const toggle = (id: string) => setUsed((old) => (old.includes(id) ? old.filter((x) => x !== id) : [...old, id]))
 
   return (
     <div className={s.settings}>
@@ -41,7 +57,20 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
           기본 conda 환경
         </label>
         <span className={s.settingsRow}>
-          <input id="pj-env" className={s.input} value={env} onChange={(e) => setEnv(e.target.value)} placeholder="lora-env" />
+          {envs.isSuccess ? (
+            <select id="pj-env" className={s.input} value={env} onChange={(e) => setEnv(e.target.value)}>
+              <option value="">정하지 않음</option>
+              {envOptions.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                  {envNames.includes(n) ? '' : ' (목록에 없음)'}
+                </option>
+              ))}
+            </select>
+          ) : (
+            // conda 를 못 읽으면 직접 적어요
+            <input id="pj-env" className={s.input} value={env} onChange={(e) => setEnv(e.target.value)} placeholder="lora-env" />
+          )}
           <Link to="/settings/conda" className={s.actLink}>
             환경 관리
           </Link>
@@ -68,6 +97,42 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
           onChange={(e) => setGlobs(e.target.value)}
           placeholder="runs/*/metrics.csv"
         />
+        <label htmlFor="pj-papers" className={s.settingsLabel}>
+          쓰는 논문
+        </label>
+        <div className={s.paperPick}>
+          <input
+            id="pj-papers"
+            className={s.input}
+            value={paperFind}
+            onChange={(e) => setPaperFind(e.target.value)}
+            placeholder={`vault 논문 ${papers.data?.length ?? 0}편에서 찾기`}
+          />
+          <div className={s.paperList} role="group" aria-label="쓰는 논문 고르기">
+            {papers.isSuccess && papers.data.length === 0 && (
+              <span className={s.muted}>
+                vault 에 논문 노트가 없어요. <Link to="/papers">Papers</Link> 의 vault 위치에서 정해요.
+              </span>
+            )}
+            {paperRows.map((p) => (
+              <label key={p.id} className={s.paperItem}>
+                <input type="checkbox" checked={used.includes(p.id)} onChange={() => toggle(p.id)} />
+                <span>{p.title}</span>
+              </label>
+            ))}
+            {missing.map((id) => (
+              <label key={id} className={s.paperItem}>
+                <input type="checkbox" checked onChange={() => toggle(id)} />
+                <span>
+                  {id} <span className={s.muted}>(vault 에 없음)</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <span className={s.muted}>
+            고른 논문은 Papers › Graph 에 "프로젝트에서 사용" 으로 이어져요. 지금 {used.length}편.
+          </span>
+        </div>
         <span />
         <span className={s.settingsRow}>
           <button type="submit" className={s.primaryBtn} disabled={!dirty || save.isPending}>
@@ -96,7 +161,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
         disabled={save.isPending}
         onClick={() =>
           // 저장 안 한 입력은 섞지 않고, 저장된 값에서 이 스위치만 바꿔요
-          save.mutate({ condaEnv: st.condaEnv, commands: st.commands, metricGlobs: st.metricGlobs, share: !st.share })
+          save.mutate({ condaEnv: st.condaEnv, commands: st.commands, metricGlobs: st.metricGlobs, papers: st.papers ?? [], share: !st.share })
         }
       >
         <span className={s.switchText}>

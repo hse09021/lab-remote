@@ -3,6 +3,8 @@ import { get, send } from './client'
 import type {
   LibraryChat,
   Paper,
+  PaperGraph,
+  VaultInfo,
   PaperReaderPayload,
   PaperSummaryMap,
   ReadStatus,
@@ -119,3 +121,28 @@ export function useSaveReference() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['papers'] }),
   })
 }
+
+/* ── vault · 지식그래프 (8단계, 실제 API) ─────────────────────────────── */
+
+/** vault 위치와 노트 수 */
+export const vaultQuery = () =>
+  queryOptions({
+    queryKey: ['papers', 'vault'],
+    queryFn: () => get<VaultInfo>('/papers/vault'),
+  })
+
+/** vault 위치 바꾸기 — 빈 값이면 기본(데이터 폴더의 vault/)으로 */
+export function useSetVault() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (path: string) => send<VaultInfo>('PUT', '/papers/vault', { path }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers'] }),
+  })
+}
+
+/** 노드: 논문 · 프로젝트 · 내 메모. 연결: 인용 · 프로젝트에서 사용 · 내 메모 링크 */
+export const paperGraphQuery = () =>
+  queryOptions({
+    queryKey: ['papers', 'graph'],
+    queryFn: () => get<PaperGraph>('/papers/graph'),
+  })

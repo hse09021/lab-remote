@@ -1,0 +1,219 @@
+{
+  "nodes": [
+    {
+      "id": "attn",
+      "kind": "paper",
+      "name": "Attention Is All You Need",
+      "category": "기초",
+      "meta": "Vaswani et al. · 2017",
+      "path": "Papers/Attention Is All You Need.md"
+    },
+    {
+      "id": "bert",
+      "kind": "paper",
+      "name": "BERT",
+      "category": "기초",
+      "meta": "Devlin et al. · 2018",
+      "path": "Papers/BERT.md"
+    },
+    {
+      "id": "vit",
+      "kind": "paper",
+      "name": "ViT",
+      "category": "비전",
+      "meta": "Dosovitskiy et al. · 2020",
+      "path": "Papers/ViT.md"
+    },
+    {
+      "id": "adapter",
+      "kind": "paper",
+      "name": "Adapters",
+      "category": "미세조정",
+      "meta": "Houlsby et al. · 2019",
+      "path": "Papers/Adapters.md"
+    },
+    {
+      "id": "prefix",
+      "kind": "paper",
+      "name": "Prefix-Tuning",
+      "category": "미세조정",
+      "meta": "Li & Liang · 2021",
+      "path": "Papers/Prefix-Tuning.md"
+    },
+    {
+      "id": "lora",
+      "kind": "paper",
+      "name": "LoRA",
+      "category": "미세조정",
+      "meta": "Hu et al. · 2021",
+      "path": "Papers/LoRA.md"
+    },
+    {
+      "id": "qlora",
+      "kind": "paper",
+      "name": "QLoRA",
+      "category": "미세조정",
+      "meta": "Dettmers et al. · 2023",
+      "path": "Papers/QLoRA.md"
+    },
+    {
+      "id": "adalora",
+      "kind": "paper",
+      "name": "AdaLoRA",
+      "category": "미세조정",
+      "meta": "Zhang et al. · 2023",
+      "path": "Papers/AdaLoRA.md"
+    },
+    {
+      "id": "dora",
+      "kind": "paper",
+      "name": "DoRA",
+      "category": "미세조정",
+      "meta": "Liu et al. · 2024",
+      "path": "Papers/DoRA.md"
+    },
+    {
+      "id": "deit",
+      "kind": "paper",
+      "name": "DeiT",
+      "category": "비전",
+      "meta": "Touvron et al. · 2021",
+      "path": "Papers/DeiT.md"
+    },
+    {
+      "id": "kd",
+      "kind": "paper",
+      "name": "Knowledge Distillation",
+      "category": "기초",
+      "meta": "Hinton et al. · 2015",
+      "path": "Papers/Knowledge Distillation.md"
+    },
+    {
+      "id": "project:lora-rank-ablation",
+      "kind": "project",
+      "name": "lora-rank-ablation",
+      "category": "프로젝트",
+      "meta": "~/projects/lora-rank-ablation",
+      "path": ""
+    },
+    {
+      "id": "project:vit-distill",
+      "kind": "project",
+      "name": "vit-distill",
+      "category": "프로젝트",
+      "meta": "~/research/vit-distill",
+      "path": ""
+    },
+    {
+      "id": "note:Notes/rank-alpha.md",
+      "kind": "note",
+      "name": "rank · alpha 비율 메모",
+      "category": "내 메모",
+      "meta": "vault/Notes/rank-alpha.md",
+      "path": "Notes/rank-alpha.md"
+    }
+  ],
+  "edges": [
+    {
+      "from": "bert",
+      "to": "attn",
+      "kind": "cite"
+    },
+    {
+      "from": "vit",
+      "to": "attn",
+      "kind": "cite"
+    },
+    {
+      "from": "lora",
+      "to": "attn",
+      "kind": "cite"
+    },
+    {
+      "from": "lora",
+      "to": "adapter",
+      "kind": "cite"
+    },
+    {
+      "from": "lora",
+      "to": "prefix",
+      "kind": "cite"
+    },
+    {
+      "from": "adapter",
+      "to": "bert",
+      "kind": "cite"
+    },
+    {
+      "from": "qlora",
+      "to": "lora",
+      "kind": "cite"
+    },
+    {
+      "from": "adalora",
+      "to": "lora",
+      "kind": "cite"
+    },
+    {
+      "from": "dora",
+      "to": "lora",
+      "kind": "cite"
+    },
+    {
+      "from": "deit",
+      "to": "vit",
+      "kind": "cite"
+    },
+    {
+      "from": "deit",
+      "to": "kd",
+      "kind": "cite"
+    },
+    {
+      "from": "project:lora-rank-ablation",
+      "to": "lora",
+      "kind": "use"
+    },
+    {
+      "from": "project:lora-rank-ablation",
+      "to": "dora",
+      "kind": "use"
+    },
+    {
+      "from": "project:lora-rank-ablation",
+      "to": "vit",
+      "kind": "use"
+    },
+    {
+      "from": "project:vit-distill",
+      "to": "deit",
+      "kind": "use"
+    },
+    {
+      "from": "project:vit-distill",
+      "to": "kd",
+      "kind": "use"
+    },
+    {
+      "from": "project:vit-distill",
+      "to": "vit",
+      "kind": "use"
+    },
+    {
+      "from": "note:Notes/rank-alpha.md",
+      "to": "lora",
+      "kind": "note"
+    },
+    {
+      "from": "note:Notes/rank-alpha.md",
+      "to": "qlora",
+      "kind": "note"
+    },
+    {
+      "from": "note:Notes/rank-alpha.md",
+      "to": "project:lora-rank-ablation",
+      "kind": "note"
+    }
+  ],
+  "vault": "~/lab-remote/data/vault"
+}

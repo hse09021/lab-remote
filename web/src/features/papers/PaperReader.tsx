@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
+import { ApiError } from '@/api/client'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   paperReaderQuery,
@@ -195,6 +196,41 @@ export default function PaperReader() {
     { value: 'pdf', label: 'PDF' },
   ]
 
+  // vault 에서 온 논문은 리더 본문(PDF · arXiv HTML 파싱)이 아직 없어요 — 노트만 보여 줘요
+  if (reader.isError && reader.error instanceof ApiError && reader.error.status === 404 && paper) {
+    return (
+      <main className={s.page}>
+        <div className={s.noteOnly}>
+          <Link to="/papers" className={s.noteBack}>
+            ← 라이브러리
+          </Link>
+          <span className={s.noteHead}>
+            <h1 className={s.noteTitle}>{paper.title}</h1>
+            <Link to={`/papers?view=graph&node=${encodeURIComponent(id)}`} className={s.graphLink}>
+              그래프에서 보기
+            </Link>
+          </span>
+          <div className={s.metaRow}>
+            <span>
+              {paper.authors}
+              {paper.venue && ` · ${paper.venue}`}
+            </span>
+            <StatusPill
+              status={paper.status}
+              size="md"
+              label={`${paper.title} 읽음 상태`}
+              onChange={(status: ReadStatus) => setStatus.mutate({ id, status })}
+            />
+          </div>
+          <p className={s.noteHint}>
+            리더 본문(PDF · arXiv HTML)과 AI 요약은 아직 준비 중이에요. 지금은 vault 노트를 읽기만 해요 · {paper.path}
+          </p>
+          {mdDrafts.data?.[id] ? <pre className={s.noteBody}>{mdDrafts.data[id]}</pre> : <p className={s.noteHint}>노트 본문이 비어 있어요.</p>}
+        </div>
+      </main>
+    )
+  }
+
   if (reader.isError) {
     return (
       <main className={s.page}>
@@ -377,7 +413,12 @@ export default function PaperReader() {
             <ChevronLeft />
           </Link>
           <div className={s.titleBlock}>
-            <h1 className={s.title}>{data.title}</h1>
+            <span className={s.titleLine}>
+              <h1 className={s.title}>{data.title}</h1>
+              <Link to={`/papers?view=graph&node=${encodeURIComponent(id)}`} className={s.graphLink}>
+                그래프에서 보기
+              </Link>
+            </span>
             <div className={s.metaRow}>
               <span>
                 {data.meta} · <span className={s.mono}>{data.arxivId}</span>

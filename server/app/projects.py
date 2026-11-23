@@ -59,6 +59,7 @@ DEFAULT_SETTINGS = {
     "commands": [],
     "metricGlobs": [],
     "share": False,
+    "papers": [],
 }
 
 ENV_RE = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
@@ -147,6 +148,8 @@ def _normalize(raw: dict) -> dict:
         "commands": _clean_list(raw.get("commands"), limit=MAX_COMMANDS, field="자주 쓰는 명령"),
         "metricGlobs": globs,
         "share": bool(raw.get("share")),
+        # 이 프로젝트가 쓰는 논문 (vault 논문 노트 이름) — 지식그래프의 "프로젝트에서 사용"
+        "papers": _clean_list(raw.get("papers"), limit=100, field="쓰는 논문"),
     }
 
 

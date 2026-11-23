@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useQueries } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   libraryChatQuery,
   paperSummariesQuery,
@@ -8,6 +8,7 @@ import {
   summaryDraftsQuery,
   useSaveSummaryMd,
   useSetReadStatus,
+  vaultQuery,
 } from '@/api/papers'
 import type { Paper, ReadStatus } from '@/api/types'
 import {
@@ -27,13 +28,15 @@ import {
 import type { Column, SegmentedItem } from '@/components'
 import { usePaneResize } from '@/lib/usePaneResize'
 import { AskLibrary } from './AskLibrary'
-import { LIBRARY_VIEWS, LibrarySidebar } from './LibrarySidebar'
+import { LibrarySidebar, libraryView } from './LibrarySidebar'
 import type { LibraryView } from './LibrarySidebar'
+import PaperGraph, { PapersViewSwitch } from './PaperGraph'
 import { PaperSummaryPane } from './PaperSummaryPane'
 import type { SummaryView } from './PaperSummaryPane'
 import s from './PapersLibrary.module.css'
 import { useIsMobile } from '@/lib/useMediaQuery'
 import { MobilePapers } from '../mobile/MobilePapers'
+import { VaultDialog } from './VaultDialog'
 
 type Density = 'list' | 'compact'
 
@@ -42,10 +45,15 @@ const DENSITY_ITEMS: SegmentedItem<Density>[] = [
   { value: 'compact', label: <CompactIcon />, ariaLabel: '간단히 보기' },
 ]
 
+/** `/papers?view=list|graph` — 라이브러리 제목 옆 List / Graph 전환 (PLAN 3장) */
 export default function PapersLibrary() {
   const isMobile = useIsMobile()
+  const [params] = useSearchParams()
   if (isMobile) return <MobilePapers />
+  return params.get('view') === 'graph' ? <PaperGraph /> : <PapersList />
+}
 
+function PapersList() {
   const saveMd = useSaveSummaryMd()
   const nav = usePaneResize({ initial: 250, min: 200, max: 400, dir: 1, collapsible: true })
   const drawer = usePaneResize({ initial: 400, min: 320, max: 720, dir: -1 })
@@ -58,6 +66,7 @@ export default function PapersLibrary() {
   const [summaryView, setSummaryView] = useState<SummaryView>('nice')
   // 요약 MD 수정본은 저장소에 있어요 — 리더와 같은 값을 보고, 새로 고쳐도 남아요
   const [mdEdits, setMdEdits] = useState<Record<string, string>>({})
+  const [vaultOpen, setVaultOpen] = useState(false)
 
   const [papers, summaries, chat, mdDrafts] = useQueries({
     queries: [
@@ -68,10 +77,11 @@ export default function PapersLibrary() {
     ],
   })
   const setStatus = useSetReadStatus()
+  const vault = useQuery(vaultQuery())
 
   const query = search.trim().toLowerCase()
   const rows = (papers.data ?? [])
-    .filter(LIBRARY_VIEWS[view].test)
+    .filter(libraryView(view).test)
     .filter(
       (p) =>
         !query ||
@@ -86,9 +96,16 @@ export default function PapersLibrary() {
     .map(([id]) => id)
   const selectedCount = selectedIds.length
 
+  // 요약 — AI 요약(아직 mock)이 있으면 그것, 없으면 vault 노트 본문(읽기만)
+  const hasSummary = (id: string) => Boolean(summaries.data?.[id] || mdDrafts.data?.[id])
   // 요약이 있는 논문만 이전/다음으로 돌아요
-  const order = (papers.data ?? []).filter((p) => summaries.data?.[p.id]).map((p) => p.id)
-  const openSummary = openSummaryId ? summaries.data?.[openSummaryId] : undefined
+  const order = (papers.data ?? []).filter((p) => hasSummary(p.id)).map((p) => p.id)
+  const inList = (papers.data ?? []).some((p) => p.id === openSummaryId)
+  const openSummary = openSummaryId && inList ? summaries.data?.[openSummaryId] : undefined
+  const openNote =
+    openSummaryId && inList && !openSummary ? (papers.data ?? []).find((p) => p.id === openSummaryId) : undefined
+  const noteBody = openNote ? mdDrafts.data?.[openNote.id] : undefined
+  const drawerOpen = Boolean(openSummary || (openNote && noteBody !== undefined))
   const step = (delta: number) => {
     if (!openSummaryId || order.length === 0) return
     const i = order.indexOf(openSummaryId)
@@ -203,12 +220,17 @@ export default function PapersLibrary() {
         onViewChange={setView}
         search={search}
         onSearchChange={setSearch}
+        vaultPath={vault.data?.path}
+        onVault={() => setVaultOpen(true)}
       />
       <Resizer handle={nav.resizerProps} label="라이브러리 메뉴 너비 조절" />
 
       <main className={s.main}>
         <div className={s.toolbar}>
-          <h1 className={s.title}>{LIBRARY_VIEWS[view].title}</h1>
+          <div className={s.titleRow}>
+            <h1 className={s.title}>{libraryView(view).title}</h1>
+            <PapersViewSwitch current="list" />
+          </div>
           <div className={s.tools}>
             <SegmentedControl
               items={DENSITY_ITEMS}
@@ -246,7 +268,11 @@ export default function PapersLibrary() {
             headY={12}
             flushEdges={false}
             minWidth={820}
-            emptyMessage="조건에 맞는 논문이 없어요."
+            emptyMessage={
+              papers.data.length === 0
+                ? `vault 에 논문 노트가 없어요 — ${vault.data?.path ?? 'vault'}/Papers/ 에 MD 를 두거나, 사이드바의 'vault 위치' 에서 폴더를 정해 주세요.`
+                : '조건에 맞는 논문이 없어요.'
+            }
           />
         ) : (
           <LoadingState label="논문 목록을 불러오는 중이에요…" />
@@ -263,9 +289,49 @@ export default function PapersLibrary() {
 
         <AskLibrary
           chat={chat.data}
-          offsetRight={openSummary && openSummaryId ? drawer.size + 12 : 0}
+          offsetRight={drawerOpen ? drawer.size + 12 : 0}
         />
       </main>
+
+      <VaultDialog open={vaultOpen} onClose={() => setVaultOpen(false)} />
+
+      {openNote && noteBody !== undefined && (
+        <div className={s.drawerWrap}>
+          <Resizer handle={drawer.resizerProps} label="요약 패널 너비 조절" />
+          <aside aria-label="논문 노트 미리보기" style={drawer.style} className={s.drawer}>
+            <div className={s.drawerHead}>
+              <span className={s.drawerTitle}>논문 노트</span>
+              <span className={s.drawerPath}>{openNote.path}</span>
+              <IconButton label="이전 요약" size={34} variant="outline" onClick={() => step(-1)}>
+                <ChevronLeft />
+              </IconButton>
+              <IconButton label="다음 요약" size={34} variant="outline" onClick={() => step(1)}>
+                <ChevronRight />
+              </IconButton>
+              <IconButton label="요약 닫기" size={34} onClick={() => setOpenSummaryId(null)}>
+                <CloseIcon />
+              </IconButton>
+            </div>
+            <div className={s.drawerBody}>
+              <h2 className={s.noteTitle}>{openNote.title}</h2>
+              <span className={s.paperMeta}>
+                {openNote.authors}
+                {openNote.venue && ` · ${openNote.venue}`}
+              </span>
+              <div className={s.noteActions}>
+                <Button variant="primary" size="md" padWide href={`/papers/${encodeURIComponent(openNote.id)}`}>
+                  리더에서 열기
+                </Button>
+                <Button variant="outline" size="md" href={`/papers?view=graph&node=${encodeURIComponent(openNote.id)}`}>
+                  그래프에서 보기
+                </Button>
+              </div>
+              <pre className={s.noteBody}>{noteBody}</pre>
+              <span className={s.paperMeta}>vault 노트를 읽기만 해요. 고치려면 Obsidian 에서 고쳐 주세요. AI 요약은 아직 준비 중이에요.</span>
+            </div>
+          </aside>
+        </div>
+      )}
 
       {openSummary && openSummaryId && (
         <div className={s.drawerWrap}>

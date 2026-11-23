@@ -12,6 +12,8 @@ const MOCKS: Record<string, () => Promise<{ default: unknown }>> = {
   '/papers/summaries': () => import('./paper-summaries.json'),
   '/papers/chat': () => import('./library-chat.json'),
   '/papers/attn/reader': () => import('./paper-attn.json'),
+  '/papers/graph': () => import('./paper-graph.json'),
+  '/papers/vault': () => import('./paper-vault.json'),
 }
 
 /**

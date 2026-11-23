@@ -151,3 +151,28 @@ def test_학습에_붙는_건_기본이_보기_전용(project):
         runs.stop("demo", run["id"], force=True)
     with pytest.raises(terminals.TerminalError, match="실행 중이 아니라"):
         terminals.attach_argv("demo", run=run["id"])
+
+
+def test_worktree_만들기와_정리(repo, tmp_path):
+    client = TestClient(main.create_app(web_dist=str(tmp_path)), base_url="http://127.0.0.1:8000")
+    r = client.post("/api/projects/demo/git/worktrees", json={"branch": "exp/wd"}, headers=H)
+    assert r.status_code == 200, r.text
+    rel = r.json()["rel"]
+    assert rel == ".labremote/worktrees/wd"
+    assert client.post("/api/projects/demo/git/worktrees", json={"branch": "-x"}, headers=H).status_code == 400
+
+    # 커밋 안 한 변경이 있으면 git 이 거절한다 (--force 안 씀)
+    with open(os.path.join(repo, rel, "src", "train.py"), "a") as fh:
+        fh.write("x = 1\n")
+    r = client.post("/api/projects/demo/git/worktrees/remove", json={"rel": rel}, headers=H)
+    assert r.status_code == 409 and "커밋" in r.json()["detail"]
+    _git(os.path.join(repo, rel), "checkout", "--", "src/train.py")
+
+    # 프로젝트 본체나 .labremote/worktrees 밖은 정리하지 않는다
+    assert client.post("/api/projects/demo/git/worktrees/remove", json={"rel": ""}, headers=H).status_code == 409
+    assert client.post("/api/projects/demo/git/worktrees/remove", json={"rel": "src"}, headers=H).status_code == 409
+
+    r = client.post("/api/projects/demo/git/worktrees/remove", json={"rel": rel}, headers=H)
+    assert r.status_code == 200 and r.json() == {"removed": rel}
+    assert not os.path.exists(os.path.join(repo, rel))
+    assert "exp/wd" in _git(repo, "branch", "--list", "exp/wd")  # 브랜치는 남는다

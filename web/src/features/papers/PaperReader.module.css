@@ -55,6 +55,24 @@
   gap: 2px;
 }
 
+.titleLine {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.graphLink {
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.graphLink:hover {
+  color: var(--accent-hover);
+}
+
 .title {
   font-size: 18px;
   font-weight: 900;
@@ -158,4 +176,55 @@
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-faint);
+}
+
+/* ── vault 노트만 있는 논문 (리더 본문 준비 전) ─────────────── */
+.noteOnly {
+  width: min(860px, 100%);
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.noteBack {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.noteHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.noteTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.noteHint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.noteBody {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

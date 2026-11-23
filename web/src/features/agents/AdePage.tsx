@@ -119,7 +119,7 @@ export default function AdePage() {
           {current ? (
             <ChatPanel key={current.id} session={current} />
           ) : (
-            all.isSuccess && <NewSession project={project} defaultTree={params.get('tree') ?? ''} />
+            all.isSuccess && <NewSession project={project} defaultTree={params.get('tree') ?? ''} draft={params.get('draft') ?? ''} />
           )}
         </main>
 
@@ -240,7 +240,7 @@ function SessionList({
   )
 }
 
-export function NewSession({ project, defaultTree }: { project: string; defaultTree: string }) {
+export function NewSession({ project, defaultTree, draft = '' }: { project: string; defaultTree: string; draft?: string }) {
   const navigate = useNavigate()
   const create = useCreateSession()
   const trees = useQuery(worktreesQuery(project))
@@ -290,6 +290,7 @@ export function NewSession({ project, defaultTree }: { project: string; defaultT
         onSettings={(next) => setSettings((old) => ({ ...old, ...next }))}
         busy={create.isPending}
         placeholder="첫 요청을 적으면 세션이 시작돼요"
+        initialText={draft}
         onSend={(text) =>
           create.mutate(
             {

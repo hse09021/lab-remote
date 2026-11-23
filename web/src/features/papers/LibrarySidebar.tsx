@@ -4,29 +4,30 @@ import { CollapsibleSidebar, IconButton, VisuallyHidden } from '@/components'
 import { Skeleton } from '@/components/StateMessage'
 import s from './LibrarySidebar.module.css'
 
-export type LibraryView =
-  | 'recent'
-  | 'all'
-  | 'todo'
-  | 'reading'
-  | 'done'
-  | 'peft'
-  | 'vision'
-  | 'nlp'
+export type LibraryView = 'recent' | 'all' | 'todo' | 'reading' | 'done' | `field:${string}`
 
-/** 목업의 VIEWS. 제목과 거르는 규칙을 한 곳에 뒀어요 */
-export const LIBRARY_VIEWS: Record<
-  LibraryView,
-  { title: string; test: (p: Paper) => boolean }
-> = {
+const FIXED: Record<string, { title: string; test: (p: Paper) => boolean }> = {
   recent: { title: '최근 열어본 논문', test: () => true },
   all: { title: '전체 논문', test: () => true },
   todo: { title: '읽을 예정', test: (p) => p.status === 'todo' },
   reading: { title: '읽는 중', test: (p) => p.status === 'reading' },
   done: { title: '완료', test: (p) => p.status === 'done' },
-  peft: { title: '# PEFT', test: (p) => p.field === 'PEFT' },
-  vision: { title: '# Vision', test: (p) => p.field === 'Vision' },
-  nlp: { title: '# NLP', test: (p) => p.field === 'NLP' },
+}
+
+/** 보기의 제목과 거르는 규칙. 분야(Research Field)는 vault 노트의 category 에서 와요 */
+export function libraryView(v: LibraryView): { title: string; test: (p: Paper) => boolean } {
+  if (v.startsWith('field:')) {
+    const field = v.slice('field:'.length)
+    return { title: `# ${field}`, test: (p) => p.field === field }
+  }
+  return FIXED[v] ?? FIXED.all
+}
+
+/** 분야 목록 — 많은 순 */
+function fieldsOf(papers: Paper[] | undefined) {
+  const n = new Map<string, number>()
+  for (const p of papers ?? []) if (p.field) n.set(p.field, (n.get(p.field) ?? 0) + 1)
+  return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([f]) => f)
 }
 
 interface Props {
@@ -37,6 +38,9 @@ interface Props {
   onViewChange: (v: LibraryView) => void
   search: string
   onSearchChange: (q: string) => void
+  /** vault 위치 (없으면 아직 모름) */
+  vaultPath?: string
+  onVault: () => void
 }
 
 export function LibrarySidebar({
@@ -47,9 +51,11 @@ export function LibrarySidebar({
   onViewChange,
   search,
   onSearchChange,
+  vaultPath,
+  onVault,
 }: Props) {
   /** 목업은 개수가 마크업에 박혀 있었어요. 여기서는 데이터로 세요 */
-  const count = (id: LibraryView) => papers?.filter(LIBRARY_VIEWS[id].test).length ?? 0
+  const count = (id: LibraryView) => papers?.filter(libraryView(id).test).length ?? 0
 
   const item = (id: LibraryView, label: string, showCount = true) => (
     <button
@@ -119,12 +125,14 @@ export function LibrarySidebar({
       {item('reading', '읽는 중')}
       {item('done', '완료')}
 
-      <span className={s.groupLabel}>Research Field</span>
-      {item('peft', '# PEFT')}
-      {item('vision', '# Vision')}
-      {item('nlp', '# NLP')}
+      {fieldsOf(papers).length > 0 && <span className={s.groupLabel}>Research Field</span>}
+      {fieldsOf(papers).map((f) => item(`field:${f}`, `# ${f}`))}
 
       <div className={s.footer}>
+        <button type="button" className={s.item} onClick={onVault} title={vaultPath}>
+          <FolderIcon />
+          <span className={s.label}>vault 위치</span>
+        </button>
         <button type="button" className={s.item}>
           <TrashIcon />
           휴지통
@@ -178,6 +186,11 @@ const PlusIcon = () => (
     aria-hidden="true"
   >
     <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+const FolderIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" {...st} aria-hidden="true">
+    <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
   </svg>
 )
 const TrashIcon = () => (

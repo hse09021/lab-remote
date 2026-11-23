@@ -64,6 +64,44 @@ export interface PaperSummary {
 /** 요약이 있는 논문만 담겨요 */
 export type PaperSummaryMap = Record<string, PaperSummary>
 
+/* ── vault · 지식그래프 ─────────────────────────────────────── */
+
+export interface VaultInfo {
+  /** vault 폴더 절대 경로 */
+  path: string
+  /** 사람이 정한 위치인가 (아니면 데이터 폴더의 vault/) */
+  custom: boolean
+  exists: boolean
+  papers: number
+  notes: number
+}
+
+export type GraphNodeKind = 'paper' | 'project' | 'note'
+export type GraphEdgeKind = 'cite' | 'use' | 'note'
+
+export interface GraphNode {
+  /** 논문은 노트 파일 이름, 프로젝트는 `project:<이름>`, 메모는 `note:<vault 안 경로>` */
+  id: string
+  kind: GraphNodeKind
+  name: string
+  /** 논문 분류(앞쪽 메타의 category). 프로젝트 · 메모는 고정 이름 */
+  category: string
+  meta: string
+  path: string
+}
+
+export interface GraphEdge {
+  from: string
+  to: string
+  kind: GraphEdgeKind
+}
+
+export interface PaperGraph {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  vault: string
+}
+
 /* ── 라이브러리에 묻기 ──────────────────────────────────────── */
 
 export interface ChatSource {

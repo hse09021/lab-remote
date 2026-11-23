@@ -151,3 +151,34 @@ async def terminal_ws(
             await ws.close()
         except RuntimeError:
             pass
+
+
+class WorktreeBody(BaseModel):
+    branch: str = ""
+    rel: str = ""
+
+
+@router.post("/projects/{name}/git/worktrees")
+def add_worktree(name: str, body: WorktreeBody):
+    from ..git import worktree
+
+    try:
+        return worktree.add(projects.require(name), body.branch)
+    except worktree.WorktreeError as exc:
+        return _bad(exc)
+
+
+@router.post("/projects/{name}/git/worktrees/remove")
+def remove_worktree(name: str, body: WorktreeBody):
+    """정리 — 화면이 한 번 더 확인한 뒤에만 부른다. 브랜치는 남긴다."""
+    from ..agents.manager import manager
+    from ..git import worktree
+
+    root = projects.require(name)
+    rel = (body.rel or "").strip().strip("/")
+    if any(x.get("tree") == rel and (x.get("busy") or x.get("connected")) for x in manager.list(name)):
+        return _bad(worktree.WorktreeError("이 worktree 에서 에이전트 세션이 돌고 있어요. 세션을 멈춘 뒤에 정리해 주세요."), 409)
+    try:
+        return worktree.remove(root, rel)
+    except worktree.WorktreeError as exc:
+        return _bad(exc, 409)

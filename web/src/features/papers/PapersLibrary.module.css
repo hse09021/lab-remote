@@ -16,7 +16,15 @@
   gap: 12px;
 }
 
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
 .title {
+  margin: 0;
   font-size: 26px;
   font-weight: 900;
   letter-spacing: -0.02em;
@@ -185,4 +193,31 @@
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-sm);
   padding: 1px 8px;
+}
+
+/* ── vault 노트 미리보기 (AI 요약이 없을 때) ───────────────── */
+.noteTitle {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.noteActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.noteBody {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

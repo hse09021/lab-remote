@@ -13,6 +13,8 @@ export interface ProjectSettings {
   condaEnv: string
   commands: string[]
   metricGlobs: string[]
+  /** 이 프로젝트가 쓰는 논문 (vault 논문 노트 이름) — 지식그래프의 "프로젝트에서 사용" */
+  papers: string[]
   share: boolean
 }
 
@@ -141,6 +143,18 @@ export const usePinProject = () =>
 export const useSaveSettings = (name: string) =>
   useProjectMutation((v: Omit<ProjectSettings, 'version'>) =>
     send<ProjectSettings>('PUT', `/projects/${enc(name)}/settings`, v),
+  )
+
+/** 새 worktree — `.labremote/worktrees/` 에 만들어요. 브랜치가 없으면 새로 만들어요 */
+export const useAddWorktree = (name: string) =>
+  useProjectMutation((v: { branch: string }) =>
+    send<{ path: string; rel: string; branch: string }>('POST', `/projects/${enc(name)}/git/worktrees`, v),
+  )
+
+/** 정리 — 폴더만 지우고 브랜치는 남겨요. 커밋 안 한 변경이 있으면 git 이 거절해요 */
+export const useRemoveWorktree = (name: string) =>
+  useProjectMutation((v: { rel: string }) =>
+    send<{ removed: string }>('POST', `/projects/${enc(name)}/git/worktrees/remove`, v),
   )
 
 export const useMakeEntry = (name: string) =>

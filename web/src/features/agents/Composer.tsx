@@ -31,6 +31,8 @@ interface Props {
   busy?: boolean
   disabled?: boolean
   placeholder?: string
+  /** 처음에 채워 둘 글 (예: Papers 그래프의 "Claude 에게 묻기"). 보내기는 사람이 눌러요 */
+  initialText?: string
 }
 
 function chipName(m: AgentModel | undefined) {
@@ -40,9 +42,9 @@ function chipName(m: AgentModel | undefined) {
   return m.displayName
 }
 
-export function Composer({ settings, onSettings, onSend, busy = false, disabled = false, placeholder }: Props) {
+export function Composer({ settings, onSettings, onSend, busy = false, disabled = false, placeholder, initialText = '' }: Props) {
   const info = useQuery(agentInfoQuery())
-  const [text, setText] = useState('')
+  const [text, setText] = useState(initialText)
   const [menu, setMenu] = useState<'' | 'model' | 'mode' | 'slash' | 'attach'>('')
   const [note, setNote] = useState('')
   const [attach, setAttach] = useState('')
