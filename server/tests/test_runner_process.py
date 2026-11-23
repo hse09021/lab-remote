@@ -185,3 +185,12 @@ def test_탐침은_실행이_받을_환경으로_잰다(monkeypatch):
     monkeypatch.setattr(P.subprocess, "run", fake_run)
     assert P.scope_available({"PATH": "/usr/bin", "ONLY": "이것만"}) is True
     assert seen["env"] == {"PATH": "/usr/bin", "ONLY": "이것만"}
+
+
+def test_서비스_접두사는_우선순위를_되돌리고_환경을_넘긴다():
+    argv = P.service_prefix("labremote-run-x", "d", {"PATH": "/usr/bin", "BAD": "a\nb", "A-B": "x"})
+    assert argv[:4] == ["systemd-run", "--user", "--quiet", "--unit=labremote-run-x"]
+    assert "Type=forking" in argv and "Nice=0" in argv and "IOSchedulingClass=best-effort" in argv
+    assert "--setenv=PATH=/usr/bin" in argv
+    assert not any(a.startswith("--setenv=BAD") or a.startswith("--setenv=A-B") for a in argv)
+    assert argv[-1] == "--"

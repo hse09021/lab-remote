@@ -1,11 +1,11 @@
 """실행 — `labremote run` 과 화면의 "새 실행" 이 같은 함수를 쓴다.
 
-    systemd-run --user --scope -- tmux -L <소켓> new-session -d -s <세션> bash run.sh
+    systemd-run --user -p Type=forking -p Nice=0 -- tmux -L <소켓> new-session -d -s <세션> bash run.sh
     run.sh:  cd <위치> ; conda run -s -p <환경> bash -c <명령> 2>&1 | tee -a output.log
              ; echo <종료코드> > exit_code
 
 - **접속이 끊겨도, 서버가 다시 떠도 학습은 계속된다**(PLAN 1.5). scope 가
-  서버와 다른 cgroup 이고, tmux 서버는 실행마다 **따로**(`-L`) 띄운다 — 이미
+  서버와 다른 cgroup 의 사용자 서비스이고(서버의 nice 19 를 물려받지 않음), tmux 서버는 실행마다 **따로**(`-L`) 띄운다 — 이미
   떠 있는 tmux 서버에 세션을 만들면 학습이 그 서버의 cgroup 으로 들어가
   scope 가 소용없어진다.
 - 실행 기록은 프로젝트 안 `<root>/.labremote/runs/<EXP-NNN>/` 에 있다
@@ -262,7 +262,8 @@ def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str
     unit = process.scope_name(project, run_id) if use_scope else ""
     argv = [tmux, "-L", sock, "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "bash", script]
     if use_scope:
-        argv = process.scope_prefix(unit, f"lab.remote {project} {run_id}") + argv
+        # scope 가 아니라 서비스로 — 서버의 nice 19 · ionice idle 을 물려받지 않게
+        argv = process.service_prefix(unit, f"lab.remote {project} {run_id}", run_env) + argv
 
     record = {
         "version": 1,

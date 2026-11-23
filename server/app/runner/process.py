@@ -37,6 +37,7 @@ __all__ = [
     "scope_name",
     "scope_available",
     "scope_prefix",
+    "service_prefix",
     "starttime_of",
     "alive",
     "group_alive",
@@ -125,6 +126,32 @@ def scope_prefix(unit: str, description: str = "") -> list[str]:
         out.append(f"--description={description}")
     # scope 가 끝나면 cgroup 도 같이 사라진다
     return out + ["--collect", "--"]
+
+
+def service_prefix(unit: str, description: str = "", env: dict[str, str] | None = None) -> list[str]:
+    """tmux 처럼 **스스로 뒤로 빠지는(fork) 명령**을 사용자 서비스로 띄우는 접두사.
+
+    scope 와 달리 서비스는 사용자 systemd 가 새로 띄운다 — 그래서 **서버의
+    nice 19 · ionice idle 을 물려받지 않는다**(실측 2026-11-23: scope 는 19·idle,
+    서비스 `Nice=0` 은 0·기본). 학습이 최하위 우선순위로 도는 사고를 막는다.
+
+    - `Type=forking`: `tmux new-session -d` 가 서버를 띄우고 빠지면 그 서버를
+      주 프로세스로 삼는다. tmux 가 끝나면 유닛도 끝나고 `--collect` 로 정리된다.
+    - 서비스는 호출한 쪽의 환경을 물려받지 않아서 `env` 를 `--setenv` 로 넘긴다.
+    - 같은 이름의 유닛이 이미 돌고 있으면 거절된다(두 번 띄우기 방지).
+    """
+    out = [
+        "systemd-run", "--user", "--quiet", f"--unit={unit}",
+        "-p", "Type=forking", "-p", "Nice=0", "-p", "IOSchedulingClass=best-effort",
+        "--collect",
+    ]
+    if description:
+        out.append(f"--description={description}")
+    for key, value in sorted((env or {}).items()):
+        if "\n" in value or "\x00" in value or not key.replace("_", "").isalnum():
+            continue
+        out.append(f"--setenv={key}={value}")
+    return out + ["--"]
 
 
 def starttime_of(pid: int) -> int | None:
