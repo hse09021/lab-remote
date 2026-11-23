@@ -13,7 +13,7 @@ vault (Obsidian 폴더):
   - arXiv 링크: arXiv API(export.arxiv.org)에서 제목 · 저자 · 연도 · 분야 · 초록을 받고 PDF도 받는다
   - PDF 올리기: 파일을 두고 파일 이름으로 노트를 만든다(메타는 사람이 채운다)
 - "프로젝트에서 사용"은 프로젝트 설정의 `papers` 목록(사람이 고름)에서 온다.
-- PDF 파싱 · AI 요약 · 리더 본문은 아직 없다(mock).
+- 리더 본문은 화면이 PDF(pdf.js) · arXiv HTML로 그린다. AI 요약 · 분석 · 설명은 누를 때만 (summaries · reader_ai).
 """
 
 from __future__ import annotations

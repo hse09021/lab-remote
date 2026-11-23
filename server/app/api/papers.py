@@ -1,4 +1,4 @@
-"""/api/papers — vault를 읽어 라이브러리 목록 · 지식그래프 (리더 · AI 요약은 아직 mock)."""
+"""/api/papers — vault를 읽어 라이브러리 목록 · 지식그래프 · PDF · AI 요약 · 리더 AI."""
 
 from __future__ import annotations
 

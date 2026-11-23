@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { ApiError } from '@/api/client'
+import { ApiError, isMockMode } from '@/api/client'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   paperReaderQuery,
@@ -127,7 +127,8 @@ export default function PaperReader() {
   const [papers, reader, summaries, mdDrafts, annotations] = useQueries({
     queries: [
       papersQuery(),
-      paperReaderQuery(id),
+      // 미리 만든 리더 데이터는 목업 논문뿐이라, 서버에 붙어 있으면 아예 묻지 않아요
+      { ...paperReaderQuery(id), enabled: isMockMode() },
       paperSummariesQuery(),
       summaryDraftsQuery(),
       annotationsQuery(id),
@@ -147,7 +148,7 @@ export default function PaperReader() {
   const vault = useVaultReader(
     id,
     paper,
-    reader.isError && reader.error instanceof ApiError && reader.error.status === 404,
+    !isMockMode() || (reader.isError && reader.error instanceof ApiError && reader.error.status === 404),
   )
   // vault 논문 — 미리 써 둔 설명이 없어서 서버에 물어요 (누를 때만)
   const aiLive = askIsLive() && !reader.data && !!vault.data
@@ -221,7 +222,7 @@ export default function PaperReader() {
 
   // vault에서 온 논문 — 미리 만든 리더 데이터가 없어요. PDF가 있으면 PDF로 같은 리더 화면을 그리고,
   // PDF도 없으면 노트만 보여 줘요
-  const missing = reader.isError && reader.error instanceof ApiError && reader.error.status === 404
+  const missing = !isMockMode() || (reader.isError && reader.error instanceof ApiError && reader.error.status === 404)
   if (missing && paper && vault.active && !vault.failed) {
     if (!vault.data) {
       return (

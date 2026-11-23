@@ -147,7 +147,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
             ? { kind: 'answer', text: canned.a, go: canned.go, src: canned.src }
             : {
                 kind: 'answer',
-                text: '목업이라 실제 답변은 연결돼 있지 않아요. 서버가 붙으면 여기로 답이 와요.',
+                text: '서버 없이 화면만 보는 모드(VITE_USE_MOCK=all)라 미리 써 둔 답만 있어요.',
               }
           if (i >= 0) log[i] = answer
           else log.push(answer)
@@ -194,7 +194,7 @@ function fallbackTopic(topicKey: string, sections: PaperSection[]): Topic {
   return {
     title: sec ? `${sec.n ? `§${sec.n} ` : ""}${sec.title} 풀어보기` : '설명',
     blocks: [
-      { p: '이 섹션 설명은 목업에 미리 넣지 않았어요. 실제로는 Claude가 이 섹션 본문을 읽고 여기에 풀어 써요.' },
+      { p: '서버 없이 화면만 보는 모드라 이 섹션 설명은 미리 써 두지 않았어요. 서버에 붙으면 Claude가 이 섹션 본문을 읽고 풀어 써요.' },
     ],
     qs: [],
   }

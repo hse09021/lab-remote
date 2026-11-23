@@ -11,7 +11,7 @@ import type { PDFDocumentProxy } from './pdf/pdfjs'
  *
  * mock 논문(attn)은 섹션 · 하이라이트 · 설명 자리까지 미리 만든 데이터가 있지만,
  * vault 논문은 PDF 하나뿐이에요. 그래서 쪽 수 · 쪽 크기 · 목차(PDF 책갈피)를 읽어
- * 같은 리더 화면에 넣어요. AI 설명 · 하이라이트 · 참고문헌은 아직 없어요.
+ * 같은 리더 화면에 넣어요. AI 설명은 누를 때 서버에 묻고, 하이라이트 · 참고문헌은 'AI 분석'으로 채워요.
  */
 export function useVaultReader(id: string, paper: Paper | undefined, enabled: boolean) {
   const [base, setBase] = useState<PaperReaderPayload | null>(null)
