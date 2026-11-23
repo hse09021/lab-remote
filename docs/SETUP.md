@@ -99,7 +99,7 @@ code tunnel service install --accept-server-license-terms     # 재부팅 뒤에
 > VS Code Server 문서의 FAQ 에는 "서비스로 호스팅은 라이선스상 허용되지 않는다" 는 문장이 있는데 라이선스 원문에는
 > 그 문구가 없어요 — 판단은 사람이 해요. 서비스로 두기 싫으면 쓸 때만 터미널에서 `code tunnel` 을 띄워도 돼요.
 >
-> [확인 필요] 전달한 포트 주소가 VS Code 창을 닫은 뒤에도 계속 열리는지는 아직 실측하지 않았어요.
+> 전달한 포트 주소는 vscode.dev 창을 닫은 뒤에도 계속 열려요 (실측 2026-11-23, 휴대폰). 주소는 `https://<id>-8000.<지역>.devtunnels.ms` 모양이에요.
 
 ## 6. 알림 (Discord)
 
