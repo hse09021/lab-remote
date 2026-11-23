@@ -7,8 +7,6 @@ import {
   createNode,
   deleteNode,
   renameNode,
-  setLoopPaused,
-  stopExperiment,
   setDiscrepancy,
   setReadStatus,
   setSummaryMd,
@@ -77,18 +75,6 @@ export function applyMockWrite(method: string, path: string, body: unknown): unk
   }
   if (ann && method === 'DELETE') {
     removeAnnotation(ann[1], ann[2])
-    return body
-  }
-
-  /* 실험 정지 · 루프 일시정지 */
-  const stop = path.match(/^\/experiments\/([^/]+)\/stop$/)
-  if (stop && method === 'POST') {
-    stopExperiment(stop[1])
-    return body
-  }
-  if (path === '/experiments/loop' && method === 'PUT') {
-    const { paused } = body as { paused: boolean }
-    setLoopPaused(paused)
     return body
   }
 

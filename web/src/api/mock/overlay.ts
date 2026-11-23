@@ -1,17 +1,5 @@
-import type {
-  Dashboard,
-  FileNode,
-  EventEntry,
-  Experiment,
-  Paper,
-} from '../types'
-import {
-  overlayPapers,
-  readFileOps,
-  readLoopPaused,
-  readStopped,
-  readDiscrepancy,
-} from '../mockStore'
+import type { FileNode, Paper } from '../types'
+import { overlayPapers, readFileOps, readDiscrepancy } from '../mockStore'
 
 /**
  * mock JSON(처음 상태) 위에 저장소의 내 값을 덮어요.
@@ -25,33 +13,6 @@ export function applyOverlay<T>(path: string, data: T): T {
 
   if (path === '/code/tree') {
     return applyFileOps(data as FileNode, '') as T
-  }
-
-  if (path === '/experiments') {
-    const stopped = readStopped()
-    if (!stopped.length) return data
-    return (data as Experiment[]).map((e) =>
-      stopped.includes(e.id)
-        ? { ...e, state: 'stopped' as const, stateNote: '모바일에서 정지', progress: null }
-        : e,
-    ) as T
-  }
-
-  if (path === '/experiments/events') {
-    const stopped = readStopped()
-    if (!stopped.length) return data
-    // 정지한 실험을 기록 맨 위에 올려요 (목업과 같게)
-    const added: EventEntry[] = stopped.map((id) => ({
-      time: '방금',
-      kind: '정지',
-      tone: 'warn',
-      text: `${id} 정지 · 체크포인트 저장 · 모바일에서 요청`,
-    }))
-    return [...added, ...(data as EventEntry[])] as T
-  }
-
-  if (path === '/experiments/dashboard') {
-    return { ...(data as Dashboard), loopPaused: readLoopPaused() } as T
   }
 
   const reader = path.match(/^\/papers\/([^/]+)\/reader$/)

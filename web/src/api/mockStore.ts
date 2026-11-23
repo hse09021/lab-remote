@@ -40,10 +40,6 @@ export interface MockState {
   summaryMd: Record<string, string>
   /** 수치 불일치에서 고른 재현 목표 */
   discrepancy: Record<string, string>
-  /** 모바일에서 정지한 실험 id */
-  stoppedExperiments: string[]
-  /** 루프 일시정지 */
-  loopPaused: boolean
   /** 탐색기에서 한 파일 작업 (경로는 '/' 로 이어 붙인 전체 경로) */
   fileOps: {
     created: Array<{ path: string; kind: 'file' | 'dir' }>
@@ -62,8 +58,6 @@ const empty = (): MockState => ({
   annotations: {},
   summaryMd: {},
   discrepancy: {},
-  stoppedExperiments: [],
-  loopPaused: false,
   fileOps: { created: [], renamed: {}, deleted: [] },
 })
 
@@ -219,21 +213,6 @@ export function setDiscrepancy(paperId: string, target: string) {
   update((prev) => ({ ...prev, discrepancy: { ...prev.discrepancy, [paperId]: target } }))
 }
 
-export function stopExperiment(id: string) {
-  update((prev) => ({
-    ...prev,
-    stoppedExperiments: prev.stoppedExperiments.includes(id)
-      ? prev.stoppedExperiments
-      : [...prev.stoppedExperiments, id],
-    // 목업처럼 실험을 멈추면 루프도 같이 일시정지돼요
-    loopPaused: true,
-  }))
-}
-
-export function setLoopPaused(paused: boolean) {
-  update((prev) => ({ ...prev, loopPaused: paused }))
-}
-
 export const readFileOps = () => state.fileOps
 
 export function createNode(path: string, kind: 'file' | 'dir') {
@@ -288,5 +267,3 @@ export function deleteNode(path: string) {
   }))
 }
 
-export const readStopped = () => state.stoppedExperiments
-export const readLoopPaused = () => state.loopPaused
