@@ -4,7 +4,7 @@
 목업은 `docs/v3/mockups/` 에 있고, 화면별 안내는 `docs/v3/mockups/README.md` 에 있어요.
 목업 파일을 읽는 법(`<x-dc>`, `{{ }}`, `sc-if`, `sc-for`, `class Component`)은 `docs/v1/HANDOFF.md` 1장과 같아요.
 
-> 이 문서와 기존 문서(`docs/spec.md`, `docs/v1/HANDOFF.md`, `CLAUDE.md`)가 부딪히면 **이 문서가 우선**이에요.
+> 이 문서와 기존 문서(`docs/v1/spec.md`, `docs/v1/HANDOFF.md`, `CLAUDE.md`)가 부딪히면 **이 문서가 우선**이에요.
 > 특히 v1의 "Hooks로 강제하는 잠금", "권한 프리셋", "연구 전체 자동화 루프", "실험 큐", "AI 실험 설계 초안"은 v3에서 모두 빠져요.
 
 ---
@@ -42,7 +42,7 @@
 - 서버 후보: `app/hooks/`, `app/grants.py`, `app/policy.py`, `app/policy_defaults.py`, `app/denials.py`, `app/approval_log.py`, `app/loop_layout.py`, `app/loopstate.py`, `app/orchestrator/`, `app/generator/`(실험 설계 초안이라면), `app/templates/project`(강제 폴더 구조라면), `app/claude_settings.py`(`~/.claude` 나 `.claude/settings.json` 을 쓰는 코드라면), `app/agent/sandboxcheck.py`, 훅 설치 CLI 명령
 - 유지 후보: `app/monitor/`(gpu, host, metrics), `app/runner/`, `app/git/`, `app/notifier.py`, `app/store/`, `app/db.py`, `app/paths.py`, `app/doctor.py`(v3 기준으로 고쳐서), `app/service/`(자동 시작)
 - 웹: `features/experiments/PermissionSettings*`, `ExperimentDesignDraft*`, `features/mobile/MobileDesignDraft*`, `api/permissions.ts`, `api/design.ts` 와 관련 mock
-- 문서: `CLAUDE.md` 규칙 중 "권한 잠금 3가지는 Hooks에서 강제" 문단, `docs/v1/HANDOFF.md`·`docs/spec.md` 의 v1 전용 부분 → v3 기준으로 고치거나 "v1 (보관)" 표시
+- 문서: `CLAUDE.md` 규칙 중 "권한 잠금 3가지는 Hooks에서 강제" 문단, `docs/v1/HANDOFF.md`·`docs/v1/spec.md` 의 v1 전용 부분 → v3 기준으로 고치거나 "v1 (보관)" 표시
 
 ---
 
