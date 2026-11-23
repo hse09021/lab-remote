@@ -137,3 +137,22 @@ def test_worktree_가_남아_있으면_labremote_를_안_지운다(project_root)
     with pytest.raises(projects.ProjectError, match="worktree"):
         projects.unregister("demo", remove_labremote=True)
     assert registry.root_of("demo") == project_root  # 등록도 그대로
+
+
+def test_새_폴더를_만들어_등록(tmp_path):
+    from app import projects
+
+    target = tmp_path / "projects" / "new-exp"
+    (tmp_path / "projects").mkdir()
+    got = projects.register(str(target), "", create=True, git_init=True)
+    assert got["name"] == "new-exp" and target.is_dir()
+    assert (target / ".git").is_dir() and (target / ".labremote").is_dir()
+    import pytest as _pytest
+
+    with _pytest.raises(projects.ProjectError, match="이미 있는 폴더"):
+        projects.register(str(target), "x", create=True)
+    with _pytest.raises(projects.ProjectError, match="위 폴더가 없어요"):
+        projects.register(str(tmp_path / "nope" / "a"), "", create=True)
+    with _pytest.raises(projects.ProjectError, match="이미 쓰는 이름"):
+        projects.register(str(tmp_path / "projects" / "other"), "new-exp", create=True)
+    assert not (tmp_path / "projects" / "other").exists()

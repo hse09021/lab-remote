@@ -181,27 +181,30 @@ function ProjectItem({ p, current }: { p: ProjectRow; current: boolean }) {
 function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
   const register = useRegisterProject()
+  const [mode, setMode] = useState<'existing' | 'new'>('existing')
   const [path, setPath] = useState('')
   const [name, setName] = useState('')
+  const [gitInit, setGitInit] = useState(true)
 
   const close = () => {
     register.reset()
     setPath('')
     setName('')
+    setMode('existing')
     onClose()
   }
 
   return (
     <Dialog
       open={open}
-      title="폴더 등록"
-      confirmLabel="등록"
+      title={mode === 'new' ? '새 폴더 만들고 등록' : '폴더 등록'}
+      confirmLabel={mode === 'new' ? '만들고 등록' : '등록'}
       busy={register.isPending}
       error={register.error instanceof ApiError ? register.error.message : register.error ? String(register.error) : undefined}
       onClose={close}
       onConfirm={() =>
         register.mutate(
-          { path, name },
+          { path, name, create: mode === 'new', gitInit: mode === 'new' && gitInit },
           {
             onSuccess: (made) => {
               close()
@@ -211,13 +214,21 @@ function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void 
         )
       }
     >
+      <div role="group" aria-label="등록 방식" className={s.modeSwitch}>
+        <button type="button" aria-pressed={mode === 'existing'} onClick={() => setMode('existing')}>
+          있는 폴더
+        </button>
+        <button type="button" aria-pressed={mode === 'new'} onClick={() => setMode('new')}>
+          새 폴더
+        </button>
+      </div>
       <label className={ds.field}>
-        이 컴퓨터의 폴더 경로
+        {mode === 'new' ? '만들 폴더 경로 (위 폴더는 있어야 해요)' : '이 컴퓨터의 폴더 경로'}
         <input
           className={ds.input}
           value={path}
           onChange={(e) => setPath(e.target.value)}
-          placeholder="~/projects/lora-rank-ablation"
+          placeholder={mode === 'new' ? '~/projects/new-experiment' : '~/projects/lora-rank-ablation'}
           autoFocus
           required
         />
@@ -226,6 +237,12 @@ function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void 
         이름 (비우면 폴더 이름으로)
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="lora-rank-ablation" />
       </label>
+      {mode === 'new' && (
+        <label className={ds.check}>
+          <input type="checkbox" checked={gitInit} onChange={(e) => setGitInit(e.target.checked)} />
+          <span>git 저장소로 시작 (git init · main 브랜치) — worktree · 커밋을 바로 쓸 수 있어요</span>
+        </label>
+      )}
       <span>
         폴더 안에 <span className={s.mono}>.labremote/</span> 를 만들어요. 스스로 git에서 빠지고, 프로젝트의{' '}
         <span className={s.mono}>.gitignore</span> 는 건드리지 않아요.

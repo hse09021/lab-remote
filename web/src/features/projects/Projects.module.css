@@ -1119,3 +1119,31 @@ button.nameBtn:hover .fileName {
   color: var(--text);
   cursor: pointer;
 }
+
+/* 폴더 등록 — 있는 폴더 / 새 폴더 */
+.modeSwitch {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+}
+
+.modeSwitch button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.modeSwitch button[aria-pressed='true'] {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: var(--shadow-raised);
+}

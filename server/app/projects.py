@@ -188,8 +188,11 @@ def _forbidden_roots() -> list[str]:
     return [os.sep, home, paths.real(registry.data_dir()), paths.real(os.path.dirname(server))]
 
 
-def register(path: str, name: str = "") -> dict:
+def register(path: str, name: str = "", *, create: bool = False, git_init: bool = False) -> dict:
     """폴더를 등록하고 `.labremote/` 를 만든다.
+
+    `create` 면 새 폴더를 만든다(위 폴더는 있어야 하고, 같은 이름이 이미 있으면 거절).
+    `git_init` 이면 만든 폴더에서 `git init -b main` 까지 한다.
 
     거절: 없는 폴더 · `/`·홈 폴더 자체 · lab.remote 저장소와 데이터 폴더 ·
     이미 등록된 프로젝트와 겹치는(안에 있거나 품는) 폴더.
@@ -197,7 +200,17 @@ def register(path: str, name: str = "") -> dict:
     if not isinstance(path, str) or not path.strip() or "\x00" in path:
         raise ProjectError("폴더 경로를 적어 주세요.")
     root = paths.real(path.strip())
-    if not os.path.isdir(root):
+    made_dir = False
+    if create:
+        parent = os.path.dirname(root)
+        if os.path.exists(root):
+            raise ProjectError(f"이미 있는 폴더예요 — '있는 폴더' 로 등록해 주세요: {root}")
+        if not os.path.isdir(parent):
+            raise ProjectError(f"위 폴더가 없어요: {parent}")
+        name_part = os.path.basename(root)
+        if not name_part or name_part.startswith(".") or len(name_part) > 100:
+            raise ProjectError("새 폴더 이름이 올바르지 않아요.")
+    elif not os.path.isdir(root):
         raise ProjectError(f"폴더가 없어요: {root}")
     for bad in _forbidden_roots():
         if root == bad or paths.is_inside(root, bad):
@@ -214,10 +227,27 @@ def register(path: str, name: str = "") -> dict:
         registry.valid_name(name)
     except registry.InvalidName as exc:
         raise ProjectError(str(exc)) from None
+    if name in registry.load().values():
+        raise ProjectError(f"이미 쓰는 이름이에요: {name}")
+    if create:
+        os.mkdir(root, 0o755)
+        made_dir = True
+        if git_init:
+            import subprocess
+
+            done = subprocess.run(["git", "init", "-q", "-b", "main", root], capture_output=True, text=True, timeout=30)
+            if done.returncode != 0:
+                os.rmdir(root) if not os.listdir(root) else None
+                raise ProjectError("git init 이 실패했어요: " + (done.stderr or "").strip()[:200])
     ensure_labremote(root)
     try:
         registry.register(root, name)
     except registry.InvalidName as exc:
+        if made_dir:
+            # 방금 이 요청이 만든 빈 폴더만 치운다
+            import shutil
+
+            shutil.rmtree(root, ignore_errors=True)
         raise ProjectError(str(exc)) from None
     return {"name": name, "root": root}
 

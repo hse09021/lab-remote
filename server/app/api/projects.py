@@ -16,6 +16,9 @@ router = APIRouter()
 class RegisterBody(BaseModel):
     path: str
     name: str = ""
+    #: 새 폴더를 만들어 등록 · 그 폴더에서 git init
+    create: bool = False
+    gitInit: bool = False
 
 
 class PinBody(BaseModel):
@@ -66,7 +69,7 @@ def list_projects():
 
 @router.post("/projects")
 def register(body: RegisterBody):
-    made = projects.register(body.path, body.name)
+    made = projects.register(body.path, body.name, create=body.create, git_init=body.gitInit)
     return _detail(made["name"])
 
 

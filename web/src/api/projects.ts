@@ -125,7 +125,7 @@ function useProjectMutation<V, R = unknown>(run: (vars: V) => Promise<R>) {
 }
 
 export const useRegisterProject = () =>
-  useProjectMutation((v: { path: string; name: string }) => send<ProjectDetail>('POST', '/projects', v))
+  useProjectMutation((v: { path: string; name: string; create?: boolean; gitInit?: boolean }) => send<ProjectDetail>('POST', '/projects', v))
 
 export const useUnregisterProject = () =>
   useProjectMutation((v: { name: string; removeLabremote: boolean }) =>
