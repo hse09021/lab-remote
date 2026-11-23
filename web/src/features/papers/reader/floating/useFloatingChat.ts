@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
+import { runReaderAi } from '@/api/papers'
+import type { ExplainResult } from '@/api/papers'
 import type { ChatEntry, PaperSection, Topic } from '@/api/types'
 
 export interface ChatAnchor {
@@ -15,8 +17,10 @@ export interface FloatingChatState {
   anchor: ChatAnchor | null
   log: ChatEntry[]
   asked: Record<string, true>
-  /** 메모 카드에서 열었을 때 붙는 맥락 */
+  /** 메모 카드에서 열었을 때 붙는 맥락 (실시간 모드에서는 고른 글) */
   context: string | null
+  /** 실시간 모드 — 서버가 만든 설명 */
+  liveTopic: Topic | null
 }
 
 const EMPTY: FloatingChatState = {
@@ -27,17 +31,38 @@ const EMPTY: FloatingChatState = {
   log: [],
   asked: {},
   context: null,
+  liveTopic: null,
 }
 
 /** 목업처럼 답이 조금 늦게 와요 */
 const ANSWER_DELAY = 900
 
-export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSection[] = []) {
+/** 미리 써 둔 설명이 없는 논문(vault) — 서버에 물어요 */
+export interface LiveChat {
+  paperId: string
+}
+
+const toTopic = (r: ExplainResult): Topic => ({
+  title: r.title || '설명',
+  blocks: (r.paragraphs ?? []).map((p) => ({ p })),
+  qs: (r.questions ?? []).map((q) => ({ q, a: '', go: '', src: '' })),
+})
+
+export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSection[] = [], live: LiveChat | null = null) {
   const [state, setState] = useState<FloatingChatState>(EMPTY)
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([])
+  // 늦게 온 답이 다른 대화를 덮지 않게
+  const seq = useRef(0)
+  // 앞 대화 · 고른 글을 보낼 때 읽는 지금 상태
+  const now = useRef(state)
+  now.current = state
 
   const open = useCallback(
     (topicKey: string, anchor: ChatAnchor | null, context: string | null = null) => {
+      const n = ++seq.current
+      const sec = sections.find((x) => x.id === topicKey)
+      const needLive = !!live && !topics[topicKey]
+      const kind = sec ? 'section' : context ? 'selection' : null
       setState({
         open: true,
         minimized: false,
@@ -46,9 +71,27 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
         log: [],
         asked: {},
         context,
+        liveTopic: needLive
+          ? kind
+            ? { title: sec ? `${sec.n ? `§${sec.n} ` : ''}${sec.title}` : '고른 글', blocks: [{ p: 'Claude 가 논문을 읽는 중이에요…' }], qs: [] }
+            : { title: '이 논문에 묻기', blocks: [{ p: '아래에 질문을 적으면 Claude 가 이 논문을 읽고 답해요.' }], qs: [] }
+          : null,
       })
+      if (!needLive || !kind || !live) return
+      runReaderAi<ExplainResult>(live.paperId, {
+        kind,
+        section: sec ? `${sec.n ? `${sec.n} ` : ''}${sec.title}` : '',
+        text: context ?? '',
+        page: sec?.page ?? 0,
+      })
+        .then((r) => n === seq.current && setState((p) => ({ ...p, liveTopic: toTopic(r) })))
+        .catch(
+          (e: unknown) =>
+            n === seq.current &&
+            setState((p) => ({ ...p, liveTopic: { title: '설명하지 못했어요', blocks: [{ p: e instanceof Error ? e.message : String(e) }], qs: [] } })),
+        )
     },
-    [],
+    [live, sections, topics],
   )
 
   const close = useCallback(() => {
@@ -67,6 +110,30 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
   /** 추천 질문을 누르거나 직접 입력했을 때 */
   const ask = useCallback(
     (question: string, canned?: { a: string; go: string; src: string }) => {
+      if (live && !canned?.a) {
+        // 실시간 — 앞 대화와 고른 글을 같이 보내요
+        const n = seq.current
+        type Turn = { role: 'user' | 'assistant'; text: string }
+        const history = now.current.log.flatMap<Turn>((e) =>
+          e.kind === 'user' ? [{ role: 'user', text: e.text }] : e.kind === 'answer' ? [{ role: 'assistant', text: e.text }] : [],
+        )
+        const context = now.current.context ?? ''
+        setState((p) => ({ ...p, log: [...p.log, { kind: 'user', text: question }, { kind: 'loading' }], asked: { ...p.asked, [question]: true } }))
+        const finish = (text: string) =>
+          n === seq.current &&
+          setState((p) => {
+            const log = [...p.log]
+            const i = log.findIndex((e) => e.kind === 'loading')
+            const answer: ChatEntry = { kind: 'answer', text }
+            if (i >= 0) log[i] = answer
+            else log.push(answer)
+            return { ...p, log }
+          })
+        runReaderAi<ExplainResult>(live.paperId, { kind: 'ask', question, history, text: context })
+          .then((r) => finish((r.paragraphs ?? []).join('\n\n') || r.title))
+          .catch((e: unknown) => finish(`답하지 못했어요 — ${e instanceof Error ? e.message : String(e)}`))
+        return
+      }
       setState((p) => ({
         ...p,
         log: [...p.log, { kind: 'user', text: question }, { kind: 'loading' }],
@@ -89,7 +156,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
       }, ANSWER_DELAY)
       timers.current.push(t)
     },
-    [],
+    [live],
   )
 
   /**
@@ -97,7 +164,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
    * (예: §3.4 — 실제로는 Claude 가 그 섹션 본문을 읽고 풀어 써요)
    */
   const topic = state.topicKey
-    ? (topics[state.topicKey] ?? fallbackTopic(state.topicKey, sections))
+    ? (topics[state.topicKey] ?? state.liveTopic ?? fallbackTopic(state.topicKey, sections))
     : undefined
 
   return { state, topic, open, close, clearLog, minimize, restore, ask }

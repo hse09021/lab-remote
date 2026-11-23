@@ -299,3 +299,55 @@ export function useSummaryJob(id: string, enabled: boolean) {
     refetchInterval: (q) => (q.state.data?.state === 'running' || !q.state.data ? 3000 : false),
   })
 }
+
+/* ── 리더 AI (누를 때만 · 그 논문의 노트 · PDF 를 읽기 전용으로) ─────────────── */
+
+export type ReaderAiKind = 'section' | 'selection' | 'ask' | 'translate' | 'analyze'
+
+export interface ReaderAiBody {
+  kind: ReaderAiKind
+  text?: string
+  section?: string
+  page?: number
+  question?: string
+  history?: { role: 'user' | 'assistant'; text: string }[]
+}
+
+export interface ExplainResult {
+  title: string
+  paragraphs: string[]
+  questions: string[]
+}
+
+/** 시작하고 끝날 때까지 1.5초마다 물어봐요. 실패하면 Error */
+export async function runReaderAi<T>(paperId: string, body: ReaderAiBody): Promise<T> {
+  const job = await send<{ id: string }>('POST', `/papers/${encodeURIComponent(paperId)}/ai`, body)
+  for (let i = 0; i < 400; i++) {
+    await new Promise((r) => setTimeout(r, 1500))
+    const j = await get<{ state: string; result: T; error: string }>(`/papers/ai/${job.id}`)
+    if (j.state === 'done') return j.result
+    if (j.state === 'failed') throw new Error(j.error || '답하지 못했어요')
+  }
+  throw new Error('너무 오래 걸려서 그만 기다렸어요')
+}
+
+export interface PaperAnalysis {
+  highlights: { category: 'core' | 'method' | 'result' | 'check'; quote: string; page: number; note: string }[]
+  references: { n: number; title: string; authors: string; year: number; venue: string; arxiv: string; why: string }[]
+}
+
+export const analysisQuery = (paperId: string, enabled: boolean) =>
+  queryOptions({
+    queryKey: ['papers', paperId, 'analysis'],
+    queryFn: () => get<{ analysis: PaperAnalysis | null; running: boolean }>(`/papers/${encodeURIComponent(paperId)}/analysis`),
+    enabled,
+    refetchInterval: (q) => (q.state.data?.running ? 4000 : false),
+  })
+
+export function useStartAnalysis(paperId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => send<{ id: string }>('POST', `/papers/${encodeURIComponent(paperId)}/ai`, { kind: 'analyze' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers', paperId, 'analysis'] }),
+  })
+}

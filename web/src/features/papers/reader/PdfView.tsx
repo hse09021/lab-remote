@@ -39,6 +39,8 @@ export interface JumpTarget {
 }
 
 interface Props {
+  /** vault 논문 — 서버에 설명을 물을 수 있어요 */
+  aiLive?: boolean
   reader: PaperReaderPayload
   toggles: HighlightToggles
   /** 아웃라인·노트에서 이동을 요청할 때마다 바뀌는 값 */
@@ -70,6 +72,7 @@ interface Props {
 }
 
 export function PdfView({
+  aiLive = false,
   reader,
   toggles,
   jump,
@@ -312,7 +315,8 @@ export function PdfView({
   const selected = reader.highlights.find((h) => h.id === selectedId) ?? null
 
   /* 두 렌더러가 같이 쓰는 오버레이 */
-  const hasTopics = Object.keys(reader.topics).length > 0
+  // 미리 쓴 설명이 있거나, 서버에 물을 수 있으면(vault 논문) 설명 버튼을 둬요
+  const hasTopics = aiLive || Object.keys(reader.topics).length > 0
   const renderOverlays = (ctx: PdfPageContext) => {
           const pageHighlights = reader.highlights.filter(
             (h) => h.page === ctx.page && visible(h),

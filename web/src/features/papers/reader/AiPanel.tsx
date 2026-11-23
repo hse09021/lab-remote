@@ -33,6 +33,10 @@ interface Props {
   /** 요약 만들기 (실제 API 일 때만) */
   onMakeSummary?: () => void
   summaryRunning?: boolean
+  /** AI 분석 — 하이라이트 구절 · 참고문헌 뽑기 (vault 논문) */
+  onAnalyze?: () => void
+  analyzing?: boolean
+  analyzed?: boolean
   summaryView: SummaryView
   onSummaryViewChange: (v: SummaryView) => void
   mdDraft: string | null
@@ -64,6 +68,9 @@ export function AiPanel({
   summary,
   onMakeSummary,
   summaryRunning = false,
+  onAnalyze,
+  analyzing = false,
+  analyzed = false,
   summaryView,
   onSummaryViewChange,
   mdDraft,
@@ -95,6 +102,22 @@ export function AiPanel({
           className={s.tabs}
         />
       </div>
+      {onAnalyze && (
+        <div className={s.analyzeBar}>
+          <span>
+            {analyzing
+              ? 'Claude 가 PDF 를 읽고 하이라이트 · 참고문헌을 뽑는 중이에요… (1~3분)'
+              : analyzed
+                ? 'AI 하이라이트 · 참고문헌이 붙어 있어요'
+                : 'AI 하이라이트 · 인용 탭은 AI 분석을 하면 채워져요'}
+          </span>
+          {!analyzing && (
+            <button type="button" className={s.analyzeBtn} onClick={onAnalyze}>
+              {analyzed ? '다시 분석' : 'AI 분석'}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className={s.body}>
         {tab === 'summary' &&
@@ -192,7 +215,8 @@ function RefRow({ r, added }: { r: Reference; added: boolean }) {
           {r.title}
         </button>
         <span className={s.refMeta}>
-          {r.short} · 본문 {r.citedCount}회
+          {r.short}
+          {r.citedCount > 0 && ` · 본문 ${r.citedCount}회`}
         </span>
       </div>
       <span data-kind={badge.kind} className={s.refBadge}>

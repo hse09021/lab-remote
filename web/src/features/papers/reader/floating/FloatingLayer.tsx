@@ -15,6 +15,8 @@ export interface FloatingHandlers {
   chat: ReturnType<typeof useFloatingChat>
   overlays: ReturnType<typeof useReaderOverlays>
   reader: PaperReaderPayload
+  /** 실시간 번역 (vault 논문) — 고른 글이 같을 때만 */
+  liveTranslation?: { text: string; translation: string | null; note: string | null } | null
   onSelectionAct: (a: SelectionAction) => void
   onJump: (sectionId: string) => void
   onOpenPaper: (title: string) => void
@@ -40,6 +42,7 @@ export interface FloatingHandlers {
  * 대화창 본체만 예외로 `chatHost`(가운데 열)에 포털해서 모서리에 고정돼요.
  */
 export function FloatingLayer({
+  liveTranslation = null,
   chatHost,
   chat,
   overlays,
@@ -78,14 +81,18 @@ export function FloatingLayer({
           anchor={overlays.popover.anchor}
           source={overlays.popover.text}
           translation={
-            overlays.popover.text === reader.selectionSpot.text
-              ? reader.selectionSpot.translation
-              : null
+            liveTranslation && liveTranslation.text === overlays.popover.text
+              ? (liveTranslation.translation ?? '번역하는 중이에요…')
+              : overlays.popover.text === reader.selectionSpot.text
+                ? reader.selectionSpot.translation
+                : null
           }
           note={
-            overlays.popover.text === reader.selectionSpot.text
-              ? reader.selectionSpot.translationNote
-              : null
+            liveTranslation && liveTranslation.text === overlays.popover.text
+              ? liveTranslation.note
+              : overlays.popover.text === reader.selectionSpot.text
+                ? reader.selectionSpot.translationNote
+                : null
           }
           onClose={() => overlays.setPopover(null)}
         />

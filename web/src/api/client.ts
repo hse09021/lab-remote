@@ -42,6 +42,10 @@ const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   // 내 하이라이트 · 주석 (데이터 폴더에 — 기기끼리 같이 봐요)
   [/^\/papers\/[^/]+\/annotations$/, ['GET', 'POST']],
   [/^\/papers\/[^/]+\/annotations\/[^/]+$/, ['PATCH', 'DELETE']],
+  // 리더 AI (설명 · 질문 · 번역 · 분석)
+  [/^\/papers\/[^/]+\/ai$/, ['POST']],
+  [/^\/papers\/ai\/[^/]+$/, ['GET']],
+  [/^\/papers\/[^/]+\/analysis$/, ['GET']],
   // 라이브러리에 묻기 (vault 를 읽기 전용으로)
   [/^\/papers\/ask$/, ['POST']],
   [/^\/papers\/ask\/[^/]+$/, ['GET']],

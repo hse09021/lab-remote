@@ -10,6 +10,8 @@ import {
   notesQuery,
   useMakeSummary,
   askIsLive,
+  runReaderAi,
+  useStartAnalysis,
   refPaperId,
   summaryDraftsQuery,
   useChooseDiscrepancy,
@@ -140,7 +142,21 @@ export default function PaperReader() {
   const updateAnn = useUpdateAnnotation(id)
   const removeAnn = useRemoveAnnotation(id)
   const restoreAnn = useRestoreAnnotation(id)
-  const chat = useFloatingChat(reader.data?.topics ?? {}, reader.data?.sections ?? [])
+  const paper = papers.data?.find((p) => p.id === id)
+  const vault = useVaultReader(
+    id,
+    paper,
+    reader.isError && reader.error instanceof ApiError && reader.error.status === 404,
+  )
+  // vault 논문 — 미리 써 둔 설명이 없어서 서버에 물어요 (누를 때만)
+  const aiLive = askIsLive() && !reader.data && !!vault.data
+  const chat = useFloatingChat(
+    (reader.data ?? vault.data)?.topics ?? {},
+    (reader.data ?? vault.data)?.sections ?? [],
+    aiLive ? { paperId: id } : null,
+  )
+  const startAnalysis = useStartAnalysis(id)
+  const [liveTr, setLiveTr] = useState<{ text: string; translation: string | null; note: string | null } | null>(null)
 
   /*
    * 단축키는 훅이라 조기 반환보다 앞에 있어야 해요.
@@ -195,12 +211,6 @@ export default function PaperReader() {
     return () => document.removeEventListener('pointerdown', onDown)
   }, [overlays])
 
-  const paper = papers.data?.find((p) => p.id === id)
-  const vault = useVaultReader(
-    id,
-    paper,
-    reader.isError && reader.error instanceof ApiError && reader.error.status === 404,
-  )
   const summary = summaries.data?.[id]
 
   const sourceItems: SegmentedItem<PaperSource>[] = [
@@ -300,14 +310,15 @@ export default function PaperReader() {
     const sel = overlays.selection
     if (!sel) return
     switch (a) {
+      // vault 논문은 고른 글을 맥락으로 넘겨 서버가 그 구절을 풀어요
       case 'explain':
-        openChat('lstm', sel.anchor)
+        openChat('lstm', sel.anchor, aiLive ? sel.text : null)
         break
       case 'info':
-        openChat('info', sel.anchor)
+        openChat('info', sel.anchor, aiLive ? sel.text : null)
         break
       case 'ask':
-        openChat('ask', sel.anchor)
+        openChat('ask', sel.anchor, aiLive ? sel.text : null)
         break
       case 'highlight': {
         const mine = myHighlightFor(sel.text)
@@ -331,6 +342,15 @@ export default function PaperReader() {
       }
       case 'translate':
         overlays.openPopover('translate', sel.anchor, sel.text, sel.sectionId, sel.place)
+        if (aiLive) {
+          const text = sel.text
+          setLiveTr({ text, translation: null, note: null })
+          runReaderAi<{ translation: string; note: string }>(id, { kind: 'translate', text, page: sel.place.page })
+            .then((r) => setLiveTr((p) => (p?.text === text ? { text, translation: r.translation, note: r.note || null } : p)))
+            .catch((e: unknown) =>
+              setLiveTr((p) => (p?.text === text ? { text, translation: `번역하지 못했어요 — ${e instanceof Error ? e.message : String(e)}`, note: null } : p)),
+            )
+        }
         break
       case 'note':
         overlays.openPopover('note', sel.anchor, sel.text, sel.sectionId, sel.place)
@@ -373,6 +393,7 @@ export default function PaperReader() {
 
   const floating = (
     <FloatingLayer
+      liveTranslation={liveTr}
       chatHost={centerRef}
       chat={chat}
       overlays={overlays}
@@ -528,6 +549,7 @@ export default function PaperReader() {
           <div ref={centerRef} className={s.center}>
             {source === 'pdf' ? (
               <PdfView
+                aiLive={aiLive}
                 reader={data}
                 toggles={toggles}
                 jump={jump}
@@ -625,6 +647,9 @@ export default function PaperReader() {
                 : undefined
             }
             summaryRunning={paper?.summaryState === 'running' || makeSummary.isPending}
+            onAnalyze={aiLive ? () => startAnalysis.mutate(undefined, { onError: (e) => toast.show(e instanceof Error ? e.message : String(e)) }) : undefined}
+            analyzing={vault.analyzing || startAnalysis.isPending}
+            analyzed={!!vault.analysis}
             summaryView={summaryView}
             onSummaryViewChange={setSummaryView}
             mdDraft={mdEdit ?? mdDrafts.data?.[id] ?? null}

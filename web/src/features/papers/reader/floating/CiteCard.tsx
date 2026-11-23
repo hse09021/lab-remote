@@ -90,7 +90,8 @@ export function CiteCard({
 
       {whyOpen && (
         <p className={s.why}>
-          {r.why} · 본문에서 {r.citedCount}번 인용했어요.
+          {r.why}
+          {r.citedCount > 0 && ` · 본문에서 ${r.citedCount}번 인용했어요.`}
         </p>
       )}
 

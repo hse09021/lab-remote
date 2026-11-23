@@ -412,3 +412,37 @@ def test_같은_이름의_다른_파일은_덮지_않는다(vault, monkeypatch):
     with pytest.raises(summaries.SummaryError):
         summaries.save_markdown("LoRA", "x")
     assert open(other, encoding="utf-8").read() == "내가 쓴 노트\n"
+
+
+def test_리더_AI(vault, monkeypatch):
+    import asyncio
+
+    from app import reader_ai
+    from app.agents import claude as claude_mod
+
+    papers.set_vault(vault)
+    monkeypatch.setattr(claude_mod, "cli_path", lambda: "/usr/bin/true")
+
+    async def wait(jid):
+        for _ in range(100):
+            await asyncio.sleep(0.01)
+            if reader_ai.job(jid)["state"] != "running":
+                return reader_ai.job(jid)
+
+    async def go():
+        run = _fake_agent({"title": "풀이", "paragraphs": ["a", "b"], "questions": ["왜?"]})
+        got = await wait(reader_ai.start("LoRA", "selection", {"text": "low rank", "page": 3}, query_fn=run)["id"])
+        assert got["state"] == "done" and got["result"]["paragraphs"] == ["a", "b"]
+        assert '3쪽의 이 구절' in run.seen["prompt"] and run.seen["opts"].tools == ["Read", "Glob", "Grep"]
+        with pytest.raises(reader_ai.ReaderAiError):
+            reader_ai.start("LoRA", "translate", {"text": " "})
+        an = _fake_agent({"highlights": [
+            {"category": "core", "quote": "We propose LoRA", "page": 1, "note": "핵심"},
+            {"category": "bogus", "quote": "x", "page": 1, "note": ""},
+        ], "references": [{"n": 1, "title": "Attention", "authors": "Vaswani", "year": 2017, "venue": "NeurIPS", "arxiv": "1706.03762", "why": "기반"}]})
+        got = await wait(reader_ai.start("LoRA", "analyze", query_fn=an)["id"])
+        assert got["result"] == {"highlights": 1, "references": 1}
+        stored = reader_ai.analysis("LoRA")
+        assert stored["highlights"][0]["quote"] == "We propose LoRA" and stored["references"][0]["arxiv"] == "1706.03762"
+
+    asyncio.run(go())

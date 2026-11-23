@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from .. import annotations, library, papers, summaries
+from .. import annotations, library, papers, reader_ai, summaries
 
 router = APIRouter()
 
@@ -136,6 +136,39 @@ async def start_summary(pid: str, body: SummaryStart):
 @router.get("/papers/{pid}/summary")
 def summary_job(pid: str):
     return summaries.job(pid)
+
+
+class ReaderAiBody(BaseModel):
+    kind: str
+    text: str = ""
+    section: str = ""
+    page: int = 0
+    question: str = ""
+    history: list[dict] = []
+    model: str = ""
+
+
+@router.post("/papers/{pid}/ai")
+async def reader_ai_start(pid: str, body: ReaderAiBody):
+    """리더 AI (설명 · 질문 · 번역 · 분석) — 시작만 하고 돌아온다. GET /papers/ai/{id} 로 물어본다."""
+    try:
+        return reader_ai.start(pid, body.kind, body.model_dump(), model=body.model)
+    except reader_ai.ReaderAiError as exc:
+        return _bad(exc, 409 if "중이에요" in str(exc) else 400)
+
+
+@router.get("/papers/ai/{jid}")
+def reader_ai_job(jid: str):
+    try:
+        return reader_ai.job(jid)
+    except reader_ai.ReaderAiError as exc:
+        return _bad(exc, 404)
+
+
+@router.get("/papers/{pid}/analysis")
+def reader_analysis(pid: str):
+    """AI 분석 결과 (하이라이트 구절 · 참고문헌). 없으면 null."""
+    return {"analysis": reader_ai.analysis(pid), "running": reader_ai.running_analysis(pid)}
 
 
 @router.post("/papers/ask")
