@@ -375,6 +375,12 @@ class Manager:
             now = next((t["content"] for t in items if t.get("status") == "in_progress"), "")
             rec["todos"] = {"done": sum(1 for t in items if t.get("status") == "completed"), "total": len(items), "current": now}
             changed = True
+        elif event.get("type") == "subagent":
+            # Agents 그래프에 쓸 하위 에이전트 (최근 10개)
+            subs = [x for x in rec.get("subagents") or [] if x.get("taskId") != event.get("taskId")]
+            subs.append({"taskId": event.get("taskId"), "description": str(event.get("description") or "")[:120], "status": event.get("status"), "at": time.time()})
+            rec["subagents"] = subs[-10:]
+            changed = True
         elif event.get("type") == "result":
             if event.get("error"):
                 rec["note"] = event["error"][:300]

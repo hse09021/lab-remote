@@ -173,4 +173,14 @@ def overview(*, port: int | None = None) -> dict:
         "gpu": gpu_summary(),
         "host": host_summary(),
         "changes": changes(),
+        "clock": _clock(),
     }
+
+
+def _clock() -> dict:
+    try:
+        from . import scheduler
+
+        return scheduler.status()
+    except Exception as exc:
+        return {"running": False, "error": type(exc).__name__}

@@ -131,8 +131,8 @@ export default function SystemPage() {
             {`부팅 → labremote-session.service   ${d.autostart.installed ? '● 있음' : '○ 없음'}
   └ labremote serve    ● 127.0.0.1:${d.server.port ?? '?'} · nice ${d.server.nice ?? '?'}
       ├ code tunnel      [확인 필요] 9단계
-      ├ 예약 시계        5단계
-      └ 에이전트 세션    3단계`}
+      ├ 예약 시계        ${d.clock?.running ? '●' : '○'} ${d.clock?.next ? `다음 ${new Date(d.clock.next.at * 1000).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${d.clock.next.name}` : '예약 없음'}${d.clock?.waiting.length ? ` · GPU 기다리는 중 ${d.clock.waiting.length}` : ''}
+      └ 에이전트 세션    Agent SDK · 동시 4개까지`}
           </pre>
           <p className={s.text}>
             켜고 끄기는 9단계에서 <span className={s.mono}>labremote autostart</span> 로 붙어요. 학습은 이 서버와 분리돼서

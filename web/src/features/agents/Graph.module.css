@@ -1,0 +1,233 @@
+/* Dashboard › Agents 그래프 — docs/v3/mockups/MissionControl.dc.html */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  border: 2.5px solid var(--dot-idle);
+  background: var(--bg);
+}
+
+.legendDot[data-kind='ask'],
+.circle[data-kind='ask'] {
+  border-color: var(--attention);
+}
+
+.legendDot[data-kind='work'],
+.circle[data-kind='work'] {
+  border-color: var(--accent);
+}
+
+.legendDot[data-kind='run'],
+.circle[data-kind='run'] {
+  border-color: var(--info);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.box {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: transparent;
+}
+
+.box[data-on='true'] {
+  border: none;
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.canvasWrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+}
+
+.canvas {
+  position: relative;
+}
+
+.box2 {
+  position: absolute;
+  padding: 10px 14px;
+  border: 1.5px solid var(--accent-soft);
+  border-radius: 14px;
+  background: var(--accent-row);
+}
+
+.boxName {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-dark);
+}
+
+.svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.edge {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+.edge[data-style='ask'] {
+  stroke: var(--attention);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.edge[data-style='child'] {
+  stroke: var(--text-muted);
+  stroke-width: 2;
+}
+
+.edge[data-style='ref'] {
+  stroke: var(--text-dim);
+  stroke-dasharray: 4 4;
+}
+
+.you {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-btn);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.node {
+  position: absolute;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.node[data-kind='done'] {
+  opacity: 0.6;
+}
+
+.circle {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  border: 2.5px solid var(--dot-idle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--info);
+}
+
+.circle[data-kind='ask'] {
+  box-shadow: 0 0 0 4px var(--attention-tint);
+}
+
+.card {
+  max-width: 200px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  text-align: center;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state[data-kind='ask'] {
+  color: var(--attention-text);
+}
+
+.state[data-kind='work'] {
+  color: var(--accent-dark);
+}
+
+.state[data-kind='run'] {
+  color: var(--hl-result-ink);
+}
+
+.empty {
+  position: absolute;
+  left: 160px;
+  top: 40%;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}

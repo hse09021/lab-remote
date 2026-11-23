@@ -7,6 +7,7 @@ import { runsQuery, useStartRun, useStopRun } from '@/api/runs'
 import { ApiError } from '@/api/client'
 import { Dialog } from '@/components'
 import { RunStatePill } from '../projects/RunsTab'
+import { ScheduleDialog } from '../schedule/ScheduleDialog'
 import { duration, whenShort } from '@/lib/time'
 import s from './Ide.module.css'
 
@@ -243,6 +244,7 @@ export function RunPanel({
   const stop = useStopRun()
   const [command, setCommand] = useState(detail.settings.commands[0] ?? '')
   const [env, setEnv] = useState(detail.settings.condaEnv)
+  const [scheduling, setScheduling] = useState(false)
   const shown = env.trim() ? `conda run -s -n ${env.trim()} bash -c '${command}'` : `bash -c '${command}'`
   const all = runs.data?.runs ?? []
   const running = all.filter((r) => r.state === 'running')
@@ -285,11 +287,17 @@ export function RunPanel({
         >
           지금 실행
         </button>
-        <button type="button" className={s.ghostBtn} disabled title="예약은 5단계에서 붙어요">
+        <button type="button" className={s.ghostBtn} disabled={!command.trim()} onClick={() => setScheduling(true)}>
           시간 정해서 실행…
         </button>
       </div>
       {start.isError && <div className={s.errText}>{errText(start.error)}</div>}
+      <ScheduleDialog
+        key={scheduling ? 'open' : 'closed'}
+        open={scheduling}
+        onClose={() => setScheduling(false)}
+        seed={{ kind: 'command', project, tree, command, env: env.trim() }}
+      />
 
       <span className={s.groupLabel}>실행 중 · {running.length}</span>
       {running.map((r) => (

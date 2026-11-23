@@ -62,6 +62,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     from .api import inbox as inbox_api
     from .api import projects as projects_api
     from .api import runs as runs_api
+    from .api import schedules as schedules_api
     from .api import system as system_api
 
     @asynccontextmanager
@@ -74,6 +75,11 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
         bus.bind(asyncio.get_running_loop())
         # 작업 중이던 에이전트 세션은 "연결 끊김" 으로 — 메시지를 보내면 이어 간다
         manager.recover()
+        # 예약 시계 — 사람이 시각으로 건 예약만 (scheduler.py). 시험에서는 끈다
+        from . import scheduler
+
+        if os.environ.get("LAB_NO_WATCH") != "1":
+            scheduler.start()
         # 실행 감시 — 끝남·실패·끊김을 알아채 Inbox·Discord 로 알린다 (watch.py)
         watcher = None
         if os.environ.get("LAB_NO_WATCH") != "1":
@@ -84,6 +90,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
         finally:
             if watcher:
                 watcher.stop()
+            await scheduler.stop()
             await manager.shutdown()
 
     app = FastAPI(title="lab.remote", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
@@ -143,6 +150,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     app.include_router(inbox_api.router, prefix="/api")
     app.include_router(agents_api.router, prefix="/api")
     app.include_router(ide_api.router, prefix="/api")
+    app.include_router(schedules_api.router, prefix="/api")
 
     @app.get("/api/{rest:path}", include_in_schema=False)
     def api_missing(rest: str):

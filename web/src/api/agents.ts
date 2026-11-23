@@ -86,6 +86,8 @@ export interface AgentSession {
   connected: boolean
   busy: boolean
   pending: PendingApproval[]
+  /** 최근 하위 에이전트 (Agents 그래프) */
+  subagents?: { taskId: string; description: string; status: string; at: number }[]
 }
 
 export interface SessionDetail extends AgentSession {

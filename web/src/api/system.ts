@@ -54,6 +54,7 @@ export interface SystemOverview {
     load: number[] | null
   }
   changes: ChangeRow[]
+  clock?: { running: boolean; lastTick: number | null; error: string; interval: number; next: { name: string; at: number; project: string } | null; waiting: string[] }
 }
 
 export const healthQuery = () =>

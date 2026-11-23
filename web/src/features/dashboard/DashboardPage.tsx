@@ -11,7 +11,8 @@ import { AgentAside, Lanes, laneOf } from '../agents/SessionLanes'
 import type { Run } from '@/api/runs'
 import { ErrorState, LoadingState } from '@/components'
 import { duration, whenShort } from '@/lib/time'
-import { ScreenShell } from '../ScreenShell'
+import { AgentsGraph } from '../agents/AgentsGraph'
+import { ScheduleView } from '../schedule/ScheduleView'
 import { RunStatePill } from '../projects/RunsTab'
 import s from './Dashboard.module.css'
 
@@ -19,33 +20,12 @@ import s from './Dashboard.module.css'
 export default function DashboardPage() {
   const [params, setParams] = useSearchParams()
   const view = params.get('view') ?? 'overview'
-  if (view === 'agents' || view === 'schedule') {
-    return (
-      <ScreenShell
-        title="Dashboard"
-        mockup="MissionControl.dc.html"
-        aside={{ title: '에이전트', step: 3, note: '프로젝트 › worktree › 세션 목록, 답 필요가 위로 와요.' }}
-        views={[
-          { id: 'overview', label: 'Overview', sections: [] },
-          { id: 'agents', label: 'Agents', sections: [{ title: '에이전트 그래프', step: 5, note: '프로젝트별 상자 · You · 세션 · 하위 에이전트 · 학습 실행.' }] },
-          {
-            id: 'schedule',
-            label: 'Schedule',
-            sections: [
-              { title: '24시간 띠', step: 5 },
-              { title: '예약 표', step: 5, note: '켜기/끄기 · 수정 · 삭제. 사람이 시각으로 건 것만 돌아요.' },
-            ],
-          },
-        ]}
-      />
-    )
-  }
   const pick = (v: string) => {
     const next = new URLSearchParams(params)
     next.set('view', v)
     setParams(next, { replace: true })
   }
-  return <Overview onView={pick} />
+  return <Overview view={view === 'agents' || view === 'schedule' ? view : 'overview'} onView={pick} />
 }
 
 function greeting(d: Date) {
@@ -57,7 +37,7 @@ function greeting(d: Date) {
 
 const runHref = (r: Run, extra = '') => `/projects/${encodeURIComponent(r.project)}?tab=work&run=${encodeURIComponent(r.id)}${extra}`
 
-function Overview({ onView }: { onView: (v: string) => void }) {
+function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; onView: (v: string) => void }) {
   const dash = useQuery(dashboardQuery())
   const agents = useQuery(sessionsQuery())
   // 답 필요가 위로
@@ -88,7 +68,7 @@ function Overview({ onView }: { onView: (v: string) => void }) {
                 ['agents', 'Agents'],
                 ['schedule', 'Schedule'],
               ].map(([id, label]) => (
-                <button key={id} type="button" role="tab" aria-selected={id === 'overview'} className={s.view} onClick={() => onView(id)}>
+                <button key={id} type="button" role="tab" aria-selected={id === view} className={s.view} onClick={() => onView(id)}>
                   {label}
                 </button>
               ))}
@@ -104,7 +84,11 @@ function Overview({ onView }: { onView: (v: string) => void }) {
 
         {dash.isPending && <LoadingState label="대시보드를 불러오는 중이에요" />}
         {dash.isError && <ErrorState error={dash.error} onRetry={() => dash.refetch()} />}
-        {dash.data && (
+        {dash.data && view === 'agents' && (
+          <AgentsGraph sessions={sorted} runs={dash.data.runs.running} finished={dash.data.runs.finishedToday} />
+        )}
+        {dash.data && view === 'schedule' && <ScheduleView running={dash.data.runs.running} />}
+        {dash.data && view === 'overview' && (
           <>
             <CutBanner runs={dash.data.runs.cut} />
             <Stats d={dash.data} sessions={sorted} />

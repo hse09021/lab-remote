@@ -29,8 +29,8 @@ __all__ = [
 
 #: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS` 에 줄을 더한다.
 #:
-#: 판 5 는 **v3 의 첫 판**이다. v1 은 판 1~4 를 썼다. 판 6 에서 Inbox 가 생겼다.
-SCHEMA_VERSION = 6
+#: 판 5 는 **v3 의 첫 판**이다. v1 은 판 1~4 를 썼다. 판 6 에서 Inbox, 판 7 에서 예약이 생겼다.
+SCHEMA_VERSION = 7
 
 #: v3 가 시작하는 판. 이보다 낮은 판은 **v1 DB** 다.
 V3_BASE = 5
@@ -40,6 +40,34 @@ V3_BASE = 5
 #: v1 판(1~4)에서 오는 이행은 **두지 않는다.** v1 표(승인·큐·루프·앵커…)를
 #: 지우는 이행은 되돌릴 수 없어서, 조용히 하지 않고 `migrate` 가 거절한다.
 MIGRATIONS: dict[int, str] = {
+    # 판 7 — 예약 (v3 5단계)
+    6: '''
+-- 예약 — 사람이 시각으로 건 것만 돈다(PLAN 1.4). 연쇄 예약 없음.
+-- kind: command(명령 실행) · agent(세션을 열고 첫 요청만 보냄)
+-- repeat: once · daily · weekly. 시각은 epoch 초(서버의 현지 시간대로 계산).
+CREATE TABLE IF NOT EXISTS schedules (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT NOT NULL,
+  kind          TEXT NOT NULL,
+  project       TEXT NOT NULL,
+  tree          TEXT NOT NULL DEFAULT '',
+  command       TEXT NOT NULL DEFAULT '',
+  env           TEXT NOT NULL DEFAULT '',
+  prompt        TEXT NOT NULL DEFAULT '',
+  mode          TEXT NOT NULL DEFAULT 'manual',
+  model         TEXT NOT NULL DEFAULT '',
+  effort        TEXT NOT NULL DEFAULT '',
+  at            REAL NOT NULL,
+  repeat        TEXT NOT NULL DEFAULT 'once',
+  enabled       INTEGER NOT NULL DEFAULT 1,
+  next_at       REAL,
+  last_at       REAL,
+  last_result   TEXT NOT NULL DEFAULT '',
+  last_ref      TEXT,
+  waiting_since REAL,
+  created_at    TEXT NOT NULL
+);
+''',
     # 판 6 — Inbox (v3 2단계)
     5: '''
 -- Inbox — 사람이 보는 알림. Discord 로 보냈는지는 `sent` 에 사람 말로 남긴다

@@ -92,3 +92,29 @@ CREATE TABLE IF NOT EXISTS inbox (
 );
 
 CREATE INDEX IF NOT EXISTS ix_inbox_kind ON inbox(kind, id);
+
+-- 예약 — 사람이 시각으로 건 것만 돈다(PLAN 1.4). 연쇄 예약 없음.
+-- kind: command(명령 실행) · agent(세션을 열고 첫 요청만 보냄)
+-- repeat: once · daily · weekly. 시각은 epoch 초(서버의 현지 시간대로 계산).
+CREATE TABLE IF NOT EXISTS schedules (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT NOT NULL,
+  kind          TEXT NOT NULL,
+  project       TEXT NOT NULL,
+  tree          TEXT NOT NULL DEFAULT '',
+  command       TEXT NOT NULL DEFAULT '',
+  env           TEXT NOT NULL DEFAULT '',
+  prompt        TEXT NOT NULL DEFAULT '',
+  mode          TEXT NOT NULL DEFAULT 'manual',
+  model         TEXT NOT NULL DEFAULT '',
+  effort        TEXT NOT NULL DEFAULT '',
+  at            REAL NOT NULL,
+  repeat        TEXT NOT NULL DEFAULT 'once',
+  enabled       INTEGER NOT NULL DEFAULT 1,
+  next_at       REAL,
+  last_at       REAL,
+  last_result   TEXT NOT NULL DEFAULT '',
+  last_ref      TEXT,
+  waiting_since REAL,
+  created_at    TEXT NOT NULL
+);
