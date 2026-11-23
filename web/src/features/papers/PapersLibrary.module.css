@@ -221,3 +221,34 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* 논문 추가 결과 */
+.addedBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--accent-tint);
+  color: var(--accent-dark);
+  font-size: 13px;
+}
+
+.addedBar[data-tone='err'] {
+  background: var(--attention-tint);
+  color: var(--attention-text);
+}
+
+.addedBar span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.addedClose {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}

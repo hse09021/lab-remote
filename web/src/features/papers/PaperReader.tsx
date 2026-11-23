@@ -5,6 +5,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   paperReaderQuery,
   paperSummariesQuery,
+  paperPdfHref,
   papersQuery,
   refPaperId,
   summaryDraftsQuery,
@@ -225,6 +226,11 @@ export default function PaperReader() {
           <p className={s.noteHint}>
             리더 본문(PDF · arXiv HTML)과 AI 요약은 아직 준비 중이에요. 지금은 vault 노트를 읽기만 해요 · {paper.path}
           </p>
+          {paper.hasPdf && (
+            <a href={paperPdfHref(id)} target="_blank" rel="noreferrer" className={s.graphLink}>
+              PDF 열기 (새 탭)
+            </a>
+          )}
           {mdDrafts.data?.[id] ? <pre className={s.noteBody}>{mdDrafts.data[id]}</pre> : <p className={s.noteHint}>노트 본문이 비어 있어요.</p>}
         </div>
       </main>

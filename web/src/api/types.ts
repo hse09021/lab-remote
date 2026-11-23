@@ -35,6 +35,8 @@ export interface Paper {
   access: string
   /** vault 안 요약 MD 경로. 없으면 null */
   path: string | null
+  /** vault 에 PDF 가 있나 (실제 API) */
+  hasPdf?: boolean
 }
 
 /** 요약 한 줄 + 원문 근거 위치 */

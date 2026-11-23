@@ -6,8 +6,12 @@ vault (Obsidian 폴더):
     <vault>/그 밖의 *.md   내 메모. 본문의 [[링크]] 가 논문이나 프로젝트를 가리키면 그래프에 나온다
 
 - vault 위치는 사람이 정한다(설정, 2026-11-23). 정하지 않으면 데이터 폴더의 `vault/`.
-- **노트 파일을 고치지 않는다.** 읽음 상태처럼 lab.remote 가 기억할 것은 데이터 폴더의
+- **있는 노트 파일을 고치지 않는다.** 읽음 상태처럼 lab.remote 가 기억할 것은 데이터 폴더의
   `papers.json` 에 둔다.
+- 논문 추가(2026-11-24 결정)만 vault 에 **새 파일을 쓴다** — `Papers/<이름>.md` 와
+  `Papers/pdf/<이름>.pdf`. 같은 이름이 있으면 뒤에 번호를 붙이고, 덮어쓰지 않는다.
+  - arXiv 링크: arXiv API(export.arxiv.org)에서 제목 · 저자 · 연도 · 분야 · 초록을 받고 PDF 도 받는다
+  - PDF 올리기: 파일을 두고 파일 이름으로 노트를 만든다(메타는 사람이 채운다)
 - "프로젝트에서 사용" 은 프로젝트 설정의 `papers` 목록(사람이 고름)에서 온다.
 - PDF 파싱 · AI 요약 · 리더 본문은 아직 없다(mock).
 """
@@ -21,7 +25,8 @@ import time
 
 from . import paths, projects, registry
 
-__all__ = ["PapersError", "settings", "set_vault", "vault_path", "scan", "list_papers", "graph", "set_status", "body_of"]
+__all__ = ["PapersError", "settings", "set_vault", "vault_path", "scan", "list_papers", "graph", "set_status", "body_of",
+           "arxiv_id", "add_arxiv", "add_pdf", "pdf_of"]
 
 WIKI_RE = re.compile(r"\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]")
 MAX_NOTES = 5000
@@ -190,6 +195,7 @@ def scan() -> dict:
                 "path": rel,
                 "mtime": os.path.getmtime(f),
                 "hasBody": bool(body.strip()),
+                "hasPdf": bool(str(meta.get("pdf") or "").strip()),
             })
         else:
             heading = next((ln[2:].strip() for ln in body.splitlines() if ln.startswith("# ")), "")
@@ -225,6 +231,7 @@ def list_papers() -> list[dict]:
             "summaryState": "done" if p["hasBody"] else "none",
             "access": _ago(p["mtime"]),
             "path": f"vault/{p['path']}",
+            "hasPdf": p.get("hasPdf", False),
         })
     return out
 
@@ -276,3 +283,194 @@ def graph() -> dict:
     linked_ids = {e["from"] for e in edges} | {e["to"] for e in edges}
     nodes = [n for n in nodes if n["kind"] != "project" or n["id"] in linked_ids]
     return {"nodes": nodes, "edges": edges, "vault": vault_path()}
+
+
+# --- 추가 (vault 에 새 파일만) --------------------------------------------------
+
+ARXIV_API = "https://export.arxiv.org/api/query?id_list={id}"
+ARXIV_PDF = "https://arxiv.org/pdf/{id}"
+USER_AGENT = "lab.remote/0.1 (personal research tool)"
+MAX_PDF = 100 * 1024 * 1024
+_NEW_ID = re.compile(r"\A\d{4}\.\d{4,5}(v\d+)?\Z")
+_OLD_ID = re.compile(r"\A[a-z-]+(\.[A-Z]{2})?/\d{7}(v\d+)?\Z")
+_BAD_NAME = re.compile(r'[\\/:*?"<>|#^\[\]\x00-\x1f]+')
+
+
+def arxiv_id(text: str) -> str:
+    """링크나 번호에서 arXiv 번호만 (버전 제외). 아니면 PapersError."""
+    t = (text or "").strip()
+    m = re.search(r"arxiv\.org/(?:abs|pdf|html)/([^?#\s]+)", t)
+    if m:
+        t = m.group(1)
+    t = t.removeprefix("arXiv:").removeprefix("arxiv:").removesuffix(".pdf").strip("/")
+    if not (_NEW_ID.match(t) or _OLD_ID.match(t)):
+        raise PapersError("arXiv 링크나 번호가 아니에요 (예: https://arxiv.org/abs/1706.03762).")
+    return re.sub(r"v\d+\Z", "", t)
+
+
+def _papers_dir() -> str:
+    root = vault_path()
+    folder = os.path.join(root, "Papers")
+    os.makedirs(os.path.join(folder, "pdf"), exist_ok=True)
+    return folder
+
+
+def _safe_name(title: str) -> str:
+    """노트 파일 이름 — "LoRA: Low-Rank …" 처럼 콜론 앞이 짧으면 그것만."""
+    head = title.split(":")[0].strip()
+    name = head if 2 <= len(head) <= 40 else title
+    name = _BAD_NAME.sub(" ", name)
+    name = re.sub(r"\s+", " ", name).strip(" .")
+    return name[:80] or "paper"
+
+
+def _create(path: str, data: bytes) -> str:
+    """없는 이름으로 만든다 — 있으면 " (2)" 를 붙인다. 덮어쓰지 않는다."""
+    stem, ext = os.path.splitext(path)
+    n = 1
+    while True:
+        target = path if n == 1 else f"{stem} ({n}){ext}"
+        try:
+            with open(target, "xb") as fh:
+                fh.write(data)
+            return target
+        except FileExistsError:
+            n += 1
+            if n > 99:
+                raise PapersError("같은 이름이 너무 많아요.") from None
+
+
+def _yaml(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _note(meta: dict, body: str) -> bytes:
+    lines = ["---"]
+    for key, value in meta.items():
+        if value is None or value == "" or value == []:
+            continue
+        if isinstance(value, list):
+            lines.append(f"{key}:")
+            lines += [f"  - {_yaml(str(v))}" for v in value]
+        else:
+            lines.append(f"{key}: {_yaml(str(value)) if not isinstance(value, int) else value}")
+    lines.append("---")
+    return ("\n".join(lines) + "\n" + body).encode("utf-8")
+
+
+def _get(url: str, *, limit: int, timeout: int = 30) -> bytes:
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as res:
+            data = res.read(limit + 1)
+    except urllib.error.HTTPError as exc:
+        raise PapersError(f"arXiv 가 거절했어요 ({exc.code}). 잠시 뒤 다시 해 주세요.") from None
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise PapersError(f"arXiv 에 닿지 못했어요: {getattr(exc, 'reason', exc)}") from None
+    if len(data) > limit:
+        raise PapersError("파일이 너무 커요.")
+    return data
+
+
+def _existing_arxiv(aid: str) -> dict | None:
+    for p in scan()["papers"]:
+        if arxiv_id_or_none(p.get("arxiv") or "") == aid:
+            return p
+    return None
+
+
+def arxiv_id_or_none(text: str) -> str | None:
+    try:
+        return arxiv_id(text)
+    except PapersError:
+        return None
+
+
+def add_arxiv(link: str, *, fetch=_get) -> dict:
+    """arXiv 링크로 논문 노트(+ PDF)를 만든다. 이미 있으면 그 논문을 돌려준다."""
+    import xml.etree.ElementTree as ET
+
+    aid = arxiv_id(link)
+    found = _existing_arxiv(aid)
+    if found:
+        return {"id": found["id"], "created": False, "path": f"vault/{found['path']}"}
+    xml = fetch(ARXIV_API.format(id=aid), limit=2 * 1024 * 1024)
+    ns = {"a": "http://www.w3.org/2005/Atom", "x": "http://arxiv.org/schemas/atom"}
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        raise PapersError("arXiv 답을 읽지 못했어요.") from None
+    entry = root.find("a:entry", ns)
+    entry_id = (entry.findtext("a:id", "", ns) if entry is not None else "") or ""
+    if entry is None or "/abs/" not in entry_id:
+        raise PapersError(f"arXiv 에 없는 번호예요: {aid}")
+    clean = lambda t: re.sub(r"\s+", " ", t or "").strip()  # noqa: E731
+    title = clean(entry.findtext("a:title", "", ns)) or aid
+    authors = [clean(a.findtext("a:name", "", ns)) for a in entry.findall("a:author", ns)]
+    published = entry.findtext("a:published", "", ns) or ""
+    primary = entry.find("x:primary_category", ns)
+    journal = clean(entry.findtext("x:journal_ref", "", ns))
+    abstract = clean(entry.findtext("a:summary", "", ns))
+
+    folder = _papers_dir()
+    name = _safe_name(title)
+    pdf_rel = ""
+    try:
+        pdf = fetch(ARXIV_PDF.format(id=aid), limit=MAX_PDF, timeout=120)
+        if pdf.startswith(b"%PDF-"):
+            made = _create(os.path.join(folder, "pdf", f"{name}.pdf"), pdf)
+            pdf_rel = os.path.relpath(made, vault_path()).replace(os.sep, "/")
+    except PapersError:
+        pdf_rel = ""  # PDF 는 못 받아도 노트는 만든다
+    meta = {
+        "title": title,
+        "authors": authors,
+        "year": int(published[:4]) if published[:4].isdigit() else "",
+        "venue": journal or "arXiv",
+        "category": primary.get("term") if primary is not None else "",
+        "arxiv": aid,
+        "pdf": pdf_rel,
+        "cites": [],
+    }
+    body = "## 초록\n\n" + abstract + "\n" if abstract else ""
+    note = _create(os.path.join(folder, f"{name}.md"), _note(meta, body))
+    stem = os.path.splitext(os.path.basename(note))[0]
+    return {"id": stem, "created": True, "path": "vault/" + os.path.relpath(note, vault_path()).replace(os.sep, "/"), "pdf": bool(pdf_rel)}
+
+
+def add_pdf(filename: str, data: bytes) -> dict:
+    """올린 PDF 를 vault 에 두고 파일 이름으로 노트를 만든다."""
+    if not data.startswith(b"%PDF-"):
+        raise PapersError("PDF 파일이 아니에요.")
+    if len(data) > MAX_PDF:
+        raise PapersError("PDF 가 너무 커요 (100MB 까지).")
+    base = os.path.splitext(os.path.basename(filename or ""))[0]
+    name = _safe_name(base) if base else "paper"
+    folder = _papers_dir()
+    made = _create(os.path.join(folder, "pdf", f"{name}.pdf"), data)
+    pdf_rel = os.path.relpath(made, vault_path()).replace(os.sep, "/")
+    meta = {"title": base or name, "authors": [], "year": "", "venue": "", "category": "", "pdf": pdf_rel, "cites": []}
+    note = _create(os.path.join(folder, f"{name}.md"), _note(meta, ""))
+    stem = os.path.splitext(os.path.basename(note))[0]
+    return {"id": stem, "created": True, "path": "vault/" + os.path.relpath(note, vault_path()).replace(os.sep, "/"), "pdf": True}
+
+
+def pdf_of(pid: str) -> str:
+    """논문 노트의 `pdf:` 가 가리키는 파일 (vault 안만)."""
+    for p in scan()["papers"]:
+        if p["id"] == pid:
+            meta, _ = _front(_read(os.path.join(vault_path(), p["path"])))
+            rel = str(meta.get("pdf") or "").strip()
+            rel = WIKI_RE.sub(lambda m: m.group(1), rel)  # [[pdf/x.pdf]] 로 적어도
+            if not rel:
+                break
+            root = paths.real(vault_path())
+            for cand in (os.path.join(root, rel), os.path.join(root, "Papers", rel)):
+                target = paths.real(cand)
+                if paths.is_inside(root, target) and os.path.isfile(target) and target.lower().endswith(".pdf"):
+                    return target
+            break
+    raise PapersError("이 논문에는 PDF 가 없어요.")

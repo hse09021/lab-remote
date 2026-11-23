@@ -1,15 +1,20 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   libraryChatQuery,
+  paperPdfHref,
   paperSummariesQuery,
   papersQuery,
   summaryDraftsQuery,
+  useAddArxiv,
   useSaveSummaryMd,
   useSetReadStatus,
+  useUploadPdf,
   vaultQuery,
 } from '@/api/papers'
+import type { AddedPaper } from '@/api/papers'
+import { ApiError } from '@/api/client'
 import type { Paper, ReadStatus } from '@/api/types'
 import {
   Button,
@@ -67,6 +72,20 @@ function PapersList() {
   // 요약 MD 수정본은 저장소에 있어요 — 리더와 같은 값을 보고, 새로 고쳐도 남아요
   const [mdEdits, setMdEdits] = useState<Record<string, string>>({})
   const [vaultOpen, setVaultOpen] = useState(false)
+  const addArxiv = useAddArxiv()
+  const uploadPdf = useUploadPdf()
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [added, setAdded] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null)
+  const onAdded = (r: AddedPaper) => {
+    setAdded({
+      text: r.created
+        ? `추가했어요 · ${r.path}${r.pdf === false ? ' (PDF 는 받지 못했어요)' : ''}`
+        : `이미 있는 논문이에요 · ${r.path}`,
+      tone: 'ok',
+    })
+    setOpenSummaryId(r.id)
+  }
+  const onFail = (e: unknown) => setAdded({ text: e instanceof ApiError ? e.message : String(e), tone: 'err' })
 
   const [papers, summaries, chat, mdDrafts] = useQueries({
     queries: [
@@ -242,15 +261,46 @@ function PapersList() {
             <IconButton label="필터" size={42}>
               <FilterIcon />
             </IconButton>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/pdf,.pdf"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (!file) return
+                setAdded({ text: `${file.name} 올리는 중이에요…`, tone: 'ok' })
+                uploadPdf.mutate(file, { onSuccess: onAdded, onError: onFail })
+              }}
+            />
             <SplitButton
               label="논문 업로드"
               menuLabel="논문 업로드"
               menuWidth={380}
-              items={[{ label: 'PDF 파일 업로드' }]}
-              footer={<UrlUploadRow />}
+              onClick={() => fileInput.current?.click()}
+              items={[{ label: 'PDF 파일 업로드', onSelect: () => fileInput.current?.click() }]}
+              footer={
+                <UrlUploadRow
+                  busy={addArxiv.isPending}
+                  onAdd={(url) => {
+                    setAdded({ text: 'arXiv 에서 받는 중이에요…', tone: 'ok' })
+                    addArxiv.mutate(url, { onSuccess: onAdded, onError: onFail })
+                  }}
+                />
+              }
             />
           </div>
         </div>
+
+        {added && (
+          <div role="status" className={s.addedBar} data-tone={added.tone}>
+            <span>{added.text}</span>
+            <button type="button" className={s.addedClose} aria-label="알림 닫기" onClick={() => setAdded(null)}>
+              ×
+            </button>
+          </div>
+        )}
 
         {papers.isError ? (
           <ErrorState
@@ -325,6 +375,11 @@ function PapersList() {
                 <Button variant="outline" size="md" href={`/papers?view=graph&node=${encodeURIComponent(openNote.id)}`}>
                   그래프에서 보기
                 </Button>
+                {openNote.hasPdf && (
+                  <Button variant="outline" size="md" href={paperPdfHref(openNote.id)} target="_blank" rel="noreferrer">
+                    PDF
+                  </Button>
+                )}
               </div>
               <pre className={s.noteBody}>{noteBody}</pre>
               <span className={s.paperMeta}>vault 노트를 읽기만 해요. 고치려면 Obsidian 에서 고쳐 주세요. AI 요약은 아직 준비 중이에요.</span>
@@ -387,17 +442,35 @@ function PapersList() {
   )
 }
 
-function UrlUploadRow() {
+function UrlUploadRow({ busy, onAdd }: { busy: boolean; onAdd: (url: string) => void }) {
+  const [url, setUrl] = useState('')
+  const submit = () => {
+    if (url.trim() && !busy) {
+      onAdd(url.trim())
+      setUrl('')
+    }
+  }
   return (
     <>
       <VisuallyHidden>
-        <label htmlFor="lib-url">arXiv 링크 또는 PDF URL</label>
+        <label htmlFor="lib-url">arXiv 링크</label>
       </VisuallyHidden>
       <div style={{ display: 'flex', gap: 8 }}>
-        <input id="lib-url" type="text" placeholder="arXiv 링크 또는 PDF URL" />
-        <Button variant="accent">추가</Button>
+        <input
+          id="lib-url"
+          type="text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') submit()
+          }}
+          placeholder="arXiv 링크 (https://arxiv.org/abs/…)"
+        />
+        <Button variant="accent" disabled={busy || !url.trim()} onClick={submit}>
+          {busy ? '받는 중…' : '추가'}
+        </Button>
       </div>
-      <span>arXiv HTML이 있으면 HTML을, 없으면 PDF를 써요</span>
+      <span>제목 · 저자 · 초록을 받아 vault 의 Papers/ 에 노트를 만들고 PDF 도 받아 둬요</span>
     </>
   )
 }

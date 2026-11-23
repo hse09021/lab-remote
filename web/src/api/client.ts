@@ -27,6 +27,9 @@ const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers$/, ['GET']],
   [/^\/papers\/(graph|vault|summary-md)$/, ['GET', 'PUT']],
   [/^\/papers\/[^/]+$/, ['PATCH']],
+  // 논문 추가 (vault 에 새 노트 · PDF) · PDF 내려받기
+  [/^\/papers\/arxiv$/, ['POST']],
+  [/^\/papers\/[^/]+\/pdf$/, ['GET']],
 ]
 
 const isLive = (path: string, method = 'GET') =>

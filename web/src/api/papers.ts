@@ -1,5 +1,5 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
-import { get, send } from './client'
+import { apiUrl, get, send, upload } from './client'
 import type {
   LibraryChat,
   Paper,
@@ -146,3 +146,34 @@ export const paperGraphQuery = () =>
     queryKey: ['papers', 'graph'],
     queryFn: () => get<PaperGraph>('/papers/graph'),
   })
+
+/* ── 논문 추가 (vault 에 새 파일만 · 있는 노트는 덮지 않아요) ─────────────── */
+
+export interface AddedPaper {
+  id: string
+  /** false 면 이미 있던 논문이에요 */
+  created: boolean
+  path: string
+  pdf?: boolean
+}
+
+/** arXiv 링크로 — 제목 · 저자 · 연도 · 분야 · 초록을 받아 노트를 만들고 PDF 도 받아 둬요 */
+export function useAddArxiv() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (url: string) => send<AddedPaper>('POST', '/papers/arxiv', { url }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers'] }),
+  })
+}
+
+/** PDF 올리기 — 파일 이름으로 노트를 만들어요 (메타는 Obsidian 에서 채워요) */
+export function useUploadPdf() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => upload<AddedPaper>(`/papers/pdf?name=${encodeURIComponent(file.name)}`, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['papers'] }),
+  })
+}
+
+/** vault 에 있는 PDF 주소 (새 탭으로 열어요) */
+export const paperPdfHref = (id: string) => apiUrl(`/papers/${encodeURIComponent(id)}/pdf`)

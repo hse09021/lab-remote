@@ -11,6 +11,8 @@
 | `<프로젝트>/.labremote/` | `settings.json` · `runs/EXP-NNN/` (명령 · 로그 · 종료코드) · `sessions/` (에이전트 세션) · `scenarios/` · `worktrees/` |
 | `~/.config/systemd/user/labremote-session.service` | 자동 시작을 켰을 때만 |
 
+vault(Papers 화면에서 정한 Obsidian 폴더)는 읽기만 해요. 논문을 추가할 때만 `Papers/<이름>.md` 와 `Papers/pdf/<이름>.pdf` 를 **새로** 만들고, 있는 노트는 덮지 않아요.
+
 데이터 폴더를 통째로 복사하면 백업이에요. `lab.db` 는 서버를 끈 뒤 복사하는 게 안전해요.
 
 ## 무엇이 어떻게 떠 있나
