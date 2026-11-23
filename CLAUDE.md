@@ -1,22 +1,31 @@
 # lab.remote
 
-원격 GPU 서버에서 AI 연구(논문 읽기 → 실험 설계 → 실행 → 기록)를 돌리는 개인용 시스템.
+데스크톱(GPU)에서 AI 연구를 돌리고, 어디서든 브라우저로 보고 · 실행하고 · 알림 받는 개인용 도구.
+지금은 v3 로 옮기는 중이에요. 기준 문서는 `docs/v3/PLAN.md` 예요.
 
 ## 먼저 읽을 것
-- `docs/HANDOFF.md` — 화면 목록, 디자인 토큰, 기술 스택, 구현 순서
-- `docs/operations.md` — **실측 결과와 보안 경계.** 추측이 아니라 돌려 본 것만 적혀 있어요
-- `docs/SETUP.md` — 사람이 직접 해야 하는 설정 (셸 함수·conda 환경·웹훅)
-- `docs/spec.md` — 기능 사양 (최종본)
-- `docs/mockups/*.dc.html` — 화면별 목업. 구조와 동작의 기준
+- `docs/v3/PLAN.md` — v3 원칙, 구조, 화면별 요구, 진행 단계. **다른 문서와 부딪히면 이게 우선**
+- `docs/v3/mockups/` — 화면별 목업(구조·문구·동작의 기준). 안내는 `README.md`
+- `docs/v1/HANDOFF.md` 1장·3장 — 목업 파일 읽는 법, 디자인 토큰
+- `docs/v1/` 의 나머지 — v1 보관용. 참고만 하고 규칙으로 따르지 않기
+
+## 원칙 (자세한 건 PLAN.md 1장)
+- 시스템 설정은 최소한만: `~/.claude`, `.bashrc`, `.condarc`, cron, systemd 타이머, 연구 프로젝트의 `.gitignore` 는 건드리지 않기. lab.remote 가 만드는 건 conda 환경 `labremote`, (자동 시작 켤 때만) 사용자 서비스 + linger, 프로젝트마다 `.labremote/` 뿐
+- Claude Code 는 Python `claude-agent-sdk` 로 사용자가 로그인해 둔 것을 불러 쓰기. 훅 설치 없음. `--dangerously-skip-permissions` 금지
+- AI 자동화 없음: 연구 루프 · 실험 큐 · 연쇄 실행 없음. 예약은 사람이 시각으로 건 것만
+- 서버는 `127.0.0.1` 에만, nice 19, GPU 사용 안 함
+- 에이전트 관련 이름은 Claude 전용으로 짓지 않기(나중에 Codex 연결 부품을 붙일 수 있게)
 
 ## 규칙
-- UI 문구는 한국어, 해요체. 버튼은 짧은 동사.
-- 색·간격·글자 크기는 `web/src/styles/tokens.css` 의 토큰만 사용.
+- UI 문구는 한국어, 해요체. 버튼은 짧은 동사. 메뉴 · 보기 이름(Dashboard, Projects, Papers, Inbox, Overview, Agents, Schedule, List, Graph, IDE, ADE, Scenario)만 영어.
+- 색 · 간격 · 글자 크기는 `web/src/styles/tokens.css` 의 토큰만 사용.
 - 목업에 있는 가짜 데이터는 `web/src/api/mock/` 로 옮기고 화면 코드에 하드코딩하지 않기.
-- 확인 못 한 값은 지어내지 말고 `[대괄호 자리표시]` 로 남기기.
-- API 키·웹훅 URL은 환경 변수로, `.env` 는 커밋하지 않기.
-- 권한 관련 잠금 3가지(프로젝트 폴더 밖 쓰기, 실행 중 종료 조건·Evaluation.md 수정, 이전 실험 폴더 덮어쓰기)는 UI가 아니라 Hooks에서 강제.
+- 확인 못 한 값은 지어내지 말고 `[확인 필요]` 로 남기고 알리기.
+- 비밀값: Discord 웹훅 주소는 lab.remote 데이터 폴더에 권한 600 으로만 저장하고 로그 · 화면 · 에러에 원문을 찍지 않기. `.env` 와 그 파일은 커밋하지 않고 읽거나 출력하지도 않기.
+- 지우기 · 되돌릴 수 없는 작업은 먼저 묻기. push 는 사람이 요청할 때만.
 
 ## 명령
+- 서버 환경: `conda activate labremote`
 - 프론트엔드: `cd web && npm run dev`
-- 백엔드: `cd server && uvicorn app.main:app --reload`
+- 백엔드: `cd server && uvicorn app.main:app --reload` (`app/main.py` 는 v3 1단계에서 생겨요)
+- 테스트: `cd server && pytest` / `cd web && npm run typecheck && npm run build`
