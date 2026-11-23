@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueries } from '@tanstack/react-query'
 import {
@@ -10,6 +10,7 @@ import {
 import type { Paper, PaperSummary, ReadStatus } from '@/api/types'
 import { ErrorState, LoadingState, Sheet, StatusPill, Toast } from '@/components'
 import { useToast } from '@/lib/useToast'
+import { LIVE_HEAD, useLibraryAsk } from '../papers/AskLibrary'
 import s from './Mobile.module.css'
 
 const FILTERS: Array<{ id: 'recent' | ReadStatus; label: string }> = [
@@ -34,6 +35,8 @@ export function MobilePapers() {
   const [search, setSearch] = useState('')
   const [openId, setOpenId] = useState<string | null>(routeId ?? null)
   const [askOpen, setAskOpen] = useState(false)
+  const [askDraft, setAskDraft] = useState('')
+  const ask = useLibraryAsk()
 
   if (papers.isPending) return <LoadingState label="논문을 불러오는 중이에요…" />
   if (papers.isError || !papers.data) {
@@ -143,16 +146,56 @@ export function MobilePapers() {
       {/* 라이브러리에 묻기 */}
       <Sheet
         open={askOpen}
-        title={chat.data?.title ?? '라이브러리에 묻기'}
+        title={ask.live ? LIVE_HEAD.title : (chat.data?.title ?? '라이브러리에 묻기')}
         onClose={() => setAskOpen(false)}
       >
-        <p className={s.sheetText}>{chat.data?.caption}</p>
-        {(chat.data?.messages ?? []).map((m, i) => (
-          <p key={i} className={s.sheetText}>
+        <p className={s.sheetText}>{ask.live ? LIVE_HEAD.caption : chat.data?.caption}</p>
+        {ask.live && ask.log.length === 0 && (
+          <span className={s.sheetNote}>보내기를 누를 때만 Claude에게 가요. 답은 1분쯤 걸릴 수 있어요.</span>
+        )}
+        {(ask.live ? ask.log : (chat.data?.messages ?? [])).map((m, i) => (
+          <p key={i} className={m.role === 'user' ? s.askUser : s.sheetText}>
             {m.text}
+            {m.sources.map((src, j) => (
+              <Fragment key={src.paperId}>
+                {j === 0 ? ' ' : ' · '}
+                <button
+                  type="button"
+                  className={s.askSource}
+                  onClick={() => {
+                    setAskOpen(false)
+                    setOpenId(src.paperId)
+                  }}
+                >
+                  {src.label}
+                </button>
+              </Fragment>
+            ))}
           </p>
         ))}
-        <span className={s.sheetNote}>목업이라 실제 답변은 연결돼 있지 않아요.</span>
+        {ask.busy && <span className={s.sheetNote}>vault를 읽는 중이에요…</span>}
+        {ask.live ? (
+          <form
+            className={s.askRow}
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (ask.send(askDraft)) setAskDraft('')
+            }}
+          >
+            <input
+              className={s.search}
+              value={askDraft}
+              onChange={(e) => setAskDraft(e.target.value)}
+              placeholder="질문하기"
+              aria-label="라이브러리에 질문하기"
+            />
+            <button type="submit" className={s.askSend} disabled={ask.busy || !askDraft.trim()}>
+              {ask.busy ? '답하는 중…' : '보내기'}
+            </button>
+          </form>
+        ) : (
+          <span className={s.sheetNote}>서버에 연결되면 vault를 읽고 답해요.</span>
+        )}
       </Sheet>
 
       <Toast message={toast.message} placement="bottom" />

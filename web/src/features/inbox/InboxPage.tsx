@@ -108,6 +108,17 @@ function actions(it: InboxItem): { primary?: [string, string, boolean]; secondar
     return { secondary: [base, '로그 보기'] }
   }
   if (it.kind === 'sys') return { secondary: ['/dashboard', '자원 보기'] }
+  if (it.kind === 'sched') {
+    // 예약이 연 세션 · 실행으로 바로, 아니면 Schedule 보기
+    const p2 = p && it.ref.session
+      ? ([`/projects/${encodeURIComponent(p)}/ade?session=${encodeURIComponent(it.ref.session)}`, '세션 보기'] as [string, string])
+      : p && r
+        ? ([`/projects/${encodeURIComponent(p)}?tab=work&run=${encodeURIComponent(r)}`, '로그 보기'] as [string, string])
+        : null
+    return p2
+      ? { primary: [p2[0], p2[1], false], secondary: ['/dashboard?view=schedule', 'Schedule 보기'] }
+      : { secondary: ['/dashboard?view=schedule', 'Schedule 보기'] }
+  }
   return {}
 }
 

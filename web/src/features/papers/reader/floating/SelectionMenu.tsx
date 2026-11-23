@@ -142,9 +142,7 @@ export function TranslatePopover({
       <span className={s.popTitle}>번역</span>
       <span className={s.popSource}>{source}</span>
       <span className={s.popText}>{translation ?? '[번역 결과]'}</span>
-      <span className={s.previewNote}>
-        {note ?? '목업이라 미리 써 둔 구절만 번역돼요.'}
-      </span>
+      {note && <span className={s.previewNote}>{note}</span>}
       <div className={s.popActions}>
         <Button size="sm" onClick={onClose}>
           닫기

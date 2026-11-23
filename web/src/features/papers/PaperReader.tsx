@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { ApiError } from '@/api/client'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   paperReaderQuery,
   paperSummariesQuery,
@@ -102,6 +102,7 @@ export default function PaperReader() {
   } | null>(null)
 
   const toast = useToast()
+  const navigate = useNavigate()
   const overlays = useReaderOverlays()
   /** 마우스가 올라간 설명 대상 — E 키로 열어요 */
   const hovered = useRef<{ key: string; anchor: SelectionAnchor } | null>(null)
@@ -255,7 +256,7 @@ export default function PaperReader() {
             />
           </div>
           <p className={s.noteHint}>
-            리더 본문(PDF · arXiv HTML)과 AI 요약은 아직 준비 중이에요. 지금은 vault 노트를 읽기만 해요 · {paper.path}
+            PDF가 없어서 vault 노트만 보여요 · {paper.path}. arXiv 링크로 추가한 논문은 PDF · HTML을 같이 받아서 리더로 열려요.
           </p>
           {paper.hasPdf && (
             <a href={paperPdfHref(id)} target="_blank" rel="noreferrer" className={s.graphLink}>
@@ -403,7 +404,14 @@ export default function PaperReader() {
         setActiveId(sectionId)
         requestJump({ sectionId })
       }}
-      onOpenPaper={(title) => toast.show(`${title} — 라이브러리에서 열어요`)}
+      onOpenPaper={(title) => {
+        // 라이브러리에 있으면 그 논문 리더로, 없으면 라이브러리 검색으로
+        const t = title.trim().toLowerCase()
+        const hit = papers.data?.find((p) => p.title.trim().toLowerCase() === t)
+          ?? papers.data?.find((p) => p.title.toLowerCase().includes(t) || t.includes(p.title.toLowerCase()))
+        if (hit) navigate(`/papers/${encodeURIComponent(hit.id)}`)
+        else toast.show(`${title} — 라이브러리에 없어요`)
+      }}
       onSaveNote={(body) => {
         const pop = overlays.popover
         const sid = pop?.sectionId ?? activeId ?? data.sections[0].id

@@ -15,6 +15,7 @@ import { Composer } from './Composer'
 import type { ComposerSettings } from './Composer'
 import { RunStatePill } from '../projects/RunsTab'
 import { ScenarioView } from '../scenario/ScenarioView'
+import { GitPanel } from '../ide/IdePanels'
 import s from './Agents.module.css'
 
 /** ADE — docs/v3/mockups/ADE.dc.html. 세션 목록 · 채팅 · Scenario/변경/실행 */
@@ -111,24 +112,8 @@ export default function AdePage() {
             />
           )}
           {side === 'explorer' && <Explorer project={project} tree={tree} branch={branch} onOpen={openDiff} />}
-          {side === 'git' && (
-            <div className={s.panel}>
-              <div className={s.panelHead}>
-                <span className={s.panelTitle}>소스 제어</span>
-              </div>
-              <div className={s.muted}>
-                {branch || '(브랜치 없음)'} · 커밋 안 한 변경 {changes.length}
-              </div>
-              <div className={s.muted}>커밋 · PR · main에 합치기는 4단계(소스 제어)에서 붙어요.</div>
-              <span className={s.groupLabel}>변경 내용 · {changes.length}</span>
-              {changes.map((c) => (
-                <button key={c.path} type="button" className={s.fileBtn} onClick={() => openDiff(c.path)}>
-                  <span className={s.mono}>{c.path}</span>
-                  <span className={s.fileMark}>{c.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
+          {/* IDE와 같은 소스 제어 — 커밋 · PR · main에 합치기 */}
+          {side === 'git' && <GitPanel project={project} tree={tree} onDiff={openDiff} />}
         </aside>
         {sideOpen && <Resizer handle={sidePane.resizerProps} label="사이드바 너비 조절" />}
 

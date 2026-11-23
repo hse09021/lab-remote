@@ -17,24 +17,21 @@ interface Props {
  * 오른쪽 아래 떠 있는 "라이브러리에 묻기".
  * 답변의 인용마다 근거 링크를 붙여요 (docs/spec.md II-1).
  */
-const LIVE_HEAD = {
+export const LIVE_HEAD = {
   title: '라이브러리에 묻기',
   caption: 'vault의 논문 노트를 읽고 답해요 · 읽기만 해요 · 대화는 저장하지 않아요',
 }
 
-export function AskLibrary({ chat, offsetRight = 0 }: Props) {
-  const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState('')
-  // 28px(기본 여백) + 패널 폭
-  const shift = { right: 28 + offsetRight }
-
-  // 실제 API — 이 창 안에서만 이어지는 대화
+/**
+ * 라이브러리에 묻기 — 실제 API 대화 상태. PC 떠 있는 창과 휴대폰 시트가 같이 써요.
+ * 대화는 이 화면 안에서만 이어지고 저장하지 않아요.
+ */
+export function useLibraryAsk() {
   const live = askIsLive()
   const [log, setLog] = useState<LibraryChatMessage[]>([])
   const [jobId, setJobId] = useState<string | null>(null)
   const ask = useAskLibrary()
   const job = useQuery(askJobQuery(jobId))
-  const logRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const d = job.data
@@ -44,17 +41,13 @@ export function AskLibrary({ chat, offsetRight = 0 }: Props) {
     setJobId(null)
   }, [job.data])
 
-  useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
-  }, [log.length, jobId])
-
   const busy = ask.isPending || !!jobId
-  const send = () => {
+  /** 보냈으면 true — 입력칸을 비울 때 써요 */
+  const send = (draft: string) => {
     const q = draft.trim()
-    if (!q || busy) return
+    if (!q || busy || !live) return false
     const history = log.map((m) => ({ role: m.role, text: m.text }))
     setLog((old) => [...old, { role: 'user', text: q, sources: [] }])
-    setDraft('')
     ask.mutate(
       { question: q, history },
       {
@@ -63,6 +56,26 @@ export function AskLibrary({ chat, offsetRight = 0 }: Props) {
           setLog((old) => [...old, { role: 'assistant', text: e instanceof ApiError ? e.message : String(e), sources: [] }]),
       },
     )
+    return true
+  }
+  return { live, log, busy, send }
+}
+
+export function AskLibrary({ chat, offsetRight = 0 }: Props) {
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState('')
+  // 28px(기본 여백) + 패널 폭
+  const shift = { right: 28 + offsetRight }
+
+  const { live, log, busy, send: sendQ } = useLibraryAsk()
+  const logRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
+  }, [log.length, busy])
+
+  const send = () => {
+    if (sendQ(draft)) setDraft('')
   }
 
   const head = live ? LIVE_HEAD : chat

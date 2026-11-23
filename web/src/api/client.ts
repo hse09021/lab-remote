@@ -20,8 +20,8 @@ const LIVE_PREFIXES = ['/health', '/projects', '/system', '/inbox', '/notify', '
 const MUTATION_HEADER = { 'X-Lab-Remote': '1' }
 
 /**
- * 일부만 서버로 가는 경로 — Papers는 vault로 만드는 목록 · 읽음 상태 · 그래프만 실제예요 (8단계).
- * 리더 · AI 요약 · 라이브러리 대화 · 참고문헌 보관은 아직 mock이에요.
+ * 일부만 서버로 가는 경로 — Papers는 vault로 만들어요. 미리 만든 리더 데이터(`/papers/{id}/reader`)와
+ * 목업 대화(`/papers/chat`)만 mock이고, vault 논문의 리더는 PDF · arXiv HTML로 화면에서 만들어요.
  */
 const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers$/, ['GET']],

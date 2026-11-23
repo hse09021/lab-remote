@@ -24,8 +24,8 @@ export const paperSummariesQuery = () =>
   })
 
 /**
- * 리더 한 편의 구조·좌표. 섹션·하이라이트·참고문헌이 들어 있어요.
- * 본문(PDF·HTML)은 다음 단계에서 따로 불러와요.
+ * 미리 만든 리더 데이터(목업 논문) — 섹션·하이라이트·참고문헌. vault 논문은 404라
+ * 리더가 PDF · arXiv HTML로 직접 만들어요 (reader/vaultReader.ts).
  */
 export const paperReaderQuery = (paperId: string) =>
   queryOptions({

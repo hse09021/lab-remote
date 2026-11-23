@@ -141,7 +141,7 @@ function PapersList() {
     .map(([id]) => id)
   const selectedCount = selectedIds.length
 
-  // 요약 — AI 요약(아직 mock)이 있으면 그것, 없으면 vault 노트 본문(읽기만)
+  // 요약 — AI 요약이 있으면 그것, 없으면 vault 노트 본문(읽기만)
   const hasSummary = (id: string) => Boolean(summaries.data?.[id] || notes.data?.[id])
   // 요약이 있는 논문만 이전/다음으로 돌아요
   const order = (papers.data ?? []).filter((p) => hasSummary(p.id)).map((p) => p.id)
@@ -581,7 +581,23 @@ function PapersList() {
                 )}
               </div>
               <pre className={s.noteBody}>{noteBody}</pre>
-              <span className={s.paperMeta}>vault 노트를 읽기만 해요. 고치려면 Obsidian에서 고쳐 주세요. AI 요약은 아직 준비 중이에요.</span>
+              <span className={s.paperMeta}>vault 노트를 읽기만 해요. 고치려면 Obsidian에서 고쳐 주세요.</span>
+              {live && openNote.summaryState !== 'running' && (
+                <Button
+                  variant="outline"
+                  size="md"
+                  disabled={makeSummary.isPending}
+                  onClick={() =>
+                    makeSummary.mutate(openNote.id, {
+                      onSuccess: () => setAdded({ text: `${openNote.title} 요약을 만드는 중이에요 · 1~2분 걸려요`, tone: 'ok' }),
+                      onError: onFail,
+                    })
+                  }
+                >
+                  AI 요약 만들기
+                </Button>
+              )}
+              {openNote.summaryState === 'running' && <span className={s.paperMeta}>Claude가 요약을 만드는 중이에요…</span>}
             </div>
           </aside>
         </div>
