@@ -1,4 +1,4 @@
-import type { Paper, Permission, PermissionMode, ReadStatus } from './types'
+import type { Paper, ReadStatus } from './types'
 
 /**
  * 목업 모드에서 "내가 바꾼 것"을 담아 두는 모듈 단위 저장소예요.
@@ -38,12 +38,8 @@ export interface MockState {
   annotations: Record<string, UserAnnotation[]>
   /** 논문별 요약 MD 수정본 */
   summaryMd: Record<string, string>
-  /** 권한 설정 저장값 */
-  permissions: { mode: PermissionMode; overrides: Record<string, Permission> } | null
   /** 수치 불일치에서 고른 재현 목표 */
   discrepancy: Record<string, string>
-  /** 실험 설계 초안에 직접 넣은 값 (논문별 · 항목 key 별) */
-  designValues: Record<string, Record<string, string>>
   /** 모바일에서 정지한 실험 id */
   stoppedExperiments: string[]
   /** 루프 일시정지 */
@@ -65,9 +61,7 @@ const empty = (): MockState => ({
   savedPapers: [],
   annotations: {},
   summaryMd: {},
-  permissions: null,
   discrepancy: {},
-  designValues: {},
   stoppedExperiments: [],
   loopPaused: false,
   fileOps: { created: [], renamed: {}, deleted: [] },
@@ -133,11 +127,9 @@ export function overlaySummaryMd(paperId: string, markdown: string): string {
 export const readAnnotations = (paperId: string): UserAnnotation[] =>
   state.annotations[paperId] ?? []
 
-export const readPermissions = () => state.permissions
 
 export const readDiscrepancy = (paperId: string) => state.discrepancy[paperId] ?? null
 
-export const readDesignValues = (paperId: string) => state.designValues[paperId] ?? null
 
 /* ── 쓰기 ─────────────────────────────────────────────────── */
 
@@ -223,10 +215,6 @@ export function setSummaryMd(paperId: string, markdown: string | null) {
   })
 }
 
-export function setPermissions(value: MockState['permissions']) {
-  update((prev) => ({ ...prev, permissions: value }))
-}
-
 export function setDiscrepancy(paperId: string, target: string) {
   update((prev) => ({ ...prev, discrepancy: { ...prev.discrepancy, [paperId]: target } }))
 }
@@ -302,10 +290,3 @@ export function deleteNode(path: string) {
 
 export const readStopped = () => state.stoppedExperiments
 export const readLoopPaused = () => state.loopPaused
-
-export function setDesignValues(paperId: string, values: Record<string, string>) {
-  update((prev) => ({
-    ...prev,
-    designValues: { ...prev.designValues, [paperId]: values },
-  }))
-}

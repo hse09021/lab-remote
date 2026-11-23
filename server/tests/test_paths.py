@@ -131,11 +131,3 @@ def test_match_globs_는_하나라도_맞으면_참():
     pats = ["docs/Evaluation.md", "specifications/Config.yaml"]
     assert paths.match_globs("specifications/Config.yaml", pats)
     assert not paths.match_globs("specifications/environment.yml", pats)
-
-
-def test_자리표시_패턴은_실제_경로와_매치되지_않는다():
-    """`[PDF 확인]` 이 정책 파일에 남아 있어도 조용히 무언가를 허용하지 않는다."""
-    from app.loop_layout import PENDING
-
-    for rel in ("State.yaml", "state/State.yaml", "PDF 확인", "docs/x.md"):
-        assert not paths.match_glob(rel, PENDING)

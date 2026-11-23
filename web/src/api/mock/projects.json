@@ -20,22 +20,11 @@
       "to": "/experiments",
       "icon": "grid",
       "badge": null
-    },
-    {
-      "id": "permissions",
-      "label": "권한 설정",
-      "to": "/experiments/permissions",
-      "icon": "shield",
-      "badge": "1"
     }
   ],
   "integrations": [
     {
       "label": "Claude Code · Remote Control",
-      "ok": true
-    },
-    {
-      "label": "Hooks 활성",
       "ok": true
     },
     {

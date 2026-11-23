@@ -11,7 +11,6 @@ import s from './ProjectSidebar.module.css'
  */
 const FALLBACK_VIEWS = [
   { id: 'dashboard', label: '대시보드', to: '/experiments', icon: 'grid' as const },
-  { id: 'permissions', label: '권한 설정', to: '/experiments/permissions', icon: 'shield' as const },
 ]
 
 interface Props {
@@ -23,7 +22,7 @@ interface Props {
 }
 
 /**
- * 실험 화면(대시보드·권한 설정)이 함께 쓰는 왼쪽 사이드바.
+ * 실험 화면이 쓰는 왼쪽 사이드바.
  * 크기 조절은 usePaneResize + Resizer가 맡고, 접기 토글만 여기로 받아요.
  */
 export function ProjectSidebar({ style, onCollapse, data, isError = false }: Props) {

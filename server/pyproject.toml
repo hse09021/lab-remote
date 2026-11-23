@@ -5,16 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "lab-remote-server"
 version = "0.1.0"
-description = "lab.remote 백엔드 — 프로젝트 생성기와 Claude Code 권한 Hooks"
+description = "lab.remote 서버 — 데스크톱에서 연구를 보고·실행하고·알림 받는 개인용 도구"
 requires-python = ">=3.11"
-dependencies = [
-  # 생성기 전용. 훅 경로에서는 import 금지 (tests/test_stdlib_only.py 로 강제)
-  "pyyaml>=6",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
-api = ["fastapi", "uvicorn[standard]"]   # ③ 단계에서 사용
+api = ["fastapi", "uvicorn[standard]"]   # v3 1단계 서버 (labremote serve)
 
 [project.scripts]
 labremote = "app.cli:main"

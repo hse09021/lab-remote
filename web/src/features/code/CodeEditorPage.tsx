@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQueries } from '@tanstack/react-query'
 import clsx from 'clsx'
 import {
   codeChatQuery,
   codeFilesQuery,
   commitsQuery,
   fileTreeQuery,
-  permissionModesQuery,
   runQuery,
   terminalQuery,
   useCreateNode,
@@ -84,7 +83,6 @@ export default function CodeEditorPage() {
   const createNode = useCreateNode()
   const renameNode = useRenameNode()
   const deleteNode = useDeleteNode()
-  const modes = useQuery(permissionModesQuery())
 
   const current = files.data?.find((f) => f.id === fileId) ?? files.data?.[0]
 
@@ -357,7 +355,6 @@ export default function CodeEditorPage() {
               <ChatPanel
                 style={chat.style}
                 chat={chatData.data}
-                modes={modes.data}
                 fileLabel={current?.label ?? ''}
                 attachment={chatAttachment}
                 onRemoveAttachment={() => setChatAttachment(null)}

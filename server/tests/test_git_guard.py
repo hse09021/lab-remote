@@ -322,22 +322,3 @@ def test_빈_훅_폴더가_server_data_아래다():
     assert folder.startswith(registry.data_dir())
     assert os.path.isdir(folder)
     assert os.listdir(folder) == []
-
-
-# --- 루프가 멈추나 -----------------------------------------------------------
-
-
-def test_루프가_멈추고_사람을_부른다(repo, conn, monkeypatch, project_root):
-    from app.orchestrator import loop as loop_mod
-    from app.orchestrator import runner_ctx
-    from app.store import loops as LP
-
-    ctx = runner_ctx.LoopCtx(project="hook-sandbox", root=repo, preset="full")
-    sent = []
-    monkeypatch.setattr(
-        loop_mod.notifier, "send", lambda *a, **k: sent.append(k) or {"ok": True}
-    )
-    loop_mod.guard_git(ctx, conn, G.GitRefused("filter.evil.clean 이 있어요"))
-
-    assert LP.ensure(conn, "hook-sandbox")["state"] == "blocked"
-    assert sent and ".git 설정이 위험해요" in sent[0]["title"]

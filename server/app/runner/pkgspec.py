@@ -1,17 +1,7 @@
-"""📦 설치 요청 검증 — **보안 경계다.**
+"""📦 설치할 패키지 목록 검증 — **이름과 버전만** 받는다.
 
-## 왜 이 파일이 있나
-
-S1 의 M3 에서 드러난 것: **Claude 의 Bash 로는 `pip install` 이 조용히
-실패한다.** conda 환경은 프로젝트 밖이라 샌드박스가 쓰기를 버리고,
-**프로그램에는 성공으로 보인다.** 사람이 승인해도 아무 일이 안 일어난다.
-
-그래서 설치는 **오케스트레이터가 샌드박스 밖에서** 한다. 그 말은 AI 가 쓴
-글자가 사용자 권한으로 도는 명령에 들어간다는 뜻이고, 그래서 여기가 경계다.
-
-## 무엇을 받나 — **이름과 버전만**
-
-`state/Install_request.json` (AI 가 쓴다):
+Conda 화면(7단계)에서 사람이 고른 패키지를 lab.remote 가 사용자 권한으로
+설치한다. 그래서 입력 칸에 들어간 글자가 명령에 섞이지 않게 여기서 막는다.
 
 ```json
 { "version": 1,
@@ -21,14 +11,13 @@ S1 의 M3 에서 드러난 것: **Claude 의 Bash 로는 `pip install` 이 조�
 
 받지 않는 것: 명령 문자열 · URL · 저장소 주소 · 로컬 경로 · 인덱스 옵션 ·
 `-e` · 파일 이름. 하나라도 섞이면 **전체를 거부**한다 — 일부만 걸러서
-"고쳐 준" 요청을 돌리면 사람이 승인한 것과 다른 게 설치된다.
+"고쳐 준" 목록을 설치하면 사람이 본 것과 다른 게 설치된다.
 
 ## 왜 `--only-binary=:all:` 이 기본인가
 
-소스 배포(sdist)는 설치할 때 `setup.py` 를 **실행**한다. 그건 샌드박스 밖
-임의 코드 실행이다. 휠(wheel)은 풀어 넣기만 한다. 그래서 기본은 휠만이고,
-소스가 꼭 필요하면 요청에 `allowSource: true` 를 적고 **사람이
-`--allow-source` 로 따로 승인**해야 한다 (두 군데가 맞아야 한다).
+소스 배포(sdist)는 설치할 때 `setup.py` 를 **실행**한다. 휠은 풀어 넣기만
+한다. 그래서 기본은 휠만이고, 소스가 필요하면 `allowSource: true` 를 따로
+켜야 한다.
 """
 
 from __future__ import annotations
@@ -71,8 +60,8 @@ EXTRAS_RE = re.compile(r"^[a-z0-9][a-z0-9,_-]{0,63}$")
 #: 설치하면 안 되는 것.
 #:
 #: `pip`·`setuptools`·`wheel` 은 **설치 도구 자신**이다 — 바꿔치기하면 다음
-#: 설치가 임의 코드가 된다. `conda` 는 환경 자체를 고친다. `claude` 는
-#: `policy.bash.denyCommands` 에 이미 있는 이유와 같다(자기 승인).
+#: 설치가 임의 코드가 된다. `conda` 는 환경 자체를 고친다. `claude`·
+#: `anthropic` 은 사용자가 설치해 둔 Claude Code 를 바꿔치기하지 않으려는 것이다.
 FORBIDDEN_NAMES = frozenset(
     {"pip", "setuptools", "wheel", "pkg-resources", "conda", "mamba", "micromamba",
      "claude", "claude-code", "anthropic"}

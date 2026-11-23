@@ -5,7 +5,6 @@ import type {
   CodeFile,
   Commit,
   FileNode,
-  PermissionsPayload,
   RunPayload,
   TerminalPayload,
 } from './types'
@@ -44,17 +43,6 @@ export const runQuery = () =>
   queryOptions({
     queryKey: ['code', 'run'],
     queryFn: () => get<RunPayload>('/code/run'),
-  })
-
-/**
- * 채팅 입력창의 권한 프리셋은 권한 설정 화면과 같은 데이터를 써요.
- * 같은 queryKey라 두 화면이 캐시를 공유해요.
- */
-export const permissionModesQuery = () =>
-  queryOptions({
-    queryKey: ['experiments', 'permissions'],
-    queryFn: () => get<PermissionsPayload>('/experiments/permissions'),
-    select: (d: PermissionsPayload) => d.modes,
   })
 
 /* ── 탐색기 파일 작업 ──────────────────────────────────────── */

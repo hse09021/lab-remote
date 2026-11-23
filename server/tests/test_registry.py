@@ -1,4 +1,4 @@
-"""레지스트리 시험. 훅이 "여기가 등록된 실험 프로젝트인가" 를 판정하는 근거."""
+"""등록한 프로젝트 목록과 데이터 폴더 위치."""
 
 import os
 
@@ -69,18 +69,14 @@ def test_좋은_이름은_통과(name):
 
 def test_저장_경로가_데이터_폴더_안에_있다():
     data = registry.data_dir()
-    for path in (
-        registry.policy_path("hook-sandbox"),
-        registry.runstate_path("hook-sandbox"),
-        registry.pending_dir("hook-sandbox"),
-        registry.projects_file(),
-    ):
-        assert os.path.commonpath([data, path]) == data
+    assert os.path.commonpath([data, registry.projects_file()]) == data
 
 
-def test_나쁜_이름은_경로_함수에서도_막힌다():
-    with pytest.raises(registry.InvalidName):
-        registry.policy_path("../../../etc/passwd")
+def test_v1_상태_경로_함수는_없다():
+    """정책·실행 상태·승인 요청·허가 폴더는 v3 에서 빠졌다."""
+    for name in ("policy_path", "runstate_path", "pending_dir", "requests_dir",
+                 "grants_dir", "projects_root"):
+        assert not hasattr(registry, name), name
 
 
 def test_깨진_레지스트리는_빈_dict():
@@ -93,11 +89,6 @@ def test_원자적_쓰기_뒤에_임시_파일이_안_남는다(project_root):
     registry.register(project_root, "hook-sandbox")
     leftovers = [p for p in os.listdir(registry.data_dir()) if ".tmp." in p]
     assert leftovers == []
-
-
-def test_LAB_PROJECTS_DIR_를_따른다(monkeypatch, tmp_path):
-    monkeypatch.setenv("LAB_PROJECTS_DIR", str(tmp_path / "연구"))
-    assert registry.projects_root() == os.path.realpath(str(tmp_path / "연구"))
 
 
 def test_LAB_DATA_DIR_를_따른다(monkeypatch, tmp_path):

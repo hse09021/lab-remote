@@ -351,7 +351,6 @@ export function HtmlView({
           createPortal(
             <ConfigCard
               data={reader.extractedConfig}
-              paperId={reader.paperId}
               onJump={(sectionId) => scrollToSection(sectionId)}
             />,
             slots.config,

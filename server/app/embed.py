@@ -1,12 +1,8 @@
 """Discord 임베드 조립 — **표준 라이브러리만.**
 
-`app/notifier.py` 와 훅이 같은 모양을 쓰게 하려고 따로 뺐다. notifier 는
-SQLite 를 보지만 훅은 못 본다(`tests/test_stdlib_only.py`). 그래서 모양을
-만드는 부분만 여기 둔다.
-
-임베드로 보내는 이유는 하나다 — **훅이 쓴 사유를 자르지 않으려고.** 평문
-`content` 는 2000자 제한이라 ①에서 사유가 잘렸다. 임베드 필드는 1024자씩
-나눠 담을 수 있다.
+임베드로 보내는 이유는 하나다 — **긴 내용을 자르지 않으려고.** 평문 `content`
+는 2000자 제한이 있다. 임베드 필드는 1024자씩 나눠 담을 수 있고, 그래도
+넘치면 잘렸다는 표시를 꼭 남긴다.
 """
 
 from __future__ import annotations
@@ -19,11 +15,8 @@ COLORS = {
     "start": 0x4C6EF5,
     "done": 0x37B24D,
     "failure": 0xE03131,
-    "usage_limit": 0xF0B429,
     "driver": 0xE03131,
     "gpu": 0xF0B429,
-    "recovery": 0x37B24D,
-    "blocked": 0xE03131,
     "test": 0x868E96,
 }
 

@@ -4,7 +4,6 @@ import type {
   Dashboard,
   EventEntry,
   Experiment,
-  PermissionsPayload,
   ProjectsPayload,
 } from './types'
 
@@ -36,12 +35,6 @@ export const eventsQuery = () =>
   queryOptions({
     queryKey: ['experiments', 'events'],
     queryFn: () => get<EventEntry[]>('/experiments/events'),
-  })
-
-export const permissionsQuery = () =>
-  queryOptions({
-    queryKey: ['experiments', 'permissions'],
-    queryFn: () => get<PermissionsPayload>('/experiments/permissions'),
   })
 
 /**

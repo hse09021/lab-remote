@@ -1,17 +1,9 @@
 """Discord 알림 — 임베드 조립 · 종류별 채널 · 중복 제거 · 재시도.
 
-`app/notify.py` 와 역할이 다르다.
+`app/notify.py` 는 HTTP 한 번만 보낸다. 이 모듈은 DB(보낸 기록·쿨다운)와
+임베드 모양을 안다. 알림 종류는 `KINDS` 로 정해져 있고 문구는 한국어 해요체다.
 
-| | `notify.py` | `notifier.py` (이 모듈) |
-|---|---|---|
-| 훅 경로 | **O** — 최소 전송만 | X |
-| 아는 것 | 웹훅 주소와 HTTP | DB·쿨다운·임베드 모양 |
-
-②가 보내는 알림은 종류가 정해져 있다(`KINDS`). 문구는 **한국어 해요체**이고
-승인 알림에는 **훅이 쓴 사유를 전문으로** 싣는다 — ①의 숙제였다. 평문
-1900자 자르기 대신 임베드 필드로 보내서 사유가 안 잘리게 한다.
-
-**전송 실패가 큐를 멈추지 않는다.** 어떤 예외도 올리지 않고 결과 dict 만
+**전송 실패가 호출부를 멈추지 않는다.** 어떤 예외도 올리지 않고 결과 dict 만
 돌려준다.
 """
 
@@ -26,19 +18,16 @@ __all__ = ["KINDS", "COLORS", "build", "send", "subject_of"]
 
 #: 알림 종류. 쿨다운과 채널 라우팅의 열쇠이기도 하다.
 KINDS = (
-    "approval",  # 승인이 필요해요 — 사유 전문을 싣는다
-    "start",  # 실험을 시작했어요
-    "done",  # 실험이 끝났어요
-    "failure",  # 실패했어요
-    "usage_limit",  # 응답이 막혔어요 (추가 결제 없이 기다려요)
+    "approval",  # 답이 필요해요 (에이전트 승인 요청)
+    "start",  # 실행을 시작했어요
+    "done",  # 실행이 끝났어요
+    "failure",  # 실행이 실패했거나 끊겼어요
     "driver",  # GPU 드라이버 불일치
     "gpu",  # GPU 조회 상태가 바뀜
-    "recovery",  # 재부팅 뒤 복구했어요
-    "blocked",  # 같은 요청이 반복돼서 멈췄어요
     "test",  # labremote notify test
 )
 
-#: 임베드 왼쪽 띠 색은 `app/embed.py` 가 단일 출처다 — 훅도 같은 모양을 쓴다.
+#: 임베드 왼쪽 띠 색은 `app/embed.py` 가 단일 출처다.
 COLORS = embed.COLORS
 
 #: 5xx 재시도 간격(초). 429 는 `Retry-After` 를 따른다.
@@ -131,7 +120,9 @@ def _send(
         config.cooldown_sec(kind) if cooldown_sec is None else int(cooldown_sec)
     )
     key = N.dedupe_key(project, kind, subject, cooldown, now_ts=now_ts)
-    route = notify.webhook_url(kind)
+    # 🔑 주소가 아니라 **어느 채널인지 이름만** 남긴다. 웹훅 주소는 0600
+    # 파일에만 있어야 한다(PLAN 1.7) — DB 는 화면(Inbox)으로 나가는 곳이다.
+    route = config.route_label(kind)
     claimed = N.claim(
         conn, key, project=project or None, kind=kind, title=title, body=body, route=route
     )

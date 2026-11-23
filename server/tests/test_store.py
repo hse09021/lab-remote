@@ -12,59 +12,11 @@ import math
 import pytest
 
 from app.store import (
-    approvals as A,
-    commands as C,
     events as E,
-    experiments as X,
-    loops as L,
     metrics as M,
     notifications as N,
     resources as R,
-    usage as U,
 )
-
-
-# --- experiments -------------------------------------------------------------
-
-
-def test_실험을_넣고_고친다(conn):
-    X.upsert(conn, "p", "EXP-001", knob="lr=1e-4")
-    X.upsert(conn, "p", "EXP-001", state="running", branch="exp-001")
-    found = X.get(conn, "p", "EXP-001")
-    assert found["knob"] == "lr=1e-4"  # 준 칸만 고친다
-    assert found["state"] == "running"
-
-
-def test_없는_칸은_거절한다(conn):
-    with pytest.raises(ValueError):
-        X.upsert(conn, "p", "EXP-001", 비밀="x")
-
-
-def test_모르는_실험_상태는_거절한다(conn):
-    with pytest.raises(ValueError):
-        X.set_state(conn, "p", "EXP-001", "돌고있음")
-
-
-def test_끝난_실험에_끝낸_시각이_적힌다(conn):
-    X.set_state(conn, "p", "EXP-001", "running")
-    assert X.get(conn, "p", "EXP-001")["started_at"]
-    X.set_state(conn, "p", "EXP-001", "done")
-    assert X.get(conn, "p", "EXP-001")["ended_at"]
-
-
-def test_best_는_방향을_따른다(conn):
-    X.record_result(conn, "p", "EXP-001", metric_name="loss", metric_value=0.5)
-    X.record_result(conn, "p", "EXP-001", metric_name="loss", metric_value=0.9)
-    assert X.get(conn, "p", "EXP-001")["best_metric"] == 0.5
-    X.record_result(conn, "p", "EXP-002", metric_name="acc", metric_value=0.5, better="higher")
-    X.record_result(conn, "p", "EXP-002", metric_name="acc", metric_value=0.9, better="higher")
-    assert X.get(conn, "p", "EXP-002")["best_metric"] == 0.9
-
-
-def test_목록은_실험_번호_역순(conn):
-    for exp in ("EXP-001", "EXP-002"):
-        X.upsert(conn, "p", exp)
-    assert [e["exp_id"] for e in X.listing(conn, "p")] == ["EXP-002", "EXP-001"]
 
 
 # --- metrics -----------------------------------------------------------------
@@ -127,45 +79,6 @@ def test_모르는_tone_은_거절한다(conn):
         E.add(conn, "p", "loop", "x", tone="무지개")
 
 
-# --- approvals ---------------------------------------------------------------
-
-
-def test_승인_요청을_올리고_결정한다(conn):
-    A.open_request(conn, "p", "toolu_1", tool="Bash", action_key="pkg", request="pip install peft")
-    assert [a["request_id"] for a in A.pending(conn, "p")] == ["toolu_1"]
-    decided = A.decide(conn, "p", "toolu_1", "approved", grant_id="g-1")
-    assert decided["state"] == "approved" and decided["grant_id"] == "g-1"
-    assert A.pending(conn, "p") == []
-
-
-def test_거울을_또_불러도_횟수가_안_올라간다(conn):
-    """⚠ 전에는 올라갔다. 그래서 `sync` 를 부를 때마다 횟수가 늘어 **한 번의
-    거절이 3회**가 됐다(S9 e2e 가 잡았다). 상한이 2라 정상 요청이 막혔다.
-
-    진짜 재시도는 `bump()` 로 센다.
-    """
-    A.open_request(conn, "p", "toolu_1", tool="Bash", action_key="pkg")
-    again = A.open_request(conn, "p", "toolu_1", tool="Bash", action_key="pkg")
-    assert again["attempts"] == 1
-    assert len(A.pending(conn, "p")) == 1
-
-
-def test_반복_횟수를_따로_올릴_수_있다(conn):
-    A.open_request(conn, "p", "toolu_1")
-    assert A.bump(conn, "p", "toolu_1") == 2
-
-
-def test_모르는_승인_상태는_거절한다(conn):
-    A.open_request(conn, "p", "toolu_1")
-    with pytest.raises(ValueError):
-        A.decide(conn, "p", "toolu_1", "그냥통과")
-
-
-def test_없는_요청은_결정할_수_없다(conn):
-    with pytest.raises(ValueError):
-        A.decide(conn, "p", "없는요청", "approved")
-
-
 # --- notifications -----------------------------------------------------------
 
 
@@ -208,28 +121,6 @@ def test_보냈는지_실패했는지_적는다(conn):
     assert failed["state"] == "failed" and failed["error"] == "그물이 없어요"
 
 
-# --- commands ----------------------------------------------------------------
-
-
-def test_웹이_보낸_명령을_하나씩_집어간다(conn):
-    first = C.push(conn, "pause_loop", project="p")
-    C.push(conn, "resume_loop", project="p")
-    taken = C.take(conn)
-    assert taken["id"] == first and taken["state"] == "taken"
-    assert len(C.pending(conn)) == 1
-    C.done(conn, first, result={"ok": True})
-    assert C.get(conn, first)["result"] == {"ok": True}
-
-
-def test_모르는_명령은_받지_않는다(conn):
-    with pytest.raises(ValueError):
-        C.push(conn, "rm -rf /")
-
-
-def test_집어갈_게_없으면_None(conn):
-    assert C.take(conn) is None
-
-
 # --- resources ---------------------------------------------------------------
 
 
@@ -252,51 +143,3 @@ def test_오래된_표본은_버린다(conn):
         R.add(conn, gpu_available=True, gpu_util=float(index))
     assert R.prune(conn, keep=3) == 7
     assert len(R.recent(conn)) == 3
-
-
-# --- loop_state --------------------------------------------------------------
-
-
-def test_루프_상태를_만들고_바꾼다(conn):
-    assert L.ensure(conn, "p")["state"] == "idle"
-    assert L.set_state(conn, "p", "running", current_job_id=3)["current_job_id"] == 3
-    assert L.bump_loop(conn, "p") == 1
-    assert L.bump_loop(conn, "p") == 2
-
-
-def test_모르는_루프_상태는_거절한다(conn):
-    with pytest.raises(ValueError):
-        L.set_state(conn, "p", "열심히돌고있음")
-
-
-def test_멈추고_다시_돌린다(conn):
-    paused = L.pause(conn, "p", reason="사용량 한도를 기다려요", until="2026-11-04T12:00:00+09:00")
-    assert paused["paused"] == 1 and "한도" in paused["paused_reason"]
-    resumed = L.resume(conn, "p")
-    assert resumed["paused"] == 0 and resumed["paused_reason"] is None
-
-
-# --- usage_limits ------------------------------------------------------------
-
-
-def test_실패_원문을_그대로_보관한다(conn):
-    """패턴을 코드에 박지 않는다. 나중에 이 원문으로 한도를 구분한다."""
-    raw = "Claude usage limit reached. 자세한 문구는 실측 전이에요." * 20
-    usage_id = U.record(conn, project="p", raw=raw, exit_code=1)
-    kept = U.latest(conn, "p")
-    assert kept["raw"] == raw  # 자르지 않는다
-    assert kept["exit_code"] == 1
-    assert U.open_wait(conn, "p")["id"] == usage_id
-
-
-def test_풀리면_대기가_닫힌다(conn):
-    usage_id = U.record(conn, project="p", raw="막힘")
-    U.mark_resumed(conn, usage_id)
-    assert U.open_wait(conn, "p") is None
-
-
-def test_대기_알림은_한_번만(conn):
-    usage_id = U.record(conn, project="p", raw="막힘")
-    assert U.open_wait(conn, "p")["notified_at"] is None
-    U.mark_notified(conn, usage_id)
-    assert U.open_wait(conn, "p")["notified_at"]

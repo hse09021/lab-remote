@@ -1,3 +1,5 @@
+> **v1 (보관)** — lab.remote v3 의 기준은 `docs/v3/PLAN.md` 예요. 이 문서는 참고용으로 남겨 둔 v1 문서이고, 부딪히면 PLAN.md 를 따라요.
+
 ## I. 논문 분석 및 요약
 기본적으로 Moonlight AI의 방식과 유사한 방향으로 기능을 제작할 예정
 https://www.themoonlight.io/ko/features

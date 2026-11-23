@@ -1,197 +1,91 @@
-"""학습 프로세스를 띄우고, 끝까지 지켜보고, 정리한다.
+"""실행 프로세스의 기본 부품 — cgroup 분리, 생존 판정, 그룹 종료, 종료코드 기록.
 
-### 왜 `subprocess` + 프로세스 그룹인가
+v3 의 실행(`labremote run`)은 `systemd-run --user --scope` + tmux + 로그
+파일로 돈다(docs/v3/PLAN.md 4.1). 실행을 띄우는 쪽은 2단계에서 그 모양으로
+새로 만들고, 여기에는 그대로 다시 쓸 부품만 남겼다.
 
-| 안 | 평가 |
-|---|---|
-| **`Popen(..., start_new_session=True)`** | 의존성 0, 시험하기 쉽다. 종료는 `killpg` 라 DataLoader worker 같은 **손자까지** 정리된다 |
+### 왜 `systemd-run --user --scope` 인가
 
-> ⚠ **`start_new_session=True` 는 cgroup 을 바꾸지 않습니다** (실측
-> 2026-11-05). 세션 ID 는 떨어지지만(411635 ≠ 411632) cgroup 은 그대로라
-> **오케스트레이터 유닛의 cgroup 안에 남습니다.** systemd 의
-> `KillMode=mixed` 는 메인 프로세스가 끝난 뒤 cgroup 에 남은 것들에
-> **SIGKILL** 을 보내므로, 그대로였다면 `systemctl --user restart` 한 번에
-> 몇 시간 돌던 학습이 같이 죽었습니다.
->
-> 두 겹으로 고쳤습니다.
->
-> | 겹 | 무엇 |
-> |---|---|
-> | 1차 | **학습을 자기 cgroup(`systemd-run --user --scope`)에 띄웁니다** — 유닛과 아예 다른 자리라 `KillMode` 와 무관합니다. 이름(`labremote-train-<프로젝트>-<EXP>`)으로 상태·종료·중복 방지가 됩니다 |
-> | 2차 | 유닛을 **`KillMode=process`** 로 둡니다 — scope 를 못 쓰는 환경(user systemd 없음)에서도 남은 프로세스를 죽이지 않습니다 |
-| `nohup` | ✕ 프로세스 그룹 제어가 없어 손자가 남는다 |
-| `systemd-run --user` | ✕ 0단계 실측에서 경로 보호 속성이 전부 무효였다 |
-| tmux | ②에서는 안 쓴다. pid 추적이 흐려진다 |
+> ⚠ **`setsid`(`start_new_session=True`) 는 cgroup 을 바꾸지 않습니다**
+> (실측 2026-11-05). 세션 ID 는 떨어지지만 cgroup 은 그대로라 서버 유닛의
+> cgroup 안에 남고, 유닛을 재시작할 때 같이 죽을 수 있습니다. scope 는
+> `/user.slice/…/app.slice/<이름>.scope` 로 **아예 다른 자리**라 서버와
+> 무관하게 살아남습니다.
 
-### `output/exit_code` 는 "무슨 일이 있었나" 의 기록이다
+### 종료코드 파일
 
-오케스트레이터가 죽어 있는 사이 학습이 끝날 수 있다. 그래서 셸이 끝나면서
-종료코드를 파일로 남긴다. 반대로 타임아웃처럼 **오케스트레이터가 먼저 아는**
-경우에는 오케스트레이터가 쓴다. 먼저 아는 쪽이 적고, 이미 있으면 덮지 않는다.
-
-### 인자는 셸을 거치지 않는다
-
-`run.json` 의 `args` 는 `"$@"` 로 넘긴다. `;`·`&&`·백틱이 들어 있어도 그냥
-인자 문자열이다 (`runner/spec.py` 가 배열만 받고, 여기서 셸 해석을 안 한다).
+서버가 죽어 있는 사이 학습이 끝날 수 있다. 그래서 셸이 끝나면서 종료코드를
+파일로 남긴다. 먼저 아는 쪽이 적고, 이미 있으면 덮지 않는다.
 """
 
 from __future__ import annotations
 
 import os
-import shlex
+import re
 import shutil
 import signal
 import subprocess
-import sys
 import time
-from dataclasses import dataclass, field
-
-from .. import paths
-from . import condaenv
-from . import cache as cache_mod
-from . import sandbox as sandbox_mod
-from .spec import RunSpec
 
 __all__ = [
-    "Launched",
-    "Outcome",
+    "POLL_SEC",
+    "ENV_STRIP",
+    "ENV_STRIP_PREFIXES",
+    "NO_SCOPE_ENV",
     "LaunchError",
-    "inner_argv",
-    "build_argv",
-    "inject_tokens",
-    "launch",
-    "wait",
-    "terminate_group",
-    "alive",
+    "scrub_env",
+    "scope_name",
+    "scope_available",
+    "scope_prefix",
     "starttime_of",
+    "alive",
+    "group_alive",
     "read_exit_code",
     "write_exit_code",
+    "terminate_group",
 ]
 
-#: 종료를 기다리며 다시 보는 간격
 POLL_SEC = 0.1
 
-#: 환경에서 **반드시 지우는** 것. 구독으로만 돌린다 (추가 결제 금지).
-#: 학습에 **절대** 물려주지 않는 변수.
+#: 실행에 **절대** 물려주지 않는 변수.
 #:
-#: `build_env` 는 어차피 화이트리스트(`ENV_KEEP`)라 이것들은 애초에 안
-#: 들어간다. 그래도 **이름으로 한 번 더** 지운다 — 누가 `ENV_KEEP` 에
-#: 더하거나 scope 경로로 새어도 걸러지게.
-#:
-#: 소켓 주소 변수(아래 둘째 줄)가 중요하다. 소켓 자체는 bwrap 의 tmpfs 가
-#: 가리지만(`sandbox.runtime_dirs`), 주소 변수까지 지워 두 겹으로 막는다 —
-#: `DBUS_*`·`SSH_AUTH_SOCK`·`GPG_AGENT_INFO` 가 있으면 "여기 붙어라" 를
-#: 알려 주는 셈이다.
+#: `ANTHROPIC_*` 가 섞이면 구독이 아니라 종량제로 과금된다. 에이전트·키
+#: 소켓 주소(`SSH_AUTH_SOCK`·`GPG_AGENT_INFO`·`DBUS_*`)는 실행되는 코드에게
+#: "여기 붙어라" 를 알려 주는 셈이라 지운다.
 ENV_STRIP = (
     "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN",
     "SSH_AUTH_SOCK", "SSH_AGENT_PID", "GPG_AGENT_INFO", "GPG_TTY",
     "DBUS_SESSION_BUS_ADDRESS", "DBUS_SYSTEM_BUS_ADDRESS",
-    "XDG_RUNTIME_DIR",
 )
 
-#: `DBUS_` 로 시작하는 건 전부 지운다 (`DBUS_STARTER_ADDRESS` 등).
+#: 이 접두사로 시작하는 건 전부 지운다 (`DBUS_STARTER_ADDRESS` 등).
 ENV_STRIP_PREFIXES = ("DBUS_",)
 
-#: 학습에 물려주는 기본 환경. 나머지는 지운다 — 오케스트레이터의 환경이
-#: 그대로 새면 `LAB_*` 로 우리 폴더 위치까지 알려 주는 셈이다.
-#:
-#: 캐시 변수(`HF_HOME`·`TMPDIR` …)는 **일부러 빼 뒀다.** 물려받으면
-#: `~/.cache/huggingface` 를 가리키는데 샌드박스에서 그건 쓸 수 없는 곳이고,
-#: `TMPDIR` 은 tmpfs(메모리)로 간다. `runner/cache.py` 가 값을 정한다.
-ENV_KEEP = (
-    "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "TZ", "TERM",
-    "PATH", "CUDA_VISIBLE_DEVICES", "CUDA_HOME", "NVIDIA_VISIBLE_DEVICES",
-    "CONDA_EXE", "CONDA_PREFIX", "CONDA_PYTHON_EXE", "MAMBA_EXE", "MAMBA_ROOT_PREFIX",
-)
-
-
-#: `systemd-run --user` **만** 쓰는 변수. 학습은 못 보게 바로 지운다.
-#:
-#: 🔑 왜 따로 두나 (실측 2026-11-05): `scope_available()` 은 오케스트레이터의
-#: 환경(`os.environ`)으로 탐침을 돌려 **성공**했는데, 실제 학습은 `ENV_KEEP`
-#: 화이트리스트만 받아서 그 안에 버스 주소가 없었다. 그래서 학습이
-#: `Failed to connect to bus: No medium found` 로 **즉사**했다 — exit 1,
-#: `result.csv` 없음, 그리고 멈춘 자리는 C(기록 누락)로 보고돼서 원인이
-#: 한 칸 뒤로 밀렸다.
-#:
-#: 학습 코드는 AI 가 쓴 코드다. 세션 버스가 보이면 사용자 서비스를 띄우거나
-#: 멈출 수 있고 그건 샌드박스가 못 가린다(소켓은 파일 경계 밖의 통로다).
-#: 그래서 `systemd-run` 에게만 주고 **셸 첫 줄에서 unset** 한다.
-SCOPE_ENV_KEEP = ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS")
+#: `1` 이면 scope 를 쓰지 않는다. 시험과 scope 가 말썽인 환경에서 쓴다.
+NO_SCOPE_ENV = "LAB_NO_SCOPE"
 
 
 class LaunchError(RuntimeError):
-    """띄우지 못했을 때. `blocked` 로 두고 알린다."""
+    """실행을 띄우지 못했을 때."""
 
 
-@dataclass
-class Launched:
-    pid: int
-    pgid: int
-    argv: list[str]
-    log_path: str
-    exit_code_path: str
-    started_at: float
-    starttime: int | None = None
-    #: 학습을 담은 transient scope 이름 (못 쓰면 빈 문자열).
-    #: `systemctl --user status <이름>.scope` 로 보고 `stop` 으로 끝낼 수 있다.
-    scope: str = ""
-    proc: subprocess.Popen | None = field(default=None, repr=False)
+def scrub_env(env: dict[str, str]) -> dict[str, str]:
+    """`ENV_STRIP`·`ENV_STRIP_PREFIXES` 를 뺀 새 dict."""
+    return {
+        k: v for k, v in env.items()
+        if k not in ENV_STRIP and not any(k.startswith(p) for p in ENV_STRIP_PREFIXES)
+    }
 
 
-@dataclass
-class Outcome:
-    #: done | timeout | failed
-    state: str
-    exit_code: int | None = None
-    #: term | kill | None — 어떻게 정리했나
-    killed: str | None = None
-    seconds: float = 0.0
-    leftover: bool = False  # 그룹에 아직 뭐가 남아 있나 (손자 정리 확인용)
+def scope_name(*parts: str) -> str:
+    """scope 유닛 이름. systemd 가 받는 글자만 남긴다.
 
-
-def inner_argv(spec: RunSpec) -> list[str]:
-    """`conda run` 과 인터프리터까지 붙인 **실제 명령**.
-
-    `.py` 는 파이썬으로, `.sh` 는 `/bin/sh` 로, 나머지는 실행 파일로 본다.
-    conda 환경이 적혀 있으면 그 안에서 돌린다 — `--no-capture-output` 이
-    없으면 `conda run` 이 출력을 모아 뒀다가 한꺼번에 내놓아서 로그 꼬리가
-    실시간으로 안 보인다.
+    `scope_name("myproj", "EXP-007")` → `labremote-run-myproj-EXP-007`
     """
-    target = spec.entrypoint_abs
-    if target.endswith(".py"):
-        interpreter = "python" if spec.conda_env else sys.executable
-        inner = [interpreter, target]
-    elif target.endswith((".sh", ".bash")):
-        inner = ["/bin/sh", target]
-    else:
-        inner = [target]
-    if spec.conda_env:
-        # 🔑 우리 코드가 도는 환경(`labremote`)·`base`·시스템 파이썬에서는
-        # 돌리지 않는다. 학습 스크립트는 AI 가 쓴 코드이고, 그 환경에 쓰기가
-        # 되면 `.pth` 한 줄이 훅 프로세스 안에서 돈다 (`runner/condaenv.py`).
-        condaenv.require(spec.conda_env)
-        inner = ["conda", "run", "-n", spec.conda_env, "--no-capture-output", *inner]
-    return [*inner, *spec.args]
-
-
-#: 학습을 담는 transient scope 이름. `systemctl --user status <이름>.scope` 로
-#: 보고, `systemctl --user stop` 으로 끝낼 수 있다.
-#:
-#: 같은 이름이 이미 돌고 있으면 `systemd-run` 이 **거절한다** — 같은 실험을
-#: 두 번 띄우는 사고가 덤으로 막힌다.
-def scope_name(spec: RunSpec) -> str:
-    import re as _re
-
     def clean(text: str) -> str:
-        return _re.sub(r"[^A-Za-z0-9_-]", "-", str(text or ""))[:48] or "x"
+        return re.sub(r"[^A-Za-z0-9_-]", "-", str(text or ""))[:48] or "x"
 
-    return f"labremote-train-{clean(spec.project)}-{clean(spec.experiment_id)}"
-
-
-#: `1` 이면 scope 를 쓰지 않는다. 시험(`tests/conftest.py`)과 scope 가 말썽인
-#: 환경에서 쓴다. 그때는 유닛의 `KillMode=process` 가 학습을 지킨다.
-NO_SCOPE_ENV = "LAB_NO_SCOPE"
+    return "labremote-run-" + "-".join(clean(p) for p in parts if p)
 
 
 def scope_available(env: dict | None = None) -> bool:
@@ -200,10 +94,8 @@ def scope_available(env: dict | None = None) -> bool:
     설정만 보고 믿지 않는다. user systemd·dbus 가 없는 환경(컨테이너·cron)
     에서는 안 된다.
 
-    🔑 **학습이 받을 환경으로 잰다.** `env` 를 안 주면 `os.environ` 으로
-    재는데, 그건 오케스트레이터의 환경이고 학습은 화이트리스트만 받는다.
-    둘이 다르면 탐침은 성공하고 학습은 버스를 못 찾아 즉사한다 — 실제로
-    그렇게 한 바퀴가 날아갔다 (2026-11-05).
+    🔑 **실행이 받을 환경으로 잰다.** 서버의 환경으로 재면 탐침은 성공하고
+    실제 실행은 버스를 못 찾아 즉사할 수 있다(실측 2026-11-05).
     """
     source = os.environ if env is None else env
     if source.get(NO_SCOPE_ENV) == "1" or os.environ.get(NO_SCOPE_ENV) == "1":
@@ -222,113 +114,24 @@ def scope_available(env: dict | None = None) -> bool:
     return done.returncode == 0
 
 
-def scope_prefix(spec: RunSpec) -> list[str]:
-    """학습을 **자기 cgroup** 에 담는 접두사.
+def scope_prefix(unit: str, description: str = "") -> list[str]:
+    """명령을 **자기 cgroup** 에 담는 접두사.
 
-    🔑 `start_new_session=True` 는 세션만 떼고 **cgroup 은 그대로 둔다**
-    (실측 2026-11-05: SID 는 달라지는데 `/proc/<pid>/cgroup` 이 같다).
-    그래서 오케스트레이터 유닛의 cgroup 안에 남고, `KillMode=mixed` 가
-    메인 프로세스 종료 뒤 남은 것들에 **SIGKILL** 을 보낸다 — 몇 시간 돌던
-    학습이 `systemctl --user restart` 한 번에 죽는다.
-
-    scope 는 `/user.slice/…/app.slice/<이름>.scope` 로 **아예 다른 자리**라
-    유닛의 `KillMode` 와 무관하다.
+    같은 이름의 scope 가 이미 돌고 있으면 `systemd-run` 이 거절한다 — 같은
+    실행을 두 번 띄우는 사고를 막는다.
     """
-    return [
-        "systemd-run",
-        "--user",
-        "--scope",
-        "--quiet",
-        f"--unit={scope_name(spec)}",
-        f"--description=lab.remote 학습 · {spec.project} · {spec.experiment_id}",
-        # scope 가 끝나면 cgroup 도 같이 사라진다
-        "--collect",
-        "--",
-    ]
-
-
-def build_argv(
-    spec: RunSpec,
-    *,
-    use_sandbox: bool = True,
-    use_scope: bool = False,
-    **sandbox_kw,
-) -> list[str]:
-    """실제로 `Popen` 에 넘길 argv. 셸은 종료코드를 남기는 용도로만 쓴다.
-
-    `use_scope` 는 **기본이 꺼짐**이다 — 이 함수는 "무엇을 돌리나" 를
-    만드는 자리이고, scope 는 "어디에 담나" 라서 실제로 띄우는 `launch()` 가
-    정한다. 그래야 argv 를 보는 시험이 systemd 에 매이지 않는다.
-    """
-    # scope 를 띄우느라 물려준 버스 주소는 **학습이 보기 전에** 지운다.
-    # 소켓 주소 변수도 같이 — 소켓은 tmpfs 가 가리지만 주소까지 지워 둔다.
-    drop = " ".join(dict.fromkeys(list(SCOPE_ENV_KEEP) + [
-        "SSH_AUTH_SOCK", "SSH_AGENT_PID", "GPG_AGENT_INFO",
-        "DBUS_SESSION_BUS_ADDRESS", "DBUS_SYSTEM_BUS_ADDRESS",
-    ]))
-    script = (
-        f"unset {drop}; "
-        '"$@"; printf %s "$?" > ' + shlex.quote(spec.exit_code_path)
-    )
-    wrapped = ["/bin/sh", "-c", script, "labremote-train", *inner_argv(spec)]
-    if use_sandbox:
-        sandbox_kw.setdefault("extra_ro", spec.data_paths)
-        wrapped = sandbox_mod.command(wrapped, project_root=spec.root, **sandbox_kw)
-    return (scope_prefix(spec) + wrapped) if use_scope else wrapped
-
-
-def inject_tokens(policy) -> dict[str, str]:
-    """정책이 허락한 토큰만 `~/.config/labremote/config.toml` 에서 가져온다.
-
-    **기본은 아무것도 주입하지 않는다.** 정책의 `runner.injectTokens` 에 이름을
-    적어야 그 이름만 들어간다.
-
-    ⚠ 학습 코드는 AI 가 쓴 코드고, 환경 변수는 `os.environ` 한 줄이면 보인다.
-    샌드박스는 파일을 가려 주지만 환경 변수는 못 가린다. 그래서 **읽기 전용·
-    최소 권한 토큰만** 쓴다 (`docs/operations.md`).
-    """
-    from .. import config as config_mod
-
-    allowed = []
-    if policy is not None:
-        allowed = (getattr(policy, "runner", {}) or {}).get("injectTokens") or []
-    wanted = {str(name).strip() for name in allowed if str(name).strip()}
-    if not wanted:
-        return {}
-    have = config_mod.tokens()
-    out = {name: have[name] for name in sorted(wanted) if name in have}
-    # 끼워 넣는 변수는 토큰으로도 못 들어온다.
-    from .spec import ENV_MANAGED, ENV_NEVER
-
-    return {k: v for k, v in out.items() if k not in ENV_NEVER and k not in ENV_MANAGED}
-
-
-def build_env(spec: RunSpec, *, cache_dir: str = "", policy=None) -> dict[str, str]:
-    """학습이 받을 환경 변수.
-
-    순서가 의미를 가진다 — **캐시 값이 맨 마지막이라 이긴다.** `run.json` 이
-    같은 이름을 넣지 못하게 `spec.py` 가 이미 막지만(`ENV_MANAGED`), 여기서도
-    뒤에 둬서 두 겹으로 둔다.
-    """
-    out = {k: os.environ[k] for k in ENV_KEEP if k in os.environ}
-    out.setdefault("PYTHONUNBUFFERED", "1")  # 로그 꼬리가 실시간으로 보이게
-    out.update(inject_tokens(policy))  # 정책이 허락한 이름만
-    out.update(spec.env)  # spec 이 이미 envAllow 로 걸렀다
-    if cache_dir:
-        out.update(cache_mod.env_for(cache_dir))
-    for name in ENV_STRIP:
-        out.pop(name, None)
-    for name in list(out):
-        if any(name.startswith(pre) for pre in ENV_STRIP_PREFIXES):
-            out.pop(name, None)
-    return out
+    out = ["systemd-run", "--user", "--scope", "--quiet", f"--unit={unit}"]
+    if description:
+        out.append(f"--description={description}")
+    # scope 가 끝나면 cgroup 도 같이 사라진다
+    return out + ["--collect", "--"]
 
 
 def starttime_of(pid: int) -> int | None:
     """`/proc/<pid>/stat` 의 starttime (22번째 칸).
 
-    pid 는 재사용된다. 복구가 "그 pid 가 **그** 프로세스인가" 를 가르려면
-    시작 시각까지 봐야 한다.
+    pid 는 재사용된다. "그 pid 가 **그** 프로세스인가" 를 가르려면 시작
+    시각까지 봐야 한다.
     """
     try:
         with open(f"/proc/{pid}/stat", encoding="utf-8", errors="replace") as fh:
@@ -362,7 +165,11 @@ def alive(pid: int | None, starttime: int | None = None) -> bool:
 
 
 def group_alive(pgid: int | None) -> bool:
-    """그룹에 **아직 뭐가 남아 있나.** 손자까지 정리됐는지 보는 데 쓴다."""
+    """그룹에 **아직 뭐가 남아 있나.** 손자까지 정리됐는지 보는 데 쓴다.
+
+    ⚠ 좀비도 "남아 있음" 으로 보인다. 우리가 그 프로세스의 부모라면 `wait`
+    로 거둬야 이 값이 거짓이 된다.
+    """
     if not pgid:
         return False
     try:
@@ -381,11 +188,7 @@ def read_exit_code(path: str) -> int | None:
 
 
 def write_exit_code(path: str, code: int, *, overwrite: bool = False) -> bool:
-    """**먼저 아는 쪽이 적는다.** 이미 있으면 덮지 않는다.
-
-    학습이 스스로 끝냈으면 셸이 이미 적었다. 타임아웃처럼 우리가 먼저 아는
-    경우에만 우리가 적는다.
-    """
+    """**먼저 아는 쪽이 적는다.** 이미 있으면 덮지 않는다."""
     if not overwrite and os.path.exists(path):
         return False
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
@@ -394,89 +197,6 @@ def write_exit_code(path: str, code: int, *, overwrite: bool = False) -> bool:
         fh.write(str(int(code)))
     os.replace(tmp, path)
     return True
-
-
-def launch(
-    spec: RunSpec,
-    *,
-    use_sandbox: bool = True,
-    append_log: bool = True,
-    cache_dir: str | None = None,
-    policy=None,
-    **sandbox_kw,
-) -> Launched:
-    """학습을 띄운다. **기다리지 않는다** (`wait` 가 기다린다).
-
-    공용 캐시 폴더를 검사하고 만들어서 샌드박스에 쓰기로 물려준다.
-    `cache_dir=""` 로 끄면 캐시 없이 돈다(시험용) — 그러면 모델을 매번
-    다시 내려받고 `TMPDIR` 이 tmpfs 로 간다.
-    """
-    # `is_inside` 는 **이미 해소된** 경로를 받는다. 그냥 넘기면
-    # `<루트>/experiments/../../etc` 가 문자열로는 루트 안처럼 보인다.
-    exp_dir_real = paths.real(spec.exp_dir)
-    if not paths.is_inside(paths.real(spec.root), exp_dir_real):
-        raise LaunchError(f"실험 폴더가 프로젝트 밖이에요: {exp_dir_real}")
-    os.makedirs(spec.output_dir, exist_ok=True)
-    # 지난 실행의 종료코드가 남아 있으면 복구가 헷갈린다.
-    try:
-        os.remove(spec.exit_code_path)
-    except OSError:
-        pass
-
-    cache = cache_mod.cache_dir(policy) if cache_dir is None else cache_dir
-    if cache:
-        # 겹치면 `CacheError` 다 — **학습을 띄우지 않는다.**
-        cache = cache_mod.ensure(cache, spec.root)["dir"]
-        if use_sandbox:
-            sandbox_kw.setdefault("cache_dir", cache)
-
-    # 🔑 학습을 **자기 cgroup** 에 담는다 (`systemd-run --user --scope`).
-    # 못 쓰면 조용히 빼고 돈다 — 그때는 유닛의 `KillMode=process` 가 지킨다.
-    env = build_env(spec, cache_dir=cache, policy=policy)
-    probe_env = dict(env)
-    probe_env.update({k: os.environ[k] for k in SCOPE_ENV_KEEP if k in os.environ})
-    scoped = scope_available(probe_env)
-    if scoped:
-        # `systemd-run` 이 쓸 것만 더한다. 셸 첫 줄이 바로 지운다.
-        env = probe_env
-    argv = build_argv(spec, use_sandbox=use_sandbox, use_scope=scoped, **sandbox_kw)
-    mode = "ab" if append_log else "wb"
-    try:
-        log_fh = open(spec.log_path, mode)
-    except OSError as exc:
-        raise LaunchError(f"로그 파일을 열 수 없어요: {exc}") from None
-    try:
-        proc = subprocess.Popen(
-            argv,
-            cwd=spec.root,
-            env=env,
-            stdin=subprocess.DEVNULL,
-            stdout=log_fh,
-            stderr=subprocess.STDOUT,
-            # 자기만의 세션·프로세스 그룹. 오케스트레이터가 죽어도 안 죽고,
-            # 끝낼 때는 그룹째로 정리해 손자까지 잡는다.
-            start_new_session=True,
-        )
-    except (OSError, ValueError) as exc:
-        log_fh.close()
-        raise LaunchError(f"학습을 띄우지 못했어요: {exc}") from None
-    finally:
-        try:
-            log_fh.close()
-        except OSError:
-            pass
-
-    return Launched(
-        pid=proc.pid,
-        pgid=proc.pid,  # start_new_session 이라 세션 리더 = pgid
-        scope=scope_name(spec) if scoped else "",
-        argv=argv,
-        log_path=spec.log_path,
-        exit_code_path=spec.exit_code_path,
-        started_at=time.time(),
-        starttime=starttime_of(proc.pid),
-        proc=proc,
-    )
 
 
 def terminate_group(pgid: int, *, grace_sec: int = 120, poll_sec: float = POLL_SEC) -> str:
@@ -506,61 +226,3 @@ def terminate_group(pgid: int, *, grace_sec: int = 120, poll_sec: float = POLL_S
             break
         time.sleep(poll_sec)
     return "kill"
-
-
-def wait(
-    launched: Launched,
-    *,
-    timeout_sec: int,
-    grace_sec: int = 120,
-    on_tick=None,
-    tick_sec: float = 10.0,
-    poll_sec: float = POLL_SEC,
-) -> Outcome:
-    """끝날 때까지 기다린다. 넘기면 정리하고 `timeout` 으로 돌려준다.
-
-    `on_tick` 은 `tick_sec` 마다 불린다 — 오케스트레이터가 심장 소리를 올리고
-    로그 꼬리를 읽는 자리다.
-    """
-    proc = launched.proc
-    if proc is None:
-        raise LaunchError("기다릴 프로세스가 없어요 (복구 경로는 alive 를 쓰세요)")
-    deadline = launched.started_at + max(1, int(timeout_sec))
-    next_tick = time.time() + tick_sec
-    while True:
-        code = proc.poll()
-        if code is not None:
-            seconds = time.time() - launched.started_at
-            # 셸이 적은 게 있으면 그걸 믿는다 (`conda run` 이 코드를 바꿀 수 있다).
-            from_file = read_exit_code(launched.exit_code_path)
-            final = from_file if from_file is not None else code
-            write_exit_code(launched.exit_code_path, final)
-            return Outcome(
-                state="done" if final == 0 else "failed",
-                exit_code=final,
-                seconds=seconds,
-                leftover=group_alive(launched.pgid),
-            )
-        now = time.time()
-        if now >= deadline:
-            how = terminate_group(launched.pgid, grace_sec=grace_sec, poll_sec=poll_sec)
-            try:
-                proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:  # pragma: no cover - SIGKILL 뒤라 드물다
-                pass
-            # 타임아웃은 **우리가 먼저 안다.** 셸이 적을 틈이 없으니 우리가 적는다.
-            write_exit_code(launched.exit_code_path, 124)
-            return Outcome(
-                state="timeout",
-                exit_code=read_exit_code(launched.exit_code_path),
-                killed=how,
-                seconds=now - launched.started_at,
-                leftover=group_alive(launched.pgid),
-            )
-        if on_tick and now >= next_tick:
-            next_tick = now + tick_sec
-            try:
-                on_tick(launched)
-            except Exception:
-                pass  # 심장 소리가 학습을 멈추게 하면 안 된다
-        time.sleep(poll_sec)

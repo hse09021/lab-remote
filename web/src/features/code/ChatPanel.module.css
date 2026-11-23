@@ -139,15 +139,6 @@
   padding: 10px 12px;
 }
 
-.modeNote {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--accent-dark);
-  background: var(--accent-tint);
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
-}
-
 .textarea {
   border: none;
   outline: none;
@@ -187,119 +178,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-/* ── 권한 프리셋 버튼 + 팝오버 ──────────────────────────────── */
-.presetWrap {
-  position: relative;
-}
-
-.preset {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: var(--radius-pill);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.preset[data-mode='full'] {
-  background: var(--accent-tint);
-  border: 1px solid var(--accent-soft);
-  color: var(--accent-dark);
-}
-
-.preset[data-mode='error'] {
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
-  color: var(--text);
-}
-
-.preset[data-mode='manual'] {
-  background: var(--attention-tint);
-  border: 1px solid var(--attention-border-strong);
-  color: var(--attention-text);
-}
-
-.presetMenu {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  z-index: 10;
-  width: 330px;
-  display: flex;
-  flex-direction: column;
-  padding: 6px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 -8px 28px rgb(20 26 25 / 0.14);
-}
-
-.presetItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: transparent;
-  font-family: inherit;
-  text-align: left;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.presetItem:hover {
-  background: var(--surface-muted);
-}
-
-.presetItem[aria-checked='true'] {
-  background: var(--accent-row);
-}
-
-.presetRadio {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  margin-top: 2px;
-  box-sizing: border-box;
-  border-radius: 50%;
-  border: 1.5px solid var(--text-dim);
-}
-
-.presetItem[aria-checked='true'] .presetRadio {
-  border: 5px solid var(--accent);
-}
-
-.presetName {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.presetDesc {
-  font-size: 12.5px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-.presetCol {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.presetFoot {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.5;
-  padding: 8px 10px 4px;
-  border-top: 1px solid var(--border-soft);
-  margin-top: 4px;
 }
 
 /* 탐색기에서 더한 첨부 칩의 빼기 버튼 */

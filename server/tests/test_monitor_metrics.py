@@ -1,7 +1,8 @@
-"""`result.csv` 읽기와 이상 감지.
+"""지표 파일(`result.csv`) 읽기와 이상 감지.
 
-열 규약은 생성기가 AI 에게 주는 `templates/result_example.csv` 다 —
-`step,split,metric,value` (긴 형식). 넓은 형식도 읽어 주지만 **경고를 남긴다**.
+긴 형식 `step,split,metric,value` 와 넓은 형식을 읽는다(넓은 형식은 경고를
+남긴다). 어느 파일을 읽을지(설정 규칙 → 흔한 위치 자동 탐색)는 2단계에서
+정한다 (PLAN 4.1 runs).
 """
 
 import os
@@ -20,26 +21,10 @@ def write(tmp_path, body, name="result.csv"):
     return str(path)
 
 
-# --- 규약이 템플릿과 같은가 -----------------------------------------------------
 
 
-def test_템플릿_헤더가_긴_형식이다():
-    """코드가 보는 규약과 AI 가 받는 예시가 어긋나면 그래프가 빈다."""
-    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    path = os.path.join(here, "app/templates/project/templates/result_example.csv.tmpl")
-    header = open(path, encoding="utf-8").read().strip().split(",")
-    assert tuple(h.strip() for h in header) == M.LONG_HEADER
 
 
-def test_가짜_학습도_같은_형식으로_쓴다(tmp_path):
-    import subprocess
-    import sys
-
-    fake = os.path.join(os.path.dirname(__file__), "fixtures", "fake_train.py")
-    subprocess.run([sys.executable, fake, "--epochs", "2", "--out", str(tmp_path)], check=True, capture_output=True)
-    got = M.read_result(str(tmp_path / "result.csv"))
-    assert got["format"] == "long"
-    assert got["warnings"] == []
 
 
 # --- 긴 형식 ------------------------------------------------------------------

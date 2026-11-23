@@ -1,14 +1,7 @@
 """SQLite 연결과 스키마 이행의 단일 출처.
 
-②의 상태는 전부 `server/data/lab.db` 하나에 있다. 큐·실험·지표·알림·승인이
-같은 트랜잭션 안에서 움직여야 하고, 파일 여러 개로 쪼개면 "running 은 1건"
-같은 불변식을 코드가 지켜야 하기 때문이다. 지금은 DB 가 지킨다
-(`ux_jobs_running`).
-
-**훅은 이 모듈을 import 하지 않는다.** 훅 경로는 표준 라이브러리 중에서도
-`sqlite3` 를 쓰지 않는다 — 잠금 경쟁으로 훅이 느려지거나 멈추면 그게 바로
-판정 지연이다. 훅이 보는 것은 `runstate` JSON 미러뿐이고,
-`tests/test_stdlib_only.py` 가 이 규칙을 강제한다.
+lab.remote 의 상태(지표·자원 표본·사건·보낸 알림)는 데이터 폴더의 `lab.db`
+하나에 있다. 위치는 `registry.data_dir()` 를 따른다.
 
 의존성은 표준 라이브러리뿐이다.
 """
@@ -23,6 +16,7 @@ from . import registry
 
 __all__ = [
     "SCHEMA_VERSION",
+    "V3_BASE",
     "DbError",
     "path",
     "schema_sql",
@@ -34,61 +28,19 @@ __all__ = [
 ]
 
 #: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS` 에 줄을 더한다.
-SCHEMA_VERSION = 4
+#:
+#: 판 5 는 **v3 의 첫 판**이다. v1 은 판 1~4 를 썼다.
+SCHEMA_VERSION = 5
 
-#: 판을 올리는 SQL. `{이전 판: SQL 문자열}` — 판 1 은 schema.sql 통째다.
-MIGRATIONS: dict[int, str] = {
-    # 판 1 -> 2 · 앵커 (AI 가 못 쓰는 곳에 둔 기준값). T5 는 git HEAD,
-    # S7 은 승인 로그 해시 체인을 같은 표에 담는다.
-    # 판 2 -> 3 · 승인 내용의 출처를 적는다 (원칙 (나)).
-    #   source='denials'  오케스트레이터가 자기 자식의 결과 JSON 에서 만든 것
-    #   source='hook'     훅의 요청 파일에서 거울한 것 (참고용)
-    # tool_summary 는 **본문 없는** 요약이다 (길이·해시). 비밀이 섞일 수 있어
-    # 원본 tool_input 은 DB 에 넣지 않는다.
-    # 판 3 -> 4 · Claude 호출의 사용량·시간 (9단계 검증표가 요구한다).
-    #   `result.parse` 가 읽던 usage·cost·num_turns 를 버리지 않고 남긴다.
-    3: """
-CREATE TABLE IF NOT EXISTS agent_calls (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  project      TEXT NOT NULL,
-  loop_no      INTEGER,
-  stage        TEXT NOT NULL,
-  session_id   TEXT,
-  resumed      INTEGER NOT NULL DEFAULT 0,
-  model        TEXT,
-  ok           INTEGER,
-  stop_reason  TEXT,
-  num_turns    INTEGER,
-  wall_ms      INTEGER,
-  session_ms   INTEGER,
-  input_tokens         INTEGER,
-  output_tokens        INTEGER,
-  cache_read_tokens    INTEGER,
-  cache_write_tokens   INTEGER,
-  cost_usd     REAL,
-  denials      INTEGER NOT NULL DEFAULT 0,
-  at           TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_agent_calls_loop ON agent_calls(project, loop_no, id);
-CREATE INDEX IF NOT EXISTS ix_agent_calls_session ON agent_calls(session_id);
-""",
-    2: """
-ALTER TABLE approvals ADD COLUMN source TEXT NOT NULL DEFAULT 'hook';
-ALTER TABLE approvals ADD COLUMN tool_summary TEXT;
-""",
-    1: """
-CREATE TABLE IF NOT EXISTS anchors (
-  project    TEXT NOT NULL,
-  kind       TEXT NOT NULL,
-  key        TEXT NOT NULL DEFAULT '',
-  value      TEXT NOT NULL,
-  count      INTEGER,
-  note       TEXT,
-  at         TEXT NOT NULL,
-  PRIMARY KEY (project, kind, key)
-);
-""",
-}
+#: v3 가 시작하는 판. 이보다 낮은 판은 **v1 DB** 다.
+V3_BASE = 5
+
+#: 판을 올리는 SQL. `{이전 판: SQL 문자열}`. v3 에서 판을 올릴 때 여기에 더한다.
+#:
+#: v1 판(1~4)에서 오는 이행은 **두지 않는다.** v1 표(승인·큐·루프·앵커…)를
+#: 지우는 이행은 되돌릴 수 없어서, 조용히 하지 않고 `migrate` 가 거절한다.
+MIGRATIONS: dict[int, str] = {}
+
 
 _SCHEMA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
 
@@ -165,6 +117,11 @@ def migrate(conn: sqlite3.Connection) -> dict:
         )
     if before == SCHEMA_VERSION:
         return {"from": before, "to": before, "changed": False}
+    if 0 < before < V3_BASE:
+        raise DbError(
+            f"v1 의 DB 예요 (판 {before}). v3 는 v1 표를 옮기지 않아요 — "
+            "필요하면 백업해 두고 이 파일을 치운 뒤 다시 띄워 주세요: " + path()
+        )
 
     if before == 0:
         conn.executescript(schema_sql())

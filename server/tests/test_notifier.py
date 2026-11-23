@@ -1,9 +1,7 @@
 """Discord 알림 — 임베드·중복 제거·재시도.
 
-①의 숙제였다: 훅이 쓴 사유가 승인 알림에 안 실렸다. 평문 1900자 자르기
-대신 임베드 필드로 보내 **사유가 안 잘리게** 한다.
-
-그리고 **전송 실패가 큐를 멈추지 않는다.**
+평문 1900자 자르기 대신 임베드 필드로 보내 **긴 내용이 안 잘리게** 한다.
+그리고 **전송 실패가 호출부를 멈추지 않는다.**
 """
 
 import pytest
@@ -33,7 +31,7 @@ def slept():
 # --- 임베드 ------------------------------------------------------------------
 
 
-def test_임베드_모양(isolated_config):
+def test_임베드_모양():
     payload = notifier.build(
         "approval",
         project="hook-sandbox",
@@ -47,12 +45,12 @@ def test_임베드_모양(isolated_config):
     assert [f["name"] for f in embed["fields"]] == ["훅 사유", "승인"]
 
 
-def test_모르는_종류는_거절한다(isolated_config):
+def test_모르는_종류는_거절한다():
     with pytest.raises(ValueError):
         notifier.build("그런알림없음", title="x")
 
 
-def test_긴_사유는_잘리지_않고_나뉜다(isolated_config):
+def test_긴_사유는_잘리지_않고_나뉜다():
     """①의 숙제. 평문 1900자 자르기로는 사유가 잘렸다."""
     reason = "사" * 3000
     payload = notifier.build("approval", title="승인", fields=[("훅 사유", reason)])
@@ -64,7 +62,7 @@ def test_긴_사유는_잘리지_않고_나뉜다(isolated_config):
 # --- 보내기 ------------------------------------------------------------------
 
 
-def test_보내면_sent_로_적힌다(conn, isolated_config, monkeypatch):
+def test_보내면_sent_로_적힌다(conn, monkeypatch):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster()
     result = notifier.send(
@@ -75,7 +73,7 @@ def test_보내면_sent_로_적힌다(conn, isolated_config, monkeypatch):
     assert len(poster.calls) == 1
 
 
-def test_쿨다운_안에서는_한_번만_보낸다(conn, isolated_config, monkeypatch):
+def test_쿨다운_안에서는_한_번만_보낸다(conn, monkeypatch):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster()
     kw = dict(project="p", subject="EXP-001", title="EXP-001 이 실패했어요", poster=poster)
@@ -86,7 +84,7 @@ def test_쿨다운_안에서는_한_번만_보낸다(conn, isolated_config, monk
     assert len(poster.calls) == 1  # 두 번째는 전송 자체를 안 한다
 
 
-def test_승인_알림은_묵히지_않는다(conn, isolated_config, monkeypatch):
+def test_승인_알림은_묵히지_않는다(conn, monkeypatch):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster()
     kw = dict(project="p", subject="toolu_1", title="승인이 필요해요", poster=poster)
@@ -95,7 +93,7 @@ def test_승인_알림은_묵히지_않는다(conn, isolated_config, monkeypatch
     assert len(poster.calls) == 2
 
 
-def test_웹훅이_없으면_보내지_않고_실패로_적는다(conn, isolated_config, monkeypatch):
+def test_웹훅이_없으면_보내지_않고_실패로_적는다(conn, monkeypatch):
     monkeypatch.delenv("LAB_DISCORD_WEBHOOK", raising=False)
     result = notifier.send(conn, "failure", project="p", title="x")
     assert result["sent"] is False
@@ -105,7 +103,7 @@ def test_웹훅이_없으면_보내지_않고_실패로_적는다(conn, isolated
 # --- 재시도 ------------------------------------------------------------------
 
 
-def test_429_는_Retry_After_만큼_기다린다(conn, isolated_config, monkeypatch, slept):
+def test_429_는_Retry_After_만큼_기다린다(conn, monkeypatch, slept):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster(
         {"sent": False, "status": 429, "retryAfter": "2"}, {"sent": True, "status": 204}
@@ -117,7 +115,7 @@ def test_429_는_Retry_After_만큼_기다린다(conn, isolated_config, monkeypa
     assert slept == [2.0]
 
 
-def test_5xx_는_점점_길게_기다리고_포기한다(conn, isolated_config, monkeypatch, slept):
+def test_5xx_는_점점_길게_기다리고_포기한다(conn, monkeypatch, slept):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster({"sent": False, "status": 503, "reason": "서버가 아파요"})
     result = notifier.send(
@@ -129,7 +127,7 @@ def test_5xx_는_점점_길게_기다리고_포기한다(conn, isolated_config, 
     assert N.get(conn, result["id"])["http_status"] == 503
 
 
-def test_4xx_는_다시_시도하지_않는다(conn, isolated_config, monkeypatch, slept):
+def test_4xx_는_다시_시도하지_않는다(conn, monkeypatch, slept):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster({"sent": False, "status": 404, "reason": "웹훅이 없어요"})
     notifier.send(conn, "failure", project="p", title="x", poster=poster, sleep=slept.append)
@@ -137,14 +135,14 @@ def test_4xx_는_다시_시도하지_않는다(conn, isolated_config, monkeypatc
     assert slept == []
 
 
-def test_터무니없는_Retry_After_에_안_잡힌다(conn, isolated_config, monkeypatch, slept):
+def test_터무니없는_Retry_After_에_안_잡힌다(conn, monkeypatch, slept):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster({"sent": False, "status": 429, "retryAfter": "99999"})
     notifier.send(conn, "failure", project="p", title="x", poster=poster, sleep=slept.append)
     assert all(wait <= 60 for wait in slept), slept
 
 
-def test_전송이_터져도_큐를_멈추지_않는다(conn, isolated_config, monkeypatch):
+def test_전송이_터져도_큐를_멈추지_않는다(conn, monkeypatch):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
 
     def boom(payload, kind=""):
@@ -155,15 +153,18 @@ def test_전송이_터져도_큐를_멈추지_않는다(conn, isolated_config, m
     assert "그물이 끊겼어요" in result["reason"]
 
 
-def test_종류별_채널로_보낸다(conn, isolated_config, monkeypatch):
-    monkeypatch.delenv("LAB_DISCORD_WEBHOOK", raising=False)
-    with open(str(isolated_config) + "/config.toml", "w", encoding="utf-8") as fh:
-        fh.write('[discord.routes]\napproval = "https://discord.test/승인"\n')
+def test_종류별_채널로_보낸다(conn, monkeypatch):
+    from app import config
+
+    config.save({"webhook": "https://discord.test/기본", "routes": {"approval": "https://discord.test/승인"}})
     poster = Poster()
     result = notifier.send(conn, "approval", project="p", title="승인", poster=poster)
     assert result["sent"] is True
-    assert N.get(conn, result["id"])["route"] == "https://discord.test/승인"
     assert poster.calls[0][1] == "approval"
+    # 🔑 DB 에는 **채널 이름만** — 웹훅 주소는 0600 파일에만 둔다 (PLAN 1.7)
+    row = N.get(conn, result["id"])
+    assert row["route"] == "routes.approval"
+    assert "discord.test" not in str(dict(row))
 
 
 # --- 🔑 Discord 가 파이썬 기본 User-Agent 를 막는다 (실측 2026-11-05) --------

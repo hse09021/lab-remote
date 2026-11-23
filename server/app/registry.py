@@ -1,11 +1,10 @@
-"""실험 프로젝트 레지스트리와 서버 쪽 저장 위치.
+"""등록한 프로젝트 목록과 lab.remote 데이터 폴더의 위치.
 
-훅은 사용자 설정(`~/.claude/settings.json`)에 등록되므로 **모든 프로젝트에서**
-뜬다. 그래서 "여기가 등록된 실험 프로젝트인가" 를 먼저 판정해야 하고,
-그 판정 근거가 이 레지스트리다. 프로젝트 안에 두면 AI 가 고쳐서 자기 정책을
-갈아탈 수 있으니 서버 쪽(`server/data/`)에 둔다.
+데이터 폴더(`data_dir`)는 lab.remote 가 쓰는 곳 전부의 뿌리다 — 프로젝트
+목록, `lab.db`, Discord 설정(0600). 기본은 `server/data/` 이고
+`LAB_DATA_DIR` 로 바꿀 수 있다. `.gitignore` 에 걸려 있어 커밋되지 않는다.
 
-표준 라이브러리만 쓴다 (훅 경로에서 import 된다).
+표준 라이브러리만 쓴다.
 """
 
 from __future__ import annotations
@@ -21,13 +20,7 @@ __all__ = [
     "InvalidName",
     "valid_name",
     "data_dir",
-    "projects_root",
     "projects_file",
-    "policy_path",
-    "runstate_path",
-    "pending_dir",
-    "requests_dir",
-    "grants_dir",
     "load",
     "register",
     "unregister",
@@ -61,43 +54,16 @@ def valid_name(name: str) -> str:
 
 
 def data_dir() -> str:
-    """런타임 상태 폴더. `.gitignore` 에 걸려 있어 커밋되지 않는다."""
+    """lab.remote 데이터 폴더. `.gitignore` 에 걸려 있어 커밋되지 않는다."""
     return os.path.abspath(os.environ.get("LAB_DATA_DIR") or os.path.join(_SERVER_DIR, "data"))
-
-
-def projects_root() -> str:
-    """실험 프로젝트들의 부모 폴더. 기본 `~/projects`."""
-    return paths.real(os.environ.get("LAB_PROJECTS_DIR") or "~/projects")
 
 
 def projects_file() -> str:
     return os.path.join(data_dir(), "projects.json")
 
 
-def policy_path(name: str) -> str:
-    return os.path.join(data_dir(), "policies", f"{valid_name(name)}.json")
-
-
-def runstate_path(name: str) -> str:
-    return os.path.join(data_dir(), "runstate", f"{valid_name(name)}.json")
-
-
-def pending_dir(name: str) -> str:
-    return os.path.join(data_dir(), "pending", valid_name(name))
-
-
-def requests_dir(name: str) -> str:
-    """헤드리스에서 막은 요청이 쌓이는 곳. ②의 승인 대기열이 닫아 준다."""
-    return os.path.join(data_dir(), "requests", valid_name(name))
-
-
-def grants_dir(name: str) -> str:
-    """1회용 허가 파일. 서명이 없거나 틀리면 훅이 무시한다 (`app/grants.py`)."""
-    return os.path.join(data_dir(), "grants", valid_name(name))
-
-
 def write_json(path: str, data) -> None:
-    """원자적 쓰기. 반쯤 쓰인 JSON 이 남으면 훅이 fail-closed 로 멈춘다."""
+    """원자적 쓰기. 반쯤 쓰인 JSON 이 남지 않게."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     tmp = f"{path}.tmp.{os.getpid()}"
     with open(tmp, "w", encoding="utf-8") as fh:
@@ -128,8 +94,7 @@ def _save(projects: dict[str, str]) -> None:
 def register(root: str, name: str) -> str:
     """프로젝트를 등록하고 해소된 루트 경로를 돌려준다.
 
-    같은 이름이 다른 경로에 이미 등록돼 있으면 거절한다 — 정책 파일이
-    엉뚱한 프로젝트에 붙는 사고를 막는다.
+    같은 이름이 다른 경로에 이미 등록돼 있으면 거절한다.
     """
     valid_name(name)
     root_real = paths.real(root)
@@ -153,7 +118,7 @@ def register(root: str, name: str) -> str:
 
 
 def unregister(name: str) -> bool:
-    """등록을 지운다. 정책 파일은 건드리지 않는다."""
+    """등록을 지운다. 프로젝트 폴더(`.labremote/` 포함)는 건드리지 않는다."""
     with open(os.path.join(data_dir(), ".projects.lock"), "a+") as fh:
         fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
         try:
@@ -168,9 +133,8 @@ def unregister(name: str) -> bool:
 
 
 def lookup(path: str) -> tuple[str, str] | None:
-    """경로(보통 훅의 `cwd`)가 속한 프로젝트의 `(루트, 이름)`.
+    """경로가 속한 등록 프로젝트의 `(루트, 이름)`. 아니면 `None`.
 
-    등록된 프로젝트가 아니면 `None` — 훅은 간섭하지 않고 `defer` 한다.
     중첩된 경우 가장 깊은 루트가 이긴다.
     """
     target = paths.real(path)

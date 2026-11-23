@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { codeChatQuery, codeFilesQuery, commitsQuery } from '@/api/code'
-import { permissionsQuery } from '@/api/experiments'
-import { useSavePermissions } from '@/api/permissions'
-import type { PermissionMode } from '@/api/types'
-import { ErrorState, LoadingState, Sheet, Toast } from '@/components'
+import { ErrorState, LoadingState, Toast } from '@/components'
 import { useToast } from '@/lib/useToast'
 import s from './Mobile.module.css'
 
@@ -40,13 +37,11 @@ function aroundChanges(lines: ReturnType<typeof diffLines>, pad = 1) {
 }
 
 export function MobileCode() {
-  const [files, commits, chat, permissions] = useQueries({
-    queries: [codeFilesQuery(), commitsQuery(), codeChatQuery(), permissionsQuery()],
+  const [files, commits, chat] = useQueries({
+    queries: [codeFilesQuery(), commitsQuery(), codeChatQuery()],
   })
 
   const toast = useToast(2600)
-  const savePermissions = useSavePermissions()
-  const [modeOpen, setModeOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [sent, setSent] = useState<string[]>([])
 
@@ -64,8 +59,6 @@ export function MobileCode() {
   const changed = files.data.find((f) => f.original && f.original !== f.content)
   const lines = changed ? aroundChanges(diffLines(changed.original!, changed.content)) : []
   const branch = commits.data?.[0]?.branch ?? 'main'
-  const mode: PermissionMode = permissions.data?.saved?.mode ?? 'full'
-  const modeName = permissions.data?.modes.find((m) => m.id === mode)?.name ?? '권한 프리셋'
 
   return (
     <div className={s.page}>
@@ -182,14 +175,6 @@ export function MobileCode() {
           <div className={s.composerRow}>
             <button
               type="button"
-              data-mode={mode}
-              onClick={() => setModeOpen(true)}
-              className={s.modeBtn}
-            >
-              {modeName} <span aria-hidden="true">▾</span>
-            </button>
-            <button
-              type="button"
               onClick={() => {
                 const text = draft.trim()
                 if (!text) return
@@ -205,31 +190,6 @@ export function MobileCode() {
       </section>
 
       <p className={s.footNote}>코드 편집은 PC에서 · 모바일은 확인과 요청 위주예요</p>
-
-      <Sheet open={modeOpen} title="권한 프리셋" onClose={() => setModeOpen(false)}>
-        <div role="radiogroup" aria-label="권한 프리셋" className={s.modeList}>
-          {(permissions.data?.modes ?? []).map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              role="radio"
-              aria-checked={mode === m.id}
-              onClick={() => {
-                savePermissions.mutate({ mode: m.id, overrides: {} })
-                setModeOpen(false)
-                toast.show('다음 작업부터 적용돼요')
-              }}
-              className={s.modeOption}
-            >
-              <span aria-hidden="true" className={s.radio} />
-              <span className={s.modeText}>
-                <span className={s.modeName}>{m.name}</span>
-                <span className={s.modeDesc}>{m.desc}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </Sheet>
 
       <Toast message={toast.message} placement="bottom" />
     </div>

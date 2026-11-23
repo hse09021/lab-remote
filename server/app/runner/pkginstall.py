@@ -1,34 +1,18 @@
-"""📦 패키지 설치 — **오케스트레이터가 샌드박스 밖에서** 돌린다.
+"""📦 패키지 설치 — 검증된 목록만 `conda run … pip install` 로.
 
-## 왜 오케스트레이터가 하나
+들어가는 값은 `runner/pkgspec.py` 가 전부 검증한 것뿐이고, 환경은
+`runner/condaenv.py` 가 막는 곳(`base`·`labremote`)이 아니어야 한다.
 
-S1 의 M3 실측: Claude 의 Bash 로 `pip install` 을 돌리면 conda 환경이
-프로젝트 밖이라 샌드박스가 쓰기를 **버린다.** 프로그램에는 성공으로 보이고
-실제로는 아무 일도 안 일어난다. 사람이 승인해도 그렇다.
+## 캐시를 쓰지 않는다
 
-그래서 승인 뒤 **오케스트레이터가** 돌린다. 샌드박스 밖이므로 들어가는
-값은 `runner/pkgspec.py` 가 전부 검증한 것뿐이다.
-
-## 🔑 공용 캐시를 **쓰지 않는다**
-
-`~/lab-cache` 는 **모든 프로젝트가 쓰기로 공유**한다(샌드박스 `allowWrite` 의
-유일한 바깥). 그래서 한 프로젝트의 AI 코드가 캐시를 오염시킬 수 있다 —
-`pip` 휠 캐시에 든 것은 **다음에 설치될 코드**다.
-
-| 누가 | 캐시를 쓰나 | 가둬지나 |
-|---|---|---|
-| 학습 프로세스 | 네 | **네** (bwrap 안) |
-| Claude 의 Bash | `TMPDIR` 만 | **네** (Bash 샌드박스 안) |
-| **이 모듈** | **아니요** | 아니요 (샌드박스 밖, 사용자 권한) |
-
-그래서 `--no-cache-dir` 를 **반드시** 붙이고, 넘기는 환경에서 캐시 변수를
-**전부 뺀다**(`PIP_CACHE_DIR`·`HF_HOME`·`XDG_CACHE_HOME` …). 테스트로 고정한다.
+`--no-cache-dir` 를 **반드시** 붙이고, 넘기는 환경에서 캐시 변수를 전부
+뺀다(`PIP_CACHE_DIR`·`HF_HOME`·`XDG_CACHE_HOME` …). 다른 곳이 쓴 캐시를
+설치 코드로 받지 않으려는 것이다. 테스트로 고정한다.
 
 ## 왜 휠만 받나
 
-소스 배포는 설치할 때 `setup.py` 를 **실행**한다. 샌드박스 밖 임의 코드
-실행이다. `--only-binary=:all:` 이 기본이고, 풀려면 요청(`allowSource`)과
-사람의 승인(`--allow-source`)이 **둘 다** 맞아야 한다.
+소스 배포는 설치할 때 `setup.py` 를 **실행**한다. `--only-binary=:all:` 이
+기본이고, `allow_source` 를 켜야 소스를 받는다.
 """
 
 from __future__ import annotations
@@ -60,7 +44,7 @@ TIMEOUT_SEC = 600
 #: pip 에 물려주는 환경. **화이트리스트다.**
 #:
 #: 캐시 변수가 여기 **없는 것이 요점**이다. `ENV_KEEP` 에 없으면 물려받지
-#: 않으므로, 오케스트레이터의 환경에 `PIP_CACHE_DIR` 이 섞여 있어도 안 간다.
+#: 않으므로, 서버의 환경에 `PIP_CACHE_DIR` 이 섞여 있어도 안 간다.
 ENV_KEEP = (
     "HOME", "USER", "LOGNAME", "PATH", "LANG", "LC_ALL", "TZ",
     "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE",
@@ -88,12 +72,10 @@ def build_argv(parsed: dict, env_name: str, *, allow_source: bool = False) -> li
     name = str(env_name or "").strip()
     if not name or not pkgspec.NAME_RE.match(name):
         raise InstallError(
-            f"conda 환경 이름이 이상해요: {env_name!r} · "
-            "specifications/Config.yaml 의 env.conda 를 봐 주세요"
+            f"conda 환경 이름이 이상해요: {env_name!r}"
         )
-    # 🔑 우리 코드가 도는 환경에는 **승인한 패키지라도** 깔지 않는다.
-    # `.pth` 는 인터프리터가 뜰 때 실행된다 — 훅은 도구 호출마다 뜨고
-    # 오케스트레이터도 그 환경에서 돈다. 둘 다 샌드박스 **밖**이다.
+    # 🔑 lab.remote 가 도는 환경(`labremote`)과 `base` 에는 깔지 않는다.
+    # `.pth` 는 인터프리터가 뜰 때 실행된다 — 서버·conda 가 뜰 때 돌게 된다.
     try:
         condaenv.require(name)
     except condaenv.EnvRefused as exc:

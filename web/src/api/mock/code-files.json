@@ -34,15 +34,10 @@
     "path": "docs/Evaluation.md",
     "label": "Evaluation.md",
     "crumb": "docs › Evaluation.md",
-    "readOnly": true,
+    "readOnly": false,
     "content": "# Evaluation\n\n- 주 지표: val_accuracy (CIFAR-100 validation)\n- 성공 기준: val_accuracy ≥ 82.0%\n- 비교 기준선: EXP-004\n- 결과 확인 후 기준 변경 금지\n",
     "original": null,
-    "banner": {
-      "tone": "warn",
-      "title": "잠긴 파일",
-      "text": "실험이 도는 동안에는 평가 기준을 바꿀 수 없어요 (Hooks로 차단)",
-      "actions": []
-    },
+    "banner": null,
     "diffNote": null
   }
 ]

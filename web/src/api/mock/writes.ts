@@ -7,17 +7,15 @@ import {
   createNode,
   deleteNode,
   renameNode,
-  setDesignValues,
   setLoopPaused,
   stopExperiment,
   setDiscrepancy,
-  setPermissions,
   setReadStatus,
   setSummaryMd,
   updateAnnotation,
 } from '../mockStore'
 import type { UserAnnotation } from '../mockStore'
-import type { Paper, Permission, PermissionMode, ReadStatus } from '../types'
+import type { Paper, ReadStatus } from '../types'
 
 /**
  * 목업 모드의 쓰기.
@@ -56,14 +54,6 @@ export function applyMockWrite(method: string, path: string, body: unknown): unk
   if (disc && method === 'PUT') {
     const { target } = body as { target: string }
     setDiscrepancy(disc[1], target)
-    return body
-  }
-
-  /* 실험 설계 초안에 직접 넣은 값 */
-  const design = path.match(/^\/papers\/([^/]+)\/design$/)
-  if (design && method === 'PUT') {
-    const { values } = body as { values: Record<string, string> }
-    setDesignValues(design[1], values)
     return body
   }
 
@@ -119,12 +109,6 @@ export function applyMockWrite(method: string, path: string, body: unknown): unk
       deleteNode(at)
       return body
     }
-  }
-
-  /* 권한 설정 저장 */
-  if (path === '/experiments/permissions' && method === 'PUT') {
-    setPermissions(body as { mode: PermissionMode; overrides: Record<string, Permission> })
-    return body
   }
 
   // 아직 저장소에 없는 쓰기는 보낸 값을 그대로 돌려줘요 (목업 흉내)

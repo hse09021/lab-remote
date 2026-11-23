@@ -1,5 +1,4 @@
 import clsx from 'clsx'
-import { Link } from 'react-router-dom'
 import type {
   DiscrepancyNote,
   ExtractedConfig,
@@ -10,12 +9,9 @@ import s from './HtmlView.module.css'
 /** AI가 본문에서 뽑은 학습 설정 */
 export function ConfigCard({
   data,
-  paperId,
   onJump,
 }: {
   data: ExtractedConfig
-  /** 설계 초안을 이 논문 기준으로 열어요 */
-  paperId: string
   onJump: (sectionId: string) => void
 }) {
   return (
@@ -29,9 +25,6 @@ export function ConfigCard({
           <Row key={r.label} label={r.label} value={r.value} ref_={r.ref} onJump={() => onJump(r.sectionId)} />
         ))}
       </div>
-      <Link to={`/experiments/new/from-paper?paper=${paperId}`} className={s.ref}>
-        실험 설계 초안에 넣기
-      </Link>
     </div>
   )
 }

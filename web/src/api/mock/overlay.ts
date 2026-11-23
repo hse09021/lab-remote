@@ -1,20 +1,16 @@
 import type {
   Dashboard,
   FileNode,
-  DesignDraft,
   EventEntry,
   Experiment,
   Paper,
-  PermissionsPayload,
 } from '../types'
 import {
   overlayPapers,
   readFileOps,
   readLoopPaused,
   readStopped,
-  readDesignValues,
   readDiscrepancy,
-  readPermissions,
 } from '../mockStore'
 
 /**
@@ -56,15 +52,6 @@ export function applyOverlay<T>(path: string, data: T): T {
 
   if (path === '/experiments/dashboard') {
     return { ...(data as Dashboard), loopPaused: readLoopPaused() } as T
-  }
-
-  if (path === '/experiments/permissions') {
-    return { ...(data as PermissionsPayload), saved: readPermissions() } as T
-  }
-
-  const design = path.match(/^\/papers\/([^/]+)\/design$/)
-  if (design) {
-    return { ...(data as DesignDraft), saved: readDesignValues(design[1]) } as T
   }
 
   const reader = path.match(/^\/papers\/([^/]+)\/reader$/)

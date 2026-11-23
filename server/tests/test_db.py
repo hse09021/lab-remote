@@ -1,18 +1,16 @@
 """스키마와 이행.
 
-DB 를 못 믿으면 큐를 돌리지 않는다. 특히 **앞으로 간 DB** 는 건드리지 않고
-거절해야 한다 — 새 코드가 만든 표를 옛 코드가 반쯤 이해한 채로 쓰면 조용히
-틀린 값이 쌓인다.
+**앞으로 간 DB** 와 **v1 의 DB** 는 건드리지 않고 거절한다. 새 코드가 만든
+표를 옛 코드가 반쯤 이해한 채로 쓰면 조용히 틀린 값이 쌓이고, v1 표를
+지우는 이행은 되돌릴 수 없다.
 """
-
-import sqlite3
 
 import pytest
 
 from app import db
 
 
-def test_빈_DB_가_판_1_로_올라간다(isolated_data):
+def test_빈_DB_가_지금_판으로_올라간다(isolated_data):
     conn = db.connect()
     assert db.version(conn) == 0
     result = db.migrate(conn)
@@ -48,22 +46,27 @@ def test_PRAGMA_가_맞다(conn):
 
 def test_표와_인덱스가_다_있다(conn):
     names = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master")}
-    for table in (
-        "schema_meta",
-        "projects",
-        "loop_state",
-        "jobs",
-        "experiments",
-        "metrics",
-        "resources",
-        "events",
-        "approvals",
-        "notifications",
-        "commands",
-        "usage_limits",
-    ):
+    for table in ("schema_meta", "projects", "metrics", "resources", "events", "notifications"):
         assert table in names, table
-    assert "ux_jobs_running" in names
+    for index in ("ix_metrics_exp", "ix_events_project"):
+        assert index in names, index
+
+
+def test_v1_표는_없다(conn):
+    """승인·큐·루프·앵커·사용량 표는 v3 에서 빠졌다 (PLAN 2장)."""
+    names = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master")}
+    for table in ("loop_state", "jobs", "experiments", "approvals", "commands",
+                  "usage_limits", "anchors", "agent_calls"):
+        assert table not in names, table
+
+
+def test_v1_DB_는_옮기지_않고_거절한다(conn):
+    """v1 표를 지우는 이행은 되돌릴 수 없다 — 조용히 하지 않는다."""
+    for old in range(1, db.V3_BASE):
+        conn.execute("UPDATE schema_meta SET value=? WHERE key='version'", (str(old),))
+        with pytest.raises(db.DbError) as exc:
+            db.migrate(conn)
+        assert "v1 의 DB" in str(exc.value)
 
 
 def test_DB_경로는_데이터_폴더_안이다(isolated_data):
@@ -84,17 +87,3 @@ def test_immediate_는_예외에_되돌린다(conn):
             )
             raise ValueError("일부러")
     assert conn.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 0
-
-
-def test_running_슬롯은_전역_한_건(conn):
-    """코드가 세는 게 아니라 DB 가 막는다."""
-    now = db.now()
-    for _ in range(2):
-        conn.execute(
-            "INSERT INTO jobs(project, kind, state, queued_at) "
-            "VALUES('p', 'train', 'queued', ?)",
-            (now,),
-        )
-    conn.execute("UPDATE jobs SET running_slot=0 WHERE id=1")
-    with pytest.raises(sqlite3.IntegrityError):
-        conn.execute("UPDATE jobs SET running_slot=0 WHERE id=2")

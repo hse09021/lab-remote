@@ -1,5 +1,7 @@
 # API 목록
 
+> **v1 (보관)** — lab.remote v3 의 기준은 `docs/v3/PLAN.md` 예요. 이 문서는 참고용으로 남겨 둔 v1 문서이고, 부딪히면 PLAN.md 를 따라요.
+
 웹 UI가 쓰는 읽기·쓰기 경로예요. FastAPI를 만들 때 이 문서를 기준으로 삼아요.
 
 지금은 `VITE_USE_MOCK=true` 라서 `web/src/api/mock/` 의 JSON과 목업 저장소가 응답을 흉내 내요.

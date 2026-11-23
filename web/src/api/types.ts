@@ -127,7 +127,7 @@ export interface SidebarView {
   label: string
   to: string
   icon: 'grid' | 'shield'
-  /** 권한 설정의 승인 대기 건수 같은 꼬리 배지 */
+  /** 꼬리 배지 (건수 등) */
   badge: string | null
 }
 
@@ -211,27 +211,6 @@ export interface EventEntry {
   kind: string
   tone: 'warn' | 'success' | 'neutral'
   text: string
-}
-
-/* ── 권한 ───────────────────────────────────────────────────── */
-
-export type PermissionMode = 'manual' | 'error' | 'full'
-export type Permission = 'allow' | 'ask' | 'block'
-
-export interface PermissionModeOption {
-  id: PermissionMode
-  name: string
-  desc: string
-}
-
-export interface PermissionAction {
-  key: string
-  name: string
-  desc: string
-  /** 프리셋별 기본값 */
-  defaults: Record<PermissionMode, Permission>
-  /** 잠긴 항목은 Hooks가 항상 막아요 — UI는 표시만 해요 */
-  locked: boolean
 }
 
 /* ── 코드 ───────────────────────────────────────────────────── */
@@ -365,65 +344,11 @@ export interface CodeChatPayload {
   messages: ChatNode[]
 }
 
-/* ── 권한 설정 화면 ─────────────────────────────────────────── */
-
-export interface NotificationTagList {
-  title: string
-  caption: string
-  tags: string[]
-  /** 가려 둔 웹훅 주소. 실제 URL은 서버에만 둬요 */
-  webhookMasked: string
-  testLabel: string
-}
-
 export interface KeyValue {
   label: string
   value: string
   /** accent = 연결됨·켜짐 같은 정상 상태 */
   tone: 'accent' | 'muted'
-}
-
-export interface ClaudePushCard {
-  title: string
-  caption: string
-  rows: KeyValue[]
-}
-
-export interface ApprovalLogEntry {
-  time: string
-  action: string
-  request: string
-  result: string
-  /** 아직 처리되지 않은 건만 알약으로 보여 줘요 */
-  resultPending: boolean
-  handledBy: string
-  /**
-   * 한 호출을 묶는 키. 한 호출이 "대기 중" → "허용"(또는 "거부 또는 미응답")
-   * 으로 두 줄 이상 남아요. 화면은 같은 toolUseId 의 **마지막 줄**을 보여 주면
-   * 돼요. 훅이 모르는 옛 기록은 빈 문자열이에요.
-   */
-  toolUseId: string
-}
-
-export interface PermissionsPayload {
-  modes: PermissionModeOption[]
-  actions: PermissionAction[]
-  /** allow / ask / block 의 화면 글자 */
-  labels: Record<Permission, string>
-  actionsCaption: string
-  /** 종료 조건은 '연구 전체 자동화'에서만 써요 */
-  configPath: string
-  stopLockNotice: string
-  stopLockButton: string
-  stopConditions: MetricTileData[]
-  /** 다른 단계일 때 보여 줄 안내 */
-  stopDisabledNotice: string
-  discord: NotificationTagList
-  claudePush: ClaudePushCard
-  logPath: string
-  approvalLog: ApprovalLogEntry[]
-  /** 저장해 둔 권한 설정. 저장한 적 없으면 null */
-  saved: { mode: PermissionMode; overrides: Record<string, Permission> } | null
 }
 
 /* ── 논문 리더 ──────────────────────────────────────────────── */
@@ -594,62 +519,3 @@ export type ChatEntry =
   | { kind: 'loading' }
   | { kind: 'answer'; text: string; go?: string; src?: string }
 
-/* ── 실험 설계 초안 (FocusDesign) ───────────────────────────── */
-
-/** 값 하나의 출처 */
-export type DesignValueKind =
-  /** 논문에서 그대로 확인한 값 */
-  | 'confirmed'
-  /** 리더의 수치 불일치에서 고른 값을 가져와요 */
-  | 'fromReader'
-  /** 논문에 없어서 내가 정해야 하는 값 */
-  | 'estimate'
-
-export interface DesignValue {
-  key: string
-  item: string
-  /** confirmed 만 처음부터 값이 있어요 */
-  value: string | null
-  /** 근거 — 리더의 해당 섹션으로 이동해요 */
-  evidence: { sectionId: string; label: string } | null
-  kind: DesignValueKind
-  /** 입력칸 안내 */
-  hint: string | null
-}
-
-export interface DesignChoiceBlock {
-  kind: 'choices'
-  title: string
-  /** startOptions / envOptions 중 어느 목록인지 */
-  options: 'startOptions' | 'envOptions'
-}
-
-export type DesignChatBlock =
-  | { kind: 'assistant'; text: string }
-  | { kind: 'user'; text: string }
-  | DesignChoiceBlock
-
-export interface DesignOption {
-  id: string
-  label: string
-  desc: string
-}
-
-export interface DesignDraft {
-  paperId: string
-  paperTitle: string
-  spec: Array<{ label: string; value: string }>
-  files: string[]
-  filesNote: string
-  values: DesignValue[]
-  startOptions: DesignOption[]
-  envOptions: DesignOption[]
-  envLabels: Record<string, string>
-  chat: DesignChatBlock[]
-  /** 설계 토론 패널의 첨부 칩 */
-  attachment: string
-  /** 내가 넣어 둔 값. 없으면 null */
-  saved: Record<string, string> | null
-}
-
-export type DesignDraftMap = Record<string, DesignDraft>

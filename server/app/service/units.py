@@ -1,37 +1,24 @@
-"""⚙️ systemd 사용자 유닛 **렌더**. 활성화는 사람이 합니다.
+"""⚙️ 자동 시작 — systemd 사용자 유닛 **렌더**. 활성화는 사람이 합니다.
+
+v3 가 바꾸는 시스템 설정은 이 유닛 하나와 `loginctl enable-linger` 뿐이고,
+그것도 **자동 시작을 켤 때만**입니다 (docs/v3/PLAN.md 1장).
+
+    ~/.config/systemd/user/labremote-session.service
 
 ## 왜 렌더만 하나
 
-`systemctl --user enable` 과 `loginctl enable-linger` 는 **사람의 세션
-설정**입니다. 지금까지의 규칙(규칙 0 — 사람의 설정 파일은 코드가 쓰지
-않는다)과 같습니다. 그리고 `enable --now` 는 **루프를 실제로 띄웁니다** —
-그건 사람이 "이제 돌려라" 라고 말하는 순간이어야 합니다.
-
-그래서 이 모듈은
-
-1. `~/.config/systemd/user/*.service` 를 **씁니다** (우리가 만든 파일입니다)
-2. 사람이 돌릴 명령을 **찍어 줍니다** (`sudo` 없이 되는 것들입니다)
-
-8단계에서 실제 재부팅까지 확인합니다.
-
-## 유닛 둘
-
-| | 하는 일 |
-|---|---|
-| `labremote-orchestrator` | 루프 (설계 → 실행 → 분석) |
-| `labremote-monitor` | 5초마다 GPU·호스트·로그를 읽어 스냅샷 |
+`systemctl --user enable` 과 `loginctl enable-linger` 는 사람의 세션
+설정입니다. 이 모듈은 유닛 파일을 쓰고, 사람이 돌릴 명령을 찍어 줍니다.
 
 ## 못박아 둔 것
 
-- **`ANTHROPIC_API_KEY` 를 넣지 않습니다.** 키가 섞이면 구독이 아니라 종량제
-  과금입니다(`agent/launch.ENV_STRIP` 가 한 번 더 지웁니다).
-- **`KillMode=process`** — 학습을 살려 두는 두 겹 중 2차입니다.
-  `mixed` 는 메인 프로세스 종료 뒤 **cgroup 에 남은 것들에 SIGKILL** 을
-  보냅니다. `start_new_session=True` 는 세션만 떼고 **cgroup 은 그대로
-  둡니다**(실측) — 그대로였다면 `restart` 한 번에 학습이 같이 죽었습니다.
-  1차는 학습을 **자기 cgroup**(`systemd-run --user --scope`)에 담는 것입니다.
-- `Restart=always` + `RestartSec=10` — 죽으면 다시 뜨고, 복구가 이어받습니다.
-- `DISABLE_AUTOUPDATER=1` — 도구 이름이 바뀌면 방어에 틈이 생깁니다(S5b).
+- **`ANTHROPIC_API_KEY` 를 넣지 않습니다.** 키가 섞이면 구독이 아니라
+  종량제 과금입니다.
+- **가볍게** — `Nice=19`, `IOSchedulingClass=idle` (PLAN 1.3).
+- **`KillMode=process`** — 학습은 `systemd-run --user --scope` + tmux 로
+  자기 cgroup 에서 돕니다. `mixed` 면 서버를 재시작할 때 cgroup 에 남은 것에
+  SIGKILL 이 가서, 혹시 서버 cgroup 에 남은 자식이 있으면 같이 죽습니다.
+- `Restart=always` + `RestartSec=10`.
 """
 
 from __future__ import annotations
@@ -53,10 +40,9 @@ __all__ = [
     "enable_commands",
 ]
 
-#: 유닛 이름 → (설명, 돌릴 모듈)
+#: 유닛 이름 → (설명, 돌릴 명령 인자)
 UNITS = {
-    "labremote-orchestrator": ("lab.remote 오케스트레이터", "app.orchestrator"),
-    "labremote-monitor": ("lab.remote 모니터", "app.monitor.daemon"),
+    "labremote-session": ("lab.remote 서버", "app.cli serve"),
 }
 
 _TEMPLATE = """[Unit]
@@ -68,26 +54,17 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory={server_dir}
 Environment=PATH={path}
-Environment=LAB_PROJECTS_DIR={projects}
 Environment=LAB_DATA_DIR={data}
-# 🔑 Claude Code 가 저절로 올라가면 도구 이름이 바뀌어 방어에 틈이 생겨요 (S5b).
-Environment=DISABLE_AUTOUPDATER=1
-Environment=DISABLE_UPDATES=1
 # ⚠ ANTHROPIC_API_KEY 는 **일부러 넣지 않아요** — 키가 섞이면 구독이 아니라
-# 종량제로 과금돼요. 런처가 한 번 더 지워요 (agent/launch.ENV_STRIP).
+# 종량제로 과금돼요.
 ExecStart={python} -m {module}
 Restart=always
 RestartSec=10
-# 🔑 학습을 살려 두는 두 겹 중 2차예요.
-#
-# `KillMode=mixed` 는 메인 프로세스가 끝난 뒤 **cgroup 에 남은 것들에
-# SIGKILL** 을 보내요. `start_new_session=True`(setsid)는 세션만 떼고
-# **cgroup 은 그대로 두니까**(실측), 그대로였다면 `systemctl --user restart`
-# 한 번에 몇 시간 돌던 학습이 같이 죽어요.
-#
-# `process` 는 메인 프로세스만 끝내고 남은 건 건드리지 않아요.
-# 1차 방어는 학습을 자기 cgroup 에 담는 거예요
-# (`systemd-run --user --scope`, `runner/process.scope_prefix`).
+# 가볍게 (PLAN 1.3)
+Nice=19
+IOSchedulingClass=idle
+# 학습은 `systemd-run --user --scope` + tmux 로 자기 cgroup 에서 돌아요.
+# `process` 는 서버 프로세스만 끝내고 남은 건 건드리지 않아요.
 KillMode=process
 TimeoutStopSec=60
 StandardOutput=append:{log}
@@ -118,7 +95,7 @@ def log_path(name: str) -> str:
 
 #: 유닛의 `PATH`. **지금 셸의 PATH 를 베끼지 않는다** — 거기엔 VS Code 서버
 #: 경로처럼 **나중에 없어질 것**이 섞인다. 필요한 것만 고정으로 둔다:
-#: 파이썬의 환경(`conda run` 없이도 돌게), `~/.local/bin`(`claude`),
+#: 파이썬의 환경, `~/.local/bin`(`claude`),
 #: 그리고 표준 폴더.
 _BASE_PATH = ("/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin")
 
@@ -140,7 +117,6 @@ def render(name: str, *, python: str = "") -> str:
         description=description,
         server_dir=paths.real(server),
         path=unit_path_env(python or sys.executable),
-        projects=registry.projects_root(),
         data=registry.data_dir(),
         python=paths.real(python or sys.executable),
         module=module,
@@ -155,7 +131,7 @@ def install(*, python: str = "") -> dict:
     """
     folder = unit_dir()
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(os.path.dirname(log_path("labremote-monitor")), exist_ok=True)
+    os.makedirs(os.path.dirname(log_path("labremote-session")), exist_ok=True)
     written, changed = [], []
     for name in sorted(UNITS):
         body = render(name, python=python)
@@ -181,7 +157,7 @@ def _systemctl() -> str:
 
 
 def status() -> dict:
-    """우리 유닛 **둘만** 본다.
+    """우리 유닛만 본다.
 
     `systemctl --user` 전체가 `degraded` 인 것은 snap·xdg-portal 탓이라
     무관하다 — 그래서 전체 상태를 보지 않는다.

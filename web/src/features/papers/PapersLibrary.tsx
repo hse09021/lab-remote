@@ -255,13 +255,6 @@ export default function PapersLibrary() {
         {selectedCount > 0 && (
           <div className={s.selectionBar}>
             <span className={s.selectionCount}>{selectedCount}편 선택됨</span>
-            {/* 고른 논문 중 첫 편 기준으로 열어요 */}
-            <Link
-              to={`/experiments/new/from-paper?paper=${selectedIds[0]}`}
-              className={s.onDark}
-            >
-              실험 설계 초안
-            </Link>
             <button type="button" className={s.onDark}>
               BibTeX
             </button>

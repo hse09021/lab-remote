@@ -4,43 +4,28 @@ import {
   dashboardQuery,
   eventsQuery,
   experimentsQuery,
-  permissionsQuery,
   projectsQuery,
   usePauseLoop,
   useStopExperiment,
 } from '@/api/experiments'
-import { useSavePermissions } from '@/api/permissions'
-import type {
-  Dashboard,
-  EventEntry,
-  Experiment,
-  PermissionMode,
-  PermissionsPayload,
-} from '@/api/types'
+import type { Dashboard, EventEntry, Experiment } from '@/api/types'
 import { ErrorState, LoadingState, Sheet, Toast } from '@/components'
 import { useToast } from '@/lib/useToast'
 import { LearningCurveChart } from '../experiments/LearningCurveChart'
 import { experimentStatus } from '../experiments/experimentStatus'
 import s from './Mobile.module.css'
 
-type SheetKind = 'mode' | 'stop' | null
+type SheetKind = 'stop' | null
 
 export function MobileExperiments() {
-  const [projects, dashboard, experiments, events, permissions] = useQueries({
-    queries: [
-      projectsQuery(),
-      dashboardQuery(),
-      experimentsQuery(),
-      eventsQuery(),
-      permissionsQuery(),
-    ],
+  const [projects, dashboard, experiments, events] = useQueries({
+    queries: [projectsQuery(), dashboardQuery(), experimentsQuery(), eventsQuery()],
   })
 
   const toast = useToast(2600)
   const [sheet, setSheet] = useState<SheetKind>(null)
   const stopExp = useStopExperiment()
   const pauseLoop = usePauseLoop()
-  const savePermissions = useSavePermissions()
 
   if (dashboard.isPending || experiments.isPending) {
     return <LoadingState label="실험 상태를 불러오는 중이에요…" />
@@ -58,22 +43,12 @@ export function MobileExperiments() {
   const d: Dashboard = dashboard.data
   const list: Experiment[] = experiments.data
   const running = list.find((e) => e.state === 'running')
-  const mode: PermissionMode = permissions.data?.saved?.mode ?? 'full'
-  const modeName = permissions.data?.modes.find((m) => m.id === mode)?.name ?? d.modeLabel
 
   return (
     <div className={s.page}>
-      {/* 프로젝트 · 권한 프리셋 */}
+      {/* 프로젝트 */}
       <div className={s.controlRow}>
         <span className={s.project}>{projects.data?.projects[0]?.name ?? d.project}</span>
-        <button
-          type="button"
-          data-mode={mode}
-          onClick={() => setSheet('mode')}
-          className={s.modeBtn}
-        >
-          {modeName} <span aria-hidden="true">▾</span>
-        </button>
         <span className={s.loop}>{d.loopPaused ? '루프 멈춤' : d.loopLabel}</span>
       </div>
 
@@ -188,19 +163,6 @@ export function MobileExperiments() {
       </div>
       <p className={s.footNote}>완료·이상 감지·에러·사용량 알림은 Discord로 와요</p>
 
-      {/* 권한 프리셋 시트 */}
-      <Sheet open={sheet === 'mode'} title="권한 프리셋" onClose={() => setSheet(null)}>
-        <ModeSheet
-          data={permissions.data}
-          mode={mode}
-          onPick={(id) => {
-            savePermissions.mutate({ mode: id, overrides: {} })
-            setSheet(null)
-            toast.show('다음 작업부터 적용돼요')
-          }}
-        />
-      </Sheet>
-
       {/* 정지 확인 시트 */}
       <Sheet
         open={sheet === 'stop'}
@@ -230,43 +192,6 @@ export function MobileExperiments() {
       </Sheet>
 
       <Toast message={toast.message} placement="bottom" />
-    </div>
-  )
-}
-
-function ModeSheet({
-  data,
-  mode,
-  onPick,
-}: {
-  data: PermissionsPayload | undefined
-  mode: PermissionMode
-  onPick: (id: PermissionMode) => void
-}) {
-  if (!data) return <p className={s.sheetText}>권한 설정을 불러오지 못했어요.</p>
-
-  return (
-    <div role="radiogroup" aria-label="권한 프리셋" className={s.modeList}>
-      {data.modes.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          role="radio"
-          aria-checked={mode === m.id}
-          onClick={() => onPick(m.id)}
-          className={s.modeOption}
-        >
-          <span aria-hidden="true" className={s.radio} />
-          <span className={s.modeText}>
-            <span className={s.modeName}>{m.name}</span>
-            <span className={s.modeDesc}>{m.desc}</span>
-          </span>
-        </button>
-      ))}
-      <span className={s.sheetNote}>
-        실행 중인 실험은 그대로 두고 다음 작업부터 적용해요. 잠긴 항목 3개는 어떤 프리셋이든 항상
-        막혀요.
-      </span>
     </div>
   )
 }

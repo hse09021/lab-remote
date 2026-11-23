@@ -8,8 +8,6 @@ import { MobileCode } from './features/mobile/MobileCode'
 import PapersLibrary from './features/papers/PapersLibrary'
 import PaperReader from './features/papers/PaperReader'
 import ExperimentDashboard from './features/experiments/ExperimentDashboard'
-import PermissionSettings from './features/experiments/PermissionSettings'
-import ExperimentDesignDraft from './features/experiments/ExperimentDesignDraft'
 
 // 코드 화면만 따로 떼요 — Monaco가 무거워서 다른 화면 번들에 섞이면 안 돼요.
 const CodeEditorPage = lazy(() => import('./features/code/CodeEditorPage'))
@@ -25,8 +23,6 @@ const router = createBrowserRouter([
       { path: 'papers/:id', element: <PaperReader /> },
 
       { path: 'experiments', element: <ExperimentDashboard /> },
-      { path: 'experiments/permissions', element: <PermissionSettings /> },
-      { path: 'experiments/new/from-paper', element: <ExperimentDesignDraft /> },
 
       // 모바일은 Monaco 청크를 아예 받지 않게 라우트에서 갈라요
       { path: 'code', element: <CodeRoute /> },

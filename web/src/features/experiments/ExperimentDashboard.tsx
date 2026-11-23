@@ -54,7 +54,7 @@ export default function ExperimentDashboard() {
     queries: [projectsQuery(), dashboardQuery(), experimentsQuery(), eventsQuery()],
   })
 
-  /* 설계 초안에서 "프로젝트 생성"으로 넘어오면 안내를 띄워요 */
+  /* 다른 화면에서 `state.toast` 를 실어 보내면 안내를 띄워요 */
   const toast = useToast()
   const { state } = useLocation() as { state?: { toast?: string } }
   useEffect(() => {
@@ -147,11 +147,6 @@ function DashboardHeader({
           menuLabel="새 실험"
           items={[
             { label: 'Claude와 토론하며 설계' },
-            {
-              // 논문을 안 고르고 들어오면 설계 초안이 기본 논문으로 열려요
-              label: '논문에서 재현 실험 만들기',
-              to: '/experiments/new/from-paper',
-            },
             { label: '설정만 바꿔 큐에 추가' },
           ]}
         />

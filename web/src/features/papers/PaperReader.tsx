@@ -19,7 +19,6 @@ import {
   LoadingState,
   Resizer,
   SegmentedControl,
-  SplitButton,
   StatusPill,
   Toast,
 } from '@/components'
@@ -57,7 +56,7 @@ export default function PaperReader() {
   if (isMobile) return <MobilePapers />
 
   const { id = 'attn' } = useParams<{ id: string }>()
-  // 설계 초안의 근거 링크로 들어오면 그 섹션부터 보여 줘요
+  // `?section=` 으로 들어오면 그 섹션부터 보여 줘요
   const [search] = useSearchParams()
   const wantSection = search.get('section')
 
@@ -424,16 +423,6 @@ export default function PaperReader() {
               disabled={!data.hasHtml}
             />
           </span>
-          <SplitButton
-            label="실험 설계 초안"
-            menuLabel="실험 설계 초안"
-            items={[
-              {
-                label: '논문에서 재현 실험 만들기',
-                to: `/experiments/new/from-paper?paper=${id}`,
-              },
-            ]}
-          />
         </div>
       </div>
 

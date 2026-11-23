@@ -1,19 +1,12 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
-import type {
-  CodeChatPayload,
-  PermissionMode,
-  PermissionModeOption,
-} from '@/api/types'
+import type { CodeChatPayload } from '@/api/types'
 import { IconButton, LoadingState, PanelIcon, TagChip, VisuallyHidden } from '@/components'
-import { useOutsideClick } from '@/lib/useOutsideClick'
 import s from './ChatPanel.module.css'
 
 interface Props {
   style: CSSProperties
   chat: CodeChatPayload | undefined
-  modes: PermissionModeOption[] | undefined
   /** 입력창에 맥락으로 붙는 현재 파일 */
   fileLabel: string
   /** 탐색기에서 "채팅에 추가" 한 것 */
@@ -25,18 +18,12 @@ interface Props {
 export function ChatPanel({
   style,
   chat,
-  modes,
   fileLabel,
   attachment,
   onRemoveAttachment,
   onCollapse,
 }: Props) {
-  const [mode, setMode] = useState<PermissionMode>('full')
-  const [prevMode, setPrevMode] = useState<PermissionMode | null>(null)
   const [draft, setDraft] = useState('')
-
-  const current = modes?.find((m) => m.id === mode)
-  const previous = modes?.find((m) => m.id === prevMode)
 
   return (
     <aside aria-label="Claude Code" style={style} className={s.panel}>
@@ -75,13 +62,6 @@ export function ChatPanel({
 
       <div className={s.composerWrap}>
         <div className={s.composer}>
-          {previous && current && previous.id !== current.id && (
-            <div role="status" className={s.modeNote}>
-              {previous.name} → {current.name} · 지금 실행 중인 EXP-007은 그대로 두고 다음
-              작업부터 적용해요. 변경 내역은 Decision_log.md에 남겨요.
-            </div>
-          )}
-
           <VisuallyHidden>
             <label htmlFor="code-chat">Claude Code에 요청</label>
           </VisuallyHidden>
@@ -116,15 +96,7 @@ export function ChatPanel({
               </span>
             )}
             <div className={s.right}>
-              <PresetButton
-                modes={modes}
-                mode={mode}
-                onChange={(next) => {
-                  if (next === mode) return
-                  setPrevMode(mode)
-                  setMode(next)
-                }}
-              />
+              {/* Mode·모델 메뉴는 3단계에서 SDK 로 확인한 값으로 붙어요 (PLAN 5장) */}
               <IconButton label="보내기" size={34} variant="primary">
                 <SendIcon />
               </IconButton>
@@ -133,70 +105,6 @@ export function ChatPanel({
         </div>
       </div>
     </aside>
-  )
-}
-
-/* ── 권한 프리셋 ──────────────────────────────────────────── */
-
-function PresetButton({
-  modes,
-  mode,
-  onChange,
-}: {
-  modes: PermissionModeOption[] | undefined
-  mode: PermissionMode
-  onChange: (m: PermissionMode) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const wrap = useRef<HTMLDivElement>(null)
-  useOutsideClick(wrap, () => setOpen(false), open)
-
-  const current = modes?.find((m) => m.id === mode)
-
-  return (
-    <div ref={wrap} className={s.presetWrap}>
-      <button
-        type="button"
-        data-mode={mode}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`권한 프리셋: ${current?.name ?? ''}, 바꾸기`}
-        onClick={() => setOpen((v) => !v)}
-        className={s.preset}
-      >
-        <ShieldIcon />
-        {current?.name ?? '권한 프리셋'}
-        <span aria-hidden="true">▾</span>
-      </button>
-
-      {open && modes && (
-        <div role="menu" aria-label="권한 프리셋" className={s.presetMenu}>
-          {modes.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              role="menuitemradio"
-              aria-checked={m.id === mode}
-              onClick={() => {
-                onChange(m.id)
-                setOpen(false)
-              }}
-              className={s.presetItem}
-            >
-              <span aria-hidden="true" className={s.presetRadio} />
-              <span className={s.presetCol}>
-                <span className={s.presetName}>{m.name}</span>
-                <span className={s.presetDesc}>{m.desc}</span>
-              </span>
-            </button>
-          ))}
-          <span className={s.presetFoot}>
-            잠긴 항목 3개는 어떤 프리셋이든 항상 막혀요.{' '}
-            <Link to="/experiments/permissions">권한 설정</Link>
-          </span>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -251,11 +159,6 @@ const st = {
   strokeLinejoin: 'round',
 } as const
 
-const ShieldIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" {...st} aria-hidden="true">
-    <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z" />
-  </svg>
-)
 const HistoryIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" {...st} aria-hidden="true">
     <path d="M3 12a9 9 0 103-6.7L3 8" />

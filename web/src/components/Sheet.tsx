@@ -12,8 +12,7 @@ interface Props {
 }
 
 /**
- * 모바일 바텀시트. 목업(FocusMobile)의 권한 프리셋 · 정지 확인 · 논문 요약
- * 세 가지가 같은 껍데기를 써요.
+ * 모바일 바텀시트. 정지 확인 · 논문 요약 같은 확인 창이 같은 껍데기를 써요.
  * 목업에 없던 포커스 트랩 · Esc · 배경 스크롤 잠금을 넣었어요.
  */
 export function Sheet({ open, title, onClose, children }: Props) {

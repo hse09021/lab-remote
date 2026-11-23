@@ -7,7 +7,7 @@ export interface SegmentedItem<T extends string> {
   label: ReactNode
   /** 아이콘만 쓸 때 스크린 리더용 이름 */
   ariaLabel?: string
-  /** 권한 설정처럼 선택지별 색이 다를 때 */
+  /** 선택지별 색이 다를 때 */
   tone?: 'allow' | 'ask' | 'block'
 }
 
