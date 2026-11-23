@@ -7,6 +7,7 @@ import { ApiError } from '@/api/client'
 import { ApprovalCard, DiffView } from './ApprovalCard'
 import { Composer } from './Composer'
 import type { ComposerSettings } from './Composer'
+import { CloseIcon } from '@/components/icons'
 import s from './Agents.module.css'
 
 /**
@@ -49,12 +50,13 @@ export function ChatPanel({ session, actions }: { session: AgentSession; actions
         {actions}
         <button
           type="button"
-          className={s.ghostBtn}
+          className={s.chatIconBtn}
+          aria-label="세션 닫기"
           disabled={close.isPending || session.busy}
-          title={session.busy ? '일하는 중에는 닫을 수 없어요 — 멈춘 뒤에' : '목록에서 빼요 · 기록은 남고 메시지를 보내면 다시 열려요'}
+          title={session.busy ? '일하는 중에는 닫을 수 없어요 — 멈춘 뒤에' : '세션 닫기 · 목록에서 빼요 (기록은 남고 메시지를 보내면 다시 열려요)'}
           onClick={() => close.mutate({ sid: session.id, closed: true })}
         >
-          닫기
+          <CloseIcon />
         </button>
       </div>
       <div className={s.chatTitle}>

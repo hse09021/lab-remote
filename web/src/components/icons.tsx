@@ -139,3 +139,10 @@ export const CollapseAllIcon = (p: P) => (
     <path d="M8.5 12h7" />
   </Svg>
 )
+
+/** 닫기 — 엑스 */
+export const CloseIcon = (p: P) => (
+  <Svg size={18} weight={1.8} {...p}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </Svg>
+)

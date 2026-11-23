@@ -1328,3 +1328,28 @@ kbd {
   }
 }
 
+
+/* 채팅 머리의 아이콘 버튼 (닫기) — IDE 채팅의 기록 · 새 세션 버튼과 같은 모양 */
+.chatIconBtn {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.chatIconBtn:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.chatIconBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
