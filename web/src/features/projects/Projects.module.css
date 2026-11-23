@@ -1120,7 +1120,7 @@ button.nameBtn:hover .fileName {
   cursor: pointer;
 }
 
-/* 폴더 등록 — 있는 폴더 / 새 폴더 */
+/* 폴더 등록 — 기존 폴더 / 새 폴더 */
 .modeSwitch {
   display: inline-flex;
   align-self: flex-start;

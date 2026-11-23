@@ -152,7 +152,7 @@ export default function ProjectsPage() {
               </p>
               <div className={s.emptyActions}>
                 <button type="button" className={s.primaryBtn} onClick={() => setRegistering('existing')}>
-                  있는 폴더 등록
+                  기존 폴더 등록
                 </button>
                 <button type="button" className={s.secondaryBtn} onClick={() => setRegistering('new')}>
                   새 폴더 만들기
@@ -229,7 +229,7 @@ function RegisterDialog({ open, onClose, initialMode = 'existing' }: { open: boo
     >
       <div role="group" aria-label="등록 방식" className={s.modeSwitch}>
         <button type="button" aria-pressed={mode === 'existing'} onClick={() => setMode('existing')}>
-          있는 폴더
+          기존 폴더
         </button>
         <button type="button" aria-pressed={mode === 'new'} onClick={() => setMode('new')}>
           새 폴더

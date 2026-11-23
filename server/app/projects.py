@@ -204,7 +204,7 @@ def register(path: str, name: str = "", *, create: bool = False, git_init: bool 
     if create:
         parent = os.path.dirname(root)
         if os.path.exists(root):
-            raise ProjectError(f"이미 있는 폴더예요 — '있는 폴더'로 등록해 주세요: {root}")
+            raise ProjectError(f"이미 있는 폴더예요 — '기존 폴더'로 등록해 주세요: {root}")
         if not os.path.isdir(parent):
             raise ProjectError(f"위 폴더가 없어요: {parent}")
         name_part = os.path.basename(root)
