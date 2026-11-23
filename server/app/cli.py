@@ -237,8 +237,15 @@ def cmd_serve(args) -> int:
     )
     # 열린 SSE(실시간 갱신) 연결이 있으면 uvicorn 은 끝없이 기다린다 — 5초 뒤에는 끊고 끝낸다
     # (자동 시작이 서버를 다시 띄울 수 있게. 실측 2026-11-23: 브라우저 탭 하나로 멈췄어요)
+    # 쉬는 연결을 75초 유지 — 기본 5초면 터널(code tunnel)이 15초 간격 요청마다 중계 세션과
+    # SSH 키 교환을 새로 해서 밖에서 볼 때 매번 느려요 (실측 2026-11-24: 30분에 중계 세션 54번)
     uvicorn.run(
-        create_app(port=args.port), host="127.0.0.1", port=args.port, log_level="warning", timeout_graceful_shutdown=5
+        create_app(port=args.port),
+        host="127.0.0.1",
+        port=args.port,
+        log_level="warning",
+        timeout_graceful_shutdown=5,
+        timeout_keep_alive=75,
     )
     return 0
 

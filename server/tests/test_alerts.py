@@ -41,7 +41,8 @@ def test_규칙대로_보낸다(conn):
 
 
 def test_주소가_없으면_조용히_Inbox_에만(conn):
-    got = alerts.post(conn, "sys", "sys", "VRAM", poster=ok_poster)
+    # 낮 시각으로 고정 — 밤(조용한 시간)에 돌리면 그 사유가 먼저 나와요
+    got = alerts.post(conn, "sys", "sys", "VRAM", poster=ok_poster, now=datetime(2026, 1, 1, 12, 0))
     assert got["sent"] == ""
     assert inbox.items(conn)[0]["title"] == "VRAM"
 
