@@ -12,6 +12,7 @@ import { ChatPanel } from './ChatPanel'
 import { Composer } from './Composer'
 import type { ComposerSettings } from './Composer'
 import { RunStatePill } from '../projects/RunsTab'
+import { ScenarioView } from '../scenario/ScenarioView'
 import s from './Agents.module.css'
 
 /** ADE — docs/v3/mockups/ADE.dc.html. 세션 목록 · 채팅 · Scenario/변경/실행 */
@@ -137,7 +138,16 @@ export default function AdePage() {
             ))}
           </div>
           <div className={s.rbody}>
-            {right === 'scenario' && <div className={s.placeholder}>Scenario 는 6단계에서 붙어요. (보기 전용, 사람이 요청할 때만 그려요)</div>}
+            {right === 'scenario' && (
+              <ScenarioView
+                project={project}
+                onFill={(cmd) =>
+                  navigate(
+                    `/projects/${encodeURIComponent(project)}/ide?${new URLSearchParams({ ...(tree ? { tree } : {}), side: 'run', fill: cmd })}`,
+                  )
+                }
+              />
+            )}
             {right === 'changes' && <Changes project={project} tree={tree} changes={changes} path={diffPath} onPick={setDiffPath} />}
             {right === 'runs' && <Runs project={project} />}
           </div>

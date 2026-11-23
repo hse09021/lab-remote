@@ -33,6 +33,7 @@ export function useServerEvents() {
     on('approval.new', approvals)
     on('approval.done', approvals)
     on('inbox.new', () => qc.invalidateQueries({ queryKey: ['inbox'] }))
+    on('scenario.updated', (d: { project: string }) => qc.invalidateQueries({ queryKey: ['scenario', d.project] }))
     return () => es.close()
   }, [qc])
 }

@@ -62,6 +62,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     from .api import inbox as inbox_api
     from .api import projects as projects_api
     from .api import runs as runs_api
+    from .api import scenarios as scenarios_api
     from .api import schedules as schedules_api
     from .api import system as system_api
 
@@ -151,6 +152,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
     app.include_router(agents_api.router, prefix="/api")
     app.include_router(ide_api.router, prefix="/api")
     app.include_router(schedules_api.router, prefix="/api")
+    app.include_router(scenarios_api.router, prefix="/api")
 
     @app.get("/api/{rest:path}", include_in_schema=False)
     def api_missing(rest: str):

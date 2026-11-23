@@ -15,6 +15,7 @@ import { ChatPanel } from '../agents/ChatPanel'
 import { NewSession } from '../agents/AdePage'
 import { Explorer, GitPanel, RunPanel, SearchPanel } from './IdePanels'
 import { TerminalView } from './TerminalView'
+import { ScenarioView } from '../scenario/ScenarioView'
 import s from './Ide.module.css'
 
 // CDN 대신 번들의 monaco 를 써요 (원격에서 바깥 네트워크에 기대지 않게)
@@ -39,7 +40,9 @@ export default function IdePage() {
   const terms = useQuery(terminalsQuery(project))
   const termActions = useTerminalActions(project)
 
-  const [side, setSide] = useState<Side>('explorer')
+  // ADE 의 Scenario 에서 "실행 탭에 채우기" 로 오면 ?side=run&fill=<명령>
+  const [side, setSide] = useState<Side>((params.get('side') as Side) || 'explorer')
+  const [fill, setFill] = useState<{ command: string; n: number } | null>(params.get('fill') ? { command: params.get('fill') as string, n: 1 } : null)
   const [tabs, setTabs] = useState<Tab[]>([])
   const [active, setActive] = useState('')
   const [jump, setJump] = useState<{ path: string; line: number } | null>(null)
@@ -184,12 +187,17 @@ export default function IdePage() {
           {side === 'search' && <SearchPanel project={project} tree={tree} onOpen={openFile} />}
           {side === 'git' && <GitPanel project={project} tree={tree} onDiff={openDiff} />}
           {side === 'scenario' && (
-            <div className={s.panel}>
-              <span className={s.panelTitle}>Scenario</span>
-              <span className={s.muted}>6단계에서 붙어요 · 보기 전용, 사람이 요청할 때만 그려요.</span>
-            </div>
+            <ScenarioView
+              project={project}
+              onFill={(cmd) => {
+                setFill({ command: cmd, n: (fill?.n ?? 0) + 1 })
+                setSide('run')
+              }}
+            />
           )}
-          {side === 'run' && <RunPanel project={project} detail={detail.data} tree={tree} branch={branch} onAttach={attachRun} />}
+          {side === 'run' && (
+            <RunPanel key={fill?.n ?? 0} project={project} detail={detail.data} tree={tree} branch={branch} onAttach={attachRun} fill={fill?.command} />
+          )}
         </aside>
 
         <div className={s.center}>

@@ -232,17 +232,20 @@ export function RunPanel({
   tree,
   branch,
   onAttach,
+  fill,
 }: {
   project: string
   detail: ProjectDetail
   tree: string
   branch: string
   onAttach: (runId: string) => void
+  /** Scenario 의 "실행 탭에 채우기" — 명령만 채우고 실행은 사람이 눌러요 */
+  fill?: string
 }) {
   const runs = useQuery(runsQuery(project))
   const start = useStartRun(project)
   const stop = useStopRun()
-  const [command, setCommand] = useState(detail.settings.commands[0] ?? '')
+  const [command, setCommand] = useState(fill ?? detail.settings.commands[0] ?? '')
   const [env, setEnv] = useState(detail.settings.condaEnv)
   const [scheduling, setScheduling] = useState(false)
   const shown = env.trim() ? `conda run -s -n ${env.trim()} bash -c '${command}'` : `bash -c '${command}'`
