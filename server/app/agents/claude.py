@@ -32,6 +32,13 @@ MODE_MAP = {"manual": "default", "edit": "acceptEdits", "plan": "plan", "auto": 
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 SETTING_SOURCES = ["user", "project", "local"]
 DISALLOWED = ["AskUserQuestion"]
+#: 할 일 도구를 켠다. 공식 문서(code.claude.com/docs/en/agent-sdk/todo-tracking):
+#: 할 일 도구는 Opus 4.7 · Sonnet 4.6 · Haiku 4.5 이하 모델에서만 기본으로 켜지고,
+#: `allowed_tools` 에 할 일 도구 이름이 하나라도 있으면 그 세션은 켜진다.
+#: 어느 계열(TodoWrite / Task*)이 나올지는 Claude Code 설정(CLAUDE_CODE_ENABLE_TASKS)
+#: 에 따라 다르므로 둘 다 넣는다 — 실측(2026-11-23, 2.1.318)에서는 TodoWrite 가 나왔다.
+#: 이 도구들은 화면의 할 일 목록만 고친다(파일·명령에 손대지 않음) — 승인 없이 둔다.
+ALLOWED = ["TodoWrite", "TaskCreate", "TaskUpdate", "TaskGet", "TaskList"]
 OUTPUT_MAX = 4000
 
 
@@ -121,7 +128,13 @@ class ClaudeBackend(AgentBackend):
     # --- 연결 --------------------------------------------------------------
 
     def _options(self):
+        import warnings
+
         from claude_agent_sdk import ClaudeAgentOptions
+        from claude_agent_sdk.types import CanUseToolShadowedWarning
+
+        # TodoWrite 를 허용 목록에 넣어서 나는 경고 — 일부러 그렇게 했다
+        warnings.filterwarnings("ignore", category=CanUseToolShadowedWarning)
 
         cfg = self.config
         mode = MODE_MAP.get(cfg.mode, "default")
@@ -134,6 +147,7 @@ class ClaudeBackend(AgentBackend):
             effort=cfg.effort if cfg.effort in EFFORTS else None,
             resume=self.agent_session_id or None,
             can_use_tool=self._can_use_tool,
+            allowed_tools=list(ALLOWED),
             disallowed_tools=list(DISALLOWED),
             stderr=self._on_stderr,
         )

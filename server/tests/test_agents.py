@@ -288,3 +288,12 @@ def test_할_일은_TaskCreate_TaskUpdate_로_만든다():
         {"content": "파일 읽기", "status": "completed"},
         {"content": "고치기", "status": "in_progress"},
     ]}
+
+
+def test_할_일_도구를_켜고_위험한_도구는_허용_목록에_없다():
+    b = claude.ClaudeBackend(base.SessionConfig(cwd="."), emit=lambda e: None, ask=None)
+    opts = b._options()
+    assert opts.allowed_tools == ["TodoWrite", "TaskCreate", "TaskUpdate", "TaskGet", "TaskList"]
+    assert not {"Bash", "Edit", "Write"} & set(opts.allowed_tools)
+    assert "AskUserQuestion" in opts.disallowed_tools
+    assert opts.permission_mode == "default" and opts.setting_sources == ["user", "project", "local"]
