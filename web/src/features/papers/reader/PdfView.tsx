@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { UserAnnotation } from '@/api/annotations'
 import type { PtRect } from '@/api/types'
 import type { ExplainZone, Highlight, PaperReaderPayload } from '@/api/types'
@@ -10,8 +10,9 @@ import { anchorFrom } from './floating/useReaderOverlays'
 import type { SelectionAnchor as Anchor } from './floating/SelectionMenu'
 import type { SelectionPlace } from './selectionPlace'
 import { ImagePdfRenderer } from './pdf/ImagePdfRenderer'
+import { lazyReload } from '@/lib/lazyReload'
 // PDF.js 는 무거워요 — PDF 보기를 열 때만 받아요 (모바일은 이 화면을 안 그려요)
-const PdfJsRenderer = lazy(() =>
+const PdfJsRenderer = lazyReload(() =>
   import('./pdf/PdfJsRenderer').then((m) => ({ default: m.PdfJsRenderer })),
 )
 import type { PdfPageContext, PdfSource } from './pdf/types'

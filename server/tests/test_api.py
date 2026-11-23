@@ -118,3 +118,19 @@ def test_웹_빌드를_내준다(client):
 def test_GPU_한_줄():
     raw = {"available": True, "devices": [{"utilPct": 94.0, "memUsedMb": 13414.0, "memTotalMb": 16303.0}]}
     assert system.gpu_summary(probe=lambda: raw)["label"] == "GPU 94% · 13.1/16G"
+
+
+def test_없어진_빌드_조각은_404_와_캐시(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from app import main
+
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "index.html").write_text("<html></html>")
+    (tmp_path / "assets" / "IdePage-new.js").write_text("x")
+    client = TestClient(main.create_app(web_dist=str(tmp_path)), base_url="http://127.0.0.1:8000")
+    assert client.get("/assets/IdePage-old.js").status_code == 404
+    r = client.get("/assets/IdePage-new.js")
+    assert r.status_code == 200 and "immutable" in r.headers["cache-control"]
+    r = client.get("/projects/x/ide")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-cache" and "<html>" in r.text
