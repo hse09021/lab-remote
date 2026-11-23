@@ -71,8 +71,33 @@ async def info():
 
 
 @router.get("/agents/sessions")
-def sessions(project: str = ""):
-    return {"sessions": manager.list(project), "pending": manager.pending_list(), "live": len(manager.live)}
+def sessions(project: str = "", closed: bool = False):
+    """닫은 세션은 `closed=true` 일 때만 같이 준다."""
+    return {"sessions": manager.list(project, include_closed=closed), "pending": manager.pending_list(), "live": len(manager.live)}
+
+
+class RenameBody(BaseModel):
+    title: str
+
+
+@router.put("/agents/sessions/{sid}/title")
+def rename(sid: str, body: RenameBody):
+    try:
+        return manager.rename(sid, body.title)
+    except AgentError as exc:
+        return _bad(exc)
+
+
+class CloseBody(BaseModel):
+    closed: bool = True
+
+
+@router.post("/agents/sessions/{sid}/close")
+async def close(sid: str, body: CloseBody):
+    try:
+        return await manager.close(sid, body.closed)
+    except AgentError as exc:
+        return _bad(exc, 409)
 
 
 @router.post("/agents/sessions")

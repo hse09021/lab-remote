@@ -210,7 +210,8 @@ class Manager:
             "warning": p.warning,
         }
 
-    def list(self, project: str = "") -> list[dict]:
+    def list(self, project: str = "", *, include_closed: bool = False) -> list[dict]:
+        """세션 목록. 닫은 세션은 `include_closed` 일 때만 (기록은 지우지 않는다)."""
         out = []
         for root, name in registry.load().items():
             if project and name != project:
@@ -223,9 +224,12 @@ class Manager:
                     continue
                 try:
                     with open(os.path.join(d, fname), encoding="utf-8") as fh:
-                        out.append(self._view(json.load(fh)))
+                        rec = json.load(fh)
                 except (OSError, json.JSONDecodeError):
                     continue
+                if rec.get("closed") and not include_closed:
+                    continue
+                out.append(self._view(rec))
         out.sort(key=lambda r: -(r.get("updatedAt") or 0))
         return out
 
@@ -251,7 +255,7 @@ class Manager:
         except Exception:
             pass
         n = 0
-        for rec in self.list():
+        for rec in self.list(include_closed=True):
             if rec.get("state") in ("working", "ask"):
                 root, raw = self._find(rec["id"])
                 raw["state"] = "idle"
@@ -384,6 +388,9 @@ class Manager:
         self._append(root, sid, {"type": "user", "text": text})
         rec["state"] = "working"
         rec["note"] = ""
+        # 닫은 세션에 보내면 다시 연다
+        rec.pop("closed", None)
+        rec.pop("closedAt", None)
         self._save(root, rec)
         bus.publish("session.state", {"session": sid})
         await live.backend.send(text)
@@ -621,6 +628,33 @@ class Manager:
             if effort != rec.get("effort") and live and not live.backend.busy:
                 await self.disconnect(sid)
             rec["effort"] = effort
+        self._save(root, rec)
+        bus.publish("session.state", {"session": sid})
+        return self._view(rec)
+
+    def rename(self, sid: str, title: str) -> dict:
+        title = " ".join((title or "").split())
+        if not title or len(title) > 120:
+            raise AgentError("세션 이름은 1~120자로 적어 주세요.")
+        root, rec = self._find(sid)
+        rec["title"] = title
+        self._save(root, rec)
+        bus.publish("session.state", {"session": sid})
+        return self._view(rec)
+
+    async def close(self, sid: str, closed: bool = True) -> dict:
+        """닫기 — 연결을 끊고 목록에서 뺀다. 기록은 남아서 다시 열 수 있다(메시지를 보내도 열린다)."""
+        root, rec = self._find(sid)
+        if closed:
+            if sid in self.live and self.live[sid].backend.busy:
+                raise AgentError("아직 일하는 중이에요. 멈춘 뒤에 닫아 주세요.")
+            await self.disconnect(sid)
+            root, rec = self._find(sid)
+            rec["closed"] = True
+            rec["closedAt"] = time.time()
+        else:
+            rec.pop("closed", None)
+            rec.pop("closedAt", None)
         self._save(root, rec)
         bus.publish("session.state", {"session": sid})
         return self._view(rec)

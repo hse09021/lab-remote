@@ -1224,3 +1224,69 @@ kbd {
   font-size: 13px;
   font-weight: 700;
 }
+
+/* 세션 이름 바꾸기 */
+.titleBtn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.titleBtn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.renameForm {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+}
+
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* 닫은 세션 */
+.closedToggle {
+  margin-top: 8px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.closedItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.closedItem span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

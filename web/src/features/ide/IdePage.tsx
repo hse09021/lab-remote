@@ -11,7 +11,8 @@ import { gitDiffQuery, gitStatusQuery, projectQuery, worktreesQuery } from '@/ap
 import { fileContentQuery, terminalsQuery, useSaveFile, useTerminalActions } from '@/api/ide'
 import { sessionsQuery } from '@/api/agents'
 import { ApiError } from '@/api/client'
-import { ErrorState, LoadingState } from '@/components'
+import { ErrorState, LoadingState, Resizer } from '@/components'
+import { usePaneResize } from '@/lib/usePaneResize'
 import { FilesIcon, GearIcon, PlusIcon, GitIcon, HistoryIcon, NewSessionIcon, RunIcon, ScenarioIcon, SearchIcon } from '@/components/icons'
 import { ChatPanel } from '../agents/ChatPanel'
 import { NewSession } from '../agents/AdePage'
@@ -46,6 +47,9 @@ export default function IdePage() {
   const [side, setSide] = useState<Side>((params.get('side') as Side) || 'explorer')
   // 목업처럼 지금 열린 아이콘을 다시 누르면 사이드바를 접어요
   const [sideOpen, setSideOpen] = useState(true)
+  // 목업의 패널 너비 조절 — 끌거나 경계선에 초점을 두고 ←→
+  const sidePane = usePaneResize({ initial: 270, min: 200, max: 560, dir: 1 })
+  const chatPane = usePaneResize({ initial: 380, min: 300, max: 760, dir: -1 })
   const [freshChat, setFreshChat] = useState(false)
   const pickSide = (k: Side) => {
     if (k === side) setSideOpen((v) => !v)
@@ -197,7 +201,7 @@ export default function IdePage() {
           </Link>
         </nav>
 
-        <aside aria-label="사이드바" className={s.sidebar} hidden={!sideOpen}>
+        <aside aria-label="사이드바" className={s.sidebar} hidden={!sideOpen} style={sidePane.style}>
           {side === 'explorer' && <Explorer key={tree} project={project} tree={tree} label={treeLabel} onOpen={openFile} />}
           {side === 'search' && <SearchPanel project={project} tree={tree} onOpen={openFile} />}
           {side === 'git' && <GitPanel project={project} tree={tree} onDiff={openDiff} />}
@@ -214,6 +218,8 @@ export default function IdePage() {
             <RunPanel key={fill?.n ?? 0} project={project} detail={detail.data} tree={tree} branch={branch} onAttach={attachRun} fill={fill?.command} />
           )}
         </aside>
+
+        {sideOpen && <Resizer handle={sidePane.resizerProps} label="사이드바 너비 조절" />}
 
         <div className={s.center}>
           <section aria-label="편집기" className={s.editorArea}>
@@ -285,7 +291,8 @@ export default function IdePage() {
           </section>
         </div>
 
-        <aside aria-label="에이전트 채팅" className={s.chat}>
+        <Resizer handle={chatPane.resizerProps} label="Claude Code 패널 너비 조절" />
+        <aside aria-label="에이전트 채팅" className={s.chat} style={chatPane.style}>
           {chat && !freshChat ? (
             <ChatPanel
               key={chat.id}

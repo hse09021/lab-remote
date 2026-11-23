@@ -376,3 +376,26 @@ def test_학습이_쓰는_환경에_설치하려_하면_경고만(project, monke
     assert mgr_mod.install_warning("demo", base.ApprovalRequest(tool="Edit", input={"file_path": "x"})) == ""
     monkeypatch.setattr(runs, "list_runs", lambda name, refresh_running=True: [])
     assert mgr_mod.install_warning("demo", req("pip install peft")) == ""  # 도는 학습이 없음
+
+
+def test_세션_이름_바꾸기와_닫기(fake, project):
+    async def go():
+        bus.bind(asyncio.get_running_loop())
+        m = Manager()
+        s = await m.create("demo", text="안녕", mode="plan")
+        await settle(m, s["id"])
+        assert m.rename(s["id"], "  rank 실험  정리 ")["title"] == "rank 실험 정리"
+        with pytest.raises(AgentError):
+            m.rename(s["id"], "   ")
+        got = await m.close(s["id"])
+        assert got["closed"] is True and not got["connected"]
+        assert m.list("demo") == [] and [x["id"] for x in m.list("demo", include_closed=True)] == [s["id"]]
+        # 보내면 다시 열린다 (기록 · 이어 가기 그대로)
+        await m.send(s["id"], "다시")
+        await settle(m, s["id"])
+        assert [x["id"] for x in m.list("demo")] == [s["id"]]
+        assert m.get(s["id"])["title"] == "rank 실험 정리"
+        await m.close(s["id"])
+        assert (await m.close(s["id"], False)).get("closed") is None
+
+    run(go())

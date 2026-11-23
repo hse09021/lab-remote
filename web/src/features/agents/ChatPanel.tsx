@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { sessionQuery, useConfigure, useInterrupt, useSendMessage } from '@/api/agents'
+import { sessionQuery, useCloseSession, useConfigure, useInterrupt, useRenameSession, useSendMessage } from '@/api/agents'
 import type { AgentEvent, AgentSession } from '@/api/agents'
 import { ApiError } from '@/api/client'
 import { ApprovalCard, DiffView } from './ApprovalCard'
@@ -26,7 +26,11 @@ export function ChatPanel({ session, actions }: { session: AgentSession; actions
   }, [events.length, session.pending.length])
 
   const settings: ComposerSettings = { mode: session.mode, model: session.model, effort: session.effort, ultracode: !!session.ultracode }
-  const err = [sendMsg.error, configure.error, interrupt.error].find(Boolean)
+  const rename = useRenameSession()
+  const close = useCloseSession()
+  const [renaming, setRenaming] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const err = [sendMsg.error, configure.error, interrupt.error, rename.error, close.error].find(Boolean)
 
   return (
     <section aria-label="에이전트 채팅" className={s.chat}>
@@ -43,9 +47,54 @@ export function ChatPanel({ session, actions }: { session: AgentSession; actions
           </button>
         ) : null}
         {actions}
+        <button
+          type="button"
+          className={s.ghostBtn}
+          disabled={close.isPending || session.busy}
+          title={session.busy ? '일하는 중에는 닫을 수 없어요 — 멈춘 뒤에' : '목록에서 빼요 · 기록은 남고 메시지를 보내면 다시 열려요'}
+          onClick={() => close.mutate({ sid: session.id, closed: true })}
+        >
+          닫기
+        </button>
       </div>
       <div className={s.chatTitle}>
-        <span className={s.chatTitleText}>{session.title}</span>
+        {renaming ? (
+          <form
+            className={s.renameForm}
+            onSubmit={(e) => {
+              e.preventDefault()
+              rename.mutate({ sid: session.id, title: titleDraft }, { onSuccess: () => setRenaming(false) })
+            }}
+          >
+            <input
+              className={s.renameInput}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Escape' && setRenaming(false)}
+              aria-label="세션 이름"
+              autoFocus
+            />
+            <button type="submit" className={s.ghostBtn} disabled={rename.isPending || !titleDraft.trim()}>
+              저장
+            </button>
+          </form>
+        ) : (
+          <>
+            <span className={s.chatTitleText}>{session.title}</span>
+            <button
+              type="button"
+              className={s.titleBtn}
+              aria-label="세션 이름 바꾸기"
+              title="이름 바꾸기"
+              onClick={() => {
+                setTitleDraft(session.title)
+                setRenaming(true)
+              }}
+            >
+              ✎
+            </button>
+          </>
+        )}
         <span className={s.statePill} data-state={session.state}>
           {session.state === 'ask' ? '답이 필요해요' : session.stateLabel}
         </span>

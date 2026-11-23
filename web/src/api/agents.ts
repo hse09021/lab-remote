@@ -88,6 +88,8 @@ export interface AgentSession {
   connected: boolean
   busy: boolean
   pending: PendingApproval[]
+  /** 닫은 세션 (목록에서 빠져요 · 메시지를 보내면 다시 열려요) */
+  closed?: boolean
   /** 최근 하위 에이전트 (Agents 그래프) */
   subagents?: { taskId: string; description: string; status: string; at: number }[]
 }
@@ -169,3 +171,23 @@ export const useAnswer = () =>
         response: v.response ?? '',
       }),
   )
+
+/* ── 세션 이름 바꾸기 · 닫기 ─────────────────────────────────────────── */
+
+/** 닫은 세션만 (ADE 의 "닫은 세션") */
+export const closedSessionsQuery = (enabled: boolean) =>
+  queryOptions({
+    queryKey: ['agents', 'sessions', 'closed'],
+    queryFn: async () => {
+      const all = await get<{ sessions: AgentSession[] }>('/agents/sessions?closed=true')
+      return all.sessions.filter((x) => x.closed)
+    },
+    enabled,
+  })
+
+export const useRenameSession = () =>
+  useAgentMutation((v: { sid: string; title: string }) => send<AgentSession>('PUT', `/agents/sessions/${enc(v.sid)}/title`, { title: v.title }))
+
+/** 닫기(closed=true) · 다시 열기(false) — 기록은 지우지 않아요 */
+export const useCloseSession = () =>
+  useAgentMutation((v: { sid: string; closed: boolean }) => send<AgentSession>('POST', `/agents/sessions/${enc(v.sid)}/close`, { closed: v.closed }))

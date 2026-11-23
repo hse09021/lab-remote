@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { sessionsQuery, useCreateSession } from '@/api/agents'
+import { closedSessionsQuery, sessionsQuery, useCloseSession, useCreateSession } from '@/api/agents'
 import type { AgentSession, ModeId } from '@/api/agents'
 import { dirQuery, gitDiffQuery, gitStatusQuery, projectQuery, worktreesQuery } from '@/api/projects'
 import { runsQuery } from '@/api/runs'
 import { ApiError } from '@/api/client'
-import { ErrorState, LoadingState } from '@/components'
+import { ErrorState, LoadingState, Resizer } from '@/components'
+import { usePaneResize } from '@/lib/usePaneResize'
 import { ChatIcon, FilesIcon, GearIcon, GitIcon, PlusIcon } from '@/components/icons'
 import { agoShort } from '@/lib/time'
 import { ChatPanel } from './ChatPanel'
@@ -28,6 +29,9 @@ export default function AdePage() {
   const sid = params.get('session') ?? ''
   const [side, setSide] = useState<Side>('sessions')
   const [sideOpen, setSideOpen] = useState(true)
+  // IDE 와 같은 패널 너비 조절
+  const sidePane = usePaneResize({ initial: 280, min: 200, max: 560, dir: 1 })
+  const rightPane = usePaneResize({ initial: 340, min: 260, max: 760, dir: -1 })
   const pickSide = (k: Side) => {
     if (k === side) setSideOpen((v) => !v)
     else {
@@ -96,7 +100,7 @@ export default function AdePage() {
           </Link>
         </nav>
 
-        <aside aria-label="사이드바" className={s.sidebar} hidden={!sideOpen}>
+        <aside aria-label="사이드바" className={s.sidebar} hidden={!sideOpen} style={sidePane.style}>
           {side === 'sessions' && (
             <SessionList
               sessions={sessions}
@@ -126,6 +130,7 @@ export default function AdePage() {
             </div>
           )}
         </aside>
+        {sideOpen && <Resizer handle={sidePane.resizerProps} label="사이드바 너비 조절" />}
 
         <main className={s.center}>
           {all.isPending && <LoadingState label="세션을 불러오는 중이에요" />}
@@ -137,7 +142,8 @@ export default function AdePage() {
           )}
         </main>
 
-        <aside aria-label="작업 정보" className={s.rightPane}>
+        <Resizer handle={rightPane.resizerProps} label="작업 정보 너비 조절" />
+        <aside aria-label="작업 정보" className={s.rightPane} style={rightPane.style}>
           <div role="tablist" aria-label="작업 정보 보기" className={s.rtabs}>
             {(
               [
@@ -186,6 +192,9 @@ function SessionList({
 }) {
   const [mine, setMine] = useState(false)
   const [q, setQ] = useState('')
+  const [showClosed, setShowClosed] = useState(false)
+  const closed = useQuery(closedSessionsQuery(showClosed))
+  const reopen = useCloseSession()
   const shown = sessions.filter(
     (x) => (!mine || x.state === 'ask') && (!q || `${x.title} ${x.branch} ${x.project}`.toLowerCase().includes(q.toLowerCase())),
   )
@@ -246,6 +255,24 @@ function SessionList({
           </div>
         ))}
         {sessions.length === 0 && <div className={s.muted}>세션이 없어요. + 로 시작해요.</div>}
+        <button type="button" className={s.closedToggle} aria-expanded={showClosed} onClick={() => setShowClosed((v) => !v)}>
+          {showClosed ? '▾' : '▸'} 닫은 세션{closed.data ? ` ${closed.data.length}` : ''}
+        </button>
+        {showClosed &&
+          (closed.data ?? []).map((x) => (
+            <div key={x.id} className={s.closedItem}>
+              <span title={`${x.project} · ${x.branch}`}>{x.title}</span>
+              <button
+                type="button"
+                className={s.ghostBtn}
+                disabled={reopen.isPending}
+                onClick={() => reopen.mutate({ sid: x.id, closed: false }, { onSuccess: () => onPick(x) })}
+              >
+                다시 열기
+              </button>
+            </div>
+          ))}
+        {showClosed && closed.data?.length === 0 && <div className={s.muted}>닫은 세션이 없어요.</div>}
       </div>
       <div className={s.panelFoot}>
         동시 세션 <b>{live}</b> / 4 · 브라우저를 닫아도 데스크톱에서 계속 돌아요.
