@@ -41,7 +41,7 @@ year: 2017
 category: 아키텍처
 ---
 """)
-    _write(str(root / "메모" / "아이디어.md"), "LoRA 랭크 실험은 [[LoRA|로라]] 와 [[demo]] 에서.\n[[없는 노트]]\n")
+    _write(str(root / "메모" / "아이디어.md"), "LoRA 랭크 실험은 [[LoRA|로라]] 와 [[demo]]에서.\n[[없는 노트]]\n")
     _write(str(root / "메모" / "외톨이.md"), "아무 링크 없음\n")
     _write(str(root / ".obsidian" / "x.md"), "[[LoRA]]\n")
     return str(root)

@@ -85,7 +85,7 @@ def install(*, port: int = units.DEFAULT_PORT, python: str = "", run: Runner = _
         code, out = run(argv)
         done.append({"what": what, "ok": code == 0, "detail": out[-300:]})
         if code != 0:
-            raise AutostartError(f"{what} 에서 멈췄어요: {out[-300:] or f'종료코드 {code}'}")
+            raise AutostartError(f"{what}에서 멈췄어요: {out[-300:] or f'종료코드 {code}'}")
 
     try:
         written = units.write(python=python, port=port)
@@ -120,7 +120,7 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
         code, out = run(argv)
         done.append({"what": what, "ok": code == 0, "detail": out[-300:]})
         if code != 0 and must:
-            raise AutostartError(f"{what} 에서 멈췄어요: {out[-300:] or f'종료코드 {code}'}")
+            raise AutostartError(f"{what}에서 멈췄어요: {out[-300:] or f'종료코드 {code}'}")
 
     unit_file = units.unit_path()
     step("서비스 끄기 (다음 부팅부터)", [systemctl, "--user", "disable", f"{units.NAME}.service"], must=False)

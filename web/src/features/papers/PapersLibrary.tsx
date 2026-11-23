@@ -284,7 +284,7 @@ function PapersList() {
                 <UrlUploadRow
                   busy={addArxiv.isPending}
                   onAdd={(url) => {
-                    setAdded({ text: 'arXiv 에서 받는 중이에요…', tone: 'ok' })
+                    setAdded({ text: 'arXiv에서 받는 중이에요…', tone: 'ok' })
                     addArxiv.mutate(url, { onSuccess: onAdded, onError: onFail })
                   }}
                 />
@@ -320,7 +320,7 @@ function PapersList() {
             minWidth={820}
             emptyMessage={
               papers.data.length === 0
-                ? `vault 에 논문 노트가 없어요 — ${vault.data?.path ?? 'vault'}/Papers/ 에 MD 를 두거나, 사이드바의 'vault 위치' 에서 폴더를 정해 주세요.`
+                ? `vault 에 논문 노트가 없어요 — ${vault.data?.path ?? 'vault'}/Papers/ 에 MD 를 두거나, 사이드바의 'vault 위치'에서 폴더를 정해 주세요.`
                 : '조건에 맞는 논문이 없어요.'
             }
           />
@@ -382,7 +382,7 @@ function PapersList() {
                 )}
               </div>
               <pre className={s.noteBody}>{noteBody}</pre>
-              <span className={s.paperMeta}>vault 노트를 읽기만 해요. 고치려면 Obsidian 에서 고쳐 주세요. AI 요약은 아직 준비 중이에요.</span>
+              <span className={s.paperMeta}>vault 노트를 읽기만 해요. 고치려면 Obsidian에서 고쳐 주세요. AI 요약은 아직 준비 중이에요.</span>
             </div>
           </aside>
         </div>

@@ -41,7 +41,7 @@ export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees
   return (
     <div className={s.treesWrap}>
       <div className={s.treesHead}>
-        <span className={s.muted}>작업마다 worktree 하나씩 · ADE 에서 세션을 만들면 함께 생겨요</span>
+        <span className={s.muted}>작업마다 worktree 하나씩 · ADE에서 세션을 만들면 함께 생겨요</span>
         <button type="button" className={s.primaryBtn} onClick={() => setAdding(true)}>
           + worktree
         </button>
@@ -142,7 +142,7 @@ function CleanDialog({ name, tree, onClose }: { name: string; tree: Worktree; on
         <span className={s.mono}>{tree.rel}</span> 폴더를 지워요. 브랜치 <span className={s.mono}>{tree.branch}</span> 는 남아서
         다시 만들 수 있어요.
       </span>
-      <span>커밋 안 한 변경이 있거나 이 worktree 에서 학습 · 세션이 돌고 있으면 정리하지 않아요.</span>
+      <span>커밋 안 한 변경이 있거나 이 worktree에서 학습 · 세션이 돌고 있으면 정리하지 않아요.</span>
     </Dialog>
   )
 }

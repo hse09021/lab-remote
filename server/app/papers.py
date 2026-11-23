@@ -232,6 +232,7 @@ def list_papers() -> list[dict]:
             "access": _ago(p["mtime"]),
             "path": f"vault/{p['path']}",
             "hasPdf": p.get("hasPdf", False),
+            "arxiv": p.get("arxiv") or "",
         })
     return out
 

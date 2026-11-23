@@ -139,7 +139,7 @@ def test_승인은_먼저_온_답만_먹는다(fake, project, conn):
             m.answer(p.id, "deny", via="inbox")
         await settle(m, s["id"])
         assert fake.instances[0].decisions[0].allow is True
-        assert inbox.badge(conn) == 0  # 답하면 Inbox 에서 읽음
+        assert inbox.badge(conn) == 0  # 답하면 Inbox에서 읽음
         states = [e.get("state") for e in m.get(s["id"])["events"] if e["type"] == "approval"]
         assert states == ["pending", "allowed"]
 

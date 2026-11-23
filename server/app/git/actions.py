@@ -49,7 +49,7 @@ def commit(base: str, message: str, paths_list: list[str] | None = None) -> dict
 
 
 def merge_to_main(root: str, branch: str) -> dict:
-    """`branch` 를 main 에 합친다(--no-ff). main worktree 에서 한다."""
+    """`branch` 를 main 에 합친다(--no-ff). main worktree에서 한다."""
     trees = view.worktrees(root)
     if trees.get("state") != "ok":
         raise ActionError(trees.get("reason") or "git 저장소가 아니에요.")
@@ -69,5 +69,5 @@ def merge_to_main(root: str, branch: str) -> dict:
         ops.run(path, ["merge", "--no-ff", "--no-edit", branch])
     except ops.GitError as exc:
         ops.run(path, ["merge", "--abort"], check=False)
-        raise ActionError(f"충돌이 나서 합치지 않고 되돌렸어요. 세션이나 IDE 에서 충돌을 풀고 다시 해 주세요. ({str(exc)[:200]})") from None
+        raise ActionError(f"충돌이 나서 합치지 않고 되돌렸어요. 세션이나 IDE에서 충돌을 풀고 다시 해 주세요. ({str(exc)[:200]})") from None
     return {"main": main, "branch": branch, "sha": ops.head_sha(path)}

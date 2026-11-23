@@ -1,7 +1,7 @@
 """프로젝트 — 등록·해제, `<프로젝트>/.labremote/`, 프로젝트 설정, 고정.
 
 lab.remote 가 연구 프로젝트 안에 만드는 것은 `.labremote/` **하나뿐이다**
-(PLAN 1장). 그 안의 `.gitignore` 가 `*` 한 줄이라 폴더가 스스로 git 에서
+(PLAN 1장). 그 안의 `.gitignore` 가 `*` 한 줄이라 폴더가 스스로 git에서
 빠진다 — 프로젝트의 `.gitignore` 는 건드리지 않는다.
 
 "repo 에 같이 올리기" 를 켜면 그 `.gitignore` 만 바꿔서 `settings.json` 과
@@ -41,8 +41,8 @@ __all__ = [
 
 LABREMOTE_DIR = ".labremote"
 
-#: `.labremote/.gitignore` — 기본은 폴더 전체를 git 에서 뺀다
-GITIGNORE_PRIVATE = "# lab.remote 가 만든 폴더예요. 통째로 git 에서 빠져요.\n*\n"
+#: `.labremote/.gitignore` — 기본은 폴더 전체를 git에서 뺀다
+GITIGNORE_PRIVATE = "# lab.remote 가 만든 폴더예요. 통째로 git에서 빠져요.\n*\n"
 #: "repo 에 같이 올리기" — `settings.json` 과 `scenarios/*.json` 만 추적
 GITIGNORE_SHARED = (
     "# lab.remote 가 만든 폴더예요. 설정과 Scenario 만 같이 올려요.\n"

@@ -100,7 +100,7 @@ export function AgentsGraph({ sessions, runs, finished }: { sessions: AgentSessi
         href: `/projects/${encodeURIComponent(p)}?tab=work&run=${r.id}`,
         isRun: true,
       })
-      // 같은 worktree 에서 도는 세션과는 "참고" 점선
+      // 같은 worktree에서 도는 세션과는 "참고" 점선
       for (const x of ss) {
         if ((x.tree === '.' ? '.' : x.tree) === (r.cwd || '.')) edges.push({ from: `s:${x.id}`, to: key, style: 'ref' })
       }

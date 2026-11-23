@@ -103,7 +103,7 @@ function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; 
                   <span className={s.laneHint}>실행 중 · 오늘 끝난 것</span>
                 </div>
                 {dash.data.runs.running.length + dash.data.runs.finishedToday.length === 0 && (
-                  <div className={s.empty}>오늘은 실행이 없어요. Projects › 세션 · 실행 에서 시작해요.</div>
+                  <div className={s.empty}>오늘은 실행이 없어요. Projects › 세션 · 실행에서 시작해요.</div>
                 )}
                 {[...dash.data.runs.running, ...dash.data.runs.finishedToday].map((r) => (
                   <RunCard key={`${r.project}/${r.id}`} r={r} />

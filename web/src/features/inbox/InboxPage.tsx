@@ -99,7 +99,7 @@ function actions(it: InboxItem): { primary?: [string, string, boolean]; secondar
   const p = it.ref.project
   const r = it.ref.run
   if (it.kind === 'ask' && p && it.ref.session) {
-    return { primary: [`/projects/${encodeURIComponent(p)}/ade?session=${encodeURIComponent(it.ref.session)}`, 'ADE 에서 답하기', true], secondary: ['/dashboard', '대시보드'] }
+    return { primary: [`/projects/${encodeURIComponent(p)}/ade?session=${encodeURIComponent(it.ref.session)}`, 'ADE에서 답하기', true], secondary: ['/dashboard', '대시보드'] }
   }
   if (it.kind === 'run' && p && r) {
     const base = `/projects/${encodeURIComponent(p)}?tab=work&run=${encodeURIComponent(r)}`

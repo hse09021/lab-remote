@@ -28,6 +28,7 @@ import type { SegmentedItem } from '@/components'
 import { usePaneResize } from '@/lib/usePaneResize'
 import { useToast } from '@/lib/useToast'
 import { AiPanel } from './reader/AiPanel'
+import { useVaultReader } from './reader/vaultReader'
 import type { AiTab } from './reader/AiPanel'
 import { ALL_HIGHLIGHTS_ON } from './reader/highlightCategories'
 import type { HighlightToggles } from './reader/highlightCategories'
@@ -190,6 +191,11 @@ export default function PaperReader() {
   }, [overlays])
 
   const paper = papers.data?.find((p) => p.id === id)
+  const vault = useVaultReader(
+    id,
+    paper,
+    reader.isError && reader.error instanceof ApiError && reader.error.status === 404,
+  )
   const summary = summaries.data?.[id]
 
   const sourceItems: SegmentedItem<PaperSource>[] = [
@@ -197,8 +203,18 @@ export default function PaperReader() {
     { value: 'pdf', label: 'PDF' },
   ]
 
-  // vault 에서 온 논문은 리더 본문(PDF · arXiv HTML 파싱)이 아직 없어요 — 노트만 보여 줘요
-  if (reader.isError && reader.error instanceof ApiError && reader.error.status === 404 && paper) {
+  // vault에서 온 논문 — 미리 만든 리더 데이터가 없어요. PDF 가 있으면 PDF 로 같은 리더 화면을 그리고,
+  // PDF 도 없으면 노트만 보여 줘요
+  const missing = reader.isError && reader.error instanceof ApiError && reader.error.status === 404
+  if (missing && paper && vault.active && !vault.failed) {
+    if (!vault.data) {
+      return (
+        <main className={s.page}>
+          <LoadingState label="PDF 를 여는 중이에요…" />
+        </main>
+      )
+    }
+  } else if (missing && paper) {
     return (
       <main className={s.page}>
         <div className={s.noteOnly}>
@@ -237,7 +253,7 @@ export default function PaperReader() {
     )
   }
 
-  if (reader.isError) {
+  if (reader.isError && !vault.data) {
     return (
       <main className={s.page}>
         <ErrorState
@@ -249,15 +265,14 @@ export default function PaperReader() {
     )
   }
 
-  if (!reader.data) {
+  const data = reader.data ?? vault.data
+  if (!data) {
     return (
       <main className={s.page}>
         <LoadingState label="논문을 불러오는 중이에요…" />
       </main>
     )
   }
-
-  const data = reader.data
 
   /* ── 떠 있는 것들 공통 핸들러 ─────────────────────────── */
   const openChat = (key: string, anchor: SelectionAnchor, context: string | null = null) => {

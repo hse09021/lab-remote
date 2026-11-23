@@ -57,11 +57,10 @@
 
 /* ── 드롭다운 ─────────────────────────────────────────────── */
 .menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 6;
+  /* 자리(position · top · left)는 화면이 버튼 위치로 정해요 */
+  z-index: 60;
   width: 160px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 2px;

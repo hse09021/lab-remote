@@ -36,7 +36,7 @@ SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 def _hostname(value: str) -> str:
-    """`Host` 값이나 `Origin` 의 netloc 에서 이름만."""
+    """`Host` 값이나 `Origin` 의 netloc에서 이름만."""
     value = (value or "").strip().lower()
     if value.startswith("["):  # [::1]:8000
         return value[1 : value.find("]")] if "]" in value else value

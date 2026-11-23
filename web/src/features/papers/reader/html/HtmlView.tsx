@@ -278,7 +278,7 @@ export function HtmlView({
     [reader.sections],
   )
 
-  // PDF 에서 넘어오면 본문이 아직 없을 수 있어요.
+  // PDF에서 넘어오면 본문이 아직 없을 수 있어요.
   // 본문이 붙은 뒤에도 한 번 맞춰 줘야 읽던 자리가 유지돼요.
   const appliedJump = useRef<number | null>(null)
   useEffect(() => {

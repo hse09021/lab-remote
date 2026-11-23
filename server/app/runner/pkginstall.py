@@ -127,13 +127,13 @@ def install(
 ) -> dict:
     """실제로 설치한다. **던지지 않는다** — 결과를 dict 로 돌려준다.
 
-    실패해도 `blocked` 로 가지 않는다. Claude 에게 결과를 그대로 알려 주고
+    실패해도 `blocked` 로 가지 않는다. Claude에게 결과를 그대로 알려 주고
     다른 방법을 찾게 한다 (의존성 하나가 루프를 끝내면 안 된다).
     """
     try:
         argv = build_argv(parsed, env_name, allow_source=allow_source)
     except InstallError as exc:
-        # 던지지 않는다 — 부르는 쪽이 결과를 사람과 AI 에게 알려 줘야 한다.
+        # 던지지 않는다 — 부르는 쪽이 결과를 사람과 AI에게 알려 줘야 한다.
         return {"ok": False, "argv": [], "exitCode": None, "output": "", "reason": str(exc)}
     env = build_env()
     where = paths.real(cwd) if cwd else None

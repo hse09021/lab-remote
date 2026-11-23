@@ -12,7 +12,7 @@ def run(argv):
 
 
 def test_v1_명령은_없다(capsys):
-    """훅·정책·승인·큐·루프 명령은 v3 에서 빠졌다 (PLAN 2장)."""
+    """훅·정책·승인·큐·루프 명령은 v3에서 빠졌다 (PLAN 2장)."""
     for name in ("hooks", "policy", "approvals", "queue", "up", "installs", "init-project", "service"):
         with pytest.raises(SystemExit):
             run([name])

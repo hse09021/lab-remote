@@ -5,6 +5,8 @@ import type { PDFDocumentProxy } from 'pdfjs-dist'
  * 워커는 번들에서 가져와요 — Monaco 때처럼 CDN 으로 나가면 안 돼요.
  */
 let docPromise: Promise<PDFDocumentProxy | null> | null = null
+/** 지금 열어 둔 문서의 주소 — 다른 논문을 열면 앞의 것을 닫고 새로 열어요 */
+let docUrl = ''
 /** 정리는 로딩 작업이 맡아요 (문서에는 destroy 가 없어요) */
 let task: { destroy: () => Promise<void> } | null = null
 
@@ -35,7 +37,10 @@ async function load(url: string): Promise<PDFDocumentProxy | null> {
 }
 
 export function loadPdf(url: string): Promise<PDFDocumentProxy | null> {
-  docPromise ??= load(url)
+  if (docPromise && docUrl === url) return docPromise
+  if (docPromise) releasePdf()
+  docUrl = url
+  docPromise = load(url)
   return docPromise
 }
 
@@ -43,6 +48,7 @@ export function loadPdf(url: string): Promise<PDFDocumentProxy | null> {
 export function releasePdf() {
   const t = task
   docPromise = null
+  docUrl = ''
   task = null
   void t?.destroy().catch(() => {})
 }

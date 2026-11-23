@@ -87,5 +87,10 @@
 
 /* 잠긴 행이라도 선택된 세그먼트는 색을 유지해요 (목업과 같아요) */
 .segment:disabled[aria-pressed='true'] {
+  color: var(--text);
+}
+
+/* 색이 있는 칸(허용 · 승인 등)은 바탕이 진해서 흰 글자 */
+.segment:disabled[aria-pressed='true'][data-tone] {
   color: var(--bg);
 }

@@ -63,7 +63,7 @@ def _run(argv: list[str], timeout: int = 10) -> tuple[int, str]:
 
 
 def conda_env_check() -> Check:
-    """서버가 conda 환경 `labremote` 에서 도는가."""
+    """서버가 conda 환경 `labremote`에서 도는가."""
     prefix = os.path.realpath(sys.prefix)
     if os.path.basename(prefix) == ENV_NAME:
         return Check(True, "conda 환경", f"{ENV_NAME} · {prefix}")
@@ -262,7 +262,7 @@ def schema_check() -> Check:
 # --- GPU -------------------------------------------------------------------
 
 
-#: `apt-config dump` 에서 `Unattended-Upgrade::Package-Blacklist` 에 꼭 있어야
+#: `apt-config dump`에서 `Unattended-Upgrade::Package-Blacklist` 에 꼭 있어야
 #: 하는 접두사. 드라이버가 저절로 올라가고 재부팅이 안 되면 `nvidia-smi` 가
 #: 통째로 죽는다 — 실제로 당했다.
 NVIDIA_BLACKLIST = (

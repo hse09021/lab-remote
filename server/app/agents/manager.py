@@ -78,7 +78,7 @@ class Live:
 
 
 #: 패키지를 바꾸는 명령처럼 보이나 — **경고용 짐작**이다. 막는 데 쓰지 않는다
-#: (명령 글자로는 빠짐없이 가를 수 없다 — v1 에서 62가지 중 52가지가 빠져나갔다).
+#: (명령 글자로는 빠짐없이 가를 수 없다 — v1에서 62가지 중 52가지가 빠져나갔다).
 INSTALL_RE = re.compile(
     r"\b(?:pip3?|python[0-9.]*\s+-m\s+pip|conda|mamba|micromamba|uv)\b[^;&|]*?\b"
     r"(?:install|add|update|upgrade|remove|uninstall)\b"

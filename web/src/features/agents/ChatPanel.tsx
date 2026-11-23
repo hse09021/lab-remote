@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { sessionQuery, useConfigure, useInterrupt, useSendMessage } from '@/api/agents'
@@ -12,7 +13,7 @@ import s from './Agents.module.css'
  * 채팅 패널 — ADE 가운데와 (4단계) IDE 오른쪽이 같은 컴포넌트를 써요.
  * 도구 사용 줄 · 할 일 · 하위 에이전트 · 승인 카드 · 결과(사용량)를 그려요.
  */
-export function ChatPanel({ session }: { session: AgentSession }) {
+export function ChatPanel({ session, actions }: { session: AgentSession; actions?: ReactNode }) {
   const detail = useQuery(sessionQuery(session.id))
   const sendMsg = useSendMessage()
   const configure = useConfigure()
@@ -41,6 +42,7 @@ export function ChatPanel({ session }: { session: AgentSession }) {
             중지
           </button>
         ) : null}
+        {actions}
       </div>
       <div className={s.chatTitle}>
         <span className={s.chatTitleText}>{session.title}</span>

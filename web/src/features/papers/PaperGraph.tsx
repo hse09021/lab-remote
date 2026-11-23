@@ -155,7 +155,7 @@ export default function PaperGraph() {
         .filter((x): x is { other: GraphNode; why: string; kind: GraphEdgeKind } => x !== null)
     : []
 
-  // "Claude 에게 묻기" 는 ADE 새 세션에 질문을 채워 두기만 해요 — 보내기는 사람이 눌러요
+  // "Claude에게 묻기" 는 ADE 새 세션에 질문을 채워 두기만 해요 — 보내기는 사람이 눌러요
   const askProject =
     (sel?.kind === 'project' ? sel.name : '') ||
     links.find((l) => l.other.kind === 'project')?.other.name ||
@@ -408,7 +408,7 @@ export default function PaperGraph() {
             <div className={s.ask}>
               <span className={s.askTitle}>연결된 논문들 사이 관계 묻기</span>
               <span className={s.askText}>
-                ADE 새 세션에 질문을 채워 둬요. 보내기를 누를 때만 Claude 에게 가요.
+                ADE 새 세션에 질문을 채워 둬요. 보내기를 누를 때만 Claude에게 가요.
                 {askProject && (
                   <>
                     {' '}
@@ -422,7 +422,7 @@ export default function PaperGraph() {
                 disabled={!askProject}
                 onClick={() => navigate(`/projects/${encodeURIComponent(askProject)}/ade?draft=${encodeURIComponent(askDraft)}`)}
               >
-                Claude 에게 묻기
+                Claude에게 묻기
               </button>
               {!askProject && <span className={s.askText}>등록한 프로젝트가 있어야 물을 수 있어요 (ADE 는 프로젝트 안에서 돌아요).</span>}
             </div>

@@ -31,7 +31,7 @@ interface Props {
   busy?: boolean
   disabled?: boolean
   placeholder?: string
-  /** 처음에 채워 둘 글 (예: Papers 그래프의 "Claude 에게 묻기"). 보내기는 사람이 눌러요 */
+  /** 처음에 채워 둘 글 (예: Papers 그래프의 "Claude에게 묻기"). 보내기는 사람이 눌러요 */
   initialText?: string
 }
 
@@ -176,7 +176,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
             className={s.textarea}
             value={text}
             disabled={disabled}
-            placeholder={placeholder ?? 'Claude 에게 요청하기'}
+            placeholder={placeholder ?? 'Claude에게 요청하기'}
             onChange={(e) => {
               setText(e.target.value)
               if (e.target.value.startsWith('/') && !e.target.value.includes(' ')) setMenu('slash')

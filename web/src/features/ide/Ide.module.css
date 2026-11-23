@@ -103,32 +103,44 @@
 
 .rail {
   flex: none;
-  width: var(--rail-w);
+  width: var(--activity-w);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 0;
+  gap: 6px;
+  padding: 10px 0;
   border-right: 1px solid var(--border);
-  background: var(--surface-muted);
+  background: var(--surface-sunken);
 }
 
 .railBtn {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: transparent;
-  font-size: 16px;
   color: var(--text-muted);
+  text-decoration: none;
   cursor: pointer;
+}
+
+.railBtn:hover {
+  color: var(--text);
 }
 
 .railBtn[aria-pressed='true'] {
   background: var(--bg);
-  color: var(--text);
+  color: var(--accent);
   box-shadow: var(--shadow-raised);
+}
+
+/* 설정 — 맨 아래 */
+.railBottom {
+  margin-top: auto;
 }
 
 .railBadge {
@@ -174,8 +186,12 @@
 }
 
 .iconBtn {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -555,11 +571,25 @@
   height: 280px;
 }
 
-.termToggle,
-.termNew {
+.termToggle {
   min-height: 34px;
   padding: 0 12px;
   border: none;
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.termNew {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-md);
   background: transparent;
   font-size: 12px;
   color: var(--text-muted);
@@ -670,4 +700,24 @@ kbd {
     flex: 1 1 100%;
     min-height: 80vh;
   }
+}
+
+/* 채팅 머리의 세션 기록 · 새 세션 (목업) */
+.chatIconBtn {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.chatIconBtn:hover {
+  background: var(--hover);
+  color: var(--text);
 }

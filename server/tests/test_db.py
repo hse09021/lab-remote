@@ -53,7 +53,7 @@ def test_표와_인덱스가_다_있다(conn):
 
 
 def test_v1_표는_없다(conn):
-    """승인·큐·루프·앵커·사용량 표는 v3 에서 빠졌다 (PLAN 2장)."""
+    """승인·큐·루프·앵커·사용량 표는 v3에서 빠졌다 (PLAN 2장)."""
     names = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master")}
     for table in ("loop_state", "jobs", "experiments", "approvals", "commands",
                   "usage_limits", "anchors", "agent_calls"):

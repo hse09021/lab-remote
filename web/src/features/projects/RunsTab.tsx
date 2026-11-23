@@ -32,7 +32,7 @@ export function RunsTab({ project, trees }: { project: ProjectDetail; trees?: Wo
 
   const runs = list.data?.runs ?? []
 
-  // 대시보드의 "이어서 실행…" 에서 왔으면 그 실행으로 창을 채워요
+  // 대시보드의 "이어서 실행…"에서 왔으면 그 실행으로 창을 채워요
   useEffect(() => {
     if (!rerunId || !list.data) return
     const from = list.data.runs.find((r) => r.id === rerunId)

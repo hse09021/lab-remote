@@ -121,7 +121,7 @@ ATTR_FILES = (".gitattributes", ".git/info/attributes")
 #: 속성 파일에서 거부할 것
 _ATTR_RE = re.compile(r"(^|\s)(filter|diff|merge)=(?!$)\S+")
 
-#: `.git/hooks` 에서 봐주는 것 — git 이 기본으로 깔아 두는 예시다
+#: `.git/hooks`에서 봐주는 것 — git 이 기본으로 깔아 두는 예시다
 _HOOK_SAMPLE = ".sample"
 
 
@@ -174,7 +174,7 @@ def noted_config(entries: dict) -> list[str]:
     out = []
     for key, value in sorted(entries.items()):
         if key in NOTED_KEYS or any(p.match(key) for p in NOTED_PATTERNS):
-            out.append(f".git/config · {key} — lab.remote 의 git 에서는 꺼져요")
+            out.append(f".git/config · {key} — lab.remote 의 git에서는 꺼져요")
     return out
 
 
@@ -195,7 +195,7 @@ def bad_hooks(root: str) -> list[str]:
         except OSError:
             continue
         if stat.S_ISREG(mode) and mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH):
-            out.append(f".git/hooks/{name} — lab.remote 의 git 에서는 안 돌아요")
+            out.append(f".git/hooks/{name} — lab.remote 의 git에서는 안 돌아요")
     return out
 
 

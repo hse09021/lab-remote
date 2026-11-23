@@ -14,7 +14,7 @@ const FIXED: Record<string, { title: string; test: (p: Paper) => boolean }> = {
   done: { title: '완료', test: (p) => p.status === 'done' },
 }
 
-/** 보기의 제목과 거르는 규칙. 분야(Research Field)는 vault 노트의 category 에서 와요 */
+/** 보기의 제목과 거르는 규칙. 분야(Research Field)는 vault 노트의 category에서 와요 */
 export function libraryView(v: LibraryView): { title: string; test: (p: Paper) => boolean } {
   if (v.startsWith('field:')) {
     const field = v.slice('field:'.length)

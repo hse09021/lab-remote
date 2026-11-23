@@ -166,7 +166,7 @@ export function useAddArxiv() {
   })
 }
 
-/** PDF 올리기 — 파일 이름으로 노트를 만들어요 (메타는 Obsidian 에서 채워요) */
+/** PDF 올리기 — 파일 이름으로 노트를 만들어요 (메타는 Obsidian에서 채워요) */
 export function useUploadPdf() {
   const qc = useQueryClient()
   return useMutation({

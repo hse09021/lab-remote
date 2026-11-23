@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Editor, loader, useMonaco } from '@monaco-editor/react'
@@ -11,6 +12,7 @@ import { fileContentQuery, terminalsQuery, useSaveFile, useTerminalActions } fro
 import { sessionsQuery } from '@/api/agents'
 import { ApiError } from '@/api/client'
 import { ErrorState, LoadingState } from '@/components'
+import { FilesIcon, GearIcon, PlusIcon, GitIcon, HistoryIcon, NewSessionIcon, RunIcon, ScenarioIcon, SearchIcon } from '@/components/icons'
 import { ChatPanel } from '../agents/ChatPanel'
 import { NewSession } from '../agents/AdePage'
 import { Explorer, GitPanel, RunPanel, SearchPanel } from './IdePanels'
@@ -40,8 +42,18 @@ export default function IdePage() {
   const terms = useQuery(terminalsQuery(project))
   const termActions = useTerminalActions(project)
 
-  // ADE 의 Scenario 에서 "실행 탭에 채우기" 로 오면 ?side=run&fill=<명령>
+  // ADE 의 Scenario에서 "실행 탭에 채우기" 로 오면 ?side=run&fill=<명령>
   const [side, setSide] = useState<Side>((params.get('side') as Side) || 'explorer')
+  // 목업처럼 지금 열린 아이콘을 다시 누르면 사이드바를 접어요
+  const [sideOpen, setSideOpen] = useState(true)
+  const [freshChat, setFreshChat] = useState(false)
+  const pickSide = (k: Side) => {
+    if (k === side) setSideOpen((v) => !v)
+    else {
+      setSide(k)
+      setSideOpen(true)
+    }
+  }
   const [fill, setFill] = useState<{ command: string; n: number } | null>(params.get('fill') ? { command: params.get('fill') as string, n: 1 } : null)
   const [tabs, setTabs] = useState<Tab[]>([])
   const [active, setActive] = useState('')
@@ -168,21 +180,24 @@ export default function IdePage() {
         <nav aria-label="작업 표시줄" className={s.rail}>
           {(
             [
-              ['explorer', '탐색기', '▤'],
-              ['search', '검색', '⌕'],
-              ['git', `소스 제어, 변경 ${status.data?.state === 'ok' ? status.data.changed : 0}개`, '⑂'],
-              ['scenario', 'Scenario', '◇'],
-              ['run', '실행', '▶'],
-            ] as [Side, string, string][]
-          ).map(([k, label, glyph]) => (
-            <button key={k} type="button" aria-label={label} title={label} aria-pressed={side === k} className={s.railBtn} onClick={() => setSide(k)}>
-              {glyph}
+              ['explorer', '탐색기', <FilesIcon />],
+              ['search', '검색', <SearchIcon size={22} weight={1.7} />],
+              ['git', `소스 제어, 변경 ${status.data?.state === 'ok' ? status.data.changed : 0}개`, <GitIcon />],
+              ['scenario', 'Scenario', <ScenarioIcon />],
+              ['run', '실행', <RunIcon />],
+            ] as [Side, string, ReactNode][]
+          ).map(([k, label, icon]) => (
+            <button key={k} type="button" aria-label={label} title={label} aria-pressed={side === k && sideOpen} className={s.railBtn} onClick={() => pickSide(k)}>
+              {icon}
               {k === 'git' && status.data?.state === 'ok' && status.data.changed > 0 && <span className={s.railBadge}>{status.data.changed}</span>}
             </button>
           ))}
+          <Link to={`/projects/${encodeURIComponent(project)}?tab=settings`} aria-label="설정" title="프로젝트 설정" className={`${s.railBtn} ${s.railBottom}`}>
+            <GearIcon />
+          </Link>
         </nav>
 
-        <aside aria-label="사이드바" className={s.sidebar}>
+        <aside aria-label="사이드바" className={s.sidebar} hidden={!sideOpen}>
           {side === 'explorer' && <Explorer key={tree} project={project} tree={tree} label={treeLabel} onOpen={openFile} />}
           {side === 'search' && <SearchPanel project={project} tree={tree} onOpen={openFile} />}
           {side === 'git' && <GitPanel project={project} tree={tree} onDiff={openDiff} />}
@@ -252,14 +267,14 @@ export default function IdePage() {
                   </button>
                 </div>
               ))}
-              <button type="button" className={s.termNew} disabled={termActions.create.isPending} onClick={newTerminal} title="새 터미널">
-                ＋ 새 터미널
+              <button type="button" className={s.termNew} disabled={termActions.create.isPending} onClick={newTerminal} aria-label="새 터미널" title="새 터미널">
+                <PlusIcon size={18} />
               </button>
               {termActions.create.error && <span className={s.errText}>{termActions.create.error instanceof ApiError ? termActions.create.error.message : ''}</span>}
             </div>
             {bottomOpen && (
               <div className={s.termBody}>
-                {openTerms.length === 0 && <div className={s.empty}>＋ 새 터미널 로 bash 를 열어요. 브라우저를 닫아도 데스크톱에서 계속 돌아요.</div>}
+                {openTerms.length === 0 && <div className={s.empty}>+ 를 누르면 bash 가 열려요. 브라우저를 닫아도 데스크톱에서 계속 돌아요.</div>}
                 {openTerms.map((t) => (
                   <div key={termKey(t)} hidden={termKey(t) !== termActive} className={s.termPane}>
                     {t.kind === 'shell' ? <TerminalView project={project} name={t.name} /> : <TerminalView project={project} run={t.run} />}
@@ -271,7 +286,24 @@ export default function IdePage() {
         </div>
 
         <aside aria-label="에이전트 채팅" className={s.chat}>
-          {chat ? <ChatPanel key={chat.id} session={chat} /> : sessions.isSuccess && <NewSession project={project} defaultTree={tree} />}
+          {chat && !freshChat ? (
+            <ChatPanel
+              key={chat.id}
+              session={chat}
+              actions={
+                <>
+                  <Link to={`/projects/${encodeURIComponent(project)}/ade?session=${encodeURIComponent(chat.id)}`} aria-label="세션 기록" title="세션 기록 (ADE)" className={s.chatIconBtn}>
+                    <HistoryIcon />
+                  </Link>
+                  <button type="button" aria-label="새 세션" title="새 세션" className={s.chatIconBtn} onClick={() => setFreshChat(true)}>
+                    <NewSessionIcon />
+                  </button>
+                </>
+              }
+            />
+          ) : (
+            sessions.isSuccess && <NewSession project={project} defaultTree={tree} onCancel={chat ? () => setFreshChat(false) : undefined} />
+          )}
         </aside>
       </div>
 

@@ -1,7 +1,7 @@
 """`result.csv` 를 읽고 **이상을 감지**한다.
 
 지표의 출처는 `experiments/EXP-NNN/result.csv` 다 (W&B 는 ② 범위 밖).
-열 규약은 생성기가 AI 에게 주는 `templates/result_example.csv` 다.
+열 규약은 생성기가 AI에게 주는 `templates/result_example.csv` 다.
 
     step,split,metric,value
 

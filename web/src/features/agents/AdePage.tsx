@@ -7,6 +7,7 @@ import { dirQuery, gitDiffQuery, gitStatusQuery, projectQuery, worktreesQuery } 
 import { runsQuery } from '@/api/runs'
 import { ApiError } from '@/api/client'
 import { ErrorState, LoadingState } from '@/components'
+import { ChatIcon, FilesIcon, GearIcon, GitIcon, PlusIcon } from '@/components/icons'
 import { agoShort } from '@/lib/time'
 import { ChatPanel } from './ChatPanel'
 import { Composer } from './Composer'
@@ -26,6 +27,14 @@ export default function AdePage() {
   const [params, setParams] = useSearchParams()
   const sid = params.get('session') ?? ''
   const [side, setSide] = useState<Side>('sessions')
+  const [sideOpen, setSideOpen] = useState(true)
+  const pickSide = (k: Side) => {
+    if (k === side) setSideOpen((v) => !v)
+    else {
+      setSide(k)
+      setSideOpen(true)
+    }
+  }
   const [right, setRight] = useState<Right>('changes')
   const [diffPath, setDiffPath] = useState('')
   const all = useQuery(sessionsQuery())
@@ -71,18 +80,23 @@ export default function AdePage() {
 
       <div className={s.adeBody}>
         <nav aria-label="작업 표시줄" className={s.rail}>
-          <button type="button" aria-label="탐색기" aria-pressed={side === 'explorer'} className={s.railBtn} onClick={() => setSide('explorer')}>
-            ▤
+          <button type="button" aria-label="탐색기" title="탐색기" aria-pressed={side === 'explorer' && sideOpen} className={s.railBtn} onClick={() => pickSide('explorer')}>
+            <FilesIcon />
           </button>
-          <button type="button" aria-label={`소스 제어, 변경 ${changes.length}개`} aria-pressed={side === 'git'} className={s.railBtn} onClick={() => setSide('git')}>
-            ⑂{changes.length > 0 && <span className={s.railBadge}>{changes.length}</span>}
+          <button type="button" aria-label={`소스 제어, 변경 ${changes.length}개`} title="소스 제어" aria-pressed={side === 'git' && sideOpen} className={s.railBtn} onClick={() => pickSide('git')}>
+            <GitIcon />
+            {changes.length > 0 && <span className={s.railBadge}>{changes.length}</span>}
           </button>
-          <button type="button" aria-label={`세션, 답 필요 ${askCount}개`} aria-pressed={side === 'sessions'} className={s.railBtn} onClick={() => setSide('sessions')}>
-            ☰{askCount > 0 && <span className={s.railBadge} data-tone="ask">{askCount}</span>}
+          <button type="button" aria-label={`세션, 답 필요 ${askCount}개`} title="세션" aria-pressed={side === 'sessions' && sideOpen} className={s.railBtn} onClick={() => pickSide('sessions')}>
+            <ChatIcon />
+            {askCount > 0 && <span className={s.railBadge} data-tone="ask">{askCount}</span>}
           </button>
+          <Link to={`/projects/${encodeURIComponent(project)}?tab=settings`} aria-label="설정" title="프로젝트 설정" className={`${s.railBtn} ${s.railBottom}`}>
+            <GearIcon />
+          </Link>
         </nav>
 
-        <aside aria-label="사이드바" className={s.sidebar}>
+        <aside aria-label="사이드바" className={s.sidebar} hidden={!sideOpen}>
           {side === 'sessions' && (
             <SessionList
               sessions={sessions}
@@ -193,7 +207,7 @@ function SessionList({
         <span className={s.panelTitle}>세션</span>
         <span className={s.muted}>{sessions.length}</span>
         <button type="button" aria-label="새 세션" title="새 세션" className={s.iconBtn} onClick={onNew}>
-          +
+          <PlusIcon />
         </button>
       </div>
       <div role="group" aria-label="세션 필터" className={s.seg}>
@@ -240,7 +254,18 @@ function SessionList({
   )
 }
 
-export function NewSession({ project, defaultTree, draft = '' }: { project: string; defaultTree: string; draft?: string }) {
+export function NewSession({
+  project,
+  defaultTree,
+  draft = '',
+  onCancel,
+}: {
+  project: string
+  defaultTree: string
+  draft?: string
+  /** IDE에서 "새 세션" 으로 열었을 때 — 원래 세션으로 돌아가기 */
+  onCancel?: () => void
+}) {
   const navigate = useNavigate()
   const create = useCreateSession()
   const trees = useQuery(worktreesQuery(project))
@@ -254,6 +279,11 @@ export function NewSession({ project, defaultTree, draft = '' }: { project: stri
     <section aria-label="새 세션" className={s.chat}>
       <div className={s.chatHead}>
         <span className={s.chatAgent}>새 세션 · Claude Code</span>
+        {onCancel && (
+          <button type="button" className={s.ghostBtn} onClick={onCancel}>
+            돌아가기
+          </button>
+        )}
       </div>
       <div className={s.newForm}>
         <label className={s.field}>
@@ -346,7 +376,7 @@ function Explorer({ project, tree, branch, onOpen }: { project: string; tree: st
         ))}
       </ul>
       <div className={s.muted}>
-        바뀐 파일을 누르면 오른쪽 변경 탭에 diff 가 열려요. 직접 고치려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE 에서 열기</Link>.
+        바뀐 파일을 누르면 오른쪽 변경 탭에 diff 가 열려요. 직접 고치려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열기</Link>.
       </div>
     </div>
   )

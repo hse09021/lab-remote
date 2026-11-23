@@ -215,7 +215,7 @@ export default function SystemPage() {
             <div className={s.row}>
               <span>보내는 것</span>
               <span>
-                {rules.length}가지 중 {rules.filter((r) => r.on).length}개 · <Link to="/inbox">Inbox 에서 바꾸기</Link>
+                {rules.length}가지 중 {rules.filter((r) => r.on).length}개 · <Link to="/inbox">Inbox에서 바꾸기</Link>
               </span>
             </div>
             <div className={s.row}>
@@ -294,7 +294,7 @@ function RemoteSection({ d }: { d: SystemOverview }) {
       </p>
       <pre className={s.pre}>{`code tunnel user login --provider github
 code tunnel service install --accept-server-license-terms
-# 휴대폰 · 다른 PC 에서 ${t.url || 'https://vscode.dev/tunnel/<이름>'} 를 열고
+# 휴대폰 · 다른 PC에서 ${t.url || 'https://vscode.dev/tunnel/<이름>'} 를 열고
 # Ports 보기에서 ${d.server.port ?? 8000} 을 전달(Forward a Port) → Forwarded Address 를 아래에 적어요`}</pre>
       <form
         className={s.remoteForm}

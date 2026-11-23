@@ -27,7 +27,7 @@ export function AgentAside({ sessions }: { sessions: AgentSession[] }) {
   for (const x of sessions) byProject.set(x.project, [...(byProject.get(x.project) ?? []), x])
   return (
     <div className={s.aside}>
-      {sessions.length === 0 && <div className={s.muted}>세션이 없어요. ADE 에서 시작해요.</div>}
+      {sessions.length === 0 && <div className={s.muted}>세션이 없어요. ADE에서 시작해요.</div>}
       {[...byProject.entries()].map(([p, list]) => (
         <div key={p}>
           <div className={s.asideProject}>{p}</div>
@@ -47,7 +47,7 @@ export function AgentAside({ sessions }: { sessions: AgentSession[] }) {
 export function Lanes({ sessions }: { sessions: AgentSession[] }) {
   const lanes = laneOf(sessions)
   const rows: [keyof typeof lanes, string, string][] = [
-    ['ask', '답이 필요해요', '카드에서 펼쳐 보고 허용하거나 ADE 에서 답해요'],
+    ['ask', '답이 필요해요', '카드에서 펼쳐 보고 허용하거나 ADE에서 답해요'],
     ['work', '작업 중', '마지막 출력 기준'],
     ['done', '끝남', '오늘 끝난 차례 · 검토하고 이어 가요'],
   ]
@@ -102,7 +102,7 @@ function SessionCard({ x, kind }: { x: AgentSession; kind: 'ask' | 'work' | 'don
       )}
       <div className={s.actions}>
         <Link to={adeHref(x)} className={s.primary} data-strong={kind === 'ask'}>
-          {kind === 'ask' ? (p?.tool === 'AskUserQuestion' ? 'ADE 에서 질문에 답하기' : 'ADE 에서 답하기') : 'ADE 로 가기'}
+          {kind === 'ask' ? (p?.tool === 'AskUserQuestion' ? 'ADE에서 질문에 답하기' : 'ADE에서 답하기') : 'ADE 로 가기'}
         </Link>
         {p && <QuickAllow p={p} />}
       </div>
@@ -134,7 +134,7 @@ export function QuickAllow({ p, via = 'Dashboard' }: { p: PendingApproval; via?:
         <button type="button" className={s.secondary} onClick={() => setOpen(false)}>
           접기
         </button>
-        <span className={s.muted}>거부 · 이유 적기는 ADE 에서 해요.</span>
+        <span className={s.muted}>거부 · 이유 적기는 ADE에서 해요.</span>
       </div>
       {answer.error ? (
         <div role="alert" className={s.err}>

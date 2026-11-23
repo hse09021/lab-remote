@@ -283,6 +283,7 @@ export function PdfView({
   const selected = reader.highlights.find((h) => h.id === selectedId) ?? null
 
   /* 두 렌더러가 같이 쓰는 오버레이 */
+  const hasTopics = Object.keys(reader.topics).length > 0
   const renderOverlays = (ctx: PdfPageContext) => {
           const pageHighlights = reader.highlights.filter(
             (h) => h.page === ctx.page && visible(h),
@@ -344,8 +345,9 @@ export function PdfView({
               />
               <SectionSparkles
                 ctx={ctx}
-                sections={pageSections}
-                titleSpot={ctx.page === 1 ? TITLE_SPOT : null}
+                // 미리 써 둔 설명이 없는 논문(vault)에는 설명 버튼을 두지 않아요
+                sections={hasTopics ? pageSections : []}
+                titleSpot={hasTopics && ctx.page === 1 ? TITLE_SPOT : null}
                 onExplain={(key, el) => openAt(key, el)}
                 onHover={(key, el) =>
                   onHover(key, key && el ? anchorAt(el) : null)
@@ -396,7 +398,8 @@ export function PdfView({
             폭 맞춤
           </button>
           <span className={s.hint}>
-            attention.pdf · 하이라이트를 누르면 메모가 보여요
+            {reader.pdfUrl.endsWith('.pdf') ? decodeURIComponent(reader.pdfUrl.split('/').pop() ?? '') : `${reader.title}.pdf`} ·{' '}
+            {reader.highlights.length > 0 ? '하이라이트를 누르면 메모가 보여요' : `${reader.pageCount}쪽 · 글자를 고르면 메뉴가 떠요`}
           </span>
         </div>
 

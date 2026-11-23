@@ -227,7 +227,7 @@ function RegisterDialog({ open, onClose }: { open: boolean; onClose: () => void 
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="lora-rank-ablation" />
       </label>
       <span>
-        폴더 안에 <span className={s.mono}>.labremote/</span> 를 만들어요. 스스로 git 에서 빠지고, 프로젝트의{' '}
+        폴더 안에 <span className={s.mono}>.labremote/</span> 를 만들어요. 스스로 git에서 빠지고, 프로젝트의{' '}
         <span className={s.mono}>.gitignore</span> 는 건드리지 않아요.
       </span>
     </Dialog>
@@ -297,7 +297,7 @@ function ProjectDetail({ name }: { name: string }) {
           </div>
         </div>
         <Link to={`${base}/ide`} className={s.headLink}>
-          IDE 에서 열기
+          IDE에서 열기
         </Link>
         <Link to={`${base}/ade`} className={s.headLink}>
           ADE 세션

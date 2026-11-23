@@ -73,7 +73,7 @@ def test_저장_경로가_데이터_폴더_안에_있다():
 
 
 def test_v1_상태_경로_함수는_없다():
-    """정책·실행 상태·승인 요청·허가 폴더는 v3 에서 빠졌다."""
+    """정책·실행 상태·승인 요청·허가 폴더는 v3에서 빠졌다."""
     for name in ("policy_path", "runstate_path", "pending_dir", "requests_dir",
                  "grants_dir", "projects_root"):
         assert not hasattr(registry, name), name

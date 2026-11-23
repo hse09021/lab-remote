@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { dirQuery, gitStatusQuery, useMakeEntry } from '@/api/projects'
 import type { ProjectDetail } from '@/api/projects'
 import { gitCapsQuery, searchQuery, useGitAction } from '@/api/ide'
 import { runsQuery, useStartRun, useStopRun } from '@/api/runs'
 import { ApiError } from '@/api/client'
 import { Dialog } from '@/components'
+import { CollapseAllIcon, NewFileIcon, NewFolderIcon, RefreshIcon } from '@/components/icons'
 import { RunStatePill } from '../projects/RunsTab'
 import { ScheduleDialog } from '../schedule/ScheduleDialog'
 import { duration, whenShort } from '@/lib/time'
@@ -18,16 +19,31 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : e ? String(
 export function Explorer({ project, tree, label, onOpen }: { project: string; tree: string; label: string; onOpen: (path: string) => void }) {
   const [making, setMaking] = useState<'' | 'file' | 'dir'>('')
   const [name, setName] = useState('')
+  // 모두 접기 — 폴더 트리를 처음 상태로 다시 그려요
+  const [fold, setFold] = useState(0)
   const make = useMakeEntry(project)
+  const qc = useQueryClient()
   return (
     <div className={s.panel}>
       <div className={s.panelHead}>
         <span className={s.panelTitle}>탐색기</span>
         <button type="button" className={s.iconBtn} aria-label="새 파일" title="새 파일" onClick={() => setMaking('file')}>
-          ＋
+          <NewFileIcon />
         </button>
         <button type="button" className={s.iconBtn} aria-label="새 폴더" title="새 폴더" onClick={() => setMaking('dir')}>
-          ▣
+          <NewFolderIcon />
+        </button>
+        <button
+          type="button"
+          className={s.iconBtn}
+          aria-label="탐색기 새로 고침"
+          title="새로 고침"
+          onClick={() => qc.invalidateQueries({ queryKey: ['projects', project, 'files'] })}
+        >
+          <RefreshIcon />
+        </button>
+        <button type="button" className={s.iconBtn} aria-label="모두 접기" title="모두 접기" onClick={() => setFold((n) => n + 1)}>
+          <CollapseAllIcon />
         </button>
       </div>
       <div className={s.muted}>{label}</div>
@@ -61,7 +77,7 @@ export function Explorer({ project, tree, label, onOpen }: { project: string; tr
           <div className={s.muted}>Enter로 만들기 · Esc로 취소 {make.error ? `· ${errText(make.error)}` : ''}</div>
         </form>
       )}
-      <Folder project={project} tree={tree} path="" depth={0} onOpen={onOpen} />
+      <Folder key={fold} project={project} tree={tree} path="" depth={0} onOpen={onOpen} />
     </div>
   )
 }
@@ -216,7 +232,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         onConfirm={() => merge.mutate(st.branch, { onSuccess: () => setAsking(false) })}
       >
         <span>
-          main worktree 에서 <code>git merge --no-ff {st.branch}</code> 를 해요. main 쪽에 커밋 안 한 변경이 있으면 하지 않고, 충돌이 나면 바로
+          main worktree에서 <code>git merge --no-ff {st.branch}</code> 를 해요. main 쪽에 커밋 안 한 변경이 있으면 하지 않고, 충돌이 나면 바로
           되돌려요. push 는 하지 않아요.
         </span>
       </Dialog>

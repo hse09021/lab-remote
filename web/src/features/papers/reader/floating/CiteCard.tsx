@@ -80,7 +80,7 @@ export function CiteCard({
         <span className={s.statePill}>
           {r.arxiv ? `arXiv:${r.arxiv}` : '원문 링크 없음'}
         </span>
-        {/* 실제 값은 Semantic Scholar 에서 받아요 */}
+        {/* 실제 값은 Semantic Scholar에서 받아요 */}
         <span className={s.cited}>피인용 [Semantic Scholar 값]</span>
       </div>
 
