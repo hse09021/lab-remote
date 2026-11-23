@@ -28,7 +28,7 @@ export function StartGuide({ projects }: { projects: number }) {
       done: account.data?.loggedIn === true,
       unknown: !account.data || account.data.loggedIn === null,
       title: 'Claude Code 로그인',
-      text: '데스크톱 터미널에서 claude 를 열어 로그인해요. lab.remote 는 그 로그인을 불러 써요.',
+      text: '데스크톱 터미널에서 claude를 열어 로그인해요. lab.remote는 그 로그인을 불러 써요.',
       to: '',
     },
     { done: projects > 0, unknown: false, title: '프로젝트 등록', text: '연구 폴더를 등록하거나 새 폴더를 만들어요.', to: '/projects' },

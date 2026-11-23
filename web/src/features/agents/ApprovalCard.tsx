@@ -18,7 +18,7 @@ function lines(text: unknown, sign: Line['sign']): Line[] {
     .map((code) => ({ sign, code }))
 }
 
-/** 도구 입력을 사람이 볼 모양으로. Edit·Write 는 diff, Bash 는 명령, 나머지는 JSON. */
+/** 도구 입력을 사람이 볼 모양으로. Edit·Write는 diff, Bash는 명령, 나머지는 JSON. */
 export function approvalBody(tool: string, input: Record<string, unknown>): { kind: 'diff'; lines: Line[]; file: string } | { kind: 'text'; text: string } {
   const file = String(input.file_path ?? input.notebook_path ?? '')
   if (tool === 'Edit') {
@@ -80,7 +80,7 @@ interface Question {
   multiSelect?: boolean
 }
 
-/** Claude 의 객관식 질문(AskUserQuestion) — 보기를 고르거나 직접 적어서 답해요 */
+/** Claude의 객관식 질문(AskUserQuestion) — 보기를 고르거나 직접 적어서 답해요 */
 export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
   const answer = useAnswer()
   const questions = (Array.isArray(p.input.questions) ? p.input.questions : []) as Question[]
@@ -99,7 +99,7 @@ export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
   const submit = () => {
     const answers: Record<string, string | string[]> = {}
     for (const q of questions) {
-      // "기타"에 적은 글은 'Other' 가 아니라 그 글 자체를 답으로 (문서: user-input)
+      // "기타"에 적은 글은 'Other'가 아니라 그 글 자체를 답으로 (문서: user-input)
       const labels = [...(picked[q.question] ?? []), ...(other[q.question]?.trim() ? [other[q.question].trim()] : [])]
       if (labels.length) answers[q.question] = q.multiSelect ? labels : labels[labels.length - 1]
     }

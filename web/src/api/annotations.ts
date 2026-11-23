@@ -22,7 +22,7 @@ const key = (paperId: string) => ['papers', paperId, 'annotations'] as const
 
 /**
  * 내가 칠한 하이라이트와 내가 쓴 주석.
- * AI 하이라이트(paper-attn.json 의 highlights)는 여기 들어오지 않아요 —
+ * AI 하이라이트(paper-attn.json의 highlights)는 여기 들어오지 않아요 —
  * 그건 논문 데이터라 지울 수 없고 왼쪽 레전드로 켜고 끄기만 해요.
  */
 export const annotationsQuery = (paperId: string) =>

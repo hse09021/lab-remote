@@ -73,8 +73,8 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
         context,
         liveTopic: needLive
           ? kind
-            ? { title: sec ? `${sec.n ? `§${sec.n} ` : ''}${sec.title}` : '고른 글', blocks: [{ p: 'Claude 가 논문을 읽는 중이에요…' }], qs: [] }
-            : { title: '이 논문에 묻기', blocks: [{ p: '아래에 질문을 적으면 Claude 가 이 논문을 읽고 답해요.' }], qs: [] }
+            ? { title: sec ? `${sec.n ? `§${sec.n} ` : ''}${sec.title}` : '고른 글', blocks: [{ p: 'Claude가 논문을 읽는 중이에요…' }], qs: [] }
+            : { title: '이 논문에 묻기', blocks: [{ p: '아래에 질문을 적으면 Claude가 이 논문을 읽고 답해요.' }], qs: [] }
           : null,
       })
       if (!needLive || !kind || !live) return
@@ -161,7 +161,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
 
   /**
    * 미리 써 둔 설명이 없는 섹션은 목업처럼 안내 문단 하나를 보여 줘요.
-   * (예: §3.4 — 실제로는 Claude 가 그 섹션 본문을 읽고 풀어 써요)
+   * (예: §3.4 — 실제로는 Claude가 그 섹션 본문을 읽고 풀어 써요)
    */
   const topic = state.topicKey
     ? (topics[state.topicKey] ?? state.liveTopic ?? fallbackTopic(state.topicKey, sections))
@@ -171,7 +171,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
 }
 
 /**
- * 섹션 id 를 설명 주제로 바꿔요.
+ * 섹션 id를 설명 주제로 바꿔요.
  * 목업처럼 일부 섹션은 그림·수식 설명으로 이어져요.
  */
 const ALIAS: Record<string, string> = {

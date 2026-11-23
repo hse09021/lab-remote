@@ -115,7 +115,7 @@ export function useTestSend() {
   })
 }
 
-/* ── Dashboard 의 열린 PR · 최근 머지 (느려서 따로 · 서버가 60초 캐시) ─────── */
+/* ── Dashboard의 열린 PR · 최근 머지 (느려서 따로 · 서버가 60초 캐시) ─────── */
 
 export interface GitFeed {
   merges: { items: { project: string; main: string; branch: string; title: string; at: number }[]; week: number; today: number }

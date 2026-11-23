@@ -47,7 +47,7 @@ interface Props {
   /** vault 위치 (없으면 아직 모름) */
   vaultPath?: string
   onVault: () => void
-  /** lab.remote 모음 (vault 는 그대로) */
+  /** lab.remote 모음 (vault는 그대로) */
   collections?: { name: string; count: number }[]
   onAddCollection?: () => void
   onRemoveCollection?: (name: string) => void

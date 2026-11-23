@@ -6,7 +6,7 @@ import s from './ImagePdfRenderer.module.css'
 
 /**
  * 미리 뽑아 둔 쪽 이미지로 PDF를 흉내 내는 렌더러.
- * 개발용 fixtures 를 쓰고, 3단계에서 PdfJsRenderer로 바뀌어요.
+ * 개발용 fixtures를 쓰고, 3단계에서 PdfJsRenderer로 바뀌어요.
  */
 export function ImagePdfRenderer({
   source,

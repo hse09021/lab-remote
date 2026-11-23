@@ -260,7 +260,7 @@ function Block({
   )
 }
 
-/** [[용어]] 를 점선 밑줄 + 뜻 툴팁으로 바꿔요 */
+/** [[용어]]를 점선 밑줄 + 뜻 툴팁으로 바꿔요 */
 function Segments({ text, terms }: { text: string; terms: Record<string, string> }) {
   const parts = text.split(/(\[\[[^\]]+\]\])/g)
   return (
@@ -284,7 +284,7 @@ function Segments({ text, terms }: { text: string; terms: Record<string, string>
   )
 }
 
-/** 목업의 인포그래픽 — 실제로는 Claude 가 SVG 를 만들어요 */
+/** 목업의 인포그래픽 — 실제로는 Claude가 SVG를 만들어요 */
 function InfoGraphic() {
   return (
     <div className={s.info}>

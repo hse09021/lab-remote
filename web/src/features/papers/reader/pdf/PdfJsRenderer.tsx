@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { PtRect } from '@/api/types'
 import { loadPdf } from './pdfjs'
-// pdfjs 의 글자 층 모양 (span 배치·선택 색)
+// pdfjs의 글자 층 모양 (span 배치·선택 색)
 import 'pdfjs-dist/web/pdf_viewer.css'
 import type { PdfPageContext, PdfRendererProps } from './types'
 import s from './PdfJsRenderer.module.css'
@@ -12,7 +12,7 @@ const NEAR = 1
 
 interface Props extends PdfRendererProps {
   url: string
-  /** PDF 를 못 읽었을 때 대신 보여 줄 것 */
+  /** PDF를 못 읽었을 때 대신 보여 줄 것 */
   fallback: React.ReactNode
   /** 실제 텍스트 선택 */
   onSelect?: (rects: PtRect[], text: string, page: number) => void
@@ -266,7 +266,7 @@ function PdfPage({
       <canvas ref={canvasRef} className={s.canvas} />
       {/*
         글자 층 — 보이지 않지만 선택이 돼요.
-        pdfjs 의 pdf_viewer.css 는 전역 .textLayer 를 노리니 그 이름을 꼭 같이 줘요
+        pdfjs의 pdf_viewer.css는 전역 .textLayer를 노리니 그 이름을 꼭 같이 줘요
         (CSS Module 해시 이름만 주면 span 위치 규칙이 안 먹어요).
       */}
       <div ref={textRef} className={`textLayer ${s.textLayerBox}`} />

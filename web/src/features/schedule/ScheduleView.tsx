@@ -12,7 +12,7 @@ import s from './Schedule.module.css'
 /** Dashboard › Schedule — 24시간 띠 + 예약 표 + 규칙 (목업 MissionControl) */
 
 const HOUR = 3600
-/** 띠는 오늘 08:00 → 내일 08:00 (지금이 08시 전이면 어제 08:00 부터) */
+/** 띠는 오늘 08:00 → 내일 08:00 (지금이 08시 전이면 어제 08:00부터) */
 function bandStart(now: Date) {
   const d = new Date(now)
   d.setMinutes(0, 0, 0)
@@ -55,7 +55,7 @@ export function ScheduleView({ running }: { running: Run[] }) {
         <h2 className={s.h2}>
           예약 <span className={s.count}>{items.length}</span>
         </h2>
-        <span className={s.muted}>IDE 실행 탭의 "시간 정해서 실행…" 이나 여기서 만들어요</span>
+        <span className={s.muted}>IDE 실행 탭의 "시간 정해서 실행…"이나 여기서 만들어요</span>
         <button type="button" className={s.primary} onClick={() => setDialog({ open: true })}>
           + 예약 만들기
         </button>
@@ -181,10 +181,10 @@ export function ScheduleView({ running }: { running: Run[] }) {
       {err && <div className={s.err}>{err instanceof ApiError ? err.message : String(err)}</div>}
 
       <ul className={s.rules}>
-        <li>예약 시각에 GPU 를 다른 학습이 쓰고 있으면 끝날 때까지 기다렸다가 시작하고, 기다리기 시작할 때 알려요.</li>
+        <li>예약 시각에 GPU를 다른 학습이 쓰고 있으면 끝날 때까지 기다렸다가 시작하고, 기다리기 시작할 때 알려요.</li>
         <li>"앞 실행이 끝나면 시작" 같은 연쇄 예약은 없어요. 예약은 시각으로만 걸어요.</li>
         <li>에이전트 예약은 그 시각에 세션을 열고 알리기만 해요. 승인이 필요하면 거기서 멈춰요.</li>
-        <li>lab.remote 서버가 시간을 재서 실행해요. cron 이나 systemd 타이머를 만들지 않고, 서버가 꺼져 있던 사이 지난 예약은 늦게 돌리지 않아요.</li>
+        <li>lab.remote 서버가 시간을 재서 실행해요. cron이나 systemd 타이머를 만들지 않고, 서버가 꺼져 있던 사이 지난 예약은 늦게 돌리지 않아요.</li>
       </ul>
 
       <ScheduleDialog key={dialog.edit?.id ?? (dialog.open ? 'new' : 'closed')} open={dialog.open} edit={dialog.edit} onClose={() => setDialog({ open: false })} />

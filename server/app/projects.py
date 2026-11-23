@@ -1,13 +1,13 @@
 """프로젝트 — 등록·해제, `<프로젝트>/.labremote/`, 프로젝트 설정, 고정.
 
-lab.remote 가 연구 프로젝트 안에 만드는 것은 `.labremote/` **하나뿐이다**
-(PLAN 1장). 그 안의 `.gitignore` 가 `*` 한 줄이라 폴더가 스스로 git에서
-빠진다 — 프로젝트의 `.gitignore` 는 건드리지 않는다.
+lab.remote가 연구 프로젝트 안에 만드는 것은 `.labremote/` **하나뿐이다**
+(PLAN 1장). 그 안의 `.gitignore`가 `*` 한 줄이라 폴더가 스스로 git에서
+빠진다 — 프로젝트의 `.gitignore`는 건드리지 않는다.
 
-"repo에 같이 올리기" 를 켜면 그 `.gitignore` 만 바꿔서 `settings.json`과
-`scenarios/` 가 추적되게 한다(PLAN 3장).
+"repo에 같이 올리기"를 켜면 그 `.gitignore`만 바꿔서 `settings.json`과
+`scenarios/`가 추적되게 한다(PLAN 3장).
 
-등록 목록은 `registry` 가, 화면 상태(고정)는 데이터 폴더의 `ui.json` 이 갖는다.
+등록 목록은 `registry`가, 화면 상태(고정)는 데이터 폴더의 `ui.json`이 갖는다.
 """
 
 from __future__ import annotations
@@ -42,10 +42,10 @@ __all__ = [
 LABREMOTE_DIR = ".labremote"
 
 #: `.labremote/.gitignore` — 기본은 폴더 전체를 git에서 뺀다
-GITIGNORE_PRIVATE = "# lab.remote 가 만든 폴더예요. 통째로 git에서 빠져요.\n*\n"
-#: "repo에 같이 올리기" — `settings.json`과 `scenarios/*.json` 만 추적
+GITIGNORE_PRIVATE = "# lab.remote가 만든 폴더예요. 통째로 git에서 빠져요.\n*\n"
+#: "repo에 같이 올리기" — `settings.json`과 `scenarios/*.json`만 추적
 GITIGNORE_SHARED = (
-    "# lab.remote 가 만든 폴더예요. 설정과 Scenario 만 같이 올려요.\n"
+    "# lab.remote가 만든 폴더예요. 설정과 Scenario만 같이 올려요.\n"
     "*\n"
     "!.gitignore\n"
     "!settings.json\n"
@@ -91,14 +91,14 @@ def _write_text(path: str, text: str) -> None:
 
 
 def ensure_labremote(root: str) -> dict:
-    """`.labremote/`와 `.gitignore`·`settings.json` 을 만든다. 있으면 그대로 둔다.
+    """`.labremote/`와 `.gitignore`·`settings.json`을 만든다. 있으면 그대로 둔다.
 
-    `.labremote` 가 심볼릭 링크거나 파일이면 거절한다 — 링크를 따라가 프로젝트
+    `.labremote`가 심볼릭 링크거나 파일이면 거절한다 — 링크를 따라가 프로젝트
     밖에 쓰지 않으려고.
     """
     folder = labremote_dir(root)
     if os.path.islink(folder) or (os.path.exists(folder) and not os.path.isdir(folder)):
-        raise ProjectError(f"{LABREMOTE_DIR} 가 폴더가 아니에요 (링크나 파일). 직접 확인해 주세요.")
+        raise ProjectError(f"{LABREMOTE_DIR}가 폴더가 아니에요 (링크나 파일). 직접 확인해 주세요.")
     made = not os.path.exists(folder)
     os.makedirs(folder, exist_ok=True)
     settings_path = os.path.join(folder, "settings.json")
@@ -115,7 +115,7 @@ def _clean_list(value, *, limit: int, field: str) -> list[str]:
     if value is None:
         return []
     if not isinstance(value, list):
-        raise ProjectError(f"{field} 는 목록이어야 해요.")
+        raise ProjectError(f"{field}는 목록이어야 해요.")
     out: list[str] = []
     for item in value:
         if not isinstance(item, str):
@@ -124,11 +124,11 @@ def _clean_list(value, *, limit: int, field: str) -> list[str]:
         if not text:
             continue
         if len(text) > MAX_TEXT or "\x00" in text or "\n" in text:
-            raise ProjectError(f"{field} 의 한 줄이 너무 길거나 줄바꿈이 있어요.")
+            raise ProjectError(f"{field}의 한 줄이 너무 길거나 줄바꿈이 있어요.")
         if text not in out:
             out.append(text)
     if len(out) > limit:
-        raise ProjectError(f"{field} 는 {limit}개까지 둘 수 있어요.")
+        raise ProjectError(f"{field}는 {limit}개까지 둘 수 있어요.")
     return out
 
 
@@ -164,7 +164,7 @@ def load_settings(root: str) -> dict:
 
 
 def save_settings(root: str, raw: dict) -> dict:
-    """검사해서 쓰고, `share`에 맞춰 `.labremote/.gitignore` 를 다시 쓴다."""
+    """검사해서 쓰고, `share`에 맞춰 `.labremote/.gitignore`를 다시 쓴다."""
     clean = _normalize(raw)
     ensure_labremote(root)
     folder = labremote_dir(root)
@@ -189,10 +189,10 @@ def _forbidden_roots() -> list[str]:
 
 
 def register(path: str, name: str = "", *, create: bool = False, git_init: bool = False) -> dict:
-    """폴더를 등록하고 `.labremote/` 를 만든다.
+    """폴더를 등록하고 `.labremote/`를 만든다.
 
     `create` 면 새 폴더를 만든다(위 폴더는 있어야 하고, 같은 이름이 이미 있으면 거절).
-    `git_init` 이면 만든 폴더에서 `git init -b main` 까지 한다.
+    `git_init` 이면 만든 폴더에서 `git init -b main`까지 한다.
 
     거절: 없는 폴더 · `/`·홈 폴더 자체 · lab.remote 저장소와 데이터 폴더 ·
     이미 등록된 프로젝트와 겹치는(안에 있거나 품는) 폴더.
@@ -238,7 +238,7 @@ def register(path: str, name: str = "", *, create: bool = False, git_init: bool 
             done = subprocess.run(["git", "init", "-q", "-b", "main", root], capture_output=True, text=True, timeout=30)
             if done.returncode != 0:
                 os.rmdir(root) if not os.listdir(root) else None
-                raise ProjectError("git init 이 실패했어요: " + (done.stderr or "").strip()[:200])
+                raise ProjectError("git init이 실패했어요: " + (done.stderr or "").strip()[:200])
     ensure_labremote(root)
     try:
         registry.register(root, name)
@@ -261,7 +261,7 @@ def require(name: str) -> str:
 
 
 def unregister(name: str, *, remove_labremote: bool = False) -> dict:
-    """등록을 지운다. `remove_labremote` 면 `.labremote/` 도 지운다(기본은 남김).
+    """등록을 지운다. `remove_labremote` 면 `.labremote/`도 지운다(기본은 남김).
 
     지우는 건 **`.labremote` 폴더 하나**다. 링크면 따라가지 않고 거절한다.
     """
@@ -270,13 +270,13 @@ def unregister(name: str, *, remove_labremote: bool = False) -> dict:
     if remove_labremote:
         folder = labremote_dir(root)
         if os.path.islink(folder):
-            raise ProjectError(f"{LABREMOTE_DIR} 가 링크라 지우지 않았어요.")
+            raise ProjectError(f"{LABREMOTE_DIR}가 링크라 지우지 않았어요.")
         trees = os.path.join(folder, "worktrees")
         if os.path.isdir(trees) and os.listdir(trees):
             # worktree 안에는 커밋 안 한 작업이 있을 수 있다 — 통째로 지우지 않는다
             raise ProjectError(
-                "`.labremote/worktrees/`에 worktree 가 남아 있어요. 먼저 정리하거나 "
-                "`.labremote/` 는 남겨 두고 해제해 주세요."
+                "`.labremote/worktrees/`에 worktree가 남아 있어요. 먼저 정리하거나 "
+                "`.labremote/`는 남겨 두고 해제해 주세요."
             )
         if os.path.isdir(folder):
             shutil.rmtree(folder)

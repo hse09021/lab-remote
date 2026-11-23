@@ -79,7 +79,7 @@ def test_pip_미리_보기와_명령_모양(fake):
                                packages=[{"name": "torch", "spec": "==2.7.0"}, {"name": "peft"}], dry=True))
     assert {(c["name"], c["from"], c["to"]) for c in got["changes"]} == {("torch", "2.6.0", "2.7.0"), ("peft", "", "0.13.2")}
     argv = next(a for a in fake if "--report" in a)
-    # 🔑 셸 없이 · 캐시 없이 · 휠만 (pkgspec 이 이름순으로 정리한다)
+    # 🔑 셸 없이 · 캐시 없이 · 휠만 (pkgspec이 이름순으로 정리한다)
     assert "--no-cache-dir" in argv and "--only-binary=:all:" in argv and sorted(argv[-2:]) == ["peft", "torch==2.7.0"]
 
 

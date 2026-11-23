@@ -3,7 +3,7 @@
 - 셸 터미널은 프로젝트마다 tmux 서버 하나(`-L labremote-term-<프로젝트>`)에 세션으로
   만든다. 브라우저를 닫아도 셸이 남고, 다시 열면 그대로 붙는다.
 - tmux 서버는 **사용자 서비스로** 띄운다(`process.service_prefix`) — 서버의
-  nice 19 · ionice idle 을 물려받지 않게(터미널에서 학습을 돌릴 수 있다).
+  nice 19 · ionice idle을 물려받지 않게(터미널에서 학습을 돌릴 수 있다).
 - 학습 실행에 붙을 때는 그 실행의 tmux에 붙는다. 기본은 **보기 전용**(`-r`) —
   잘못 누른 Ctrl+C로 학습이 멈추지 않게. 입력을 허용하려면 화면에서 켠다.
 - 화면 쪽 tmux 클라이언트는 PTY 하나로 띄우고 WebSocket과 잇는다.
@@ -50,7 +50,7 @@ def _env() -> dict[str, str]:
 def _tmux(*args: str, timeout: int = 10) -> subprocess.CompletedProcess:
     tmux = runs.tmux_bin()
     if not tmux:
-        raise TerminalError("tmux 가 없어요 — sudo apt install tmux")
+        raise TerminalError("tmux가 없어요 — sudo apt install tmux")
     return subprocess.run([tmux, *args], capture_output=True, text=True, timeout=timeout, env=_env())
 
 

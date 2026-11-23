@@ -2,7 +2,7 @@ import type { PtRect } from '@/api/types'
 
 /**
  * 고른 글이 본문 어디인지 — 나중에 그 자리에 다시 그리기 위한 값이에요.
- * HTML 은 블록 id + 글자 오프셋, PDF 는 pt(612×792) 사각형을 써요.
+ * HTML은 블록 id + 글자 오프셋, PDF는 pt(612×792) 사각형을 써요.
  */
 export interface SelectionPlace {
   page: number
@@ -25,7 +25,7 @@ function offsetWithin(block: HTMLElement, node: Node, nodeOffset: number): numbe
 
 /**
  * 드래그 선택 → 블록 id + 오프셋.
- * id 가 있는 가장 가까운 조상을 블록으로 봐요 (샘플·arXiv HTML 모두 id 가 있어요).
+ * id가 있는 가장 가까운 조상을 블록으로 봐요 (샘플·arXiv HTML 모두 id가 있어요).
  */
 export function placeFromRange(range: Range): SelectionPlace['anchor'] {
   const start = range.startContainer

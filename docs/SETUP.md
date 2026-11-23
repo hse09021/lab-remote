@@ -1,18 +1,18 @@
 # lab.remote 설치
 
 데스크톱(GPU)에서 연구를 돌리고, 어디서든 브라우저로 보고 · 실행하고 · 알림 받는 개인용 도구예요.
-설치는 clone 하고 몇 줄이면 끝나요. 끝났는지는 `labremote doctor`로 확인해요 — `✘` 가 없으면 돼요.
+설치는 clone 하고 몇 줄이면 끝나요. 끝났는지는 `labremote doctor`로 확인해요 — `✘`가 없으면 돼요.
 
-## lab.remote 가 바꾸는 것 (전부)
+## lab.remote가 바꾸는 것 (전부)
 
 | 무엇 | 언제 | 되돌리기 |
 |---|---|---|
 | conda 환경 `labremote` | `./install.sh` | `conda env remove -n labremote` |
 | 사용자 서비스 `~/.config/systemd/user/labremote-session.service` | `labremote autostart install` | `labremote autostart uninstall` |
-| linger (`loginctl enable-linger`) — 꺼져 있을 때만 | `labremote autostart install` | uninstall 이 원래 값으로 돌려요 (code tunnel 서비스가 있으면 그대로) |
+| linger (`loginctl enable-linger`) — 꺼져 있을 때만 | `labremote autostart install` | uninstall이 원래 값으로 돌려요 (code tunnel 서비스가 있으면 그대로) |
 | 등록한 프로젝트마다 `<프로젝트>/.labremote/` (스스로 git에서 빠져요) | 프로젝트를 등록할 때 | 등록 해제 때 지울지 골라요 |
 
-`~/.bashrc` · `~/.claude/` · `.condarc` · cron · systemd 타이머 · 프로젝트의 `.gitignore` 는 고치지 않아요.
+`~/.bashrc` · `~/.claude/` · `.condarc` · cron · systemd 타이머 · 프로젝트의 `.gitignore`는 고치지 않아요.
 나머지 상태는 전부 lab.remote 데이터 폴더(기본 `server/data/`)에 있어요.
 
 ---
@@ -24,12 +24,12 @@
 | Linux + systemd | 실행 · 자동 시작 | `systemctl --user status` |
 | Miniconda (또는 conda) | 서버 환경 · 실험 환경 | `conda --version` |
 | tmux | 접속이 끊겨도 학습이 계속 돌게 | `tmux -V` (`sudo apt install tmux`) |
-| **Claude Code — 설치하고 로그인까지** | 채팅 · 승인 · 시나리오 | `claude` 를 한 번 열어 로그인 |
+| **Claude Code — 설치하고 로그인까지** | 채팅 · 승인 · 시나리오 | `claude`를 한 번 열어 로그인 |
 | Node.js 20 이상 | 웹 화면 빌드 (한 번) | `npm --version` |
 | (밖에서 쓸 때) VS Code | code tunnel | `code --version` |
 
-lab.remote 는 Claude 로그인을 대신하지 않아요. 터미널에서 쓰는 그 Claude Code 를 그대로 불러요.
-`ANTHROPIC_API_KEY` 가 환경에 있으면 구독이 아니라 종량제로 과금될 수 있어요 — `doctor` 가 알려 줘요.
+lab.remote는 Claude 로그인을 대신하지 않아요. 터미널에서 쓰는 그 Claude Code를 그대로 불러요.
+`ANTHROPIC_API_KEY`가 환경에 있으면 구독이 아니라 종량제로 과금될 수 있어요 — `doctor`가 알려 줘요.
 
 ## 2. 받고 설치하기
 
@@ -39,14 +39,14 @@ cd ~/lab-remote
 ./install.sh            # 무엇을 돌릴지만 보려면 ./install.sh --dry-run
 ```
 
-`install.sh` 는 conda 환경 `labremote` 를 만들고(있으면 그대로), 서버 패키지를 설치하고, 웹 화면을 빌드하고,
-`labremote doctor` 를 돌려요. 셸 설정은 고치지 않으니 명령은 환경 경로로 불러요.
+`install.sh`는 conda 환경 `labremote`를 만들고(있으면 그대로), 서버 패키지를 설치하고, 웹 화면을 빌드하고,
+`labremote doctor`를 돌려요. 셸 설정은 고치지 않으니 명령은 환경 경로로 불러요.
 
 ```bash
 ~/miniconda3/envs/labremote/bin/labremote doctor
 ```
 
-(자주 쓰면 `alias labremote=~/miniconda3/envs/labremote/bin/labremote` 를 **직접** 셸 설정에 넣어도 돼요.)
+(자주 쓰면 `alias labremote=~/miniconda3/envs/labremote/bin/labremote`를 **직접** 셸 설정에 넣어도 돼요.)
 
 ## 3. 띄우기
 
@@ -54,7 +54,7 @@ cd ~/lab-remote
 labremote serve          # http://127.0.0.1:8000 · nice 19 · ionice idle
 ```
 
-이 데스크톱 브라우저에서 `http://127.0.0.1:8000` 을 열어요. 서버는 `127.0.0.1`에만 열려요.
+이 데스크톱 브라우저에서 `http://127.0.0.1:8000`을 열어요. 서버는 `127.0.0.1`에만 열려요.
 
 ## 4. 켜 두기 (자동 시작)
 
@@ -64,20 +64,20 @@ labremote autostart status
 labremote autostart uninstall
 ```
 
-켜면 `labremote-session` 서비스가 tmux `labremote` 안에서 `labremote serve` 를 띄워요.
+켜면 `labremote-session` 서비스가 tmux `labremote` 안에서 `labremote serve`를 띄워요.
 재부팅하거나 로그아웃해도 떠 있어요. 서버 출력은 `/usr/bin/tmux -L labremote attach -t labremote` (터미널 창에서 · 나올 때 `Ctrl+b d`), 터미널 없이 지금 화면만 보려면 `/usr/bin/tmux -L labremote capture-pane -p -t labremote`.
 학습 실행은 이 서비스와 따로 돌아서 서비스를 다시 켜도 살아요. 끄기와 다시 켜기는 System 화면에서도 돼요.
 
 ## 5. 밖에서 접속 (code tunnel)
 
-터널은 **VS Code 가 띄워요.** lab.remote 는 상태만 읽어요 (System 화면 · 헤더의 Tunnel 점 · `labremote remote`).
+터널은 **VS Code가 띄워요.** lab.remote는 상태만 읽어요 (System 화면 · 헤더의 Tunnel 점 · `labremote remote`).
 
 ```bash
 code tunnel user login --provider github
 code tunnel service install --accept-server-license-terms     # 재부팅 뒤에도 켜져 있게
 ```
 
-1. 휴대폰 · 다른 PC에서 `https://vscode.dev/tunnel/<이름>` 을 열고 같은 GitHub 계정으로 로그인해요.
+1. 휴대폰 · 다른 PC에서 `https://vscode.dev/tunnel/<이름>`을 열고 같은 GitHub 계정으로 로그인해요.
 2. Ports 보기에서 **Forward a Port** → `8000`. 기본은 Private 이라 같은 계정으로 로그인해야 열려요 (Public으로 바꾸지 마세요).
 3. 나온 **Forwarded Address** 를 lab.remote에 알려 줘요.
 
@@ -91,13 +91,13 @@ code tunnel service install --accept-server-license-terms     # 재부팅 뒤에
 > **보안** — 터널이 열려 있으면 그 GitHub 계정만 있으면 이 데스크톱의 터미널과 파일에 들어올 수 있어요.
 > **GitHub 2단계 인증을 켜 두세요.**
 
-> `code tunnel service install` 은 사용자 서비스 `~/.config/systemd/user/code-tunnel.service`
-> (→ `~/.vscode/cli/code-tunnel.service`)를 만들고 켜요 (실측 2026-11-23). 로그아웃 뒤에도 돌려면 linger 가
-> 필요해요 — 자동 시작을 켰다면 이미 켜져 있어요. 그래서 `labremote autostart uninstall` 은 터널 서비스가 있으면
-> linger 를 끄지 않아요.
+> `code tunnel service install`은 사용자 서비스 `~/.config/systemd/user/code-tunnel.service`
+> (→ `~/.vscode/cli/code-tunnel.service`)를 만들고 켜요 (실측 2026-11-23). 로그아웃 뒤에도 돌려면 linger가
+> 필요해요 — 자동 시작을 켰다면 이미 켜져 있어요. 그래서 `labremote autostart uninstall`은 터널 서비스가 있으면
+> linger를 끄지 않아요.
 >
-> VS Code Server 문서의 FAQ에는 "서비스로 호스팅은 라이선스상 허용되지 않는다" 는 문장이 있는데 라이선스 원문에는
-> 그 문구가 없어요 — 판단은 사람이 해요. 서비스로 두기 싫으면 쓸 때만 터미널에서 `code tunnel` 을 띄워도 돼요.
+> VS Code Server 문서의 FAQ에는 "서비스로 호스팅은 라이선스상 허용되지 않는다"는 문장이 있는데 라이선스 원문에는
+> 그 문구가 없어요 — 판단은 사람이 해요. 서비스로 두기 싫으면 쓸 때만 터미널에서 `code tunnel`을 띄워도 돼요.
 >
 > 전달한 포트 주소는 vscode.dev 창을 닫은 뒤에도 계속 열려요 (실측 2026-11-23, 휴대폰). 주소는 `https://<id>-8000.<지역>.devtunnels.ms` 모양이에요.
 
@@ -112,8 +112,8 @@ Inbox 화면 › 알림 설정에서 웹훅 주소를 넣어요. 주소는 데�
 labremote doctor
 ```
 
-`✘` 는 고쳐야 하는 것, `⚠` 는 알려 주기만 하는 것(종료코드를 바꾸지 않아요)이에요.
-터널 · 자동 시작은 쓰지 않으면 `⚠` 나 "꺼져 있어요"로 나와도 괜찮아요.
+`✘`는 고쳐야 하는 것, `⚠`는 알려 주기만 하는 것(종료코드를 바꾸지 않아요)이에요.
+터널 · 자동 시작은 쓰지 않으면 `⚠`나 "꺼져 있어요"로 나와도 괜찮아요.
 
 ## 8. 지우기
 
@@ -122,5 +122,5 @@ labremote autostart uninstall      # 자동 시작을 켰다면
 conda env remove -n labremote
 rm -rf ~/lab-remote
 # 등록했던 프로젝트의 .labremote/ 는 남아요. 필요하면 프로젝트마다 지워요.
-# code tunnel 을 켰다면: code tunnel service uninstall · code tunnel user logout
+# code tunnel을 켰다면: code tunnel service uninstall · code tunnel user logout
 ```

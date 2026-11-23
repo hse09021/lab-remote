@@ -12,8 +12,8 @@ export interface LoadedPaperHtml {
 /**
  * 논문 본문 HTML 가져오기.
  *
- * 개발 중에 web/fixtures/<id>.arxiv.html 을 두면 그걸 읽고,
- * 없으면 구조만 담은 샘플 골격을 써요. 둘 다 DOMPurify 를 거쳐요.
+ * 개발 중에 web/fixtures/<id>.arxiv.html을 두면 그걸 읽고,
+ * 없으면 구조만 담은 샘플 골격을 써요. 둘 다 DOMPurify를 거쳐요.
  */
 export async function loadPaperHtml(paperId: string): Promise<LoadedPaperHtml> {
   if (import.meta.env.DEV) {
@@ -30,7 +30,7 @@ export async function loadPaperHtml(paperId: string): Promise<LoadedPaperHtml> {
         }
       }
     } catch {
-      // fixtures 가 없으면 샘플로 떨어져요
+      // fixtures가 없으면 샘플로 떨어져요
     }
   }
 
@@ -40,7 +40,7 @@ export async function loadPaperHtml(paperId: string): Promise<LoadedPaperHtml> {
     return { html: sanitizePaperHtml(sample.default), isReal: false }
   }
 
-  // FastAPI 가 붙으면 본문을 여기서 받아요
+  // FastAPI가 붙으면 본문을 여기서 받아요
   const res = await fetch(`${API_BASE}/papers/${paperId}/html`)
   if (!res.ok) throw new ApiError(res.status, `/papers/${paperId}/html`)
   return { html: sanitizePaperHtml(await res.text()), isReal: true }

@@ -37,7 +37,7 @@ interface Props {
 
 function chipName(m: AgentModel | undefined) {
   if (!m) return 'Default'
-  // "Default (recommended)" 는 실제로 쓰이는 모델 이름으로 보여요
+  // "Default (recommended)"는 실제로 쓰이는 모델 이름으로 보여요
   if (m.value === 'default' && m.description) return m.description.split('·')[0].trim() || m.displayName
   return m.displayName
 }
@@ -91,7 +91,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
       e.preventDefault()
       submit()
     } else if (e.key === 'Tab' && e.shiftKey) {
-      // ⇧ + tab으로 Mode 를 돌려요
+      // ⇧ + tab으로 Mode를 돌려요
       e.preventDefault()
       const i = modes.indexOf(settings.mode)
       pickMode(modes[(i + 1) % modes.length])
@@ -100,7 +100,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
     }
   }
 
-  // Ultracode — Claude Code 설정이라 xhigh 를 지원하는 모델에서만 (문서: model-config)
+  // Ultracode — Claude Code 설정이라 xhigh를 지원하는 모델에서만 (문서: model-config)
   const ultraOk = !!info.data?.ultracode && efforts.includes(info.data.ultracode.needsEffort)
   const ultraRow = ultraOk && (
     <button

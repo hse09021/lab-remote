@@ -11,7 +11,7 @@ import type { SelectionAnchor as Anchor } from './floating/SelectionMenu'
 import type { SelectionPlace } from './selectionPlace'
 import { ImagePdfRenderer } from './pdf/ImagePdfRenderer'
 import { lazyReload } from '@/lib/lazyReload'
-// PDF.js 는 무거워요 — PDF 보기를 열 때만 받아요 (모바일은 이 화면을 안 그려요)
+// PDF.js는 무거워요 — PDF 보기를 열 때만 받아요 (모바일은 이 화면을 안 그려요)
 const PdfJsRenderer = lazyReload(() =>
   import('./pdf/PdfJsRenderer').then((m) => ({ default: m.PdfJsRenderer })),
 )
@@ -226,7 +226,7 @@ export function PdfView({
 
   useEffect(() => {
     if (jump) scrollTo(jump.target)
-    // nonce 가 바뀔 때마다 한 번씩 이동해요
+    // nonce가 바뀔 때마다 한 번씩 이동해요
   }, [jump?.nonce]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── 확대·축소: 보던 쪽을 유지해요 ───────────────────────── */

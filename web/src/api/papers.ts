@@ -115,7 +115,7 @@ export function useSaveReference() {
       const added: Paper = {
         id,
         title: reference.title,
-        // short 가 이미 연도를 품고 있어요 ("Hochreiter & Schmidhuber, 1997")
+        // short가 이미 연도를 품고 있어요 ("Hochreiter & Schmidhuber, 1997")
         authors: reference.short,
         venue: `${reference.venue} ${reference.year}`,
         // 아직 분류 전이에요 — 표에서는 "분류 대기" 칩 하나로 보여요
@@ -168,7 +168,7 @@ export interface AddedPaper {
   pdf?: boolean
 }
 
-/** arXiv 링크로 — 제목 · 저자 · 연도 · 분야 · 초록을 받아 노트를 만들고 PDF 도 받아 둬요 */
+/** arXiv 링크로 — 제목 · 저자 · 연도 · 분야 · 초록을 받아 노트를 만들고 PDF도 받아 둬요 */
 export function useAddArxiv() {
   const qc = useQueryClient()
   return useMutation({
@@ -219,7 +219,7 @@ export const askJobQuery = (id: string | null) =>
     refetchInterval: (q) => (q.state.data?.state === 'running' || !q.state.data ? 1500 : false),
   })
 
-/* ── 휴지통 · 모음 · BibTeX (lab.remote에만 기록 — vault 는 그대로) ─────── */
+/* ── 휴지통 · 모음 · BibTeX (lab.remote에만 기록 — vault는 그대로) ─────── */
 
 export const trashQuery = () =>
   queryOptions({ queryKey: ['papers', 'trash'], queryFn: () => get<Paper[]>('/papers?trash=true') })
@@ -261,7 +261,7 @@ export async function fetchBibtex(papers: Paper[]): Promise<string> {
     return papers.map((p) => `@article{${p.id},\n  title = {${p.title}},\n  author = {${p.authors}}\n}`).join('\n\n')
   }
   const res = await fetch(apiUrl(`/papers/bibtex?ids=${papers.map((p) => encodeURIComponent(p.id)).join(',')}`))
-  if (!res.ok) throw new Error(`BibTeX 를 만들지 못했어요 (${res.status})`)
+  if (!res.ok) throw new Error(`BibTeX를 만들지 못했어요 (${res.status})`)
   return res.text()
 }
 
@@ -300,7 +300,7 @@ export function useSummaryJob(id: string, enabled: boolean) {
   })
 }
 
-/* ── 리더 AI (누를 때만 · 그 논문의 노트 · PDF 를 읽기 전용으로) ─────────────── */
+/* ── 리더 AI (누를 때만 · 그 논문의 노트 · PDF를 읽기 전용으로) ─────────────── */
 
 export type ReaderAiKind = 'section' | 'selection' | 'ask' | 'translate' | 'analyze'
 

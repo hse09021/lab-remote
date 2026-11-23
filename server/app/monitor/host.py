@@ -1,9 +1,9 @@
-"""CPU·RAM·디스크 — `/proc`와 `statvfs` 만.
+"""CPU·RAM·디스크 — `/proc`와 `statvfs`만.
 
-`psutil` 이 없고 ② 범위 밖이다. 같은 인터페이스 뒤에 나중에 붙일 수 있다.
+`psutil`이 없고 ② 범위 밖이다. 같은 인터페이스 뒤에 나중에 붙일 수 있다.
 
-CPU 사용률은 **두 표본의 차분**이다. `/proc/stat` 은 부팅 이후 누적값이라
-한 번만 읽으면 "부팅 이후 평균" 이 나온다 — 지금 바쁜지 알 수 없다.
+CPU 사용률은 **두 표본의 차분**이다. `/proc/stat`은 부팅 이후 누적값이라
+한 번만 읽으면 "부팅 이후 평균"이 나온다 — 지금 바쁜지 알 수 없다.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ def cpu_pct(before: tuple[int, int] | None, after: tuple[int, int] | None) -> fl
 
 
 def memory() -> dict:
-    """`/proc/meminfo` 기준. `MemAvailable` 을 쓴다 — `MemFree` 는 캐시를
+    """`/proc/meminfo` 기준. `MemAvailable`을 쓴다 — `MemFree`는 캐시를
     빼서 "거의 꽉 찼다"로 보이게 한다."""
     values: dict[str, int] = {}
     try:
@@ -60,10 +60,10 @@ def memory() -> dict:
                 if number.isdigit():
                     values[name] = int(number)  # kB
     except OSError:
-        return {"ok": False, "reason": f"{PROC_MEMINFO} 를 읽을 수 없어요"}
+        return {"ok": False, "reason": f"{PROC_MEMINFO}를 읽을 수 없어요"}
     total = values.get("MemTotal")
     if not total:
-        return {"ok": False, "reason": "MemTotal 이 없어요"}
+        return {"ok": False, "reason": "MemTotal이 없어요"}
     available = values.get("MemAvailable", values.get("MemFree", 0))
     used = total - available
     return {
@@ -100,9 +100,9 @@ def load_average() -> list[float] | None:
 
 
 def probe(path: str = ".", *, before: tuple[int, int] | None = None) -> dict:
-    """한 덩어리로. `before` 를 주면 그 표본과의 차분으로 CPU 를 계산한다.
+    """한 덩어리로. `before`를 주면 그 표본과의 차분으로 CPU를 계산한다.
 
-    안 주면 CPU 는 `None` 이다 — **거짓말보다 모른다고 하는 게 낫다.**
+    안 주면 CPU는 `None` 이다 — **거짓말보다 모른다고 하는 게 낫다.**
     """
     now = cpu_times()
     return {

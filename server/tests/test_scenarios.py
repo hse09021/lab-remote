@@ -58,7 +58,7 @@ def test_그리고_저장하고_바뀜을_알아챈다(proj):
 
     assert scenarios.load("demo")["changed"] == []
     with open(os.path.join(proj, "runs", "r16", "metrics.csv"), "a") as fh:
-        fh.write("1,0.5\n")  # 학습 결과가 바뀌어도 "바뀜" 이 아니다
+        fh.write("1,0.5\n")  # 학습 결과가 바뀌어도 "바뀜"이 아니다
     assert scenarios.load("demo")["changed"] == []
     with open(os.path.join(proj, "src", "train.py"), "a") as fh:
         fh.write("lr = 2\n")

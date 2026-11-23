@@ -218,14 +218,14 @@ export default function PaperReader() {
     { value: 'pdf', label: 'PDF' },
   ]
 
-  // vault에서 온 논문 — 미리 만든 리더 데이터가 없어요. PDF 가 있으면 PDF로 같은 리더 화면을 그리고,
-  // PDF 도 없으면 노트만 보여 줘요
+  // vault에서 온 논문 — 미리 만든 리더 데이터가 없어요. PDF가 있으면 PDF로 같은 리더 화면을 그리고,
+  // PDF도 없으면 노트만 보여 줘요
   const missing = reader.isError && reader.error instanceof ApiError && reader.error.status === 404
   if (missing && paper && vault.active && !vault.failed) {
     if (!vault.data) {
       return (
         <main className={s.page}>
-          <LoadingState label="PDF 를 여는 중이에요…" />
+          <LoadingState label="PDF를 여는 중이에요…" />
         </main>
       )
     }
@@ -558,7 +558,7 @@ export default function PaperReader() {
                 onAskChat={(sectionId, page) => {
                   setTab('chat')
                   ai.setOpen(true)
-                  toast.show(`${sectionLabel(sectionId)} 를 맥락으로 채팅 탭을 열었어요`)
+                  toast.show(`${sectionLabel(sectionId)}를 맥락으로 채팅 탭을 열었어요`)
                   setChatContext(`§${
                     data.sections.find((x) => x.id === sectionId)?.n || sectionId
                   } · p.${page}`)

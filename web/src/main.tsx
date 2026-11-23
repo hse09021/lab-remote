@@ -9,7 +9,7 @@ import './styles/reset.css'
 import { App } from './App'
 import { resetMockFromUrl } from './api/client'
 
-// 주소에 ?reset-mock 이 있으면 목업 저장소를 비우고 시작해요 (개발 모드)
+// 주소에 ?reset-mock이 있으면 목업 저장소를 비우고 시작해요 (개발 모드)
 resetMockFromUrl()
 
 const queryClient = new QueryClient({
@@ -23,7 +23,7 @@ const queryClient = new QueryClient({
 })
 
 const root = document.getElementById('root')
-if (!root) throw new Error('#root 를 찾지 못했어요')
+if (!root) throw new Error('#root를 찾지 못했어요')
 
 createRoot(root).render(
   <StrictMode>

@@ -1,6 +1,6 @@
 """📦 설치할 패키지 목록 검증 — **이름과 버전만** 받는다.
 
-Conda 화면(7단계)에서 사람이 고른 패키지를 lab.remote 가 사용자 권한으로
+Conda 화면(7단계)에서 사람이 고른 패키지를 lab.remote가 사용자 권한으로
 설치한다. 그래서 입력 칸에 들어간 글자가 명령에 섞이지 않게 여기서 막는다.
 
 ```json
@@ -13,10 +13,10 @@ Conda 화면(7단계)에서 사람이 고른 패키지를 lab.remote 가 사용�
 `-e` · 파일 이름. 하나라도 섞이면 **전체를 거부**한다 — 일부만 걸러서
 "고쳐 준" 목록을 설치하면 사람이 본 것과 다른 게 설치된다.
 
-## 왜 `--only-binary=:all:` 이 기본인가
+## 왜 `--only-binary=:all:`이 기본인가
 
-소스 배포(sdist)는 설치할 때 `setup.py` 를 **실행**한다. 휠은 풀어 넣기만
-한다. 그래서 기본은 휠만이고, 소스가 필요하면 `allowSource: true` 를 따로
+소스 배포(sdist)는 설치할 때 `setup.py`를 **실행**한다. 휠은 풀어 넣기만
+한다. 그래서 기본은 휠만이고, 소스가 필요하면 `allowSource: true`를 따로
 켜야 한다.
 """
 
@@ -59,9 +59,9 @@ EXTRAS_RE = re.compile(r"^[a-z0-9][a-z0-9,_-]{0,63}$")
 
 #: 설치하면 안 되는 것.
 #:
-#: `pip`·`setuptools`·`wheel` 은 **설치 도구 자신**이다 — 바꿔치기하면 다음
-#: 설치가 임의 코드가 된다. `conda` 는 환경 자체를 고친다. `claude`·
-#: `anthropic` 은 사용자가 설치해 둔 Claude Code 를 바꿔치기하지 않으려는 것이다.
+#: `pip`·`setuptools`·`wheel`은 **설치 도구 자신**이다 — 바꿔치기하면 다음
+#: 설치가 임의 코드가 된다. `conda`는 환경 자체를 고친다. `claude`·
+#: `anthropic`은 사용자가 설치해 둔 Claude Code를 바꿔치기하지 않으려는 것이다.
 FORBIDDEN_NAMES = frozenset(
     {"pip", "setuptools", "wheel", "pkg-resources", "conda", "mamba", "micromamba",
      "claude", "claude-code", "anthropic"}
@@ -69,8 +69,8 @@ FORBIDDEN_NAMES = frozenset(
 
 #: 이름·버전에 들어 있으면 거부. 셸·URL·경로·옵션의 흔적이다.
 #:
-#: `<`·`>` 는 **일부러 빼 뒀다** — `>=0.13` 같은 정상 버전 지정에 들어간다.
-#: 리다이렉트로 쓰일 걱정은 `NAME_RE`·`SPEC_RE`·`EXTRAS_RE` 가 **앵커된
+#: `<`·`>`는 **일부러 빼 뒀다** — `>=0.13` 같은 정상 버전 지정에 들어간다.
+#: 리다이렉트로 쓰일 걱정은 `NAME_RE`·`SPEC_RE`·`EXTRAS_RE`가 **앵커된
 #: 화이트리스트**라 없다 (그 셋을 지나가지 못한다). 여기 목록은 그 위의 한 겹이다.
 BAD_SUBSTRINGS = (
     "/", "\\", ":", "@", ";", "&", "|", "$", "`", "(", ")", "'", '"',
@@ -84,7 +84,7 @@ def _clean(label: str, value: str, *, allow_empty: bool = False) -> str:
     if not text:
         if allow_empty:
             return ""
-        raise SpecError(f"{label} 이 비어 있어요")
+        raise SpecError(f"{label}이 비어 있어요")
     if text != str(value):
         # 앞뒤 공백을 말없이 지우지 않는다 — 요청과 승인 내용이 달라진다.
         raise SpecError(f"{label} 앞뒤에 공백이 있어요: {value!r}")
@@ -107,11 +107,11 @@ def _one(item, index: int) -> dict:
     if not NAME_RE.match(name):
         raise SpecError(
             f"패키지 이름 규칙에 안 맞아요: {name!r} · 영문으로 시작하고 "
-            "영문·숫자·`.`·`_`·`-` 만 쓸 수 있어요"
+            "영문·숫자·`.`·`_`·`-`만 쓸 수 있어요"
         )
     if name.lower() in FORBIDDEN_NAMES:
         raise SpecError(
-            f"{name} 은 설치하지 않아요 — 설치 도구나 환경 자체를 바꿔요"
+            f"{name}은 설치하지 않아요 — 설치 도구나 환경 자체를 바꿔요"
         )
 
     spec = _clean(f"{index + 1}번째 버전", item.get("spec"), allow_empty=True)
@@ -141,11 +141,11 @@ def parse(data) -> dict:
 
     version = data.get("version", 1)
     if version not in (1, "1"):
-        raise SpecError(f"모르는 판이에요: {version!r} (아는 건 1 이에요)")
+        raise SpecError(f"모르는 판이에요: {version!r} (아는 건 1이에요)")
 
     items = data.get("packages")
     if not isinstance(items, list) or not items:
-        raise SpecError("packages 가 비어 있어요")
+        raise SpecError("packages가 비어 있어요")
     if len(items) > MAX_PACKAGES:
         raise SpecError(
             f"한 번에 {MAX_PACKAGES}개까지만 받아요 (받은 것 {len(items)}개) · "
@@ -169,7 +169,7 @@ def parse(data) -> dict:
 
     allow_source = data.get("allowSource", False)
     if not isinstance(allow_source, bool):
-        raise SpecError("allowSource 는 true/false 여야 해요")
+        raise SpecError("allowSource는 true/false 여야 해요")
 
     return {
         "packages": [seen[k] for k in sorted(seen)],
@@ -190,7 +190,7 @@ def requirements(parsed: dict) -> list[str]:
 def fingerprint(parsed: dict) -> str:
     """같은 요청인지 가르는 지문. 승인·중복 판정에 쓴다.
 
-    `reason` 은 **넣지 않는다** — 사유를 고쳐 같은 설치를 다시 승인받게
+    `reason`은 **넣지 않는다** — 사유를 고쳐 같은 설치를 다시 승인받게
     만드는 길을 막는다.
     """
     body = json.dumps(

@@ -279,7 +279,7 @@ function NewRunDialog({
       </span>
       {from && from.state === 'cut' && (
         <span className={s.muted}>
-          체크포인트에서 이어 가려면 명령에 직접 재개 옵션을 붙여 주세요. lab.remote 는 명령을 바꾸지 않아요.
+          체크포인트에서 이어 가려면 명령에 직접 재개 옵션을 붙여 주세요. lab.remote는 명령을 바꾸지 않아요.
         </span>
       )}
     </Dialog>
@@ -315,7 +315,7 @@ function StopDialog({ project, run, onClose }: { project: string; run: Run | nul
         )
       }
     >
-      <span>Ctrl+C 를 보내요. 프로그램이 체크포인트를 저장하고 스스로 끝날 시간을 줘요.</span>
+      <span>Ctrl+C를 보내요. 프로그램이 체크포인트를 저장하고 스스로 끝날 시간을 줘요.</span>
       <label className={ds.check}>
         <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
         <span>강제 중지 — 바로 끝내요. 체크포인트를 못 남길 수 있어요.</span>

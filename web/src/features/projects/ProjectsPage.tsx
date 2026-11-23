@@ -32,8 +32,8 @@ export function gitLine(git: GitSummary, { long = false } = {}): string {
   }
   if (git.state === 'none') return 'git 저장소 아님'
   if (git.state === 'missing') return '폴더가 없어요'
-  if (git.state === 'refused') return 'git 을 안 돌렸어요 (.git 설정)'
-  return 'git 을 못 읽었어요'
+  if (git.state === 'refused') return 'git을 안 돌렸어요 (.git 설정)'
+  return 'git을 못 읽었어요'
 }
 
 const toneOf = (p: ProjectRow) => (p.agents.ask > 0 ? 'ask' : p.runs.running.length > 0 || p.agents.working > 0 ? 'work' : 'idle')
@@ -71,7 +71,7 @@ export default function ProjectsPage() {
   // /projects로 오면 가장 최근 프로젝트를 열어요
   const mobile = useIsMobile()
   useEffect(() => {
-    // 쿼리(?tab=work 등)는 그대로 들고 가요 — Dashboard 의 "새 실행" 이 쓰는 길.
+    // 쿼리(?tab=work 등)는 그대로 들고 가요 — Dashboard의 "새 실행"이 쓰는 길.
     // 휴대폰은 목록을 먼저 보여 줘요 (목록과 상세 중 하나만 보여서)
     if (!id && projects.length > 0 && (!mobile || window.location.search))
       navigate(`/projects/${encodeURIComponent(projects[0].name)}${window.location.search}`, { replace: true })
@@ -133,7 +133,7 @@ export default function ProjectsPage() {
           )}
         </div>
         <div className={s.asideFoot}>
-          등록한 폴더만 읽어요. lab.remote 가 쓰는 건 각 프로젝트의 <span className={s.mono}>.labremote/</span>{' '}
+          등록한 폴더만 읽어요. lab.remote가 쓰는 건 각 프로젝트의 <span className={s.mono}>.labremote/</span>{' '}
           하나뿐이에요.
         </div>
       </aside>
@@ -147,7 +147,7 @@ export default function ProjectsPage() {
             <div className={s.empty}>
               <h1 className={s.emptyTitle}>등록한 프로젝트가 없어요</h1>
               <p className={s.emptyText}>
-                연구 폴더를 등록하면 파일 · git · worktree 를 여기서 봐요. 폴더 안에는{' '}
+                연구 폴더를 등록하면 파일 · git · worktree를 여기서 봐요. 폴더 안에는{' '}
                 <span className={s.mono}>.labremote/</span> 하나만 생겨요.
               </p>
               <div className={s.emptyActions}>
@@ -257,8 +257,8 @@ function RegisterDialog({ open, onClose, initialMode = 'existing' }: { open: boo
         </label>
       )}
       <span>
-        폴더 안에 <span className={s.mono}>.labremote/</span> 를 만들어요. 스스로 git에서 빠지고, 프로젝트의{' '}
-        <span className={s.mono}>.gitignore</span> 는 건드리지 않아요.
+        폴더 안에 <span className={s.mono}>.labremote/</span>를 만들어요. 스스로 git에서 빠지고, 프로젝트의{' '}
+        <span className={s.mono}>.gitignore</span>는 건드리지 않아요.
       </span>
     </Dialog>
   )

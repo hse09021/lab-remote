@@ -3,12 +3,12 @@
 ## 왜 이 파일이 있나
 
 `.pth` 파일은 **인터프리터가 뜰 때 실행된다.** `site-packages`에 한 줄
-`import os; os.system(...)` 이 든 `.pth` 가 있으면, 그 환경의 파이썬이 뜨는
-순간 돈다 — `import` 를 안 해도 된다.
+`import os; os.system(...)`이 든 `.pth`가 있으면, 그 환경의 파이썬이 뜨는
+순간 돈다 — `import`를 안 해도 된다.
 
-lab.remote 서버는 `labremote` 환경에서 돈다. `conda` 명령은 `base` 의
-파이썬으로 돈다. 그래서 실험용 패키지를 그 둘에 깔면 **서버나 conda 가 뜰 때
-임의 코드가 돈다.** v3 의 Conda 화면은 `base`·`labremote` 를 보호한다
+lab.remote 서버는 `labremote` 환경에서 돈다. `conda` 명령은 `base`의
+파이썬으로 돈다. 그래서 실험용 패키지를 그 둘에 깔면 **서버나 conda가 뜰 때
+임의 코드가 돈다.** v3의 Conda 화면은 `base`·`labremote`를 보호한다
 (docs/v3/PLAN.md 4.1 conda).
 
 ## 어떻게 막나
@@ -21,7 +21,7 @@ lab.remote 서버는 `labremote` 환경에서 돈다. `conda` 명령은 `base` �
 ## 환경 이름을 **실행 없이** 푼다
 
 `conda run -n <이름> python -c "print(sys.prefix)"`로 풀면 **그 파이썬이
-뜨면서 `.pth` 가 이미 돈다.** 그래서 conda 설치 폴더에서 경로를 계산한다 —
+뜨면서 `.pth`가 이미 돈다.** 그래서 conda 설치 폴더에서 경로를 계산한다 —
 `<root>/envs/<이름>`과 `<root>`(= `base`).
 """
 
@@ -61,12 +61,12 @@ SYSTEM_PREFIXES = ("/usr", "/usr/local", "/opt", "/bin", "/sbin", "/lib", "/etc"
 #: 경로로 환경을 지정하려면 `conda run -p` 인데 우리는 쓰지 않는다.
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
-#: `base` 를 가리키는 이름들. conda 설치 폴더 자신이고, `conda` 명령이
-#: 그 환경의 파이썬으로 돈다 — 거기 `.pth` 를 넣으면 `conda` 가 실행한다.
+#: `base`를 가리키는 이름들. conda 설치 폴더 자신이고, `conda` 명령이
+#: 그 환경의 파이썬으로 돈다 — 거기 `.pth`를 넣으면 `conda`가 실행한다.
 BASE_NAMES = frozenset({"base", "root", ""})
 
 
-#: 환경 변수로 conda 를 못 찾았을 때 볼 흔한 자리
+#: 환경 변수로 conda를 못 찾았을 때 볼 흔한 자리
 CONDA_GUESSES = (
     "~/miniconda3",
     "~/anaconda3",
@@ -103,7 +103,7 @@ def conda_roots() -> list[str]:
 def candidates(name: str) -> list[str]:
     """이름이 가리킬 수 있는 환경 경로들. **아무것도 실행하지 않는다.**
 
-    이름만 받는다 — 경로는 `check()` 가 먼저 거부한다.
+    이름만 받는다 — 경로는 `check()`가 먼저 거부한다.
     """
     text = str(name or "").strip()
     out: list[str] = []
@@ -136,7 +136,7 @@ def protected_prefixes() -> dict[str, list[str]]:
     """
     envs: list[str] = []
 
-    # 1. 지금 이 프로세스의 환경 — lab.remote 서버·CLI 가 여기서 돈다
+    # 1. 지금 이 프로세스의 환경 — lab.remote 서버·CLI가 여기서 돈다
     envs.append(paths.real(sys.prefix))
     if sys.base_prefix != sys.prefix:
         envs.append(paths.real(sys.base_prefix))
@@ -176,7 +176,7 @@ def check(name: str) -> dict:
     if not NAME_RE.match(text):
         out["reason"] = (
             f"환경 이름 규칙에 안 맞아요: {text!r} · 영문·숫자로 시작하고 "
-            "`.`·`_`·`-` 만 쓸 수 있어요. 경로는 받지 않아요."
+            "`.`·`_`·`-`만 쓸 수 있어요. 경로는 받지 않아요."
         )
         return out
     if text.lower() in BASE_NAMES:
@@ -201,7 +201,7 @@ def check(name: str) -> dict:
             if hit:
                 out["prefix"] = path
                 out["reason"] = (
-                    f"{text} 는 lab.remote 가 도는 환경이라 보호돼요 ({path}). "
+                    f"{text}는 lab.remote가 도는 환경이라 보호돼요 ({path}). "
                     "실험용 환경을 따로 만들어 주세요: "
                     f"conda create -n {text}-exp python=3.11"
                 )
@@ -215,7 +215,7 @@ def check(name: str) -> dict:
 def require_made(name: str) -> str:
     """환경이 **실제로 있어야** 한다. 없으면 `EnvRefused` (사람이 읽을 문구).
 
-    `check()` 는 아직 없는 환경도 통과시킨다. 하지만 설치·실행은 환경이
+    `check()`는 아직 없는 환경도 통과시킨다. 하지만 설치·실행은 환경이
     있어야 한다 — 없는 환경에 설치를 누르면 아무 일도 안 일어난다.
     """
     got = check(name)
@@ -223,7 +223,7 @@ def require_made(name: str) -> str:
         raise EnvRefused(got["reason"])
     if not got["prefix"]:
         raise EnvRefused(
-            f"conda 환경 {name} 이 없어요: conda create -n {name} python=3.11 -y"
+            f"conda 환경 {name}이 없어요: conda create -n {name} python=3.11 -y"
         )
     return got["prefix"]
 

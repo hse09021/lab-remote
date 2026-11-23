@@ -1,6 +1,6 @@
-"""🩺 `labremote doctor` (v3) — PLAN 4.1 의 점검 + GPU·비밀값.
+"""🩺 `labremote doctor` (v3) — PLAN 4.1의 점검 + GPU·비밀값.
 
-`doctor` 는 **읽기만 한다.** 고칠 명령은 `hint`로 알려 준다.
+`doctor`는 **읽기만 한다.** 고칠 명령은 `hint`로 알려 준다.
 """
 
 import os
@@ -19,7 +19,7 @@ def test_경고는_종료코드를_안_바꾼다():
 
 
 def test_run_은_v3_점검만_돈다(monkeypatch):
-    """v1 의 훅·정책·샌드박스·앵커 점검은 없다."""
+    """v1의 훅·정책·샌드박스·앵커 점검은 없다."""
     names = [
         "conda_env_check", "claude_check", "tmux_check", "systemd_scope_check",
         "linger_check", "tunnel_check", "web_build_check", "api_key_check", "webhook_check", "schema_check",
@@ -54,7 +54,7 @@ def test_claude_가_없으면_실패(monkeypatch):
 
 
 def test_claude_로그인을_계정_정보로_본다(monkeypatch):
-    """자격 증명 파일을 읽지 않고, SDK 가 알려 주는 구독 종류만 쓴다(이메일은 안 찍는다)."""
+    """자격 증명 파일을 읽지 않고, SDK가 알려 주는 구독 종류만 쓴다(이메일은 안 찍는다)."""
     monkeypatch.setattr(doctor.shutil, "which", lambda name: "/usr/bin/claude")
     monkeypatch.setattr(doctor, "_run", lambda argv, timeout=10: (0, "2.1.318 (Claude Code)\n"))
     monkeypatch.setattr(doctor, "_login_probe", lambda: {"installed": True, "loggedIn": True, "plan": "Claude Max"})
@@ -77,7 +77,7 @@ def test_tmux(monkeypatch):
     monkeypatch.setattr(runs, "tmux_bin", lambda: "")
     assert doctor.tmux_check()["level"] == "bad"
     monkeypatch.setattr(runs, "tmux_bin", lambda: "/usr/bin/tmux")
-    # conda 의 tmux 는 libtinfo 경고를 앞에 찍는다 — 판 줄만 고른다
+    # conda의 tmux는 libtinfo 경고를 앞에 찍는다 — 판 줄만 고른다
     monkeypatch.setattr(
         doctor, "_run",
         lambda argv, timeout=10: (0, "tmux: libtinfo.so.6: no version information\ntmux 3.6a\n"),
@@ -96,7 +96,7 @@ def test_systemd_scope(monkeypatch):
 
 
 def test_자동_시작이_꺼져_있으면_정상(monkeypatch):
-    """linger 는 자동 시작을 켤 때만 필요하다 (PLAN 1.1)."""
+    """linger는 자동 시작을 켤 때만 필요하다 (PLAN 1.1)."""
     from app.service import units
 
     monkeypatch.setattr(units, "status", lambda: {
@@ -193,7 +193,7 @@ def test_빠졌으면_참고_한_줄_점검은_아니다(monkeypatch):
     partial = [i for i in doctor.NVIDIA_BLACKLIST if i != "cuda-"]
     monkeypatch.setattr(doctor, "apt_blacklist", lambda: _apt(partial, auto="true"))
     note = doctor.nvidia_hold_note()
-    assert "cuda-" in note and "Automatic-Reboot" in note and "lab.remote 는 바꾸지 않아요" in note
+    assert "cuda-" in note and "Automatic-Reboot" in note and "lab.remote는 바꾸지 않아요" in note
     # 점검 목록에는 없다 — 경고 수를 늘리지 않는다
     monkeypatch.setattr(doctor, "run", doctor.run)
     assert "nvidia_hold_check" not in dir(doctor)

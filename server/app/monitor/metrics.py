@@ -1,6 +1,6 @@
-"""`result.csv` 를 읽고 **이상을 감지**한다.
+"""`result.csv`를 읽고 **이상을 감지**한다.
 
-지표의 출처는 `experiments/EXP-NNN/result.csv` 다 (W&B 는 ② 범위 밖).
+지표의 출처는 `experiments/EXP-NNN/result.csv` 다 (W&B는 ② 범위 밖).
 열 규약은 생성기가 AI에게 주는 `templates/result_example.csv` 다.
 
     step,split,metric,value
@@ -15,11 +15,11 @@
 |---|---|---|
 | NaN / Inf | 한 번이라도 | **즉시 중단** |
 | 발산 | 최근 5개가 연속으로 초기값 × 3 초과 | 중단 |
-| OOM 반복 | 로그에 `CUDA out of memory` 가 2회 | 중단 |
-| 진전 없음 | 로그 mtime 이 900초 동안 그대로 | 알림만 |
+| OOM 반복 | 로그에 `CUDA out of memory`가 2회 | 중단 |
+| 진전 없음 | 로그 mtime이 900초 동안 그대로 | 알림만 |
 | 디스크 부족 | 여유 < 10GB | 큐 정지 |
 
-`Config.yaml` 의 `monitor:`로 덮어쓴다.
+`Config.yaml`의 `monitor:`로 덮어쓴다.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ __all__ = [
     "scan_log",
 ]
 
-#: 기본 임계값. `Config.yaml` 의 `monitor:` 가 이긴다.
+#: 기본 임계값. `Config.yaml`의 `monitor:`가 이긴다.
 DEFAULTS = {
     "divergeFactor": 3.0,
     "divergeWindow": 5,
@@ -51,7 +51,7 @@ DEFAULTS = {
 OOM_RE = re.compile(r"CUDA out of memory|out of memory|CUBLAS_STATUS_ALLOC_FAILED", re.I)
 NAN_RE = re.compile(r"\b(nan|inf|-inf)\b", re.I)
 
-#: 넓은 형식에서 split 을 가르는 접두사
+#: 넓은 형식에서 split을 가르는 접두사
 WIDE_SPLITS = (("train_", "train"), ("val_", "val"), ("valid_", "val"), ("test_", "test"))
 
 LONG_HEADER = ("step", "split", "metric", "value")
@@ -73,9 +73,9 @@ def _to_float(text):
 
 
 def read_result(path: str) -> dict:
-    """`result.csv` 를 읽는다. 없거나 깨졌으면 정상 반환 (던지지 않는다).
+    """`result.csv`를 읽는다. 없거나 깨졌으면 정상 반환 (던지지 않는다).
 
-    `{"ok", "format", "rows", "warnings", "reason"}`. `rows` 는
+    `{"ok", "format", "rows", "warnings", "reason"}`. `rows`는
     `{"step", "split", "metric", "value", "flag"}`로 **정규화**한 것이다.
     """
     try:
@@ -96,15 +96,15 @@ def read_result(path: str) -> dict:
 
     if lower and lower[0] in ("step", "epoch", "iter", "iteration"):
         warnings.append(
-            "result.csv 가 넓은 형식이에요(열마다 지표). 규약은 "
-            "templates/result_example.csv 의 step,split,metric,value 예요."
+            "result.csv가 넓은 형식이에요(열마다 지표). 규약은 "
+            "templates/result_example.csv의 step,split,metric,value예요."
         )
         rows = _read_wide(header, table[1:], warnings)
         return {"ok": True, "reason": "", "format": "wide", "rows": rows, "warnings": warnings}
 
     return {
         "ok": False,
-        "reason": f"result.csv 의 열을 읽지 못했어요: {header}",
+        "reason": f"result.csv의 열을 읽지 못했어요: {header}",
         "format": "unknown",
         "rows": [],
         "warnings": warnings,
@@ -160,7 +160,7 @@ def _read_wide(header: list[str], body, warnings: list[str]) -> list[dict]:
 
 
 def series_of(rows: list[dict], metric: str, split: str = "") -> list[dict]:
-    """한 지표의 시계열. 들어온 순서를 지킨다 (step 이 없을 수도 있다)."""
+    """한 지표의 시계열. 들어온 순서를 지킨다 (step이 없을 수도 있다)."""
     out = []
     for row in rows:
         if row["metric"].lower() != metric.lower():
@@ -189,7 +189,7 @@ def find_anomalies(
 ) -> list[dict]:
     """찾은 이상들. 각각 `{"kind","action","text"}`.
 
-    `action` 은 `stop`(즉시 중단) · `pause`(큐 정지) · `notify`(알림만) 다.
+    `action`은 `stop`(즉시 중단) · `pause`(큐 정지) · `notify`(알림만) 다.
     **판정만 한다** — 멈추는 건 오케스트레이터의 일이다.
     """
     cfg = {**DEFAULTS, **(config or {})}
@@ -220,7 +220,7 @@ def find_anomalies(
                     "kind": "diverge",
                     "action": "stop",
                     "text": (
-                        f"{split}/{metric} 가 발산했어요: 처음 {values[0]:.4g} → "
+                        f"{split}/{metric}가 발산했어요: 처음 {values[0]:.4g} → "
                         f"최근 {window}개가 전부 {values[0] * factor:.4g} 초과"
                     ),
                 }

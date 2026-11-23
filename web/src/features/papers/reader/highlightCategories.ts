@@ -1,6 +1,6 @@
 import type { HighlightCategory } from '@/api/types'
 
-/** 하이라이트 5종. 색은 tokens.css 의 --hl-* 가 갖고 있어요 */
+/** 하이라이트 5종. 색은 tokens.css의 --hl-* 가 갖고 있어요 */
 export const HIGHLIGHT_CATEGORIES: Array<{ id: HighlightCategory; label: string }> = [
   { id: 'core', label: '핵심 혁신' },
   { id: 'method', label: '방법' },

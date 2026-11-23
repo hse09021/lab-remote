@@ -49,7 +49,7 @@ def cmd_notify(args) -> int:
             body="`labremote notify test`로 보낸 시험 알림이에요.",
             fields=[("보낸 쪽", notify.USER_AGENT)],
         )
-    # `notifier.send` 는 `sent`·`status` 를 돌려준다 (`ok` 가 아니다).
+    # `notifier.send`는 `sent`·`status`를 돌려준다 (`ok`가 아니다).
     if got.get("suppressed"):
         print("· 방금 같은 알림을 보내서 이번 건은 눌렸어요 (중복 제거).")
         return 0
@@ -67,7 +67,7 @@ def _confirm(question: str, yes: bool) -> bool:
     if yes:
         return True
     if not sys.stdin.isatty():
-        print("✘ 확인할 수 없어요 — 터미널에서 돌리거나 --yes 를 붙여 주세요.", file=sys.stderr)
+        print("✘ 확인할 수 없어요 — 터미널에서 돌리거나 --yes를 붙여 주세요.", file=sys.stderr)
         return False
     try:
         return input(f"{question} [y/N] ").strip().lower() in ("y", "yes", "네", "ㅇ")
@@ -85,7 +85,7 @@ def cmd_autostart(args) -> int:
             print(json.dumps({**got, "record": autostart.record()}, ensure_ascii=False, indent=2))
             return 0
         if not got["systemctl"]:
-            print("systemctl 이 없어요 — systemd 가 아닌 환경이에요.")
+            print("systemctl이 없어요 — systemd가 아닌 환경이에요.")
             return 1
         row = got["units"].get(units.NAME) or {}
         print(f"{units.NAME}  유닛 {'있어요' if row.get('file') else '없어요'} · {row.get('enabled')} · {row.get('active')}"
@@ -104,10 +104,10 @@ def cmd_autostart(args) -> int:
                 print(f"--- {units.unit_path()} ---")
                 print(units.render(port=args.port))
                 return 0
-            print("자동 시작을 켜면 이것들이 바뀌어요 (sudo 는 필요 없어요):")
+            print("자동 시작을 켜면 이것들이 바뀌어요 (sudo는 필요 없어요):")
             for st in autostart.plan(port=args.port):
                 print(f"  · {st['what']}\n      {st['detail']}")
-            print("code tunnel 은 여기서 켜지 않아요 — 따로 `code tunnel service install` (docs/SETUP.md).")
+            print("code tunnel은 여기서 켜지 않아요 — 따로 `code tunnel service install` (docs/SETUP.md).")
             if not _confirm("켤까요?", args.yes):
                 print("그만뒀어요. 아무것도 바꾸지 않았어요.")
                 return 1
@@ -116,8 +116,8 @@ def cmd_autostart(args) -> int:
             if not os.path.exists(units.unit_path()) and not autostart.record():
                 print("자동 시작이 이미 꺼져 있어요.")
                 return 0
-            print("자동 시작을 끄면 서비스를 멈추고 유닛 파일을 지워요. linger 는 lab.remote 가 켰을 때만 원래대로 돌려요"
-                  " (code tunnel 서비스가 있으면 그것도 linger 를 써서 그대로 둬요).")
+            print("자동 시작을 끄면 서비스를 멈추고 유닛 파일을 지워요. linger는 lab.remote가 켰을 때만 원래대로 돌려요"
+                  " (code tunnel 서비스가 있으면 그것도 linger를 써서 그대로 둬요).")
             print("학습 실행은 서비스와 따로 돌아서 계속 돌아요.")
             if not _confirm("끌까요?", args.yes):
                 print("그만뒀어요. 아무것도 바꾸지 않았어요.")
@@ -158,7 +158,7 @@ def cmd_remote(args) -> int:
     if args.json:
         print(json.dumps({**info, "tunnel": t}, ensure_ascii=False, indent=2))
         return 0
-    state = {"up": "켜져 있어요", "off": "꺼져 있어요", "absent": "VS Code CLI 가 없어요", "unknown": "못 읽었어요"}[t["state"]]
+    state = {"up": "켜져 있어요", "off": "꺼져 있어요", "absent": "VS Code CLI가 없어요", "unknown": "못 읽었어요"}[t["state"]]
     print(f"code tunnel  {state}" + (f" · {t['url']}" if t["url"] else "")
           + (" · 서비스로 설치됨" if t["service"] else "")
           + ("" if t["loggedIn"] is None else " · 로그인함" if t["loggedIn"] else " · 로그인 안 함"))
@@ -173,7 +173,7 @@ def cmd_monitor(args) -> int:
     from .monitor import gpu as gpu_mod
     from .monitor import host as host_mod
 
-    # CPU 는 **두 표본의 차분**이다 (/proc/stat). 짧게 두 번 읽는다.
+    # CPU는 **두 표본의 차분**이다 (/proc/stat). 짧게 두 번 읽는다.
     before = host_mod.cpu_times()
     time.sleep(0.2)
     gpu = gpu_mod.probe()
@@ -227,7 +227,7 @@ def cmd_serve(args) -> int:
 
         from .main import create_app
     except ImportError:
-        print("✘ fastapi·uvicorn 이 없어요 — pip install -e '.[api]'", file=sys.stderr)
+        print("✘ fastapi·uvicorn이 없어요 — pip install -e '.[api]'", file=sys.stderr)
         return 2
     prio = lower_priority()
     print(
@@ -235,7 +235,7 @@ def cmd_serve(args) -> int:
         f"ionice {'idle' if prio['ionice'] else '그대로'}",
         flush=True,
     )
-    # 열린 SSE(실시간 갱신) 연결이 있으면 uvicorn 은 끝없이 기다린다 — 5초 뒤에는 끊고 끝낸다
+    # 열린 SSE(실시간 갱신) 연결이 있으면 uvicorn은 끝없이 기다린다 — 5초 뒤에는 끊고 끝낸다
     # (자동 시작이 서버를 다시 띄울 수 있게. 실측 2026-11-23: 브라우저 탭 하나로 멈췄어요)
     # 쉬는 연결을 75초 유지 — 기본 5초면 터널(code tunnel)이 15초 간격 요청마다 중계 세션과
     # SSH 키 교환을 새로 해서 밖에서 볼 때 매번 느려요 (실측 2026-11-24: 30분에 중계 세션 54번)
@@ -259,7 +259,7 @@ def _project_here(name: str | None) -> tuple[str, str, str]:
         return name, root, ""
     hit = registry.lookup(os.getcwd())
     if not hit:
-        raise RuntimeError("등록한 프로젝트 폴더 안에서 돌리거나 -p <이름> 을 붙여 주세요.")
+        raise RuntimeError("등록한 프로젝트 폴더 안에서 돌리거나 -p <이름>을 붙여 주세요.")
     root, found = hit
     rel = paths.rel_or_none(root, paths.real(os.getcwd())) or ""
     return found, root, "" if rel == "." else rel
@@ -286,7 +286,7 @@ def cmd_run(args) -> int:
     if args.json:
         print(json.dumps(run, ensure_ascii=False, indent=2))
     else:
-        print(f"▶ {name} · {run['id']} 를 시작했어요 ({'conda ' + env if env else 'conda 없이'})")
+        print(f"▶ {name} · {run['id']}를 시작했어요 ({'conda ' + env if env else 'conda 없이'})")
         print(f"  로그     {run['log']}")
         print(f"  붙기     {run['attach']}")
     return 0
@@ -330,7 +330,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--json", action="store_true", help="JSON으로 출력해요")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("serve", help="서버를 띄워요 (127.0.0.1 만)")
+    p = sub.add_parser("serve", help="서버를 띄워요 (127.0.0.1만)")
     p.add_argument("--port", type=int, default=8000)
     p.set_defaults(func=cmd_serve)
 
@@ -347,7 +347,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("action", choices=["list", "stop", "log"], nargs="?", default="list")
     p.add_argument("id", nargs="?", help="EXP-…")
     p.add_argument("-p", "--project")
-    p.add_argument("--force", action="store_true", help="stop: tmux 를 통째로 꺼요")
+    p.add_argument("--force", action="store_true", help="stop: tmux를 통째로 꺼요")
     p.add_argument("--lines", type=int, default=200)
     p.set_defaults(func=cmd_runs)
 

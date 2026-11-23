@@ -5,7 +5,7 @@ import '@xterm/xterm/css/xterm.css'
 import { terminalSocketUrl } from '@/api/ide'
 import s from './Ide.module.css'
 
-/** 디자인 토큰을 xterm 색으로 (xterm 은 CSS 변수를 못 읽어요) */
+/** 디자인 토큰을 xterm 색으로 (xterm은 CSS 변수를 못 읽어요) */
 function tokenColors() {
   const css = getComputedStyle(document.documentElement)
   const v = (name: string) => css.getPropertyValue(name).trim()
@@ -81,7 +81,7 @@ export function TerminalView({ project, name, run, write = false }: { project: s
         fit.fit()
         sendResize()
       } catch {
-        // 숨겨진 탭이면 크기가 0 이에요
+        // 숨겨진 탭이면 크기가 0이에요
       }
     })
     observer.observe(el)

@@ -1,15 +1,15 @@
 """`.git` 경유 탈출 — **오케스트레이터가 대신 실행해 주는 길.**
 
-오케스트레이터의 git 은 **샌드박스 밖에서 사용자 권한으로** 돈다(의도된
+오케스트레이터의 git은 **샌드박스 밖에서 사용자 권한으로** 돈다(의도된
 비대칭 — 커밋·브랜치는 훅을 거치지 않는다). 그런데 샌드박스는 작업 디렉터리
-쓰기를 못 막으므로(M4) AI 가 쓴 코드가 `.git/`에 쓸 수 있다.
+쓰기를 못 막으므로(M4) AI가 쓴 코드가 `.git/`에 쓸 수 있다.
 
     .git/hooks/post-commit      커밋할 때 실행된다
     .git/config  core.hooksPath / filter.X.process / core.fsmonitor / include.path
     .gitattributes  * filter=X
 
-여기서는 **실제로 악성 설정을 심어 두고** 오케스트레이터의 git 이 그걸
-실행하지 않는지 본다. 가짜 없이 진짜 `git` 을 쓴다.
+여기서는 **실제로 악성 설정을 심어 두고** 오케스트레이터의 git이 그걸
+실행하지 않는지 본다. 가짜 없이 진짜 `git`을 쓴다.
 """
 
 import os
@@ -22,7 +22,7 @@ from app.git import guard as G
 from app.git import ops
 
 pytestmark = pytest.mark.skipif(
-    shutil.which("git") is None, reason="git 이 없어요"
+    shutil.which("git") is None, reason="git이 없어요"
 )
 
 #: 훅·필터가 실행되면 여기에 흔적을 남긴다. 파일이 생기면 **실패**다.
@@ -75,7 +75,7 @@ def test_깨끗하면_통과한다(repo):
 
 
 def test_기본_sample_훅은_봐준다(repo):
-    """git init 이 `*.sample` 을 깔아 둔다 — 실행되지 않는다."""
+    """git init이 `*.sample`을 깔아 둔다 — 실행되지 않는다."""
     folder = os.path.join(repo, ".git", "hooks")
     assert any(n.endswith(".sample") for n in os.listdir(folder))
     assert G.bad_hooks(repo) == []
@@ -93,7 +93,7 @@ def test_평범한_git_작업은_그대로_된다(repo):
 
 
 def test_신원이_없어도_커밋된다(repo):
-    """`SAFE_ENV` 가 전역 설정을 끊는다 — 그래도 커밋이 돼야 한다."""
+    """`SAFE_ENV`가 전역 설정을 끊는다 — 그래도 커밋이 돼야 한다."""
     subprocess.run(
         ["git", "-C", repo, "config", "--unset", "user.name"], check=False
     )
@@ -112,8 +112,8 @@ def test_신원이_없어도_커밋된다(repo):
 
 
 def test_악성_post_commit_훅이_실행되지_않는다(repo, tmp_path):
-    """훅이 있어도 거절하지 않는다 (pre-commit·husky 가 흔하다). 대신 **안 돈다** —
-    `-c core.hooksPath` 가 빈 폴더를 가리킨다. 보통 경로(guard 를 지나는 run)로 잰다."""
+    """훅이 있어도 거절하지 않는다 (pre-commit·husky가 흔하다). 대신 **안 돈다** —
+    `-c core.hooksPath`가 빈 폴더를 가리킨다. 보통 경로(guard를 지나는 run)로 잰다."""
     mark = _mark_path(tmp_path)
     _plant_hook(repo, "post-commit", mark)
 
@@ -139,7 +139,7 @@ def test_pre_commit_훅도_실행되지_않는다(repo, tmp_path):
 
 
 def test_core_hooksPath_를_심어도_이긴다(repo, tmp_path):
-    """저장소 설정으로 훅 폴더를 바꿔도 `-c` 가 이긴다 — 그래서 알리기만 한다."""
+    """저장소 설정으로 훅 폴더를 바꿔도 `-c`가 이긴다 — 그래서 알리기만 한다."""
     folder = tmp_path / "evil-hooks"
     folder.mkdir()
     mark = _mark_path(tmp_path)
@@ -174,7 +174,7 @@ def test_filter_설정이면_git_을_안_돌린다(repo, tmp_path):
         ops.guard(repo)
     assert "filter.evil.clean" in str(err.value)
 
-    # guard 를 지나가는 모든 호출이 막힌다 — 커밋도 status 도
+    # guard를 지나가는 모든 호출이 막힌다 — 커밋도 status도
     for call in (
         lambda: ops.commit(repo, "x", ["src"]),
         lambda: ops.status_porcelain(repo),
@@ -193,7 +193,7 @@ def test_textconv_도_잡는다(repo):
 
 
 def test_fsmonitor_를_심어도_status_에서_안_돈다(repo, tmp_path):
-    """`git status` 할 때 실행되는 감시 프로그램 — `-c core.fsmonitor=false` 가 이긴다."""
+    """`git status` 할 때 실행되는 감시 프로그램 — `-c core.fsmonitor=false`가 이긴다."""
     mark = _mark_path(tmp_path)
     script = tmp_path / "evil.sh"
     script.write_text(f"#!/bin/sh\necho pwned > {mark}\n", encoding="utf-8")
@@ -206,10 +206,10 @@ def test_fsmonitor_를_심어도_status_에서_안_돈다(repo, tmp_path):
 
 
 def test_include_path_자체를_거부한다(repo, tmp_path):
-    """`include.path` 는 파싱 시점에 끼어든다 — `-c`로 못 막는다.
+    """`include.path`는 파싱 시점에 끼어든다 — `-c`로 못 막는다.
 
-    ⚠ 그리고 `git config --list --local` 은 **include 가 끌어온 값을 보여
-    주지 않는다**(실측). 그래서 끌어온 `filter.x.process` 는 우리 목록에
+    ⚠ 그리고 `git config --list --local`은 **include가 끌어온 값을 보여
+    주지 않는다**(실측). 그래서 끌어온 `filter.x.process`는 우리 목록에
     안 보인다 — `include.path` **자체를 거부하는 것이 유일한 수단**이다.
     이 시험이 그 전제를 고정한다.
     """
@@ -220,7 +220,7 @@ def test_include_path_자체를_거부한다(repo, tmp_path):
     entries = G.config_entries(repo, config_args=ops.safe_config(), env=ops.safe_env())
     assert "include.path" in entries
     assert "filter.x.process" not in entries, (
-        "--list --local 이 include 를 따라가면 이 시험을 지워도 돼요"
+        "--list --local이 include를 따라가면 이 시험을 지워도 돼요"
     )
 
     with pytest.raises(G.GitRefused) as err:
@@ -249,7 +249,7 @@ def test_sshCommand_는_알리고_insteadOf_는_거부한다(repo):
 
 
 def test_protocol_이름별_허용은_거부한다(repo):
-    """`protocol.<이름>.allow` 는 `protocol.allow=never`보다 우선한다."""
+    """`protocol.<이름>.allow`는 `protocol.allow=never`보다 우선한다."""
     _append_config(repo, "\n[protocol \"ext\"]\n\tallow = always\n")
     with pytest.raises(G.GitRefused) as err:
         ops.guard(repo)
@@ -257,13 +257,13 @@ def test_protocol_이름별_허용은_거부한다(repo):
 
 
 def test_alias_와_credential_helper_는_알리기만(repo):
-    """별칭은 빌트인을 못 가리고, `credential.helper` 는 `-c` 가 비운다."""
+    """별칭은 빌트인을 못 가리고, `credential.helper`는 `-c`가 비운다."""
     _append_config(repo, "\n[alias]\n\tst = !sh -c 'echo pwned'\n")
     assert any("alias.st" in n for n in ops.guard(repo)["notes"])
     os.truncate(os.path.join(repo, ".git", "config"), 0)
     _append_config(repo, "[credential]\n\thelper = !sh -c 'echo pwned'\n")
     assert any("credential.helper" in n for n in ops.guard(repo)["notes"])
-    # URL 별 helper 는 `-c`로 못 비운다 — 거부
+    # URL 별 helper는 `-c`로 못 비운다 — 거부
     os.truncate(os.path.join(repo, ".git", "config"), 0)
     _append_config(repo, "[credential \"https://x\"]\n\thelper = !sh -c 'echo pwned'\n")
     with pytest.raises(G.GitRefused):
@@ -277,7 +277,7 @@ def test_서브모듈은_알리기만(repo):
 
 
 def test_LFS_저장소는_거부하지_않는다(repo):
-    """`filter=lfs` 만 있고 드라이버가 저장소 설정에 없으면 아무것도 안 돈다."""
+    """`filter=lfs`만 있고 드라이버가 저장소 설정에 없으면 아무것도 안 돈다."""
     with open(os.path.join(repo, ".gitattributes"), "w", encoding="utf-8") as fh:
         fh.write("*.bin filter=lfs diff=lfs merge=lfs -text\n")
     report = ops.guard(repo)
@@ -287,7 +287,7 @@ def test_LFS_저장소는_거부하지_않는다(repo):
 
 
 def test_저장소를_걷지_않는다(repo):
-    """큰 연구 저장소에서 git 을 부를 때마다 걸으면 느리다 — 맨 위만 본다."""
+    """큰 연구 저장소에서 git을 부를 때마다 걸으면 느리다 — 맨 위만 본다."""
     with open(os.path.join(repo, "src", ".gitattributes"), "w", encoding="utf-8") as fh:
         fh.write("*.py diff=evil\n")
     assert G.bad_attributes(repo) == []
@@ -295,7 +295,7 @@ def test_저장소를_걷지_않는다(repo):
 
 def test_주석과_빈_줄은_넘어간다(repo):
     with open(os.path.join(repo, ".gitattributes"), "w", encoding="utf-8") as fh:
-        fh.write("# filter=evil 은 주석이에요\n\n*.bin binary\n")
+        fh.write("# filter=evil은 주석이에요\n\n*.bin binary\n")
     assert G.bad_attributes(repo) == []
 
 
@@ -335,7 +335,7 @@ def test_안전_설정에_필요한_것이_다_있다():
 
 
 def test_빈_훅_폴더가_server_data_아래다():
-    """샌드박스 안에서 그 폴더 쓰기가 실패하므로(M1b) AI 가 훅을 못 넣는다."""
+    """샌드박스 안에서 그 폴더 쓰기가 실패하므로(M1b) AI가 훅을 못 넣는다."""
     from app import registry
 
     folder = ops.nohooks_dir()

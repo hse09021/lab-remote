@@ -28,7 +28,7 @@ export interface Schedule {
   lastAt: number | null
   lastResult: string
   lastRef: { project?: string; run?: string; session?: string } | null
-  /** GPU 가 바빠서 기다리기 시작한 시각 */
+  /** GPU가 바빠서 기다리기 시작한 시각 */
   waitingSince: number | null
 }
 

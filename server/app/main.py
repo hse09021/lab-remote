@@ -1,17 +1,17 @@
-"""FastAPI 앱 — `labremote serve` 가 띄운다. 빌드된 웹(`web/dist`)도 같이 내준다.
+"""FastAPI 앱 — `labremote serve`가 띄운다. 빌드된 웹(`web/dist`)도 같이 내준다.
 
 ### 🔑 127.0.0.1에만 열지만, 그것만으로는 모자라다
 
 브라우저에서 연 **아무 웹 페이지**나 `http://127.0.0.1:8000`으로 요청을 보낼
 수 있다. 그래서 두 겹을 더 둔다.
 
-1. **Host 검사** — `Host` 가 `127.0.0.1`·`localhost`·`[::1]`(포트 무관)이
+1. **Host 검사** — `Host`가 `127.0.0.1`·`localhost`·`[::1]`(포트 무관)이
    아니면 거절한다. DNS rebinding(공격자 도메인을 127.0.0.1로 돌려 응답까지
    읽는 것)을 막는다. 터널로 전달한 바깥 주소는 `labremote remote set` (데이터 폴더
-   `remote.json`) 이나 환경 변수 `LAB_ALLOWED_HOSTS`로 더한다 (remote.py).
+   `remote.json`)이나 환경 변수 `LAB_ALLOWED_HOSTS`로 더한다 (remote.py).
 2. **바꾸는 요청에는 `X-Lab-Remote: 1` 헤더** — 다른 출처의 페이지가 이
-   헤더를 붙이려면 CORS 사전 요청이 필요한데, 이 서버는 CORS 를 허락하지
-   않는다. `Origin` 이 있으면 그 호스트도 같은 규칙으로 본다.
+   헤더를 붙이려면 CORS 사전 요청이 필요한데, 이 서버는 CORS를 허락하지
+   않는다. `Origin`이 있으면 그 호스트도 같은 규칙으로 본다.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 def _hostname(value: str) -> str:
-    """`Host` 값이나 `Origin` 의 netloc에서 이름만."""
+    """`Host` 값이나 `Origin`의 netloc에서 이름만."""
     value = (value or "").strip().lower()
     if value.startswith("["):  # [::1]:8000
         return value[1 : value.find("]")] if "]" in value else value
@@ -107,7 +107,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
         hosts = allowed_hosts()
         if _hostname(request.headers.get("host", "")) not in hosts:
             return _refuse(
-                "이 주소로는 열 수 없어요 (Host 가 허용 목록에 없어요). 터널로 전달한 주소라면 데스크톱에서 "
+                "이 주소로는 열 수 없어요 (Host가 허용 목록에 없어요). 터널로 전달한 주소라면 데스크톱에서 "
                 "labremote remote set https://<그 주소> 로 알려 주세요."
             )
         origin = request.headers.get("origin")
@@ -167,7 +167,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
 
     @app.get("/api/{rest:path}", include_in_schema=False)
     def api_missing(rest: str):
-        return JSONResponse({"detail": f"없는 API 예요: /api/{rest}"}, status_code=404)
+        return JSONResponse({"detail": f"없는 API예요: /api/{rest}"}, status_code=404)
 
     @app.get("/{rest:path}", include_in_schema=False)
     def web(rest: str):
@@ -184,7 +184,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
                 immutable = rest.startswith("assets/")
                 return FileResponse(target, headers={"Cache-Control": "public, max-age=31536000, immutable" if immutable else "no-cache"})
             if rest.startswith("assets/"):
-                # 새로 빌드돼 없어진 조각 — index.html 을 주면 브라우저가 "모듈을 못 불러와요"로 터져요.
+                # 새로 빌드돼 없어진 조각 — index.html을 주면 브라우저가 "모듈을 못 불러와요"로 터져요.
                 # 404로 답하고 화면이 스스로 한 번 새로 고쳐요 (web/src/lib/lazyReload.ts)
                 return JSONResponse({"detail": "없는 파일이에요 (새로 빌드됐어요 — 새로 고침해 주세요)"}, status_code=404)
         # SPA — 화면 경로는 전부 index.html. 늘 새로 받게 (새 빌드의 조각 이름을 알도록)

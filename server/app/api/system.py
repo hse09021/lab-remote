@@ -23,7 +23,7 @@ def gpu():
 
 @router.get("/system/resources")
 def resources():
-    """Dashboard 자원 칸 — 화면을 보는 동안만 5초마다 불린다(systemctl 은 안 부른다)."""
+    """Dashboard 자원 칸 — 화면을 보는 동안만 5초마다 불린다(systemctl은 안 부른다)."""
     return {"gpu": system.gpu_summary(), "host": system.host_summary()}
 
 

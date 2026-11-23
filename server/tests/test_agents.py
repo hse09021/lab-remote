@@ -1,6 +1,6 @@
-"""에이전트 세션 — 가짜 연결 부품으로 manager · 승인 흐름 · API 를 시험한다.
+"""에이전트 세션 — 가짜 연결 부품으로 manager · 승인 흐름 · API를 시험한다.
 
-진짜 Claude 는 부르지 않는다(사용량을 쓰지 않게). 진짜 연결은 단계 보고 때
+진짜 Claude는 부르지 않는다(사용량을 쓰지 않게). 진짜 연결은 단계 보고 때
 손으로 한 번 확인했다.
 """
 
@@ -248,7 +248,7 @@ def test_worktree_를_만든다(project):
     subprocess.run(["git", "-C", project, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "i"], check=True)
     made = worktree.add(project, "exp/early-stop")
     assert made["rel"] == ".labremote/worktrees/early-stop" and os.path.isdir(made["path"])
-    # 같은 브랜치를 두 worktree 가 쓸 수는 없다 — git 이 거절하고 그 문구를 그대로 보여 준다
+    # 같은 브랜치를 두 worktree가 쓸 수는 없다 — git이 거절하고 그 문구를 그대로 보여 준다
     with pytest.raises(worktree.WorktreeError, match="already used"):
         worktree.add(project, "exp/early-stop")
     with pytest.raises(worktree.WorktreeError):
@@ -296,7 +296,7 @@ def test_할_일_도구를_켜고_위험한_도구는_허용_목록에_없다():
     assert opts.allowed_tools == ["TodoWrite", "TaskCreate", "TaskUpdate", "TaskGet", "TaskList"]
     assert not {"Bash", "Edit", "Write"} & set(opts.allowed_tools)
     assert "AskUserQuestion" not in opts.disallowed_tools  # 질문 카드로 답한다
-    assert opts.settings is None  # Ultracode 는 켤 때만
+    assert opts.settings is None  # Ultracode는 켤 때만
     on = claude.ClaudeBackend(base.SessionConfig(cwd=".", extra={"ultracode": True}), emit=lambda e: None, ask=None)._options()
     assert json.loads(on.settings) == {"ultracode": True}
     assert opts.permission_mode == "default" and opts.setting_sources == ["user", "project", "local"]
@@ -369,7 +369,7 @@ def test_학습이_쓰는_환경에_설치하려_하면_경고만(project, monke
     running = [{"id": "EXP-007", "name": "", "state": "running", "env": "lora-env"}]
     monkeypatch.setattr(runs, "list_runs", lambda name, refresh_running=True: running)
     w = mgr_mod.install_warning("demo", req("pip install peft"))
-    assert "EXP-007 이 lora-env로 학습 중" in w
+    assert "EXP-007이 lora-env로 학습 중" in w
     assert mgr_mod.install_warning("demo", req("conda run -n lora-env python -m pip install -U timm"))
     assert mgr_mod.install_warning("demo", req("conda install -n other-env tqdm")) == ""  # 다른 환경
     assert mgr_mod.install_warning("demo", req("python train.py")) == ""  # 설치가 아님

@@ -99,7 +99,7 @@ const MEMO_ID = 'memo-inline'
 export function MemoCard({ data, paperId }: { data: InlineMemo; paperId: string }) {
   // 고친 메모는 내 주석 저장소에 같은 id로 남겨요 (기기끼리 같이 봐요)
   const notes = useQuery(annotationsQuery(paperId))
-  // 정해 둔 id로 만들어요 (되돌리기와 같은 길 — id 를 그대로 넘겨요)
+  // 정해 둔 id로 만들어요 (되돌리기와 같은 길 — id를 그대로 넘겨요)
   const add = useRestoreAnnotation(paperId)
   const update = useUpdateAnnotation(paperId)
   const saved = notes.data?.find((a) => a.id === MEMO_ID)

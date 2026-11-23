@@ -1,12 +1,12 @@
 """에이전트 세션 관리 — 저장 · 이어 가기 · 동시 세션 상한 · 승인 흐름.
 
 저장: `<프로젝트>/.labremote/sessions/<id>.json`(기록)과 `<id>.jsonl`(이벤트).
-서버가 다시 떠도 목록과 에이전트 쪽 세션 id 가 남아 **이어 갈 수 있다**
+서버가 다시 떠도 목록과 에이전트 쪽 세션 id가 남아 **이어 갈 수 있다**
 (PLAN 4.1). 대화 원문은 에이전트(Claude Code)도 따로 갖고 있다.
 
 승인: 연결 부품이 도구를 쓰기 전에 묻으면 "대기 중 승인"으로 올리고
 (화면 SSE · Inbox · Discord), **먼저 온 답**을 돌려준다. 어느 화면에서 답해도
-같다. "이 세션에서 계속 허용" 은 lab.remote 가 이 세션 안에서만 기억한다 —
+같다. "이 세션에서 계속 허용"은 lab.remote가 이 세션 안에서만 기억한다 —
 Claude Code 설정 파일에 쓰지 않는다.
 
 모든 함수는 서버의 이벤트 루프에서 돈다.
@@ -34,7 +34,7 @@ MAX_LIVE = 4
 ID_RE = re.compile(r"\As-[0-9a-f]{10}\Z")
 STATE_LABELS = {"ask": "답 필요", "working": "작업 중", "idle": "끝남", "error": "오류"}
 EFFORTS = ("", "low", "medium", "high", "xhigh", "max")
-#: 파일을 다루는 도구 — "이 세션에서 이 파일은 계속 허용" 의 열쇠가 파일 경로다
+#: 파일을 다루는 도구 — "이 세션에서 이 파일은 계속 허용"의 열쇠가 파일 경로다
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 
 
@@ -42,7 +42,7 @@ class AgentError(ValueError):
     """사람에게 그대로 보여 줄 수 있는 거절 사유."""
 
 
-#: 연결 부품. Codex 를 붙이면 여기에 한 줄 더한다(시험은 가짜를 끼운다).
+#: 연결 부품. Codex를 붙이면 여기에 한 줄 더한다(시험은 가짜를 끼운다).
 BACKENDS: dict[str, object] = {}
 
 
@@ -89,7 +89,7 @@ ENV_NAME_RE = re.compile(r"(?:-n|--name)\s+([A-Za-z0-9][A-Za-z0-9._-]*)")
 def install_warning(project: str, req: ApprovalRequest) -> str:
     """학습이 쓰고 있는 conda 환경에 설치하려는 것 같으면 경고 한 줄. 아니면 "".
 
-    명령에 `-n 환경` 이 있으면 그 환경을 쓰는 학습(모든 프로젝트)을, 없으면 이 프로젝트에서
+    명령에 `-n 환경`이 있으면 그 환경을 쓰는 학습(모든 프로젝트)을, 없으면 이 프로젝트에서
     도는 학습을 본다. 사람이 승인 카드에서 판단하도록 알려 주기만 한다(사람이 고름, 2026-11-23).
     """
     if req.tool != "Bash":
@@ -113,7 +113,7 @@ def install_warning(project: str, req: ApprovalRequest) -> str:
                 continue
             if named and r.get("env") != named.group(1):
                 continue
-            busy.append(f"{r.get('name') or r['id']} 이 {r.get('env') or 'conda 없이'}")
+            busy.append(f"{r.get('name') or r['id']}이 {r.get('env') or 'conda 없이'}")
     if not busy:
         return ""
     return f"{', '.join(busy[:3])}로 학습 중이에요. 지금 패키지를 바꾸면 학습이 깨질 수 있어요."
@@ -141,7 +141,7 @@ class Manager:
 
     def _paths(self, root: str, sid: str) -> tuple[str, str]:
         if not ID_RE.match(sid or ""):
-            raise AgentError(f"세션 id 가 올바르지 않아요: {sid!r}")
+            raise AgentError(f"세션 id가 올바르지 않아요: {sid!r}")
         d = self._dir(root)
         return os.path.join(d, f"{sid}.json"), os.path.join(d, f"{sid}.jsonl")
 
@@ -242,8 +242,8 @@ class Manager:
     def recover(self) -> int:
         """서버가 뜰 때 — 작업 중이던 세션은 연결이 끊긴 것으로 적는다.
 
-        기다리던 승인 요청은 프로세스와 함께 사라졌으니, Inbox 의 안 읽은
-        "답 필요" 도 읽음으로 돌린다(배지가 답할 수 없는 걸 세지 않게).
+        기다리던 승인 요청은 프로세스와 함께 사라졌으니, Inbox의 안 읽은
+        "답 필요"도 읽음으로 돌린다(배지가 답할 수 없는 걸 세지 않게).
         """
         try:
             with db.open_db() as conn:
@@ -299,9 +299,9 @@ class Manager:
         if not text:
             raise AgentError("첫 메시지를 적어 주세요.")
         if mode not in MODES:
-            raise AgentError(f"모르는 Mode 예요: {mode}")
+            raise AgentError(f"모르는 Mode예요: {mode}")
         if effort not in EFFORTS:
-            raise AgentError(f"모르는 Effort 예요: {effort}")
+            raise AgentError(f"모르는 Effort예요: {effort}")
         _backend_class(kind)
         if new_branch:
             made = await asyncio.to_thread(worktree_mod.add, root, new_branch)
@@ -466,7 +466,7 @@ class Manager:
         rec["state"] = "ask"
         self._save(root, rec)
         def _notify() -> int | None:
-            # Discord 재시도가 sleep 을 쓰므로 이벤트 루프 밖(스레드)에서 돈다
+            # Discord 재시도가 sleep을 쓰므로 이벤트 루프 밖(스레드)에서 돈다
             with db.open_db() as conn:
                 return alerts.post(
                     conn, "ask", "ask",
@@ -510,7 +510,7 @@ class Manager:
             return self._answer_questions(p, answers or {}, response, via)
         root, rec = self._find(p.session)
         if choice == "allowSession" and p.request.tool == "AskUserQuestion":
-            raise AgentError("질문에는 '계속 허용' 이 없어요. 답을 골라 주세요.")
+            raise AgentError("질문에는 '계속 허용'이 없어요. 답을 골라 주세요.")
         if choice == "allowSession":
             key = _allow_key(p.request)
             live = self.live.get(p.session)
@@ -541,7 +541,7 @@ class Manager:
     def _answer_questions(self, p: Pending, answers: dict, response: str, via: str) -> dict:
         """AskUserQuestion — 답은 질문 글을 열쇠로, 고른 label(여러 개면 목록)을 값으로.
 
-        `response` 는 보기 대신 자유롭게 쓴 답이다(문서의 top-level `response`).
+        `response`는 보기 대신 자유롭게 쓴 답이다(문서의 top-level `response`).
         """
         questions = p.request.input.get("questions")
         if not isinstance(questions, list):
@@ -604,7 +604,7 @@ class Manager:
         effort: str | None = None,
         ultracode: bool | None = None,
     ) -> dict:
-        """Mode·Model 은 바로, Effort·Ultracode 는 다음 연결부터(쉬고 있으면 끊었다가 이어 간다)."""
+        """Mode·Model은 바로, Effort·Ultracode는 다음 연결부터(쉬고 있으면 끊었다가 이어 간다)."""
         root, rec = self._find(sid)
         live = self.live.get(sid)
         if ultracode is not None and bool(ultracode) != bool(rec.get("ultracode")):
@@ -614,7 +614,7 @@ class Manager:
                 live = None
         if mode is not None:
             if mode not in MODES:
-                raise AgentError(f"모르는 Mode 예요: {mode}")
+                raise AgentError(f"모르는 Mode예요: {mode}")
             rec["mode"] = mode
             if live:
                 await live.backend.set_mode(mode)
@@ -624,7 +624,7 @@ class Manager:
                 await live.backend.set_model(model)
         if effort is not None:
             if effort not in EFFORTS:
-                raise AgentError(f"모르는 Effort 예요: {effort}")
+                raise AgentError(f"모르는 Effort예요: {effort}")
             if effort != rec.get("effort") and live and not live.backend.busy:
                 await self.disconnect(sid)
             rec["effort"] = effort

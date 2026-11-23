@@ -74,7 +74,7 @@ export default function AdePage() {
         </Link>
         {branch && <span className={s.barBranch}>⎇ {branch}</span>}
         <div role="group" aria-label="작업 화면 전환" className={s.switch}>
-          {/* 같은 worktree 를 들고 IDE로 */}
+          {/* 같은 worktree를 들고 IDE로 */}
           <Link to={`/projects/${encodeURIComponent(project)}/ide${tree ? `?tree=${encodeURIComponent(tree)}` : ''}`}>IDE</Link>
           <Link to="#" aria-current="page">
             ADE
@@ -352,7 +352,7 @@ export function NewSession({
           </label>
         )}
         <p className={s.muted}>
-          작업마다 worktree 하나씩 두면 세션끼리 파일이 섞이지 않아요. Mode · Model · Effort 는 이 세션에만 적용되고 ~/.claude 를 바꾸지
+          작업마다 worktree 하나씩 두면 세션끼리 파일이 섞이지 않아요. Mode · Model · Effort는 이 세션에만 적용되고 ~/.claude를 바꾸지
           않아요.
         </p>
       </div>
@@ -423,7 +423,7 @@ function Explorer({ project, tree, branch, onOpen }: { project: string; tree: st
         ))}
       </ul>
       <div className={s.muted}>
-        바뀐 파일을 누르면 오른쪽 변경 탭에 diff 가 열려요. 직접 고치려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열기</Link>.
+        바뀐 파일을 누르면 오른쪽 변경 탭에 diff가 열려요. 직접 고치려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열기</Link>.
       </div>
     </div>
   )
@@ -457,7 +457,7 @@ function Changes({
           {diff.isPending
             ? '불러오는 중이에요…'
             : diff.data?.diff ||
-              (changes.find((c) => c.path === path)?.label === '새 파일' ? '새 파일이에요 — git 이 아직 모르는 파일이라 diff 가 없어요.' : '바뀐 내용이 없어요.')}
+              (changes.find((c) => c.path === path)?.label === '새 파일' ? '새 파일이에요 — git이 아직 모르는 파일이라 diff가 없어요.' : '바뀐 내용이 없어요.')}
         </pre>
       )}
     </div>

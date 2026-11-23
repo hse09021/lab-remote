@@ -1,6 +1,6 @@
 """등록한 프로젝트 목록과 lab.remote 데이터 폴더의 위치.
 
-데이터 폴더(`data_dir`)는 lab.remote 가 쓰는 곳 전부의 뿌리다 — 프로젝트
+데이터 폴더(`data_dir`)는 lab.remote가 쓰는 곳 전부의 뿌리다 — 프로젝트
 목록, `lab.db`, Discord 설정(0600). 기본은 `server/data/` 이고
 `LAB_DATA_DIR`로 바꿀 수 있다. `.gitignore`에 걸려 있어 커밋되지 않는다.
 
@@ -63,7 +63,7 @@ def projects_file() -> str:
 
 
 def write_json(path: str, data) -> None:
-    """원자적 쓰기. 반쯤 쓰인 JSON 이 남지 않게."""
+    """원자적 쓰기. 반쯤 쓰인 JSON이 남지 않게."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     tmp = f"{path}.tmp.{os.getpid()}"
     with open(tmp, "w", encoding="utf-8") as fh:
@@ -107,7 +107,7 @@ def register(root: str, name: str) -> str:
             for other_root, other_name in projects.items():
                 if other_name == name and other_root != root_real:
                     raise InvalidName(
-                        f"이름 {name!r} 은 이미 {other_root}에 쓰고 있어요. "
+                        f"이름 {name!r}은 이미 {other_root}에 쓰고 있어요. "
                         "다른 이름을 쓰거나 먼저 등록을 지워 주세요."
                     )
             projects[root_real] = name

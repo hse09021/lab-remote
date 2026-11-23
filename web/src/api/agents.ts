@@ -22,7 +22,7 @@ export interface AgentInfo {
   modes: { id: ModeId; label: string }[]
   version: string
   maxLive: number
-  /** Ultracode — 이 Effort 를 지원하는 모델에서만 켤 수 있어요 */
+  /** Ultracode — 이 Effort를 지원하는 모델에서만 켤 수 있어요 */
   ultracode: { needsEffort: string } | null
 }
 
@@ -174,7 +174,7 @@ export const useAnswer = () =>
 
 /* ── 세션 이름 바꾸기 · 닫기 ─────────────────────────────────────────── */
 
-/** 닫은 세션만 (ADE 의 "닫은 세션") */
+/** 닫은 세션만 (ADE의 "닫은 세션") */
 export const closedSessionsQuery = (enabled: boolean) =>
   queryOptions({
     queryKey: ['agents', 'sessions', 'closed'],

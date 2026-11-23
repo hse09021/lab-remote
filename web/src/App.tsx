@@ -15,7 +15,7 @@ import InboxPage from './features/inbox/InboxPage'
 import AdePage from './features/agents/AdePage'
 import CondaPage from './features/conda/CondaPage'
 
-// IDE 만 따로 떼요 — Monaco가 무거워서 다른 화면 번들에 섞이면 안 돼요.
+// IDE만 따로 떼요 — Monaco가 무거워서 다른 화면 번들에 섞이면 안 돼요.
 // 새로 빌드돼 옛 조각 파일이 없으면 한 번 새로 고쳐요 (lazyReload)
 const IdePage = lazyReload(() => import('./features/ide/IdePage'))
 

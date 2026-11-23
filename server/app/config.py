@@ -1,7 +1,7 @@
 """lab.remote 데이터 폴더의 설정과 비밀.
 
-v3 는 데이터 폴더(`registry.data_dir()`) 밖에 설정을 두지 않는다
-(docs/v3/PLAN.md 1장 · 3장). 그래서 v1 의 `~/.config/labremote/` 는 쓰지 않는다.
+v3는 데이터 폴더(`registry.data_dir()`) 밖에 설정을 두지 않는다
+(docs/v3/PLAN.md 1장 · 3장). 그래서 v1의 `~/.config/labremote/`는 쓰지 않는다.
 
     <data>/discord.json   Discord 웹훅 주소·채널 라우팅·알림 쿨다운 (권한 0600)
 
@@ -35,7 +35,7 @@ __all__ = [
     "is_private",
 ]
 
-#: 알림 종류별 기본 쿨다운(초). `discord.json` 의 `cooldownSec`로 덮어쓴다.
+#: 알림 종류별 기본 쿨다운(초). `discord.json`의 `cooldownSec`로 덮어쓴다.
 COOLDOWN_DEFAULTS = {
     "approval": 0,  # 답이 필요한 건 묵히지 않는다
     "failure": 300,
@@ -54,7 +54,7 @@ def discord_path() -> str:
 
 
 def load() -> dict:
-    """`discord.json` 을 읽는다. 없거나 깨졌으면 빈 dict. **던지지 않는다.**
+    """`discord.json`을 읽는다. 없거나 깨졌으면 빈 dict. **던지지 않는다.**
 
     설정이 없어도 서버는 돌아야 한다 — 알림만 안 간다.
     """
@@ -172,7 +172,7 @@ def cooldown_sec(kind: str) -> int:
     """같은 알림을 다시 보내기까지 묵힐 시간(초)."""
     table = load().get("cooldownSec")
     value = table.get(kind) if isinstance(table, dict) else None
-    if isinstance(value, bool):  # true 를 1로 읽지 않는다
+    if isinstance(value, bool):  # true를 1로 읽지 않는다
         value = None
     if isinstance(value, int) and value >= 0:
         return value

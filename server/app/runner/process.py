@@ -1,14 +1,14 @@
 """실행 프로세스의 기본 부품 — cgroup 분리, 생존 판정, 그룹 종료, 종료코드 기록.
 
-v3 의 실행(`labremote run`)은 `systemd-run --user --scope` + tmux + 로그
+v3의 실행(`labremote run`)은 `systemd-run --user --scope` + tmux + 로그
 파일로 돈다(docs/v3/PLAN.md 4.1). 실행을 띄우는 쪽은 2단계에서 그 모양으로
 새로 만들고, 여기에는 그대로 다시 쓸 부품만 남겼다.
 
 ### 왜 `systemd-run --user --scope` 인가
 
-> ⚠ **`setsid`(`start_new_session=True`) 는 cgroup 을 바꾸지 않습니다**
-> (실측 2026-11-05). 세션 ID 는 떨어지지만 cgroup 은 그대로라 서버 유닛의
-> cgroup 안에 남고, 유닛을 재시작할 때 같이 죽을 수 있습니다. scope 는
+> ⚠ **`setsid`(`start_new_session=True`)는 cgroup을 바꾸지 않습니다**
+> (실측 2026-11-05). 세션 ID는 떨어지지만 cgroup은 그대로라 서버 유닛의
+> cgroup 안에 남고, 유닛을 재시작할 때 같이 죽을 수 있습니다. scope는
 > `/user.slice/…/app.slice/<이름>.scope`로 **아예 다른 자리**라 서버와
 > 무관하게 살아남습니다.
 
@@ -50,9 +50,9 @@ POLL_SEC = 0.1
 
 #: 실행에 **절대** 물려주지 않는 변수.
 #:
-#: `ANTHROPIC_*` 가 섞이면 구독이 아니라 종량제로 과금된다. 에이전트·키
+#: `ANTHROPIC_*`가 섞이면 구독이 아니라 종량제로 과금된다. 에이전트·키
 #: 소켓 주소(`SSH_AUTH_SOCK`·`GPG_AGENT_INFO`·`DBUS_*`)는 실행되는 코드에게
-#: "여기 붙어라" 를 알려 주는 셈이라 지운다.
+#: "여기 붙어라"를 알려 주는 셈이라 지운다.
 ENV_STRIP = (
     "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN",
     "SSH_AUTH_SOCK", "SSH_AGENT_PID", "GPG_AGENT_INFO", "GPG_TTY",
@@ -62,7 +62,7 @@ ENV_STRIP = (
 #: 이 접두사로 시작하는 건 전부 지운다 (`DBUS_STARTER_ADDRESS` 등).
 ENV_STRIP_PREFIXES = ("DBUS_",)
 
-#: `1` 이면 scope 를 쓰지 않는다. 시험과 scope 가 말썽인 환경에서 쓴다.
+#: `1` 이면 scope를 쓰지 않는다. 시험과 scope가 말썽인 환경에서 쓴다.
 NO_SCOPE_ENV = "LAB_NO_SCOPE"
 
 
@@ -71,7 +71,7 @@ class LaunchError(RuntimeError):
 
 
 def scrub_env(env: dict[str, str]) -> dict[str, str]:
-    """`ENV_STRIP`·`ENV_STRIP_PREFIXES` 를 뺀 새 dict."""
+    """`ENV_STRIP`·`ENV_STRIP_PREFIXES`를 뺀 새 dict."""
     return {
         k: v for k, v in env.items()
         if k not in ENV_STRIP and not any(k.startswith(p) for p in ENV_STRIP_PREFIXES)
@@ -79,7 +79,7 @@ def scrub_env(env: dict[str, str]) -> dict[str, str]:
 
 
 def scope_name(*parts: str) -> str:
-    """scope 유닛 이름. systemd 가 받는 글자만 남긴다.
+    """scope 유닛 이름. systemd가 받는 글자만 남긴다.
 
     `scope_name("myproj", "EXP-007")` → `labremote-run-myproj-EXP-007`
     """
@@ -90,9 +90,9 @@ def scope_name(*parts: str) -> str:
 
 
 def scope_available(env: dict | None = None) -> bool:
-    """`systemd-run --user --scope` 를 **실제로 띄워 보고** 판정한다.
+    """`systemd-run --user --scope`를 **실제로 띄워 보고** 판정한다.
 
-    설정만 보고 믿지 않는다. user systemd·dbus 가 없는 환경(컨테이너·cron)
+    설정만 보고 믿지 않는다. user systemd·dbus가 없는 환경(컨테이너·cron)
     에서는 안 된다.
 
     🔑 **실행이 받을 환경으로 잰다.** 서버의 환경으로 재면 탐침은 성공하고
@@ -118,26 +118,26 @@ def scope_available(env: dict | None = None) -> bool:
 def scope_prefix(unit: str, description: str = "") -> list[str]:
     """명령을 **자기 cgroup**에 담는 접두사.
 
-    같은 이름의 scope 가 이미 돌고 있으면 `systemd-run` 이 거절한다 — 같은
+    같은 이름의 scope가 이미 돌고 있으면 `systemd-run`이 거절한다 — 같은
     실행을 두 번 띄우는 사고를 막는다.
     """
     out = ["systemd-run", "--user", "--scope", "--quiet", f"--unit={unit}"]
     if description:
         out.append(f"--description={description}")
-    # scope 가 끝나면 cgroup 도 같이 사라진다
+    # scope가 끝나면 cgroup도 같이 사라진다
     return out + ["--collect", "--"]
 
 
 def service_prefix(unit: str, description: str = "", env: dict[str, str] | None = None) -> list[str]:
     """tmux처럼 **스스로 뒤로 빠지는(fork) 명령**을 사용자 서비스로 띄우는 접두사.
 
-    scope와 달리 서비스는 사용자 systemd 가 새로 띄운다 — 그래서 **서버의
-    nice 19 · ionice idle 을 물려받지 않는다**(실측 2026-11-23: scope 는 19·idle,
-    서비스 `Nice=0` 은 0·기본). 학습이 최하위 우선순위로 도는 사고를 막는다.
+    scope와 달리 서비스는 사용자 systemd가 새로 띄운다 — 그래서 **서버의
+    nice 19 · ionice idle을 물려받지 않는다**(실측 2026-11-23: scope는 19·idle,
+    서비스 `Nice=0`은 0·기본). 학습이 최하위 우선순위로 도는 사고를 막는다.
 
-    - `Type=forking`: `tmux new-session -d` 가 서버를 띄우고 빠지면 그 서버를
-      주 프로세스로 삼는다. tmux 가 끝나면 유닛도 끝나고 `--collect`로 정리된다.
-    - 서비스는 호출한 쪽의 환경을 물려받지 않아서 `env` 를 `--setenv`로 넘긴다.
+    - `Type=forking`: `tmux new-session -d`가 서버를 띄우고 빠지면 그 서버를
+      주 프로세스로 삼는다. tmux가 끝나면 유닛도 끝나고 `--collect`로 정리된다.
+    - 서비스는 호출한 쪽의 환경을 물려받지 않아서 `env`를 `--setenv`로 넘긴다.
     - 같은 이름의 유닛이 이미 돌고 있으면 거절된다(두 번 띄우기 방지).
     """
     out = [
@@ -155,9 +155,9 @@ def service_prefix(unit: str, description: str = "", env: dict[str, str] | None 
 
 
 def starttime_of(pid: int) -> int | None:
-    """`/proc/<pid>/stat` 의 starttime (22번째 칸).
+    """`/proc/<pid>/stat`의 starttime (22번째 칸).
 
-    pid 는 재사용된다. "그 pid 가 **그** 프로세스인가" 를 가르려면 시작
+    pid는 재사용된다. "그 pid가 **그** 프로세스인가"를 가르려면 시작
     시각까지 봐야 한다.
     """
     try:
@@ -247,7 +247,7 @@ def terminate_group(pgid: int, *, grace_sec: int = 120, poll_sec: float = POLL_S
         os.killpg(pgid, signal.SIGKILL)
     except (ProcessLookupError, PermissionError, OSError):
         return "term"
-    # SIGKILL 은 거절할 수 없지만, 커널이 거두는 데 잠깐 걸린다.
+    # SIGKILL은 거절할 수 없지만, 커널이 거두는 데 잠깐 걸린다.
     for _ in range(50):
         if not group_alive(pgid):
             break

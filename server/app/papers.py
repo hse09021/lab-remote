@@ -1,18 +1,18 @@
-"""Papers — vault 를 **읽기만** 해서 라이브러리 목록과 지식그래프를 만든다 (8단계).
+"""Papers — vault를 **읽기만** 해서 라이브러리 목록과 지식그래프를 만든다 (8단계).
 
 vault (Obsidian 폴더):
     <vault>/Papers/*.md   논문 노트. 앞쪽 메타(--- … ---)에 title · authors · year · venue ·
                           category · arxiv · cites([[링크]] 목록)
-    <vault>/그 밖의 *.md   내 메모. 본문의 [[링크]] 가 논문이나 프로젝트를 가리키면 그래프에 나온다
+    <vault>/그 밖의 *.md   내 메모. 본문의 [[링크]]가 논문이나 프로젝트를 가리키면 그래프에 나온다
 
 - vault 위치는 사람이 정한다(설정, 2026-11-23). 정하지 않으면 데이터 폴더의 `vault/`.
-- **있는 노트 파일을 고치지 않는다.** 읽음 상태처럼 lab.remote 가 기억할 것은 데이터 폴더의
+- **있는 노트 파일을 고치지 않는다.** 읽음 상태처럼 lab.remote가 기억할 것은 데이터 폴더의
   `papers.json`에 둔다.
 - 논문 추가(2026-11-24 결정)만 vault에 **새 파일을 쓴다** — `Papers/<이름>.md`와
   `Papers/pdf/<이름>.pdf`. 같은 이름이 있으면 뒤에 번호를 붙이고, 덮어쓰지 않는다.
-  - arXiv 링크: arXiv API(export.arxiv.org)에서 제목 · 저자 · 연도 · 분야 · 초록을 받고 PDF 도 받는다
+  - arXiv 링크: arXiv API(export.arxiv.org)에서 제목 · 저자 · 연도 · 분야 · 초록을 받고 PDF도 받는다
   - PDF 올리기: 파일을 두고 파일 이름으로 노트를 만든다(메타는 사람이 채운다)
-- "프로젝트에서 사용" 은 프로젝트 설정의 `papers` 목록(사람이 고름)에서 온다.
+- "프로젝트에서 사용"은 프로젝트 설정의 `papers` 목록(사람이 고름)에서 온다.
 - PDF 파싱 · AI 요약 · 리더 본문은 아직 없다(mock).
 """
 
@@ -106,7 +106,7 @@ def set_status(pid: str, status: str) -> dict:
 
 
 def _front(text: str) -> tuple[dict, str]:
-    """앞쪽 메타 `--- … ---` 를 아주 단순하게 읽는다 (key: value · key: [a, b] · - 목록)."""
+    """앞쪽 메타 `--- … ---`를 아주 단순하게 읽는다 (key: value · key: [a, b] · - 목록)."""
     if not text.startswith("---"):
         return {}, text
     end = text.find("\n---", 3)
@@ -157,7 +157,7 @@ _cache: dict = {"key": None, "value": None}
 
 
 def scan() -> dict:
-    """vault 를 훑는다. 바뀐 게 없으면(파일 수 · 최근 수정 시각) 캐시를 쓴다."""
+    """vault를 훑는다. 바뀐 게 없으면(파일 수 · 최근 수정 시각) 캐시를 쓴다."""
     root = vault_path()
     files = []
     for dirpath, dirnames, filenames in os.walk(root):
@@ -176,7 +176,7 @@ def scan() -> dict:
         text = _read(f)
         meta, body = _front(text)
         if meta.get("summary_of"):
-            continue  # lab.remote 가 만든 요약 파일 — 논문도 메모도 아니다
+            continue  # lab.remote가 만든 요약 파일 — 논문도 메모도 아니다
         rel = os.path.relpath(f, root).replace(os.sep, "/")
         stem = os.path.splitext(os.path.basename(f))[0]
         if paths.is_inside(paths.real(paper_dir), paths.real(f)):
@@ -272,7 +272,7 @@ def graph() -> dict:
     data = scan()
     hidden = _hidden()
     papers = [p for p in data["papers"] if p["id"] not in hidden]
-    # [[링크]] 를 논문 id로 — 파일 이름 · 제목 · 별칭 무엇으로 적어도
+    # [[링크]]를 논문 id로 — 파일 이름 · 제목 · 별칭 무엇으로 적어도
     alias: dict[str, str] = {}
     for p in papers:
         for name in [p["id"], p["title"], *p["aliases"]]:
@@ -349,7 +349,7 @@ def _safe_name(title: str) -> str:
 
 
 def _create(path: str, data: bytes) -> str:
-    """없는 이름으로 만든다 — 있으면 " (2)" 를 붙인다. 덮어쓰지 않는다."""
+    """없는 이름으로 만든다 — 있으면 " (2)"를 붙인다. 덮어쓰지 않는다."""
     stem, ext = os.path.splitext(path)
     n = 1
     while True:
@@ -391,7 +391,7 @@ def _get(url: str, *, limit: int, timeout: int = 30) -> bytes:
         with urllib.request.urlopen(req, timeout=timeout) as res:
             data = res.read(limit + 1)
     except urllib.error.HTTPError as exc:
-        raise PapersError(f"arXiv 가 거절했어요 ({exc.code}). 잠시 뒤 다시 해 주세요.") from None
+        raise PapersError(f"arXiv가 거절했어요 ({exc.code}). 잠시 뒤 다시 해 주세요.") from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise PapersError(f"arXiv에 닿지 못했어요: {getattr(exc, 'reason', exc)}") from None
     if len(data) > limit:
@@ -448,7 +448,7 @@ def add_arxiv(link: str, *, fetch=_get) -> dict:
             made = _create(os.path.join(folder, "pdf", f"{name}.pdf"), pdf)
             pdf_rel = os.path.relpath(made, vault_path()).replace(os.sep, "/")
     except PapersError:
-        pdf_rel = ""  # PDF 는 못 받아도 노트는 만든다
+        pdf_rel = ""  # PDF는 못 받아도 노트는 만든다
     meta = {
         "title": title,
         "authors": authors,
@@ -466,11 +466,11 @@ def add_arxiv(link: str, *, fetch=_get) -> dict:
 
 
 def add_pdf(filename: str, data: bytes) -> dict:
-    """올린 PDF 를 vault에 두고 파일 이름으로 노트를 만든다."""
+    """올린 PDF를 vault에 두고 파일 이름으로 노트를 만든다."""
     if not data.startswith(b"%PDF-"):
         raise PapersError("PDF 파일이 아니에요.")
     if len(data) > MAX_PDF:
-        raise PapersError("PDF 가 너무 커요 (100MB 까지).")
+        raise PapersError("PDF가 너무 커요 (100MB까지).")
     base = os.path.splitext(os.path.basename(filename or ""))[0]
     name = _safe_name(base) if base else "paper"
     folder = _papers_dir()
@@ -483,7 +483,7 @@ def add_pdf(filename: str, data: bytes) -> dict:
 
 
 def pdf_rel(pid: str) -> str:
-    """vault 안 PDF 의 상대 경로 (없으면 "")."""
+    """vault 안 PDF의 상대 경로 (없으면 "")."""
     try:
         return os.path.relpath(pdf_of(pid), paths.real(vault_path())).replace(os.sep, "/")
     except PapersError:
@@ -491,7 +491,7 @@ def pdf_rel(pid: str) -> str:
 
 
 def pdf_of(pid: str) -> str:
-    """논문 노트의 `pdf:` 가 가리키는 파일 (vault 안만)."""
+    """논문 노트의 `pdf:`가 가리키는 파일 (vault 안만)."""
     for p in scan()["papers"]:
         if p["id"] == pid:
             meta, _ = _front(_read(os.path.join(vault_path(), p["path"])))
@@ -505,10 +505,10 @@ def pdf_of(pid: str) -> str:
                 if paths.is_inside(root, target) and os.path.isfile(target) and target.lower().endswith(".pdf"):
                     return target
             break
-    raise PapersError("이 논문에는 PDF 가 없어요.")
+    raise PapersError("이 논문에는 PDF가 없어요.")
 
 
-# --- 휴지통 · 모음 · BibTeX (lab.remote에만 기록 — vault 는 그대로) ----------------------
+# --- 휴지통 · 모음 · BibTeX (lab.remote에만 기록 — vault는 그대로) ----------------------
 
 COLLECTION_RE = re.compile(r"\A[^/\\\x00-\x1f]{1,40}\Z")
 

@@ -2,7 +2,7 @@
 
 - 한 번 / 매일 / 매주. **연쇄 예약 없음** — "앞 실행이 끝나면 다음" 같은 건 만들지
   않는다. cron · systemd 타이머도 만들지 않는다.
-- 명령 예약: 그 시각에 GPU 가 바쁘면(`nvidia-smi` 계산 프로세스가 있으면 — 사람이
+- 명령 예약: 그 시각에 GPU가 바쁘면(`nvidia-smi` 계산 프로세스가 있으면 — 사람이
   고름, 2026-11-23) 끝날 때까지 기다렸다가 시작하고, 기다리기 시작할 때 한 번 알린다.
 - 에이전트 예약: 세션을 열고 첫 요청만 보낸다. 승인이 필요하면 거기서 멈춘다.
 - 서버가 꺼져 있던 사이 지난 예약은 **늦게 돌리지 않고** "놓쳤어요"로 적는다
@@ -233,7 +233,7 @@ def _where(job: dict) -> str:
 async def tick(conn: sqlite3.Connection, *, now: float | None = None, busy=None, start_run=None, start_session=None) -> list[dict]:
     """시각이 된 예약을 처리한다. 무엇을 했는지 돌려준다(시험용).
 
-    `start_run`·`start_session`·`busy` 는 시험에서 바꿔 끼운다.
+    `start_run`·`start_session`·`busy`는 시험에서 바꿔 끼운다.
     """
     import asyncio
 
@@ -258,7 +258,7 @@ async def tick(conn: sqlite3.Connection, *, now: float | None = None, busy=None,
                 if not job["waitingSince"]:
                     conn.execute("UPDATE schedules SET waiting_since = ? WHERE id = ?", (now, job["id"]))
                     await _post("sched", "plan", f"예약 · {job['name']} 기다리는 중", where=_where(job),
-                                body="GPU 를 다른 학습이 쓰고 있어요. 끝나면 바로 시작하고 알려 줘요.", project=job["project"],
+                                body="GPU를 다른 학습이 쓰고 있어요. 끝나면 바로 시작하고 알려 줘요.", project=job["project"],
                                 ref={"schedule": job["id"]}, subject=f"sched:{job['id']}:{job['nextAt']}:wait")
                 done.append({"id": job["id"], "did": "waiting"})
                 continue

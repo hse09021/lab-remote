@@ -1,7 +1,7 @@
-"""Inbox — 사람이 보는 알림 목록 (lab.db 의 `inbox` 표).
+"""Inbox — 사람이 보는 알림 목록 (lab.db의 `inbox` 표).
 
 종류: `ask` 답 필요 · `run` 실행 · `sched` 예약 · `pr` PR·머지 · `sys` 시스템.
-`act` 는 "내가 처리해야 하는 것"(답 필요 · 실행 실패·끊김) — 헤더 배지는
+`act`는 "내가 처리해야 하는 것"(답 필요 · 실행 실패·끊김) — 헤더 배지는
 안 읽은 것 중 이것만 센다(사람이 고른 규칙, 2026-11-23).
 """
 
@@ -85,7 +85,7 @@ def badge(conn: sqlite3.Connection) -> int:
 
 
 def mark_read(conn: sqlite3.Connection, ids: list[int] | None = None) -> int:
-    """`ids` 가 없으면 전부."""
+    """`ids`가 없으면 전부."""
     if ids is None:
         cur = conn.execute("UPDATE inbox SET read_at = ? WHERE read_at IS NULL", (db.now(),))
     else:

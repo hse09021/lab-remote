@@ -1,11 +1,11 @@
 """Discord 웹훅 전송 — 최소한만.
 
-웹훅 주소는 환경 변수 `LAB_DISCORD_WEBHOOK` 이 먼저고, 없으면 데이터 폴더의
+웹훅 주소는 환경 변수 `LAB_DISCORD_WEBHOOK`이 먼저고, 없으면 데이터 폴더의
 `discord.json`(권한 0600)에서 읽는다(`config.discord_webhook`). 주소 원문은
 로그·화면·에러에 찍지 않는다.
 
-**실패해도 예외를 올리지 않는다.** 타임아웃을 짧게 잡고 결과 dict 만 돌려준다.
-재시도·중복 제거·임베드는 `app/notifier.py` 가 맡는다.
+**실패해도 예외를 올리지 않는다.** 타임아웃을 짧게 잡고 결과 dict만 돌려준다.
+재시도·중복 제거·임베드는 `app/notifier.py`가 맡는다.
 
 표준 라이브러리만 쓴다.
 """
@@ -19,8 +19,8 @@ import urllib.request
 
 __all__ = ["USER_AGENT", "HEADERS", "webhook_url", "send", "send_payload"]
 
-#: 🔑 보내는 쪽 이름. **Discord 가 파이썬 기본 User-Agent 를 403으로 막는다**
-#: (실측 2026-11-05: 같은 URL에 `curl` 은 204, `urllib` 기본값은
+#: 🔑 보내는 쪽 이름. **Discord가 파이썬 기본 User-Agent를 403으로 막는다**
+#: (실측 2026-11-05: 같은 URL에 `curl`은 204, `urllib` 기본값은
 #: `HTTP Error 403: Forbidden`). 고정값을 쓴다.
 #:
 #: 개인 정보를 넣지 않는다 — 이메일·호스트 이름·프로젝트 이름을 싣지 않는다.
@@ -58,7 +58,7 @@ def send(text: str, kind: str = "") -> dict:
 
 
 def send_payload(payload: dict, *, kind: str = "", url: str = "") -> dict:
-    """Discord에 JSON 한 덩어리를 보낸다 (임베드는 `app/notifier.py` 가 만든다).
+    """Discord에 JSON 한 덩어리를 보낸다 (임베드는 `app/notifier.py`가 만든다).
 
     **어떤 경우에도 예외를 올리지 않는다.**
     """
@@ -77,7 +77,7 @@ def send_payload(payload: dict, *, kind: str = "", url: str = "") -> dict:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SEC) as resp:
             return {"sent": 200 <= resp.status < 300, "status": resp.status}
     except urllib.error.HTTPError as exc:
-        # 429(너무 자주)·5xx(서버)는 notifier 가 다시 시도한다.
+        # 429(너무 자주)·5xx(서버)는 notifier가 다시 시도한다.
         retry_after = exc.headers.get("Retry-After") if exc.headers else None
         return {
             "sent": False,

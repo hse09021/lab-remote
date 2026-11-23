@@ -105,7 +105,7 @@ def test_시스템(client, project):
     assert body["tunnel"]["state"] == "unknown"
     whats = [row["what"] for row in body["changes"]]
     assert whats[:3] == ["conda 환경 labremote", "사용자 서비스 labremote-session", "linger (로그아웃해도 서비스 유지)"]
-    assert "demo 의 .labremote/" in whats
+    assert "demo의 .labremote/" in whats
 
 
 def test_웹_빌드를_내준다(client):

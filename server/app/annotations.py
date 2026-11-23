@@ -74,7 +74,7 @@ def _clean(pid: str, raw: dict) -> dict:
 
 
 def add(pid: str, raw: dict) -> dict:
-    """새로 만든다. `id` · `createdAt` 이 있으면 되돌리기라 그대로 되살린다."""
+    """새로 만든다. `id` · `createdAt`이 있으면 되돌리기라 그대로 되살린다."""
     row = _clean(pid, raw)
     rid = str(raw.get("id") or "")
     row["id"] = rid if rid and len(rid) <= 64 else f"u-{uuid.uuid4().hex[:12]}"

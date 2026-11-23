@@ -1,4 +1,4 @@
-"""/api/papers — vault 를 읽어 라이브러리 목록 · 지식그래프 (리더 · AI 요약은 아직 mock)."""
+"""/api/papers — vault를 읽어 라이브러리 목록 · 지식그래프 (리더 · AI 요약은 아직 mock)."""
 
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ def get_summaries():
 
 @router.get("/papers/summary-md")
 def summary_md():
-    """vault 의 요약 파일 MD (만든 것만)."""
+    """vault의 요약 파일 MD (만든 것만)."""
     out = {}
     for pid in summaries.load_all():
         md = summaries.markdown_of(pid)
@@ -293,7 +293,7 @@ async def add_pdf(request: Request, name: str = ""):
     async for chunk in request.stream():
         data += chunk
         if len(data) > papers.MAX_PDF:
-            return _bad(papers.PapersError("PDF 가 너무 커요 (100MB 까지)."))
+            return _bad(papers.PapersError("PDF가 너무 커요 (100MB까지)."))
     try:
         return await asyncio.to_thread(papers.add_pdf, name, bytes(data))
     except papers.PapersError as exc:

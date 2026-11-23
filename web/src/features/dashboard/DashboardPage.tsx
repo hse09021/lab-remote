@@ -17,7 +17,7 @@ import { RunStatePill } from '../projects/RunsTab'
 import { StartGuide } from './StartGuide'
 import s from './Dashboard.module.css'
 
-/** Dashboard — docs/v3/mockups/MissionControl.dc.html. Overview 만 2단계에서 실제 데이터 */
+/** Dashboard — docs/v3/mockups/MissionControl.dc.html. Overview만 2단계에서 실제 데이터 */
 export default function DashboardPage() {
   const [params, setParams] = useSearchParams()
   const view = params.get('view') ?? 'overview'
@@ -240,7 +240,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
           sub: summarizePrs(git.prs.items),
           tone: 'default',
         }
-      : { label: '열린 PR', value: '—', sub: git ? 'gh 가 없어서 못 읽어요' : '…', tone: 'muted' },
+      : { label: '열린 PR', value: '—', sub: git ? 'gh가 없어서 못 읽어요' : '…', tone: 'muted' },
     git
       ? {
           label: '이번 주 머지',
@@ -341,7 +341,7 @@ function Resources({ self }: { self: DashboardPayload['self'] }) {
         </>
       )}
       {vramPct !== null && vramPct >= 80 && (
-        <div className={s.warn}>VRAM 이 거의 찼어요 — 새 실행은 메모리가 모자랄 수 있어요</div>
+        <div className={s.warn}>VRAM이 거의 찼어요 — 새 실행은 메모리가 모자랄 수 있어요</div>
       )}
       <div className={s.selfLine}>
         lab.remote 서버 자신: CPU {self.cpuPct ?? '…'}% · RAM {self.rssMb ?? '?'}MB · GPU 0
@@ -351,7 +351,7 @@ function Resources({ self }: { self: DashboardPayload['self'] }) {
 }
 
 function summarizePrs(items: GitFeed['prs']['items']) {
-  if (!items.length) return '열린 PR 이 없어요'
+  if (!items.length) return '열린 PR이 없어요'
   const count = (state: string) => items.filter((p) => p.state === state).length
   return [`리뷰 기다림 ${count('리뷰 기다림')}`, `변경 요청 ${count('변경 요청')}`].join(' · ')
 }
@@ -366,7 +366,7 @@ function GitCards({ feed, failed }: { feed?: GitFeed; failed?: boolean }) {
         </h2>
         {!feed && <div className={s.muted}>{failed ? 'git 기록을 못 읽었어요.' : '불러오는 중이에요…'}</div>}
         {feed && !feed.prs.available && <div className={s.muted}>{feed.prs.reason}</div>}
-        {feed?.prs.available && feed.prs.items.length === 0 && <div className={s.muted}>열린 PR 이 없어요.</div>}
+        {feed?.prs.available && feed.prs.items.length === 0 && <div className={s.muted}>열린 PR이 없어요.</div>}
         {feed?.prs.items.map((pr) => (
           <a key={`${pr.project}#${pr.number}`} href={pr.url} target="_blank" rel="noreferrer" className={s.gitRow}>
             <span className={s.gitTop}>

@@ -1,9 +1,9 @@
 """Discord 알림 — 임베드 조립 · 종류별 채널 · 중복 제거 · 재시도.
 
-`app/notify.py` 는 HTTP 한 번만 보낸다. 이 모듈은 DB(보낸 기록·쿨다운)와
+`app/notify.py`는 HTTP 한 번만 보낸다. 이 모듈은 DB(보낸 기록·쿨다운)와
 임베드 모양을 안다. 알림 종류는 `KINDS`로 정해져 있고 문구는 한국어 해요체다.
 
-**전송 실패가 호출부를 멈추지 않는다.** 어떤 예외도 올리지 않고 결과 dict 만
+**전송 실패가 호출부를 멈추지 않는다.** 어떤 예외도 올리지 않고 결과 dict만
 돌려준다.
 """
 
@@ -28,16 +28,16 @@ KINDS = (
     "test",  # labremote notify test
 )
 
-#: 임베드 왼쪽 띠 색은 `app/embed.py` 가 단일 출처다.
+#: 임베드 왼쪽 띠 색은 `app/embed.py`가 단일 출처다.
 COLORS = embed.COLORS
 
-#: 5xx 재시도 간격(초). 429 는 `Retry-After` 를 따른다.
+#: 5xx 재시도 간격(초). 429는 `Retry-After`를 따른다.
 BACKOFF_SEC = (1, 4, 16)
 MAX_ATTEMPTS = 3
 
 
 def subject_of(*parts: str) -> str:
-    """중복 제거 열쇠에 쓸 주제. "무엇에 대한 알림인가" 를 한 줄로."""
+    """중복 제거 열쇠에 쓸 주제. "무엇에 대한 알림인가"를 한 줄로."""
     return "·".join(str(p) for p in parts if p)
 
 
@@ -81,7 +81,7 @@ def send(
 ) -> dict:
     """중복을 걸러 보낸다. 결과를 dict로 돌려주고 **던지지 않는다.**
 
-    `poster`·`sleep` 은 시험에서 바꿔 끼운다 (실제 전송은 `notify.send_payload`).
+    `poster`·`sleep`은 시험에서 바꿔 끼운다 (실제 전송은 `notify.send_payload`).
     """
     try:
         return _send(
@@ -122,7 +122,7 @@ def _send(
     )
     key = N.dedupe_key(project, kind, subject, cooldown, now_ts=now_ts)
     # 🔑 주소가 아니라 **어느 채널인지 이름만** 남긴다. 웹훅 주소는 0600
-    # 파일에만 있어야 한다(PLAN 1.7) — DB 는 화면(Inbox)으로 나가는 곳이다.
+    # 파일에만 있어야 한다(PLAN 1.7) — DB는 화면(Inbox)으로 나가는 곳이다.
     route = config.route_label(kind)
     claimed = N.claim(
         conn, key, project=project or None, kind=kind, title=title, body=body, route=route

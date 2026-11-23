@@ -1,6 +1,6 @@
 """스키마와 이행.
 
-**앞으로 간 DB**와 **v1 의 DB** 는 건드리지 않고 거절한다. 새 코드가 만든
+**앞으로 간 DB**와 **v1의 DB** 는 건드리지 않고 거절한다. 새 코드가 만든
 표를 옛 코드가 반쯤 이해한 채로 쓰면 조용히 틀린 값이 쌓이고, v1 표를
 지우는 이행은 되돌릴 수 없다.
 """
@@ -29,7 +29,7 @@ def test_앞으로_간_DB_는_거절한다(conn):
     conn.execute("UPDATE schema_meta SET value='99' WHERE key='version'")
     with pytest.raises(db.DbError) as exc:
         db.migrate(conn)
-    assert "DB 가 이 코드보다 새로워요" in str(exc.value)
+    assert "DB가 이 코드보다 새로워요" in str(exc.value)
 
 
 def test_판을_못_읽으면_거절한다(conn):
@@ -66,7 +66,7 @@ def test_v1_DB_는_옮기지_않고_거절한다(conn):
         conn.execute("UPDATE schema_meta SET value=? WHERE key='version'", (str(old),))
         with pytest.raises(db.DbError) as exc:
             db.migrate(conn)
-        assert "v1 의 DB" in str(exc.value)
+        assert "v1의 DB" in str(exc.value)
 
 
 def test_DB_경로는_데이터_폴더_안이다(isolated_data):

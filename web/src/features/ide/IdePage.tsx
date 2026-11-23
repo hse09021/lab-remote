@@ -22,7 +22,7 @@ import { TerminalView } from './TerminalView'
 import { ScenarioView } from '../scenario/ScenarioView'
 import s from './Ide.module.css'
 
-// CDN 대신 번들의 monaco 를 써요 (원격에서 바깥 네트워크에 기대지 않게)
+// CDN 대신 번들의 monaco를 써요 (원격에서 바깥 네트워크에 기대지 않게)
 loader.config({ monaco: monacoEditor })
 
 /** IDE — docs/v3/mockups/IDE.dc.html */
@@ -44,7 +44,7 @@ export default function IdePage() {
   const terms = useQuery(terminalsQuery(project))
   const termActions = useTerminalActions(project)
 
-  // ADE 의 Scenario에서 "실행 탭에 채우기"로 오면 ?side=run&fill=<명령>
+  // ADE의 Scenario에서 "실행 탭에 채우기"로 오면 ?side=run&fill=<명령>
   const [side, setSide] = useState<Side>((params.get('side') as Side) || 'explorer')
   // 목업처럼 지금 열린 아이콘을 다시 누르면 사이드바를 접어요
   const [sideOpen, setSideOpen] = useState(true)
@@ -70,7 +70,7 @@ export default function IdePage() {
   const [termActive, setTermActive] = useState('')
   const [bottomOpen, setBottomOpen] = useState(true)
 
-  // 주소에 path 가 있으면 그 파일을 열어요 (Projects 의 "열기")
+  // 주소에 path가 있으면 그 파일을 열어요 (Projects의 "열기")
   useEffect(() => {
     const p = params.get('path')
     if (p) openFile(p)
@@ -145,7 +145,7 @@ export default function IdePage() {
   const options = trees.data?.state === 'ok' ? trees.data.worktrees.filter((w) => w.rel !== null) : []
   const branch = status.data?.state === 'ok' ? status.data.branch : ''
   const treeLabel = `${project} · ${branch || (tree || '프로젝트 루트')}`
-  // 이 worktree 의 가장 최근 세션을 오른쪽 채팅에 (IDE ⇄ ADE 가 같은 세션을 봐요)
+  // 이 worktree의 가장 최근 세션을 오른쪽 채팅에 (IDE ⇄ ADE가 같은 세션을 봐요)
   const chat = useMemo(
     () => (sessions.data?.sessions ?? []).find((x) => (x.tree === '.' ? '' : x.tree) === tree),
     [sessions.data, tree],
@@ -155,7 +155,7 @@ export default function IdePage() {
   if (mobile) {
     return (
       <main style={{ padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h1 style={{ margin: 0, fontSize: 20 }}>IDE 는 넓은 화면에서 써요</h1>
+        <h1 style={{ margin: 0, fontSize: 20 }}>IDE는 넓은 화면에서 써요</h1>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--text-soft)' }}>
           편집기 · 터미널은 휴대폰 화면에 맞지 않아요. 에이전트에게 시키고 답하는 건 ADE에서 돼요.
         </p>
@@ -170,7 +170,7 @@ export default function IdePage() {
 
   return (
     <div className={s.ide}>
-      {/* WorkspaceBar — 프로젝트 › 브랜치 › IDE | ADE (같은 worktree 를 들고 가요) */}
+      {/* WorkspaceBar — 프로젝트 › 브랜치 › IDE | ADE (같은 worktree를 들고 가요) */}
       <div className={s.bar}>
         <Link to={`/projects/${encodeURIComponent(project)}`} className={s.barProject}>
           ‹ {project}
@@ -295,7 +295,7 @@ export default function IdePage() {
             </div>
             {bottomOpen && (
               <div className={s.termBody}>
-                {openTerms.length === 0 && <div className={s.empty}>+ 를 누르면 bash 가 열려요. 브라우저를 닫아도 데스크톱에서 계속 돌아요.</div>}
+                {openTerms.length === 0 && <div className={s.empty}>+를 누르면 bash가 열려요. 브라우저를 닫아도 데스크톱에서 계속 돌아요.</div>}
                 {openTerms.map((t) => (
                   <div key={termKey(t)} hidden={termKey(t) !== termActive} className={s.termPane}>
                     {t.kind === 'shell' ? <TerminalView project={project} name={t.name} /> : <TerminalView project={project} run={t.run} />}
@@ -448,7 +448,7 @@ function DiffTab({ project, tree, path, onOpen }: { project: string; tree: strin
         </button>
       </div>
       <pre className={s.diff}>
-        {(diff.data?.diff || (diff.isPending ? '불러오는 중이에요…' : '바뀐 내용이 없거나 git 이 아직 모르는 새 파일이에요.'))
+        {(diff.data?.diff || (diff.isPending ? '불러오는 중이에요…' : '바뀐 내용이 없거나 git이 아직 모르는 새 파일이에요.'))
           .split('\n')
           .map((line, i) => (
             <span key={i} data-sign={line.startsWith('+') && !line.startsWith('+++') ? '+' : line.startsWith('-') && !line.startsWith('---') ? '-' : line.startsWith('@@') ? '@' : ''}>

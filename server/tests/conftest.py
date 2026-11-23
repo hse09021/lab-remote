@@ -1,6 +1,6 @@
 """공통 픽스처.
 
-`server/data/` 를 건드리지 않도록 `LAB_DATA_DIR` 을 테스트마다 임시 폴더로
+`server/data/`를 건드리지 않도록 `LAB_DATA_DIR`을 테스트마다 임시 폴더로
 돌린다. 웹훅 설정(`discord.json`)도 그 안에 있어서 같이 격리된다.
 """
 
@@ -9,7 +9,7 @@ import pathlib
 
 import pytest
 
-#: 저장소 루트. web/ 의 mock JSON 을 대조하는 데 쓴다.
+#: 저장소 루트. web/ 의 mock JSON을 대조하는 데 쓴다.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
@@ -30,7 +30,7 @@ def isolated_data(tmp_path, monkeypatch):
 def no_systemd_scope(monkeypatch):
     """시험에서는 실행을 systemd scope에 담지 않는다.
 
-    시험이 `systemd-run --user --scope` 를 쓰면 user systemd에 매이고
+    시험이 `systemd-run --user --scope`를 쓰면 user systemd에 매이고
     transient 유닛이 기계에 남는다.
     """
     from app.runner import process as process_mod
@@ -66,7 +66,7 @@ def project(project_root):
 
 @pytest.fixture(autouse=True)
 def no_tunnel_cli(monkeypatch):
-    """시험에서는 진짜 `code tunnel` 을 부르지 않는다 (느리고 기계마다 다르다)."""
+    """시험에서는 진짜 `code tunnel`을 부르지 않는다 (느리고 기계마다 다르다)."""
     from app import tunnel
 
     monkeypatch.setattr(tunnel, "_run", lambda argv: (-1, "시험에서는 부르지 않아요"))

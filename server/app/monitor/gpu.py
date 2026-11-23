@@ -4,21 +4,21 @@
 
 ### 조회 실패가 정상 경로다
 
-예외를 던지지 않고 `{"available": false, "reason": ...}` 를 돌려준다.
+예외를 던지지 않고 `{"available": false, "reason": ...}`를 돌려준다.
 ①의 실측 중에 실제로 당했다 — 우분투 자동 업데이트가 드라이버를 올리고
-재부팅을 안 해서 `nvidia-smi` 가 통째로 죽었고, 그 상태로 며칠 지났다.
+재부팅을 안 해서 `nvidia-smi`가 통째로 죽었고, 그 상태로 며칠 지났다.
 
 ### 드라이버 불일치
 
 | 신호 | 읽는 곳 |
 |---|---|
-| 커널 모듈 | `/proc/driver/nvidia/version` 의 `NVRM version:` |
+| 커널 모듈 | `/proc/driver/nvidia/version`의 `NVRM version:` |
 | 유저랜드 | `nvidia-smi --query-gpu=driver_version` |
-| 재부팅 대기 | `/var/run/reboot-required.pkgs`에 `nvidia` 가 있나 |
-| 이미 깨짐 | `nvidia-smi` stderr 의 `version mismatch` |
+| 재부팅 대기 | `/var/run/reboot-required.pkgs`에 `nvidia`가 있나 |
+| 이미 깨짐 | `nvidia-smi` stderr의 `version mismatch` |
 
 앞 두 자리가 다르면 **불일치**다. 재부팅 대기만 있으면 아직 안 깨졌지만
-곧 깨질 상태라 미리 알린다. 불일치면 `guards` 가 학습을 **시작하지 않는다**
+곧 깨질 상태라 미리 알린다. 불일치면 `guards`가 학습을 **시작하지 않는다**
 (어차피 실패할 학습으로 GPU 시간과 사용량을 버리지 않게).
 """
 
@@ -64,7 +64,7 @@ def _run(args: list[str]) -> tuple[int, str, str]:
     try:
         done = subprocess.run(args, capture_output=True, text=True, timeout=TIMEOUT_SEC)
     except FileNotFoundError:
-        return 127, "", "nvidia-smi 가 없어요"
+        return 127, "", "nvidia-smi가 없어요"
     except (OSError, subprocess.SubprocessError) as exc:
         return 1, "", str(exc)
     return done.returncode, done.stdout, done.stderr
@@ -188,7 +188,7 @@ def probe() -> dict:
     )
     if code != 0 or not stdout.strip():
         detail = [line.strip() for line in (stderr or "").splitlines() if line.strip()]
-        reason = detail[0] if detail else f"nvidia-smi 가 실패했어요 (종료코드 {code})"
+        reason = detail[0] if detail else f"nvidia-smi가 실패했어요 (종료코드 {code})"
         return {"available": False, "reason": reason, "devices": [], "driver": driver}
     devices = parse_csv(stdout)
     if not devices:

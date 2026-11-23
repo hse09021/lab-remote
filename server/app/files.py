@@ -1,13 +1,13 @@
 """등록한 프로젝트 폴더 안의 파일 — 목록·읽기·쓰기·업로드·내려받기·이동·삭제.
 
-🔑 **경로 탈출을 막는 곳이 여기 하나다.** 모든 함수가 `resolve()` 를 지난다.
+🔑 **경로 탈출을 막는 곳이 여기 하나다.** 모든 함수가 `resolve()`를 지난다.
 
 - 화면이 주는 경로는 항상 **기준 폴더(프로젝트 루트나 그 안의 worktree)
-  기준 상대 경로**다. 절대 경로·`..` 조각·NUL 은 거절한다.
+  기준 상대 경로**다. 절대 경로·`..` 조각·NUL은 거절한다.
 - 심볼릭 링크는 **해소한 결과**가 기준 폴더 안일 때만 따라간다. 밖을 가리키는
   링크는 목록에는 보이되 열거나 쓸 수 없다. 지우기·이름 바꾸기는 링크 **자신**만
   다룬다(따라가지 않는다).
-- 루트 자신·`.git` 은 지우거나 옮기지 않는다. 실행 중인 학습이 쓰는 폴더도
+- 루트 자신·`.git`은 지우거나 옮기지 않는다. 실행 중인 학습이 쓰는 폴더도
   지우지 않는다(`busy_paths` — 2단계에서 실행 기록과 이어진다).
 """
 
@@ -65,12 +65,12 @@ def _clean_rel(rel: str) -> str:
         raise FileRefused("프로젝트 안 상대 경로만 쓸 수 있어요.")
     parts = [p for p in rel.split("/") if p not in ("", ".")]
     if any(p == ".." for p in parts):
-        raise FileRefused("`..` 는 쓸 수 없어요.")
+        raise FileRefused("`..`는 쓸 수 없어요.")
     return "/".join(parts)
 
 
 def base_of(root: str, tree: str = "") -> str:
-    """기준 폴더. `tree` 는 worktree처럼 **프로젝트 안**의 하위 폴더다."""
+    """기준 폴더. `tree`는 worktree처럼 **프로젝트 안**의 하위 폴더다."""
     root_real = paths.real(root)
     rel = _clean_rel(tree)
     if not rel:
@@ -111,7 +111,7 @@ def _rel_of(base: str, target: str) -> str:
 
 def busy_paths(root: str) -> list[str]:
     """실행 중인 학습이 쓰는 폴더(절대 경로) — 실행 위치와 그 실행의 기록 폴더."""
-    from . import runs  # runs 가 files 를 쓰므로 여기서 부른다
+    from . import runs  # runs가 files를 쓰므로 여기서 부른다
 
     return runs.busy_dirs(root)
 
@@ -122,7 +122,7 @@ def busy_paths(root: str) -> list[str]:
 def list_dir(base: str, rel: str = "", *, git_marks: dict[str, str] | None = None) -> dict:
     """폴더 한 칸. 폴더 크기는 재지 않는다(큰 데이터 폴더를 걷지 않으려고).
 
-    `git_marks` 는 `{상대경로: "수정"|"새 파일"|"gitignore"|...}`.
+    `git_marks`는 `{상대경로: "수정"|"새 파일"|"gitignore"|...}`.
     """
     folder = resolve(base, rel)
     if not os.path.isdir(folder):
@@ -229,7 +229,7 @@ def write_text(base: str, rel: str, text: str, *, create: bool = False) -> dict:
         raise FileRefused("내용은 글이어야 해요.")
     data = text.encode("utf-8")
     if len(data) > MAX_TEXT_BYTES:
-        raise FileRefused("파일이 너무 커요 (편집기로는 2 MB 까지).")
+        raise FileRefused("파일이 너무 커요 (편집기로는 2 MB까지).")
     if create:
         target = _new_target(base, rel)
     else:
@@ -263,7 +263,7 @@ def make(base: str, rel: str, kind: str) -> dict:
     elif kind == "file":
         _atomic_write(target, [b""])
     else:
-        raise FileRefused("file 이나 dir 만 만들 수 있어요.")
+        raise FileRefused("file이나 dir만 만들 수 있어요.")
     return {"path": _rel_of(base, target), "kind": kind}
 
 
@@ -281,7 +281,7 @@ def upload_target(base: str, rel: str, *, overwrite: bool = False) -> str:
 
 
 def upload(base: str, rel: str, chunks, *, overwrite: bool = False) -> dict:
-    """올린 파일을 쓴다(동기). 서버는 `upload_target` + `_atomic_write` 를 나눠 쓴다."""
+    """올린 파일을 쓴다(동기). 서버는 `upload_target` + `_atomic_write`를 나눠 쓴다."""
     target = upload_target(base, rel, overwrite=overwrite)
     size = _atomic_write(target, chunks)
     return {"path": _rel_of(base, target), "size": size}
@@ -298,7 +298,7 @@ def _guard_mutation(root: str, base: str, target: str) -> None:
     rel = _rel_of(base, target)
     top = rel.split("/", 1)[0]
     if top in PROTECTED_TOP:
-        raise FileRefused(f"{top} 은 옮기거나 지울 수 없어요.")
+        raise FileRefused(f"{top}은 옮기거나 지울 수 없어요.")
     # 실행 위치 **자신이나 그걸 품은 폴더**를 막는다. 그 안의 파일 하나를
     # 지우는 건 막지 않는다 — 실행 위치가 프로젝트 루트면 학습 내내 아무것도
     # 못 지우게 된다.

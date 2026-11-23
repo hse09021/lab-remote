@@ -6,7 +6,7 @@ PLAN 4.1 scenarios:
   명령을 돌리거나 파일을 고치지 못한다.
 - `<프로젝트>/.labremote/scenarios/main.json`에 단계와 **분석한 파일들의 해시**를 저장한다.
   열 때마다 해시를 다시 재서 바뀐 파일을 알려 준다 — **저절로 다시 그리지 않는다.**
-- 단계를 이어서 자동으로 돌리지 않는다(AI 자동화 없음). "실행 탭에 채우기" 는 명령만 채운다.
+- 단계를 이어서 자동으로 돌리지 않는다(AI 자동화 없음). "실행 탭에 채우기"는 명령만 채운다.
 """
 
 from __future__ import annotations
@@ -128,7 +128,7 @@ def status(project: str) -> dict:
 
 
 async def _ask_agent(root: str, model: str, *, query_fn=None) -> tuple[dict, list[str], str]:
-    """에이전트에게 읽기만 시켜 JSON 을 받는다. `(답, 실제로 읽은 파일, 모델)`."""
+    """에이전트에게 읽기만 시켜 JSON을 받는다. `(답, 실제로 읽은 파일, 모델)`."""
     from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, PermissionResultAllow, PermissionResultDeny, ResultMessage, ToolUseBlock
 
     from .agents.claude import SETTING_SOURCES, _scrub_env, cli_path
@@ -223,7 +223,7 @@ async def draw(project: str, *, model: str = "", query_fn=None) -> dict:
         listed = [str(x) for x in data.get("files") or []]
         code = [c for st in steps for c in st["code"]]
         # 해시는 실제로 읽은 파일 + 답에 적힌 파일 + 단계의 코드 파일.
-        # 단계가 **내는 파일**(지표 · 체크포인트)은 뺀다 — 학습할 때마다 "바뀜" 이 뜨면 안 된다
+        # 단계가 **내는 파일**(지표 · 체크포인트)은 뺀다 — 학습할 때마다 "바뀜"이 뜨면 안 된다
         outs = [o.rstrip("/").replace("<", "").split("*")[0] for st in steps for o in st["outputs"]]
         outs = [o for o in outs if o]
         tracked = [

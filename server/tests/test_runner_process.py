@@ -19,7 +19,7 @@ def spawn(code: str) -> subprocess.Popen:
     """자기 세션·그룹으로 파이썬 한 줄을 띄운다 (pgid == pid).
 
     **부모가 거둔다**(`wait`). 안 거두면 죽은 자식이 좀비로 그룹에 남아서
-    `group_alive` 가 계속 참이다 — 실제 실행기도 부모라면 거둬야 한다.
+    `group_alive`가 계속 참이다 — 실제 실행기도 부모라면 거둬야 한다.
     """
     proc = subprocess.Popen(
         [sys.executable, "-c", code],
@@ -59,7 +59,7 @@ def test_SIGTERM_을_무시하면_유예_뒤_SIGKILL():
 
 
 def test_손자까지_정리한다():
-    """DataLoader worker 같은 손자가 남으면 GPU 를 계속 잡는다."""
+    """DataLoader worker 같은 손자가 남으면 GPU를 계속 잡는다."""
     proc = spawn(
         "import subprocess, sys, time;"
         "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']);"
@@ -162,7 +162,7 @@ def test_scope_접두사():
 
 
 def test_scope_를_끄면_탐침도_안_돌린다(monkeypatch):
-    """시험 픽스처가 `LAB_NO_SCOPE=1` 을 둔다."""
+    """시험 픽스처가 `LAB_NO_SCOPE=1`을 둔다."""
     called = []
     monkeypatch.setattr(P.subprocess, "run", lambda *a, **k: called.append(a))
     assert P.scope_available() is False

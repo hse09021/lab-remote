@@ -84,7 +84,7 @@ def test_지식그래프(vault, project):
     ids = {n["id"]: n for n in g["nodes"]}
     # 인용: 제목으로 적은 링크가 파일 이름 id로 이어진다
     assert {"from": "LoRA", "to": "Transformer", "kind": "cite"} in g["edges"]
-    # 메모: 별칭 링크 · 프로젝트 이름 링크. 외톨이 메모와 .obsidian 은 빠진다
+    # 메모: 별칭 링크 · 프로젝트 이름 링크. 외톨이 메모와 .obsidian은 빠진다
     note = "note:메모/아이디어.md"
     assert ids[note]["kind"] == "note"
     assert {"from": note, "to": "LoRA", "kind": "note"} in g["edges"]
@@ -111,7 +111,7 @@ def test_API(vault, tmp_path, project):
     assert client.get("/api/papers/summary-md").json() == {}
     g = client.get("/api/papers/graph").json()
     assert {n["kind"] for n in g["nodes"]} == {"paper", "note", "project"}
-    # 프로젝트 설정의 papers 는 정리돼서 저장된다
+    # 프로젝트 설정의 papers는 정리돼서 저장된다
     r = client.put("/api/projects/demo/settings", json={**projects.load_settings(project), "papers": [" LoRA ", "LoRA"]}, headers=H)
     assert r.status_code == 200, r.text
     assert projects.load_settings(project)["papers"] == ["LoRA"]
@@ -161,7 +161,7 @@ def test_arxiv_로_추가(vault):
     papers.set_vault(vault)
     fetch = _fetch()
     got = papers.add_arxiv("https://arxiv.org/abs/1706.03762v7", fetch=fetch)
-    # 이미 있는 Transformer.md 는 arxiv 번호가 없어서 새로 만든다 — 같은 제목이라도 덮지 않는다
+    # 이미 있는 Transformer.md는 arxiv 번호가 없어서 새로 만든다 — 같은 제목이라도 덮지 않는다
     assert got["created"] and got["pdf"] and got["id"] == "Attention Is All You Need"
     text = open(os.path.join(vault, "Papers", "Attention Is All You Need.md"), encoding="utf-8").read()
     assert 'arxiv: "1706.03762"' in text and "year: 2017" in text and 'category: "cs.CL"' in text
@@ -198,7 +198,7 @@ def test_PDF_올리기는_덮어쓰지_않는다(vault):
         papers.add_pdf("x.pdf", b"hello")
     a = papers.add_pdf("../LoRA.pdf", b"%PDF-1.4 a")
     b = papers.add_pdf("LoRA.pdf", b"%PDF-1.4 b")
-    # 이미 있는 LoRA.md 를 덮지 않고 번호를 붙인다
+    # 이미 있는 LoRA.md를 덮지 않고 번호를 붙인다
     assert a["id"] == "LoRA (2)" and b["id"] == "LoRA (3)"
     assert "Low-Rank" in open(os.path.join(vault, "Papers", "LoRA.md"), encoding="utf-8").read()
     assert open(os.path.join(vault, "Papers", "pdf", "LoRA.pdf"), "rb").read() == b"%PDF-1.4 a"
@@ -245,7 +245,7 @@ def test_묻기_읽기_전용과_근거_정리(vault, monkeypatch):
 
     papers.set_vault(vault)
     monkeypatch.setattr(claude_mod, "cli_path", lambda: "/usr/bin/true")
-    run = _fake_agent({"answer": "LoRA 는 저랭크 어댑터예요.", "sources": [
+    run = _fake_agent({"answer": "LoRA는 저랭크 어댑터예요.", "sources": [
         {"paper": "LoRA", "why": "초록"},
         {"paper": "Papers/LoRA.md", "why": "중복"},
         {"paper": "Attention Is All You Need", "why": "제목으로 적음"},
@@ -253,7 +253,7 @@ def test_묻기_읽기_전용과_근거_정리(vault, monkeypatch):
     ]})
 
     async def go():
-        got = library.start("LoRA 가 뭐야?", [{"role": "user", "text": "앞 질문"}], query_fn=run)
+        got = library.start("LoRA가 뭐야?", [{"role": "user", "text": "앞 질문"}], query_fn=run)
         assert got["state"] == "running"
         with pytest.raises(library.AskError, match="답하는 중"):
             library.start("또", query_fn=run)

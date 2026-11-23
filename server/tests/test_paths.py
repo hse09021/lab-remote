@@ -36,7 +36,7 @@ def test_절대경로_밖(root):
 
 
 def test_형제_접두사_경로는_밖(root, tmp_path):
-    """`<root>-old` 가 안쪽으로 보이면 안 된다. os.sep 을 빼먹었을 때 생기는 버그."""
+    """`<root>-old`가 안쪽으로 보이면 안 된다. os.sep을 빼먹었을 때 생기는 버그."""
     sibling = tmp_path / "hook-sandbox-old"
     sibling.mkdir()
     tgt = paths.real(str(sibling / "x.txt"))

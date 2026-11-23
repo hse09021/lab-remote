@@ -79,9 +79,9 @@ function EnvPanel({ name, onClone }: { name: string; onClone: () => void }) {
           <b>지울 수 없는 환경이에요</b>
           <span>
             {d.name === 'base'
-              ? 'conda 의 기본 환경이라 지우거나 패키지를 바꾸지 않아요. 보기만 할 수 있어요.'
+              ? 'conda의 기본 환경이라 지우거나 패키지를 바꾸지 않아요. 보기만 할 수 있어요.'
               : d.name === 'labremote'
-                ? 'lab.remote 서버가 쓰는 환경이에요. 지우면 lab.remote 가 멈춰서 여기서는 막아 둬요.'
+                ? 'lab.remote 서버가 쓰는 환경이에요. 지우면 lab.remote가 멈춰서 여기서는 막아 둬요.'
                 : d.protectedReason}
           </span>
         </div>
@@ -89,7 +89,7 @@ function EnvPanel({ name, onClone }: { name: string; onClone: () => void }) {
         <div role="status" className={s.banner}>
           <b>사용 중이라 잠겨 있어요</b>
           <span>
-            {d.usedBy.join(', ')} 이 이 환경으로 학습 중이에요. 패키지를 바꾸면 학습이 깨질 수 있어서 끝날 때까지 설치 · 제거 · 삭제를 막아요.
+            {d.usedBy.join(', ')}이 이 환경으로 학습 중이에요. 패키지를 바꾸면 학습이 깨질 수 있어서 끝날 때까지 설치 · 제거 · 삭제를 막아요.
             에이전트가 이 환경에 설치하려 하면 승인 카드에 경고가 떠요.
           </span>
           <Link to={`/projects/${encodeURIComponent(d.usedBy[0].split(' · ')[0])}?tab=work&run=${d.usedBy[0].split(' · ')[1]}`}>학습 보기</Link>
@@ -202,7 +202,7 @@ function InstallBox({ env }: { env: CondaEnvDetail }) {
             설치
           </button>
           <span className={s.muted}>
-            설치 기록은 lab.remote 데이터 폴더에 남아요. pip 는 휠만 받고 캐시를 쓰지 않아요(설치할 때 코드가 돌지 않게).
+            설치 기록은 lab.remote 데이터 폴더에 남아요. pip는 휠만 받고 캐시를 쓰지 않아요(설치할 때 코드가 돌지 않게).
           </span>
         </div>
       )}
@@ -313,7 +313,7 @@ function DeleteBox({ env }: { env: CondaEnvDetail }) {
   return (
     <section aria-label="환경 삭제" className={s.dangerCard}>
       <h2 className={s.h2}>환경 삭제</h2>
-      <p className={s.muted}>되돌릴 수 없어요. 지우기 전에 environment.yml 을 lab.remote 데이터 폴더에 백업해 둬요.</p>
+      <p className={s.muted}>되돌릴 수 없어요. 지우기 전에 environment.yml을 lab.remote 데이터 폴더에 백업해 둬요.</p>
       <div className={s.row}>
         <label className={s.srOnly} htmlFor="del-name">
           삭제 확인용 환경 이름
@@ -371,7 +371,7 @@ function CreateDialog({ open, clone, onClose }: { open: boolean; clone?: string;
       )}
       {job.data?.state === 'running' && <span>만드는 중이에요… 몇 분 걸릴 수 있어요.</span>}
       {job.data?.state === 'done' && <span>만들었어요. 닫아도 돼요.</span>}
-      <span>conda 기본 채널 설정을 그대로 써요(.condarc 는 바꾸지 않아요).</span>
+      <span>conda 기본 채널 설정을 그대로 써요(.condarc는 바꾸지 않아요).</span>
     </Dialog>
   )
 }

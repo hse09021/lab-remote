@@ -22,7 +22,7 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : e ? String(
 
 function tunnelCard(d: SystemOverview): Card {
   const t = d.tunnel
-  if (t.state === 'absent') return { label: 'code tunnel', value: '없음', sub: ['VS Code CLI 를 못 찾았어요', '밖에서 쓸 때만 필요해요'], tone: 'off' }
+  if (t.state === 'absent') return { label: 'code tunnel', value: '없음', sub: ['VS Code CLI를 못 찾았어요', '밖에서 쓸 때만 필요해요'], tone: 'off' }
   if (t.state === 'unknown') return { label: 'code tunnel', value: '모름', sub: [t.detail || '상태를 못 읽었어요'], tone: 'warn' }
   if (t.state === 'off')
     return {
@@ -66,7 +66,7 @@ function cards(d: SystemOverview): Card[] {
       value: g.available ? (dev?.name ?? 'GPU') : '조회 불가',
       sub: g.available
         ? [`드라이버 ${g.driver.userland ?? dev?.driver ?? '?'}`, g.driver.mismatch ? '커널·유저랜드 다름 — 재부팅 필요' : '커널·유저랜드 같음']
-        : [g.reason || 'nvidia-smi 를 못 읽었어요'],
+        : [g.reason || 'nvidia-smi를 못 읽었어요'],
       tone: !g.available || g.driver.mismatch ? 'warn' : 'ok',
     },
   ]
@@ -88,7 +88,7 @@ function tree(d: SystemOverview) {
       └ labremote serve    ● 127.0.0.1:${d.server.port ?? '?'} · nice ${d.server.nice ?? '?'}
           ├ 예약 시계      ${clock?.running ? '●' : '○'} ${next}${clock?.waiting.length ? ` · GPU 기다리는 중 ${clock.waiting.length}` : ''}
           └ 에이전트 세션  Agent SDK · 동시 4개까지
-code tunnel (VS Code 가 따로 띄워요)   ${tunnelLine}`
+code tunnel (VS Code가 따로 띄워요)   ${tunnelLine}`
 }
 
 export default function SystemPage() {
@@ -109,7 +109,7 @@ export default function SystemPage() {
     <main className={s.page}>
       <div>
         <h1 className={s.title}>시스템</h1>
-        <p className={s.text}>lab.remote 가 이 데스크톱에서 어떻게 떠 있는지, 무엇을 바꿨는지 보여 줘요. 여기 없는 시스템 설정은 건드리지 않아요.</p>
+        <p className={s.text}>lab.remote가 이 데스크톱에서 어떻게 떠 있는지, 무엇을 바꿨는지 보여 줘요. 여기 없는 시스템 설정은 건드리지 않아요.</p>
       </div>
 
       <div className={s.cards}>
@@ -131,7 +131,7 @@ export default function SystemPage() {
 
       <section className={s.section} aria-labelledby="sys-changes">
         <h2 id="sys-changes" className={s.h2}>
-          lab.remote 가 바꾼 것
+          lab.remote가 바꾼 것
         </h2>
         <p className={s.text}>
           이게 전부예요. 나머지 상태는 lab.remote 데이터 폴더(<span className={s.mono}>{d.server.dataDir}</span>)와, 등록한 프로젝트마다 하나씩
@@ -181,7 +181,7 @@ export default function SystemPage() {
           ) : (
             <p className={s.text}>
               꺼져 있어요. 켜려면 데스크톱 터미널에서 <span className={s.mono}>{a.installCommand}</span> — 무엇이 바뀌는지 먼저 보여 주고 물어봐요.
-              {a.systemctl ? '' : ' (systemctl 이 없어 이 컴퓨터에서는 쓸 수 없어요)'}
+              {a.systemctl ? '' : ' (systemctl이 없어 이 컴퓨터에서는 쓸 수 없어요)'}
             </p>
           )}
           {a.installed && (
@@ -268,9 +268,9 @@ export default function SystemPage() {
           labremote-session 서비스를 멈추고 유닛 파일을 지워요.{' '}
           {a.lingerBefore === false
             ? d.tunnel.service
-              ? 'linger 는 code tunnel 서비스도 써서 그대로 둬요.'
-              : 'linger 는 원래대로(no) 돌려요.'
-            : 'linger 는 lab.remote 가 켠 게 아니라 그대로 둬요.'}
+              ? 'linger는 code tunnel 서비스도 써서 그대로 둬요.'
+              : 'linger는 원래대로(no) 돌려요.'
+            : 'linger는 lab.remote가 켠 게 아니라 그대로 둬요.'}
         </span>
         <span>학습 실행은 따로 돌아서 계속 돌아요. {a.inside && '지금 보고 있는 이 서버도 꺼져서 화면이 끊겨요.'} 다시 켜려면 터미널에서 labremote autostart install.</span>
       </Dialog>
@@ -290,12 +290,12 @@ function RemoteSection({ d }: { d: SystemOverview }) {
         밖에서 접속
       </h2>
       <p className={s.text}>
-        터널은 VS Code 가 띄워요 — lab.remote 는 상태만 읽어요. 한 번만 하면 돼요{t.state === 'up' ? ' (터널은 이미 켜져 있어요)' : ''}.
+        터널은 VS Code가 띄워요 — lab.remote는 상태만 읽어요. 한 번만 하면 돼요{t.state === 'up' ? ' (터널은 이미 켜져 있어요)' : ''}.
       </p>
       <pre className={s.pre}>{`code tunnel user login --provider github
 code tunnel service install --accept-server-license-terms
-# 휴대폰 · 다른 PC에서 ${t.url || 'https://vscode.dev/tunnel/<이름>'} 를 열고
-# Ports 보기에서 ${d.server.port ?? 8000} 을 전달(Forward a Port) → Forwarded Address 를 아래에 적어요`}</pre>
+# 휴대폰 · 다른 PC에서 ${t.url || 'https://vscode.dev/tunnel/<이름>'}를 열고
+# Ports 보기에서 ${d.server.port ?? 8000}을 전달(Forward a Port) → Forwarded Address를 아래에 적어요`}</pre>
       <form
         className={s.remoteForm}
         onSubmit={(e) => {

@@ -1,4 +1,4 @@
-"""실행 — 진짜 tmux로 띄운다 (scope 는 conftest 가 끈다)."""
+"""실행 — 진짜 tmux로 띄운다 (scope는 conftest가 끈다)."""
 
 import os
 import shutil
@@ -9,7 +9,7 @@ import pytest
 
 from app import files, inbox, runs, watch
 
-pytestmark = pytest.mark.skipif(not runs.tmux_bin(), reason="tmux 가 없어요")
+pytestmark = pytest.mark.skipif(not runs.tmux_bin(), reason="tmux가 없어요")
 
 
 @pytest.fixture()
@@ -31,7 +31,7 @@ def wait_state(project, run_id, want, timeout=8.0):
         if got["state"] in want:
             return got
         time.sleep(0.1)
-    raise AssertionError(f"{run_id} 가 {want} 가 안 됐어요: {runs.get(project, run_id)['state']}")
+    raise AssertionError(f"{run_id}가 {want}가 안 됐어요: {runs.get(project, run_id)['state']}")
 
 
 def test_끝까지_돌고_로그와_종료코드를_남긴다(proj, project):
@@ -58,7 +58,7 @@ def test_중지는_프로그램이_정리할_시간을_준다(proj):
     runs.stop(proj, "EXP-001")
     got = wait_state(proj, "EXP-001", {"stopped"})
     assert got["exitCode"] == 130
-    assert "saved" in runs.log_tail(proj, "EXP-001")["text"]  # tee 가 같이 죽지 않았다
+    assert "saved" in runs.log_tail(proj, "EXP-001")["text"]  # tee가 같이 죽지 않았다
 
 
 def test_프로세스가_사라지면_끊김(proj):
@@ -136,7 +136,7 @@ def test_감시가_끝남과_실패를_Inbox_에_넣는다(proj, conn):
     assert watch.tick(conn) == []  # 두 번 알리지 않는다
 
 
-@pytest.mark.skipif(not shutil.which("bash"), reason="bash 가 없어요")
+@pytest.mark.skipif(not shutil.which("bash"), reason="bash가 없어요")
 def test_실행_스크립트는_명령을_한_덩어리로_넘긴다(proj, project):
     runs.start(proj, "printf '%s\\n' \"$(echo 'a b')\" ; echo $((1+2))")
     wait_state(proj, "EXP-001", {"done"})

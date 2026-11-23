@@ -3,10 +3,10 @@
 PLAN 4.1 conda:
 - `conda env list --json`, `conda list --json -n <환경>`으로 읽는다.
 - 설치 · 업데이트 · 제거는 **먼저 바뀌는 것(dry-run)을 보여 주고** 사람이 확인한 뒤에만.
-- `base` · `labremote` 는 보호(`runner/condaenv.py`), 실행 중인 학습이 쓰는 환경은 잠금.
-- 삭제는 이름을 입력해야 하고, 지우기 전에 `environment.yml` 을 데이터 폴더에 남긴다.
-- `.condarc` 는 건드리지 않는다. 채널 옵션(`-c`)도 받지 않는다 — 사용자의 설정 그대로.
-- 패키지 이름 · 버전은 `runner/pkgspec.py` 가 검증한 것만 명령에 들어간다(셸 없이).
+- `base` · `labremote`는 보호(`runner/condaenv.py`), 실행 중인 학습이 쓰는 환경은 잠금.
+- 삭제는 이름을 입력해야 하고, 지우기 전에 `environment.yml`을 데이터 폴더에 남긴다.
+- `.condarc`는 건드리지 않는다. 채널 옵션(`-c`)도 받지 않는다 — 사용자의 설정 그대로.
+- 패키지 이름 · 버전은 `runner/pkgspec.py`가 검증한 것만 명령에 들어간다(셸 없이).
 
 오래 걸리는 일은 백그라운드 작업으로 돌리고 화면이 상태를 읽어 간다.
 """
@@ -40,7 +40,7 @@ class CondaError(ValueError):
 def _conda() -> str:
     exe = runs.conda_bin()
     if not exe:
-        raise CondaError("conda 를 찾지 못했어요 (CONDA_EXE · ~/miniconda3 등).")
+        raise CondaError("conda를 찾지 못했어요 (CONDA_EXE · ~/miniconda3 등).")
     return exe
 
 
@@ -157,7 +157,7 @@ def export_yml(name: str) -> str:
         raise CondaError("환경 이름이 올바르지 않아요.")
     done = _run([_conda(), "env", "export", "-n", name, "--no-builds"], timeout=180)
     if done.returncode != 0:
-        raise CondaError("environment.yml 을 만들지 못했어요: " + done.stderr.strip()[-300:])
+        raise CondaError("environment.yml을 만들지 못했어요: " + done.stderr.strip()[-300:])
     return done.stdout
 
 
@@ -297,7 +297,7 @@ def _work(record: dict, argv: list[str]) -> None:
     final = "failed"
     try:
         if record["kind"] == "delete":
-            # 지우기 전에 environment.yml 을 남긴다
+            # 지우기 전에 environment.yml을 남긴다
             yml = export_yml(record["env"])
             folder = os.path.join(registry.data_dir(), "conda", "backups")
             os.makedirs(folder, exist_ok=True)
@@ -321,7 +321,7 @@ def _work(record: dict, argv: list[str]) -> None:
         final = "failed"
         record["error"] = f"{type(exc).__name__}: {exc}"[:500]
     finally:
-        # 기록을 다 남긴 뒤에 끝난 것으로 보이게 — 화면 · 시험이 "끝남" 을 보고 기록을 읽어도 있게
+        # 기록을 다 남긴 뒤에 끝난 것으로 보이게 — 화면 · 시험이 "끝남"을 보고 기록을 읽어도 있게
         record["endedAt"] = time.time()
         _forget(record["env"])
         if not record["dry"]:

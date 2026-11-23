@@ -1,11 +1,11 @@
 """논문 AI 요약 — 누를 때만 만든다 (2026-11-24 결정).
 
-- 에이전트를 vault에서 읽기 전용으로 열어 논문 노트와 PDF 를 읽게 하고, 정해진 모양
+- 에이전트를 vault에서 읽기 전용으로 열어 논문 노트와 PDF를 읽게 하고, 정해진 모양
   (3줄 요약 · 쪽 번호 · 정보 칸 · 방법 · 결과 · 한계)으로 받는다.
-- **vault에 새 파일** `Papers/<이름> 요약.md` 를 만든다. 원래 노트는 고치지 않는다.
+- **vault에 새 파일** `Papers/<이름> 요약.md`를 만든다. 원래 노트는 고치지 않는다.
   앞쪽 메타의 `summary_of: "[[이름]]"`으로 라이브러리가 논문으로 세지 않는다.
-- "정리된 보기" 용 구조 데이터는 데이터 폴더 `summaries/`에 둔다. 요약 MD 를 사람이 고치면
-  vault 의 요약 파일만 고친다(구조 데이터는 그대로).
+- "정리된 보기" 용 구조 데이터는 데이터 폴더 `summaries/`에 둔다. 요약 MD를 사람이 고치면
+  vault의 요약 파일만 고친다(구조 데이터는 그대로).
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ def _paper(pid: str) -> dict:
 
 
 def _ours(pid: str, path: str) -> bool:
-    """그 자리의 파일을 lab.remote 가 만들었나 — 없거나, 표시가 있거나, 우리 기록이 있으면."""
+    """그 자리의 파일을 lab.remote가 만들었나 — 없거나, 표시가 있거나, 우리 기록이 있으면."""
     if not os.path.exists(path):
         return True
     if os.path.exists(_json_path(pid)):
@@ -80,7 +80,7 @@ def _ours(pid: str, path: str) -> bool:
 
 
 def _summary_file(p: dict) -> str:
-    """vault 의 요약 파일 경로 (노트 옆 `<이름> 요약.md`)."""
+    """vault의 요약 파일 경로 (노트 옆 `<이름> 요약.md`)."""
     note = os.path.join(papers.vault_path(), p["path"])
     stem = os.path.splitext(os.path.basename(note))[0]
     return os.path.join(os.path.dirname(note), f"{stem} 요약.md")
@@ -176,7 +176,7 @@ def _markdown(p: dict, s: dict) -> str:
 def _prompt(p: dict) -> str:
     pdf = papers.pdf_rel(p["id"])
     return "\n".join([
-        "이 폴더는 연구자의 논문 vault 예요. 아래 논문을 읽고 요약해 주세요.",
+        "이 폴더는 연구자의 논문 vault예요. 아래 논문을 읽고 요약해 주세요.",
         f"- 논문 노트: {p['path']}",
         f"- 원문 PDF: {pdf}" if pdf else "- 원문 PDF: 없음 (노트만 읽으세요)",
         "",
@@ -231,7 +231,7 @@ def job(pid: str) -> dict:
 
 
 def save_markdown(pid: str, markdown: str | None) -> dict:
-    """요약 MD 수정 — vault 의 **요약 파일만** 고친다. None 이면 구조 데이터로 다시 만든다."""
+    """요약 MD 수정 — vault의 **요약 파일만** 고친다. None 이면 구조 데이터로 다시 만든다."""
     p = _paper(pid)
     path = _summary_file(p)
     if markdown is None:

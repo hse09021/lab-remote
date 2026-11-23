@@ -68,7 +68,7 @@ export function HtmlView({
   const [html, setHtml] = useState<string | null>(null)
   const [isReal, setIsReal] = useState(false)
   const [failed, setFailed] = useState(false)
-  /** 주입된 HTML 안에 React 를 끼워 넣을 자리들 */
+  /** 주입된 HTML 안에 React를 끼워 넣을 자리들 */
   const [slots, setSlots] = useState<{
     sparkles: Array<{ key: string; el: HTMLElement; label: string }>
     config: HTMLElement | null
@@ -266,7 +266,7 @@ export function HtmlView({
       if (!sec?.htmlAnchor) return
       const el = body.querySelector<HTMLElement>(`#${CSS.escape(sec.htmlAnchor)}`)
       if (!el) return
-      // offsetTop 은 offsetParent 기준이라 어긋나요. 화면 좌표로 계산해요.
+      // offsetTop은 offsetParent 기준이라 어긋나요. 화면 좌표로 계산해요.
       const top =
         el.getBoundingClientRect().top -
         root.getBoundingClientRect().top +
@@ -313,7 +313,7 @@ export function HtmlView({
         ) : (
           <div
             ref={bodyRef}
-            // loadPaperHtml 이 DOMPurify로 정리한 결과만 들어와요
+            // loadPaperHtml이 DOMPurify로 정리한 결과만 들어와요
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )}

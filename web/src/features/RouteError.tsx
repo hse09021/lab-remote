@@ -9,7 +9,7 @@ export default function RouteError() {
   const detail = isRouteErrorResponse(err) ? `${err.status} ${err.statusText}` : err instanceof Error ? err.message : String(err)
   return (
     <main style={{ padding: '40px 32px', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720 }}>
-      <h1 style={{ margin: 0, fontSize: 20 }}>{chunk ? 'lab.remote 가 새로 바뀌었어요' : '화면을 그리다 문제가 생겼어요'}</h1>
+      <h1 style={{ margin: 0, fontSize: 20 }}>{chunk ? 'lab.remote가 새로 바뀌었어요' : '화면을 그리다 문제가 생겼어요'}</h1>
       <p style={{ margin: 0, fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.6 }}>
         {chunk
           ? '이 탭은 바뀌기 전 화면을 들고 있어요. 새로 고침하면 새 화면을 받아요.'

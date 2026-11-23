@@ -19,7 +19,7 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 
 export function AppHeader() {
   const [goto, setGoto] = useState(false)
-  // Ctrl/⌘+K — 편집기(Monaco) · 터미널은 Ctrl+K 를 자기 단축키로 써서 거기서는 가로채지 않아요
+  // Ctrl/⌘+K — 편집기(Monaco) · 터미널은 Ctrl+K를 자기 단축키로 써서 거기서는 가로채지 않아요
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== 'k' || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
@@ -36,15 +36,15 @@ export function AppHeader() {
   const badge = useQuery(badgeQuery())
   const inboxCount = badge.data?.badge ?? 0
 
-  // 목업의 "Tunnel" 점 — 서버에 닿으면 터널 상태를, 못 닿으면 "서버 끊김" 을 보여 줘요
+  // 목업의 "Tunnel" 점 — 서버에 닿으면 터널 상태를, 못 닿으면 "서버 끊김"을 보여 줘요
   const connected = health.isSuccess
   const tunnelUp = health.data?.tunnel === 'up'
   const connLabel = health.isPending ? '연결 확인 중' : !connected ? '서버 끊김' : 'Tunnel'
   const connTitle = !connected
     ? 'lab.remote 서버에 닿지 않아요'
     : tunnelUp
-      ? 'code tunnel 이 켜져 있어요'
-      : 'code tunnel 이 꺼져 있어요 — 이 데스크톱에서만 열려요'
+      ? 'code tunnel이 켜져 있어요'
+      : 'code tunnel이 꺼져 있어요 — 이 데스크톱에서만 열려요'
 
   return (
     <header className={s.header}>

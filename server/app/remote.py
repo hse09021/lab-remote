@@ -1,16 +1,16 @@
 """바깥 주소 — 터널로 전달한 lab.remote 주소 (9단계).
 
-code tunnel로 들어온 브라우저는 VS Code 의 Ports 보기에서 8000 을 전달해 받은
-"Forwarded Address"로 lab.remote 를 연다. 그 주소의 정확한 모양은 공식 문서에
+code tunnel로 들어온 브라우저는 VS Code의 Ports 보기에서 8000을 전달해 받은
+"Forwarded Address"로 lab.remote를 연다. 그 주소의 정확한 모양은 공식 문서에
 없어서(실측 전) 코드가 짐작하지 않는다 — **사람이 그 주소를 그대로 적는다.**
 
     labremote remote set https://<전달된 주소>/
 
 적으면 두 가지가 된다.
-- 그 Host 가 허용 목록에 들어간다 (main.py 의 Host · Origin 검사).
+- 그 Host가 허용 목록에 들어간다 (main.py의 Host · Origin 검사).
 - Discord 알림에 "답하기" 링크가 붙는다 (alerts.py).
 
-데이터 폴더의 `remote.json`에 둔다. 환경 변수 `LAB_ALLOWED_HOSTS` 도 그대로 먹는다.
+데이터 폴더의 `remote.json`에 둔다. 환경 변수 `LAB_ALLOWED_HOSTS`도 그대로 먹는다.
 """
 
 from __future__ import annotations

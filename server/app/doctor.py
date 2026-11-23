@@ -1,6 +1,6 @@
 """`labremote doctor` — 설치와 환경을 점검한다 (v3).
 
-docs/v3/PLAN.md 4.1 의 점검 목록: conda 환경, Claude Code 설치·로그인, tmux,
+docs/v3/PLAN.md 4.1의 점검 목록: conda 환경, Claude Code 설치·로그인, tmux,
 systemd --user, 자동 시작(linger), 터널. 거기에 웹 빌드 · GPU·드라이버 · 비밀값 권한을 더 본다.
 
 **읽기만 한다.** `~/.claude`·`.bashrc`·`.condarc`·apt 설정을 고치지 않는다 —
@@ -20,12 +20,12 @@ LEVELS = ("ok", "warn", "bad")
 
 MARKS = {"ok": "✔", "warn": "⚠", "bad": "✘"}
 
-#: lab.remote 가 도는 conda 환경 이름 (PLAN 1.1)
+#: lab.remote가 도는 conda 환경 이름 (PLAN 1.1)
 ENV_NAME = "labremote"
 
 
 class Check(dict):
-    """`level` 이 참 무게다. `ok` 는 호환을 위해 남겨 둔 거울이다.
+    """`level`이 참 무게다. `ok`는 호환을 위해 남겨 둔 거울이다.
 
     - `Check(True, …)` → `level="ok"`
     - `Check(False, …)` → `level="bad"`
@@ -85,16 +85,16 @@ def _login_probe() -> dict:
 
 
 def claude_check() -> Check:
-    """Claude Code 가 설치돼 있고 로그인돼 있나.
+    """Claude Code가 설치돼 있고 로그인돼 있나.
 
-    로그인은 `claude-agent-sdk`로 **연결만** 해서 Claude Code 가 알려 주는 계정
+    로그인은 `claude-agent-sdk`로 **연결만** 해서 Claude Code가 알려 주는 계정
     정보(구독 종류)로 본다. 자격 증명 파일은 읽지 않고, 이메일은 찍지 않는다.
     """
     binary = shutil.which("claude")
     if not binary:
         return Check(
             False, "Claude Code", "claude 명령을 찾을 수 없어요",
-            hint="Claude Code 를 설치하고 로그인해 주세요 (lab.remote 는 로그인을 대신하지 않아요).",
+            hint="Claude Code를 설치하고 로그인해 주세요 (lab.remote는 로그인을 대신하지 않아요).",
         )
     code, out = _run([binary, "--version"], timeout=20)
     head = (out.strip().splitlines() or [""])[-1]
@@ -102,17 +102,17 @@ def claude_check() -> Check:
         return warn("Claude Code", f"판을 못 읽었어요: {head[:120]}")
     try:
         got = _login_probe()
-    except Exception as exc:  # SDK 가 없거나 연결이 안 됨
+    except Exception as exc:  # SDK가 없거나 연결이 안 됨
         return warn("Claude Code", f"{head} · 로그인을 확인하지 못했어요 ({type(exc).__name__})",
-                    hint="터미널에서 claude 를 한 번 열어 로그인돼 있는지 봐 주세요.")
+                    hint="터미널에서 claude를 한 번 열어 로그인돼 있는지 봐 주세요.")
     if not got.get("loggedIn"):
         return Check(False, "Claude Code", f"{head} · 로그인이 안 돼 있어요",
-                     hint="터미널에서 claude 를 열고 /login으로 로그인해 주세요 (lab.remote 는 로그인을 대신하지 않아요).")
+                     hint="터미널에서 claude를 열고 /login으로 로그인해 주세요 (lab.remote는 로그인을 대신하지 않아요).")
     return Check(True, "Claude Code", f"{head} · 로그인됨 · {got.get('plan') or '구독 종류 모름'}")
 
 
 def tmux_check() -> Check:
-    """`labremote run` · 자동 시작이 쓰는 그 tmux 가 있나 (PLAN 1.5)."""
+    """`labremote run` · 자동 시작이 쓰는 그 tmux가 있나 (PLAN 1.5)."""
     from . import runs
 
     binary = runs.tmux_bin()
@@ -127,15 +127,15 @@ def tmux_check() -> Check:
 
 
 def systemd_scope_check() -> Check:
-    """`systemd-run --user --scope` 가 실제로 되나 — 실행을 자기 cgroup에 담는 길."""
+    """`systemd-run --user --scope`가 실제로 되나 — 실행을 자기 cgroup에 담는 길."""
     from .runner import process
 
     if process.scope_available():
         return Check(True, "systemd --user", "systemd-run --user --scope 돼요")
     return warn(
         "systemd --user",
-        "systemd-run --user --scope 가 안 돼요 — 서버를 재시작하면 실행이 같이 죽을 수 있어요",
-        hint="로그인 세션의 사용자 systemd 가 떠 있는지 봐 주세요 (systemctl --user status).",
+        "systemd-run --user --scope가 안 돼요 — 서버를 재시작하면 실행이 같이 죽을 수 있어요",
+        hint="로그인 세션의 사용자 systemd가 떠 있는지 봐 주세요 (systemctl --user status).",
     )
 
 
@@ -145,7 +145,7 @@ def linger_check() -> Check:
 
     got = units.status()
     if not got["systemctl"]:
-        return warn("자동 시작", "systemctl 이 없어요 — systemd 가 아닌 환경이에요")
+        return warn("자동 시작", "systemctl이 없어요 — systemd가 아닌 환경이에요")
     unit = got["units"].get(units.NAME) or next(iter(got["units"].values()), {})
     enabled = str(unit.get("enabled") or "")
     active = str(unit.get("active") or "")
@@ -156,7 +156,7 @@ def linger_check() -> Check:
         return warn(
             "자동 시작",
             f"유닛 {enabled or '?'} · linger 꺼짐 — 로그아웃하면 서버가 내려가요",
-            hint="loginctl enable-linger $USER  (또는 labremote autostart install 을 다시)",
+            hint="loginctl enable-linger $USER  (또는 labremote autostart install을 다시)",
         )
     if active and active != "active":
         return warn("자동 시작", f"유닛 {enabled or '?'} · {active} — 서버가 안 떠 있어요",
@@ -175,8 +175,8 @@ def tunnel_check() -> Check:
 
     t = tunnel.status(fresh=True)
     if t["state"] == "absent":
-        return warn("code tunnel", "VS Code CLI 가 없어요 — 밖(휴대폰 · 다른 PC)에서 열 수 없어요",
-                    hint="밖에서 쓸 때만: VS Code 를 설치하고 docs/SETUP.md 의 '밖에서 접속' 을 따라 주세요.")
+        return warn("code tunnel", "VS Code CLI가 없어요 — 밖(휴대폰 · 다른 PC)에서 열 수 없어요",
+                    hint="밖에서 쓸 때만: VS Code를 설치하고 docs/SETUP.md의 '밖에서 접속'을 따라 주세요.")
     if t["state"] == "unknown":
         return warn("code tunnel", f"상태를 못 읽었어요: {t['detail']}")
     if t["loggedIn"] is False:
@@ -204,7 +204,7 @@ def web_build_check() -> Check:
 
 
 def api_key_check() -> Check:
-    """`ANTHROPIC_API_KEY` 가 환경에 있으면 **경고.**
+    """`ANTHROPIC_API_KEY`가 환경에 있으면 **경고.**
 
     키가 섞이면 구독 한도가 아니라 **종량제로 과금**된다.
     """
@@ -252,18 +252,18 @@ def schema_check() -> Check:
             got = db_mod.version(conn)
     except db_mod.DbError as exc:
         return Check(False, "DB 스키마", str(exc)[:200])
-    except Exception as exc:  # pragma: no cover - DB 를 못 여는 환경
+    except Exception as exc:  # pragma: no cover - DB를 못 여는 환경
         return warn("DB 스키마", f"못 읽었어요: {exc}")
     if got == db_mod.SCHEMA_VERSION:
         return Check(True, "DB 스키마", f"판 {got} · {db_mod.path()}")
-    return Check(False, "DB 스키마", f"판 {got} · 코드는 판 {db_mod.SCHEMA_VERSION} 를 알아요")
+    return Check(False, "DB 스키마", f"판 {got} · 코드는 판 {db_mod.SCHEMA_VERSION}를 알아요")
 
 
 # --- GPU -------------------------------------------------------------------
 
 
 #: `apt-config dump`에서 `Unattended-Upgrade::Package-Blacklist`에 꼭 있어야
-#: 하는 접두사. 드라이버가 저절로 올라가고 재부팅이 안 되면 `nvidia-smi` 가
+#: 하는 접두사. 드라이버가 저절로 올라가고 재부팅이 안 되면 `nvidia-smi`가
 #: 통째로 죽는다 — 실제로 당했다.
 NVIDIA_BLACKLIST = (
     "nvidia-",
@@ -278,7 +278,7 @@ NVIDIA_BLACKLIST = (
 
 
 def apt_blacklist() -> dict:
-    """`apt-config dump` 의 **적용값**을 읽는다. 파일 이름을 보지 않는다.
+    """`apt-config dump`의 **적용값**을 읽는다. 파일 이름을 보지 않는다.
 
     설정이 여러 파일에 흩어지고 나중 파일이 앞 파일을 덮으므로, 파일이
     있는지로는 알 수 없다. `{"ok", "entries", "autoReboot", "reason"}`.
@@ -301,9 +301,9 @@ def apt_blacklist() -> dict:
 def nvidia_hold_note() -> str | None:
     """참고 한 줄 — nvidia 드라이버가 **저절로 올라가지 않게** 묶여 있나.
 
-    점검(✔ ⚠ ✘)이 아니다. 시스템 설정(apt)을 바꾸라는 권유라서, lab.remote 는
+    점검(✔ ⚠ ✘)이 아니다. 시스템 설정(apt)을 바꾸라는 권유라서, lab.remote는
     바꾸지 않고 원하는 사람이 직접 하도록 알려 주기만 한다(사람이 고름, 2026-11-23).
-    드라이버가 실제로 어긋났을 때는 `gpu_driver_check` 가 ✘로 알린다.
+    드라이버가 실제로 어긋났을 때는 `gpu_driver_check`가 ✘로 알린다.
     """
     got = apt_blacklist()
     if not got["ok"]:
@@ -314,17 +314,17 @@ def nvidia_hold_note() -> str | None:
         return None
     why = []
     if missing:
-        why.append(f"Unattended-Upgrade::Package-Blacklist에 {', '.join(missing[:4])}{' 등' if len(missing) > 4 else ''} 이 없어요")
+        why.append(f"Unattended-Upgrade::Package-Blacklist에 {', '.join(missing[:4])}{' 등' if len(missing) > 4 else ''}이 없어요")
     if auto_reboot_on:
-        why.append("Automatic-Reboot 가 켜져 있어요")
+        why.append("Automatic-Reboot가 켜져 있어요")
     return (
         "참고 · 드라이버 자동 업데이트를 막고 싶으면 직접 설정해요 (" + " · ".join(why) + "). "
-        "lab.remote 는 바꾸지 않아요 — 방법은 docs/v1/SETUP.md 의 Package-Blacklist 예시."
+        "lab.remote는 바꾸지 않아요 — 방법은 docs/v1/SETUP.md의 Package-Blacklist 예시."
     )
 
 
 def gpu_check() -> Check:
-    """GPU 를 조회할 수 있나. 조회 실패는 ⚠ 다 (화면에 "조회 불가"로 나간다)."""
+    """GPU를 조회할 수 있나. 조회 실패는 ⚠ 다 (화면에 "조회 불가"로 나간다)."""
     from .monitor import gpu
 
     got = gpu.probe()
@@ -342,8 +342,8 @@ def gpu_check() -> Check:
 def gpu_driver_check() -> Check:
     """커널 드라이버와 유저랜드 드라이버의 판이 **같은가.**
 
-    다르면 `nvidia-smi` 가 통째로 죽는다(`Failed to initialize NVML`). 재부팅
-    대기 목록에 nvidia 가 있으면 아직 안 깨졌지만 곧 깨진다.
+    다르면 `nvidia-smi`가 통째로 죽는다(`Failed to initialize NVML`). 재부팅
+    대기 목록에 nvidia가 있으면 아직 안 깨졌지만 곧 깨진다.
     """
     from .monitor import gpu
 
@@ -357,15 +357,15 @@ def gpu_driver_check() -> Check:
     if pending.get("nvidia"):
         return warn(
             "GPU 드라이버",
-            f"{kernel} · 재부팅 대기에 nvidia 가 있어요: " + ", ".join(pending["nvidia"])[:80],
-            hint="다음 재부팅 전까지 nvidia-smi 가 죽을 수 있어요.",
+            f"{kernel} · 재부팅 대기에 nvidia가 있어요: " + ", ".join(pending["nvidia"])[:80],
+            hint="다음 재부팅 전까지 nvidia-smi가 죽을 수 있어요.",
         )
     if not state.get("ok"):
         return warn("GPU 드라이버", "판을 못 읽었어요: " + str(state.get("reason") or "")[:120],
                     hint="nvidia 드라이버가 없는 기계면 정상이에요.")
     detail = f"{kernel} (커널·유저랜드 같아요)"
     if pending.get("pending"):
-        detail += " · 재부팅 대기 있음 (nvidia 는 아님)"
+        detail += " · 재부팅 대기 있음 (nvidia는 아님)"
     return Check(True, "GPU 드라이버", detail)
 
 

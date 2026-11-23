@@ -1,6 +1,6 @@
-"""에이전트 공통 규칙 — Claude 전용 이름을 쓰지 않는다(나중에 Codex 를 붙일 수 있게).
+"""에이전트 공통 규칙 — Claude 전용 이름을 쓰지 않는다(나중에 Codex를 붙일 수 있게).
 
-연결 부품(`claude.py` 등)은 `AgentBackend` 를 구현하고, 무슨 일이 생길 때마다
+연결 부품(`claude.py` 등)은 `AgentBackend`를 구현하고, 무슨 일이 생길 때마다
 `emit(event)`로 **공통 모양의 이벤트**를 낸다. 화면과 저장은 이 모양만 안다.
 
 이벤트 (`type` 별 칸):
@@ -11,10 +11,10 @@
 - `todos`      {items: [{content, status}]}    할 일
 - `subagent`   {taskId, description, status}   하위 에이전트
 - `result`     {ok, durationMs, turns, costUsd?, usage?, error?}
-- `approval`   {approvalId, state, ...}        승인 요청·결과 (manager 가 낸다)
+- `approval`   {approvalId, state, ...}        승인 요청·결과 (manager가 낸다)
 - `system`     {text}                          연결·오류 등
 
-승인: 도구를 쓰기 전 `ask(request) -> Decision` 을 부른다. manager 가 화면·
+승인: 도구를 쓰기 전 `ask(request) -> Decision`을 부른다. manager가 화면·
 Inbox·Discord에 올리고, 먼저 온 답을 돌려준다.
 """
 

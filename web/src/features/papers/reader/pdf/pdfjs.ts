@@ -1,18 +1,18 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 
 /**
- * pdfjs 를 한 번만 불러와요.
+ * pdfjs를 한 번만 불러와요.
  * 워커는 번들에서 가져와요 — Monaco 때처럼 CDN으로 나가면 안 돼요.
  */
 let docPromise: Promise<PDFDocumentProxy | null> | null = null
 /** 지금 열어 둔 문서의 주소 — 다른 논문을 열면 앞의 것을 닫고 새로 열어요 */
 let docUrl = ''
-/** 정리는 로딩 작업이 맡아요 (문서에는 destroy 가 없어요) */
+/** 정리는 로딩 작업이 맡아요 (문서에는 destroy가 없어요) */
 let task: { destroy: () => Promise<void> } | null = null
 
 async function load(url: string): Promise<PDFDocumentProxy | null> {
   const pdfjs = await import('pdfjs-dist')
-  // ?url로 받으면 Vite 가 워커 파일을 번들에 넣고 같은 출처 주소를 줘요
+  // ?url로 받으면 Vite가 워커 파일을 번들에 넣고 같은 출처 주소를 줘요
   const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -21,8 +21,8 @@ async function load(url: string): Promise<PDFDocumentProxy | null> {
       url,
       /*
        * 글꼴과 CJK 문자표는 같은 출처에서 받아요 (외부 요청 0).
-       * vite.config.ts 의 pdfAssetsPlugin 이 이 자리에 넣어 줘요.
-       * 둘 다 쓰는 파일만 받아서, 라틴 문자 PDF 는 cmaps 를 안 받아요.
+       * vite.config.ts의 pdfAssetsPlugin이 이 자리에 넣어 줘요.
+       * 둘 다 쓰는 파일만 받아서, 라틴 문자 PDF는 cmaps를 안 받아요.
        */
       standardFontDataUrl: '/pdfjs/standard_fonts/',
       cMapUrl: '/pdfjs/cmaps/',

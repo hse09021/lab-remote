@@ -111,7 +111,7 @@ export function AiPanel({
         <div className={s.analyzeBar}>
           <span>
             {analyzing
-              ? 'Claude 가 PDF 를 읽고 하이라이트 · 참고문헌을 뽑는 중이에요… (1~3분)'
+              ? 'Claude가 PDF를 읽고 하이라이트 · 참고문헌을 뽑는 중이에요… (1~3분)'
               : analyzed
                 ? 'AI 하이라이트 · 참고문헌이 붙어 있어요'
                 : 'AI 하이라이트 · 인용 탭은 AI 분석을 하면 채워져요'}
@@ -142,7 +142,7 @@ export function AiPanel({
             </div>
           ) : (
             <div className={s.pad}>
-              <p className={s.todo}>{summaryRunning ? 'Claude 가 노트와 PDF 를 읽고 요약하는 중이에요… (1~2분)' : '아직 요약이 없어요.'}</p>
+              <p className={s.todo}>{summaryRunning ? 'Claude가 노트와 PDF를 읽고 요약하는 중이에요… (1~2분)' : '아직 요약이 없어요.'}</p>
               {onMakeSummary && !summaryRunning && (
                 <button type="button" className={s.makeSummary} onClick={onMakeSummary}>
                   요약 만들기
@@ -418,7 +418,7 @@ function MyNoteRow({
   )
 }
 
-/** 채팅 탭 — 이 논문에 묻기 (Claude 가 노트 · PDF 를 읽기 전용으로). 대화는 저장하지 않아요 */
+/** 채팅 탭 — 이 논문에 묻기 (Claude가 노트 · PDF를 읽기 전용으로). 대화는 저장하지 않아요 */
 function PaperChat({ paperId, context }: { paperId: string; context: string | null }) {
   const [log, setLog] = useState<{ role: 'user' | 'assistant'; text: string }[]>([])
   const [draft, setDraft] = useState('')
@@ -441,7 +441,7 @@ function PaperChat({ paperId, context }: { paperId: string; context: string | nu
     <div className={s.chatTab}>
       <div className={s.chatLog}>
         {context && <span className={s.contextChip}>{context}</span>}
-        {log.length === 0 && <p className={s.todo}>이 논문에 대해 물어보세요. 보내기를 누를 때만 Claude 가 노트와 PDF 를 읽고 답해요.</p>}
+        {log.length === 0 && <p className={s.todo}>이 논문에 대해 물어보세요. 보내기를 누를 때만 Claude가 노트와 PDF를 읽고 답해요.</p>}
         {log.map((m, i) => (
           <div key={i} className={m.role === 'user' ? s.chatUser : s.chatAnswer}>
             {m.text}

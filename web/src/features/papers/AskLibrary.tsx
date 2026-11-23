@@ -79,7 +79,7 @@ export function AskLibrary({ chat, offsetRight = 0 }: Props) {
 
           <div className={s.log} ref={logRef}>
             {live && messages.length === 0 && (
-              <div className={s.assistant}>예: "LoRA 계열 논문들이 rank 를 어떻게 정하는지 비교해 줘". 보내기를 누를 때만 Claude에게 가요.</div>
+              <div className={s.assistant}>예: "LoRA 계열 논문들이 rank를 어떻게 정하는지 비교해 줘". 보내기를 누를 때만 Claude에게 가요.</div>
             )}
             {messages.map((m, i) => (
               <div key={i} className={m.role === 'user' ? s.user : s.assistant}>
@@ -94,7 +94,7 @@ export function AskLibrary({ chat, offsetRight = 0 }: Props) {
                 ))}
               </div>
             ))}
-            {busy && <div className={s.assistant}>vault 를 읽는 중이에요… (1분쯤 걸릴 수 있어요)</div>}
+            {busy && <div className={s.assistant}>vault를 읽는 중이에요… (1분쯤 걸릴 수 있어요)</div>}
           </div>
 
           <div className={s.composer}>

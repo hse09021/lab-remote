@@ -197,7 +197,7 @@ export function NotePopover({
   )
 }
 
-/* ── 메뉴 아이콘 (목업 FocusReader 의 svg 그대로) ─────────── */
+/* ── 메뉴 아이콘 (목업 FocusReader의 svg 그대로) ─────────── */
 
 function Svg({ children, round }: { children: ReactNode; round?: boolean }) {
   return (

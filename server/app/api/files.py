@@ -1,7 +1,7 @@
 """/api/projects/{name}/files — 프로젝트 안 파일.
 
-`tree` 는 기준 폴더(프로젝트 루트나 그 안의 worktree, 루트 기준 상대 경로),
-`path` 는 그 기준 폴더 안의 상대 경로다.
+`tree`는 기준 폴더(프로젝트 루트나 그 안의 worktree, 루트 기준 상대 경로),
+`path`는 그 기준 폴더 안의 상대 경로다.
 """
 
 from __future__ import annotations
@@ -93,7 +93,7 @@ def download(name: str, path: str, tree: str = ""):
 
 @router.put("/projects/{name}/files/upload")
 async def upload(name: str, path: str, request: Request, tree: str = "", overwrite: bool = False):
-    """본문 그대로가 파일 내용이다 (multipart 를 쓰지 않는다)."""
+    """본문 그대로가 파일 내용이다 (multipart를 쓰지 않는다)."""
     _root, base = _base(name, tree)
     target = files.upload_target(base, path, overwrite=overwrite)
     fd, tmp = tempfile.mkstemp(prefix=".labremote-up-", dir=os.path.dirname(target))

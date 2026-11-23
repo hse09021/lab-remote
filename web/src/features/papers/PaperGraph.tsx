@@ -10,7 +10,7 @@ import { layoutGraph } from '@/lib/graphLayout'
 import { VaultDialog } from './VaultDialog'
 import s from './PaperGraph.module.css'
 
-/** 연결 종류 — 목업 PaperGraph 의 KIND */
+/** 연결 종류 — 목업 PaperGraph의 KIND */
 const KINDS: Array<{ id: GraphEdgeKind; label: string; color: string; dash: string; w: number }> = [
   { id: 'cite', label: '인용', color: 'var(--text-dim)', dash: '0', w: 1.5 },
   { id: 'use', label: '프로젝트에서 사용', color: 'var(--accent)', dash: '0', w: 2.5 },
@@ -24,7 +24,7 @@ const NOTE_COLOR = 'var(--purple)'
 
 const BOX = { pad: 30, padRight: 170 }
 
-/** 그래프 위 이름은 짧게 — "LoRA: Low-Rank …" 는 "LoRA"로. 전체 이름은 오른쪽 칸에 */
+/** 그래프 위 이름은 짧게 — "LoRA: Low-Rank …"는 "LoRA"로. 전체 이름은 오른쪽 칸에 */
 function shortName(n: GraphNode) {
   if (n.kind !== 'paper') return n.name.length > 28 ? `${n.name.slice(0, 27)}…` : n.name
   const head = n.name.split(/:\s/)[0]
@@ -155,7 +155,7 @@ export default function PaperGraph() {
         .filter((x): x is { other: GraphNode; why: string; kind: GraphEdgeKind } => x !== null)
     : []
 
-  // "Claude에게 묻기" 는 ADE 새 세션에 질문을 채워 두기만 해요 — 보내기는 사람이 눌러요
+  // "Claude에게 묻기"는 ADE 새 세션에 질문을 채워 두기만 해요 — 보내기는 사람이 눌러요
   const askProject =
     (sel?.kind === 'project' ? sel.name : '') ||
     links.find((l) => l.other.kind === 'project')?.other.name ||
@@ -268,7 +268,7 @@ export default function PaperGraph() {
           </span>
         </div>
 
-        <p className={s.hint}>인용은 참고문헌에서 읽고, 메모 연결은 vault 의 [[링크]] 를 따라가요. 노드 크기는 연결 수예요.</p>
+        <p className={s.hint}>인용은 참고문헌에서 읽고, 메모 연결은 vault의 [[링크]]를 따라가요. 노드 크기는 연결 수예요.</p>
         <button type="button" className={s.vault} onClick={() => setVaultOpen(true)} title={vault}>
           vault · <span className={s.mono}>{vault}</span>
         </button>
@@ -296,7 +296,7 @@ export default function PaperGraph() {
             <div className={s.empty}>
               <b>그래프에 나올 게 아직 없어요</b>
               <span>
-                vault 의 Papers/ 폴더에 논문 노트(MD)를 두면 여기에 나와요. 앞쪽 메타의 cites 가 인용, 메모의 [[링크]] 가 메모
+                vault의 Papers/ 폴더에 논문 노트(MD)를 두면 여기에 나와요. 앞쪽 메타의 cites가 인용, 메모의 [[링크]]가 메모
                 연결이에요.
               </span>
               <Button variant="primary" size="md" onClick={() => setVaultOpen(true)}>
@@ -424,7 +424,7 @@ export default function PaperGraph() {
               >
                 Claude에게 묻기
               </button>
-              {!askProject && <span className={s.askText}>등록한 프로젝트가 있어야 물을 수 있어요 (ADE 는 프로젝트 안에서 돌아요).</span>}
+              {!askProject && <span className={s.askText}>등록한 프로젝트가 있어야 물을 수 있어요 (ADE는 프로젝트 안에서 돌아요).</span>}
             </div>
           </>
         ) : (

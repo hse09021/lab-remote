@@ -151,7 +151,7 @@ export const useAddWorktree = (name: string) =>
     send<{ path: string; rel: string; branch: string }>('POST', `/projects/${enc(name)}/git/worktrees`, v),
   )
 
-/** 정리 — 폴더만 지우고 브랜치는 남겨요. 커밋 안 한 변경이 있으면 git 이 거절해요 */
+/** 정리 — 폴더만 지우고 브랜치는 남겨요. 커밋 안 한 변경이 있으면 git이 거절해요 */
 export const useRemoveWorktree = (name: string) =>
   useProjectMutation((v: { rel: string }) =>
     send<{ removed: string }>('POST', `/projects/${enc(name)}/git/worktrees/remove`, v),

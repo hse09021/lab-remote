@@ -1,15 +1,15 @@
 """Claude 연결 부품 — Python `claude-agent-sdk`로 사용자가 **설치·로그인해 둔**
-Claude Code 를 부른다(PLAN 1.2).
+Claude Code를 부른다(PLAN 1.2).
 
 - `cli_path`로 사용자의 `claude`(PATH · ~/.local/bin)를 쓴다. SDK에 딸린 사본을
   쓰지 않는다.
 - 읽을 설정: `setting_sources=["user", "project", "local"]` — 터미널에서 쓸 때와
-  같게(사람이 고름, 2026-11-23). lab.remote 는 설정 파일을 **쓰지 않는다.**
-- 권한: SDK 의 `can_use_tool` 콜백으로 받아 manager에 넘긴다. bypass 계열 모드는
+  같게(사람이 고름, 2026-11-23). lab.remote는 설정 파일을 **쓰지 않는다.**
+- 권한: SDK의 `can_use_tool` 콜백으로 받아 manager에 넘긴다. bypass 계열 모드는
   쓰지 않는다.
 - `AskUserQuestion`(객관식 질문)은 승인과 같은 길(`can_use_tool`)로 받아, 답을
   `updated_input={"questions": 원래 질문, "answers": {질문 글: 고른 label}}`로 돌려준다.
-- Ultracode 는 Claude Code 설정 키(`"ultracode": true`)다. 세션마다 `settings`
+- Ultracode는 Claude Code 설정 키(`"ultracode": true`)다. 세션마다 `settings`
   (인라인 JSON → `--settings`)로 켠다 — 사용자 설정 파일을 쓰지 않는다
   (code.claude.com/docs/en/model-config · settings-reference).
 
@@ -35,7 +35,7 @@ __all__ = ["ClaudeBackend", "MODE_MAP", "EFFORTS", "cli_path", "probe_info", "pr
 MODE_MAP = {"manual": "default", "edit": "acceptEdits", "plan": "plan", "auto": "auto"}
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 SETTING_SOURCES = ["user", "project", "local"]
-#: 끄는 도구 — 없다. AskUserQuestion(Claude 의 객관식 질문)도 `can_use_tool`로 와서
+#: 끄는 도구 — 없다. AskUserQuestion(Claude의 객관식 질문)도 `can_use_tool`로 와서
 #: 화면의 질문 카드로 답한다(code.claude.com/docs/en/agent-sdk/user-input).
 DISALLOWED: list[str] = []
 #: 질문 도구 이름
@@ -44,7 +44,7 @@ ASK_TOOL = "AskUserQuestion"
 #: 할 일 도구는 Opus 4.7 · Sonnet 4.6 · Haiku 4.5 이하 모델에서만 기본으로 켜지고,
 #: `allowed_tools`에 할 일 도구 이름이 하나라도 있으면 그 세션은 켜진다.
 #: 어느 계열(TodoWrite / Task*)이 나올지는 Claude Code 설정(CLAUDE_CODE_ENABLE_TASKS)
-#:에 따라 다르므로 둘 다 넣는다 — 실측(2026-11-23, 2.1.318)에서는 TodoWrite 가 나왔다.
+#:에 따라 다르므로 둘 다 넣는다 — 실측(2026-11-23, 2.1.318)에서는 TodoWrite가 나왔다.
 #: 이 도구들은 화면의 할 일 목록만 고친다(파일·명령에 손대지 않음) — 승인 없이 둔다.
 ALLOWED = ["TodoWrite", "TaskCreate", "TaskUpdate", "TaskGet", "TaskList"]
 OUTPUT_MAX = 4000
@@ -123,10 +123,10 @@ async def probe_info(cwd: str) -> dict:
 
 
 async def probe_account(cwd: str) -> dict:
-    """로그인했나 — 연결만 해서 Claude Code 가 알려 주는 계정 정보를 본다.
+    """로그인했나 — 연결만 해서 Claude Code가 알려 주는 계정 정보를 본다.
 
     자격 증명 파일을 읽지 않는다. **이메일은 돌려주지 않고** 구독 종류만 쓴다.
-    (확인: 연결 직후 `get_server_info()["account"]`에 subscriptionType · apiProvider 가
+    (확인: 연결 직후 `get_server_info()["account"]`에 subscriptionType · apiProvider가
     온다 — 2026-11-23, Claude Code 2.1.318. 로그아웃 상태의 모양은 재 보지 않았다.)
     """
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
@@ -154,7 +154,7 @@ class ClaudeBackend(AgentBackend):
         self._idle.set()
         self._stderr: list[str] = []
         self.info: dict = {}
-        #: 할 일 — Claude Code 2.1.x 는 TaskCreate/TaskUpdate로 관리한다(실행 파일의
+        #: 할 일 — Claude Code 2.1.x는 TaskCreate/TaskUpdate로 관리한다(실행 파일의
         #: 스키마로 확인: subject · status pending/in_progress/completed/deleted)
         self._tasks: dict[str, dict] = {}
         self._creating: dict[str, str] = {}  # tool_use_id → subject
@@ -167,7 +167,7 @@ class ClaudeBackend(AgentBackend):
         from claude_agent_sdk import ClaudeAgentOptions
         from claude_agent_sdk.types import CanUseToolShadowedWarning
 
-        # TodoWrite 를 허용 목록에 넣어서 나는 경고 — 일부러 그렇게 했다
+        # TodoWrite를 허용 목록에 넣어서 나는 경고 — 일부러 그렇게 했다
         warnings.filterwarnings("ignore", category=CanUseToolShadowedWarning)
 
         cfg = self.config

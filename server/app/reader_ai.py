@@ -1,4 +1,4 @@
-"""리더 AI — 누를 때만 Claude 가 그 논문(노트 · PDF)을 읽기 전용으로 읽고 답한다.
+"""리더 AI — 누를 때만 Claude가 그 논문(노트 · PDF)을 읽기 전용으로 읽고 답한다.
 
 세 가지:
 - 설명 · 질문 (`explain`): 섹션 · 고른 글 · 질문에 대한 풀이. 대화창에 나온다.
@@ -112,7 +112,7 @@ def analysis(pid: str) -> dict | None:
 
 
 def _prompt(kind: str, p: dict, req: dict) -> tuple[str, dict]:
-    base = [f"이 폴더는 연구자의 논문 vault 예요. 아래 논문을 읽고 답해 주세요. 파일을 고치지 말고 읽기만 하세요.", _where(p), ""]
+    base = [f"이 폴더는 연구자의 논문 vault예요. 아래 논문을 읽고 답해 주세요. 파일을 고치지 말고 읽기만 하세요.", _where(p), ""]
     text = str(req.get("text") or "")[:3000]
     page = int(req.get("page") or 0)
     hist = [f"[{'질문' if h.get('role') == 'user' else '답'}] {str(h.get('text') or '')[:1200]}" for h in (req.get("history") or [])[-6:] if isinstance(h, dict)]
@@ -130,9 +130,9 @@ def _prompt(kind: str, p: dict, req: dict) -> tuple[str, dict]:
         base += [f"질문: {str(req.get('question') or '')[:2000]}", "답은 paragraphs에, 제목은 짧게."]
         return "\n".join(base), EXPLAIN
     if kind == "translate":
-        return "\n".join([f"이 구절을 한국어로 번역해 주세요. 필요하면 {_where(p)} 를 읽어 맥락을 확인하세요.", f"\"{text}\""]), TRANSLATE
+        return "\n".join([f"이 구절을 한국어로 번역해 주세요. 필요하면 {_where(p)}를 읽어 맥락을 확인하세요.", f"\"{text}\""]), TRANSLATE
     base += [
-        "이 논문 PDF 를 읽고:",
+        "이 논문 PDF를 읽고:",
         "1. 본문에서 핵심 주장(core) · 방법(method) · 결과(result) · 확인이 필요한 곳(check: 숫자가 안 맞거나 근거가 약한 곳) 구절을 그대로 옮겨 적으세요. 쪽 번호도.",
         "2. 참고문헌 목록을 번호 순으로 적고, 본문이 왜 인용했는지 한 줄씩.",
         "구절은 PDF에 있는 글자 그대로여야 해요 (화면이 그 글자를 찾아 칠해요).",

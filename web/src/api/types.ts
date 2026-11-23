@@ -35,7 +35,7 @@ export interface Paper {
   access: string
   /** vault 안 요약 MD 경로. 없으면 null */
   path: string | null
-  /** vault에 PDF 가 있나 (실제 API) */
+  /** vault에 PDF가 있나 (실제 API) */
   hasPdf?: boolean
   /** arXiv 번호 (실제 API) */
   arxiv?: string
@@ -304,7 +304,7 @@ export interface Topic {
   qs: TopicQuestion[]
 }
 
-/** 본문에서 선택했다고 가정하는 자리 (PDF 는 텍스트 레이어가 없어서) */
+/** 본문에서 선택했다고 가정하는 자리 (PDF는 텍스트 레이어가 없어서) */
 export interface SelectionSpot {
   page: number
   box: PtRect

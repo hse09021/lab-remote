@@ -7,7 +7,7 @@ import { agoShort } from '@/lib/time'
 import { DiffView } from './ApprovalCard'
 import s from './Lanes.module.css'
 
-/* Dashboard 의 에이전트 부분 — 왼쪽 목록 · 숫자 · 답 필요/작업 중/끝남 레인. */
+/* Dashboard의 에이전트 부분 — 왼쪽 목록 · 숫자 · 답 필요/작업 중/끝남 레인. */
 
 export const adeHref = (x: { project: string; id: string }) =>
   `/projects/${encodeURIComponent(x.project)}/ade?session=${encodeURIComponent(x.id)}`
@@ -114,7 +114,7 @@ function SessionCard({ x, kind }: { x: AgentSession; kind: 'ask' | 'work' | 'don
 export function QuickAllow({ p, via = 'Dashboard' }: { p: PendingApproval; via?: string }) {
   const [open, setOpen] = useState(false)
   const answer = useAnswer()
-  // 질문은 보기를 골라야 해서 "보고 허용" 이 없어요 — ADE 의 질문 카드에서 답해요
+  // 질문은 보기를 골라야 해서 "보고 허용"이 없어요 — ADE의 질문 카드에서 답해요
   if (p.tool === 'AskUserQuestion') return null
   if (!open) {
     return (

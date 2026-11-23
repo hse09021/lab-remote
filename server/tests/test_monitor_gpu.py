@@ -1,7 +1,7 @@
 """GPU 상태와 드라이버 불일치.
 
 **조회 실패가 정상 경로다.** ①의 실측 중에 실제로 당했다 — 우분투 자동
-업데이트가 드라이버를 올리고 재부팅을 안 해서 `nvidia-smi` 가 통째로 죽었고,
+업데이트가 드라이버를 올리고 재부팅을 안 해서 `nvidia-smi`가 통째로 죽었고,
 그 상태로 며칠 지났다.
 """
 
@@ -14,7 +14,7 @@ OK_LINE = "0, NVIDIA GeForce RTX 5080, 94, 21300, 16303, 71, 595.99.02\n"
 
 @pytest.fixture()
 def fake_run(monkeypatch):
-    """`nvidia-smi` 를 가짜로 바꿔 끼운다."""
+    """`nvidia-smi`를 가짜로 바꿔 끼운다."""
     calls = []
 
     def install(answers):
@@ -70,7 +70,7 @@ def test_빈_출력은_빈_목록():
 
 
 def test_nvidia_smi_가_없으면_정상_반환(fake_run):
-    fake_run({"full": (127, "", "nvidia-smi 가 없어요")})
+    fake_run({"full": (127, "", "nvidia-smi가 없어요")})
     got = G.probe()
     assert got["available"] is False
     assert "없어요" in got["reason"]
@@ -101,7 +101,7 @@ def test_정상이면_장치가_나온다(fake_run):
 @pytest.mark.parametrize(
     "error,expect",
     [
-        (FileNotFoundError(), "nvidia-smi 가 없어요"),
+        (FileNotFoundError(), "nvidia-smi가 없어요"),
         (OSError("프로세스를 못 띄웠어요"), "못 띄웠어요"),
         (G.subprocess.TimeoutExpired("nvidia-smi", 10), "nvidia-smi"),
     ],
@@ -189,7 +189,7 @@ def test_재부팅_대기_파일이_없으면_조용하다(monkeypatch, tmp_path
 
 
 def test_실제_조회가_던지지_않는다():
-    """GPU 가 있든 없든 예외 없이 상태를 돌려줘야 한다."""
+    """GPU가 있든 없든 예외 없이 상태를 돌려줘야 한다."""
     got = G.probe()
     assert set(got) == {"available", "reason", "devices", "driver"}
     assert isinstance(got["available"], bool)

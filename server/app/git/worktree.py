@@ -1,7 +1,7 @@
 """worktree 만들기 — `<프로젝트>/.labremote/worktrees/<이름>`에만 만든다(PLAN 4.1).
 
-정리(`remove`)는 사람이 누르고 한 번 더 확인했을 때만 부른다. `--force` 는 쓰지 않는다 —
-커밋 안 한 변경이 있으면 git 이 거절하고 그 문구를 그대로 보여 준다. 브랜치는 지우지 않는다.
+정리(`remove`)는 사람이 누르고 한 번 더 확인했을 때만 부른다. `--force`는 쓰지 않는다 —
+커밋 안 한 변경이 있으면 git이 거절하고 그 문구를 그대로 보여 준다. 브랜치는 지우지 않는다.
 """
 
 from __future__ import annotations
@@ -28,12 +28,12 @@ def slug(branch: str) -> str:
 
 
 def add(root: str, branch: str) -> dict:
-    """새 브랜치로 worktree 를 만든다. 브랜치가 이미 있으면 그 브랜치로."""
+    """새 브랜치로 worktree를 만든다. 브랜치가 이미 있으면 그 브랜치로."""
     branch = (branch or "").strip()
     if not BRANCH_RE.match(branch) or branch.endswith(".lock"):
         raise WorktreeError(f"브랜치 이름이 올바르지 않아요: {branch!r}")
     if not ops.inside_worktree(root):
-        raise WorktreeError("git 저장소가 아니라 worktree 를 만들 수 없어요.")
+        raise WorktreeError("git 저장소가 아니라 worktree를 만들 수 없어요.")
     projects.ensure_labremote(root)
     base = os.path.join(projects.labremote_dir(root), "worktrees")
     os.makedirs(base, exist_ok=True)
@@ -65,7 +65,7 @@ def remove(root: str, rel: str) -> dict:
         raise WorktreeError(str(exc)) from None
     base = paths.real(os.path.join(projects.labremote_dir(root), "worktrees"))
     if not paths.is_inside(base, target) or target == base:
-        raise WorktreeError("lab.remote 가 만든 worktree(.labremote/worktrees/)만 정리해요.")
+        raise WorktreeError("lab.remote가 만든 worktree(.labremote/worktrees/)만 정리해요.")
     from .. import runs
 
     if any(paths.is_inside(target, d) for d in runs.busy_dirs(root)):

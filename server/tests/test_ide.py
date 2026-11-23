@@ -83,7 +83,7 @@ def test_충돌이면_되돌린다(repo):
     assert _git(repo, "status", "--porcelain") == ""  # 반쯤 합쳐진 채로 두지 않는다
 
 
-pytestmark_tmux = pytest.mark.skipif(not runs.tmux_bin(), reason="tmux 가 없어요")
+pytestmark_tmux = pytest.mark.skipif(not runs.tmux_bin(), reason="tmux가 없어요")
 
 
 @pytestmark_tmux
@@ -109,8 +109,8 @@ def test_웹소켓_터미널(project, tmp_path):
     client = TestClient(main.create_app(web_dist=str(tmp_path)), base_url="http://127.0.0.1:8000")
     try:
         terminals.create("demo")
-        # Origin 이 없거나 다른 사이트면 거절 — cross-site WebSocket hijacking
-        # (TestClient 의 WebSocket 은 Host 를 testserver로 보내서 직접 넣는다)
+        # Origin이 없거나 다른 사이트면 거절 — cross-site WebSocket hijacking
+        # (TestClient의 WebSocket은 Host를 testserver로 보내서 직접 넣는다)
         for headers in ({"host": "127.0.0.1:8000"}, {"host": "127.0.0.1:8000", "origin": "https://evil.example"}):
             with pytest.raises(Exception):
                 with client.websocket_connect("/api/terminals/ws?project=demo&name=t-1", headers=headers) as ws:
@@ -161,7 +161,7 @@ def test_worktree_만들기와_정리(repo, tmp_path):
     assert rel == ".labremote/worktrees/wd"
     assert client.post("/api/projects/demo/git/worktrees", json={"branch": "-x"}, headers=H).status_code == 400
 
-    # 커밋 안 한 변경이 있으면 git 이 거절한다 (--force 안 씀)
+    # 커밋 안 한 변경이 있으면 git이 거절한다 (--force 안 씀)
     with open(os.path.join(repo, rel, "src", "train.py"), "a") as fh:
         fh.write("x = 1\n")
     r = client.post("/api/projects/demo/git/worktrees/remove", json={"rel": rel}, headers=H)
@@ -189,6 +189,6 @@ def test_최근_머지(repo, monkeypatch):
     got = gitfeed.merges()
     assert got["week"] == 1 and got["today"] == 1
     assert got["items"][0]["project"] == "demo" and got["items"][0]["branch"] == "exp/feed"
-    # gh 가 없으면 없다고 말한다
+    # gh가 없으면 없다고 말한다
     monkeypatch.setattr(gitfeed.shutil, "which", lambda name: None)
     assert gitfeed.prs()["available"] is False

@@ -7,8 +7,8 @@ import s from './Scenario.module.css'
 
 /**
  * Scenario — 보기 전용 (IDE 왼쪽 · ADE 오른쪽이 같은 컴포넌트).
- * 사람이 "그리기" 를 눌렀을 때만 에이전트가 읽기만 해서 그려요. 파일이 바뀌어도 저절로
- * 다시 그리지 않고 알려만 줘요. "실행 탭에 채우기" 는 명령만 채우고 실행은 직접 눌러요.
+ * 사람이 "그리기"를 눌렀을 때만 에이전트가 읽기만 해서 그려요. 파일이 바뀌어도 저절로
+ * 다시 그리지 않고 알려만 줘요. "실행 탭에 채우기"는 명령만 채우고 실행은 직접 눌러요.
  */
 export function ScenarioView({ project, onFill }: { project: string; onFill: (command: string) => void }) {
   const q = useQuery(scenarioQuery(project))
@@ -28,7 +28,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
       {q.isPending && <span className={s.muted}>불러오는 중이에요…</span>}
       {sc && (
         <span className={s.muted}>
-          Claude 가 {new Date(sc.createdAt * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}에 그림 · 파일{' '}
+          Claude가 {new Date(sc.createdAt * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}에 그림 · 파일{' '}
           {Object.keys(sc.hashes).length}개 분석 · <span className={s.mono}>{data?.path}</span>
         </span>
       )}
@@ -39,7 +39,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
       {sc && changed.length > 0 && (
         <div className={s.warn}>
           그린 뒤로 <span className={s.mono}>{changed.slice(0, 3).join(', ')}</span>
-          {changed.length > 3 ? ` 외 ${changed.length - 3}개` : ''} 가 바뀌었어요. 저절로 다시 그리지는 않아요.
+          {changed.length > 3 ? ` 외 ${changed.length - 3}개` : ''}가 바뀌었어요. 저절로 다시 그리지는 않아요.
         </div>
       )}
       <button type="button" className={s.drawBtn} disabled={running || draw.isPending} onClick={() => setAsking(true)}>
@@ -90,7 +90,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
         </ol>
       )}
       <p className={s.footer}>
-        순서만 보여 줘요. 단계를 이어서 자동으로 돌리지 않아요. "실행 탭에 채우기" 는 명령만 채우고, 실행은 직접 눌러요.
+        순서만 보여 줘요. 단계를 이어서 자동으로 돌리지 않아요. "실행 탭에 채우기"는 명령만 채우고, 실행은 직접 눌러요.
       </p>
 
       <Dialog

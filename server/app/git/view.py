@@ -1,6 +1,6 @@
 """git 읽기 — 화면용 상태·diff·브랜치·worktree.
 
-모든 호출이 `ops.run()` 을 지난다(안전 옵션 + `.git` 검사). 여기서는 **읽기만**
+모든 호출이 `ops.run()`을 지난다(안전 옵션 + `.git` 검사). 여기서는 **읽기만**
 한다 — 커밋·합치기·worktree 만들기/정리는 뒤 단계에서 붙는다.
 
 git 저장소가 아니거나 `.git` 검사에 걸리면 예외 대신 `{"state": ...}`로
@@ -53,7 +53,7 @@ def _label(xy: str) -> str:
 
 
 def _state_of(root: str) -> dict | None:
-    """git 을 못 쓰는 사유. 쓸 수 있으면 `None`."""
+    """git을 못 쓰는 사유. 쓸 수 있으면 `None`."""
     if not os.path.isdir(root):
         return {"state": "missing", "reason": "폴더가 없어요"}
     try:
@@ -172,7 +172,7 @@ def marks_for(base: str, rel_dir: str) -> dict[str, str]:
 
 
 def diff(root: str, path: str = "", *, staged: bool = False) -> dict:
-    """unified diff. 외부 diff·textconv 를 끈다. 너무 길면 자른다."""
+    """unified diff. 외부 diff·textconv를 끈다. 너무 길면 자른다."""
     bad = _state_of(root)
     if bad:
         return bad
@@ -191,7 +191,7 @@ def diff(root: str, path: str = "", *, staged: bool = False) -> dict:
 
 
 def main_branch(root: str) -> str:
-    """"main 대비" 의 main. `main` → `master` → 첫 worktree 의 브랜치."""
+    """"main 대비"의 main. `main` → `master` → 첫 worktree의 브랜치."""
     names = ops.branches(root)
     for candidate in ("main", "master"):
         if candidate in names:
@@ -240,7 +240,7 @@ def worktrees(root: str) -> dict:
     def worked_on(branch: str) -> bool:
         """만든 뒤 커밋이 있었나 — 막 만든 브랜치는 main과 같은 커밋이라 `--merged`에 걸린다.
 
-        reflog 가 "만들었음" 한 줄뿐이면 아직 아무 일도 안 한 것이다. reflog 가 없으면 판단하지 않는다(합쳐짐으로 둔다).
+        reflog가 "만들었음" 한 줄뿐이면 아직 아무 일도 안 한 것이다. reflog가 없으면 판단하지 않는다(합쳐짐으로 둔다).
         """
         try:
             out = ops.run(root, ["reflog", "show", "--format=%H", f"refs/heads/{branch}", "--"])

@@ -1,9 +1,9 @@
-"""git 쓰기 — 커밋 · main에 합치기 (IDE · ADE 의 소스 제어).
+"""git 쓰기 — 커밋 · main에 합치기 (IDE · ADE의 소스 제어).
 
-모든 호출이 `ops.run()` 을 지난다(안전 옵션 + `.git` 검사, 훅 안 돎).
-**push · force · reset 은 만들지 않는다.** 합치기는 main worktree 가 깨끗할 때만,
+모든 호출이 `ops.run()`을 지난다(안전 옵션 + `.git` 검사, 훅 안 돎).
+**push · force · reset은 만들지 않는다.** 합치기는 main worktree가 깨끗할 때만,
 충돌이 나면 바로 되돌린다(`merge --abort`) — 반쯤 합쳐진 채로 두지 않는다.
-PR 은 `gh` 가 있을 때만(지금 이 컴퓨터엔 없다 — 화면에서 버튼을 숨긴다).
+PR은 `gh`가 있을 때만(지금 이 컴퓨터엔 없다 — 화면에서 버튼을 숨긴다).
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ def gh_available() -> bool:
 
 
 def commit(base: str, message: str, paths_list: list[str] | None = None) -> dict:
-    """이 worktree 의 변경을 커밋한다. `paths_list` 가 없으면 바뀐 것 전부(gitignore 제외)."""
+    """이 worktree의 변경을 커밋한다. `paths_list`가 없으면 바뀐 것 전부(gitignore 제외)."""
     message = (message or "").strip()
     if not message:
         raise ActionError("커밋 메시지를 적어 주세요.")
@@ -49,7 +49,7 @@ def commit(base: str, message: str, paths_list: list[str] | None = None) -> dict
 
 
 def merge_to_main(root: str, branch: str) -> dict:
-    """`branch` 를 main에 합친다(--no-ff). main worktree에서 한다."""
+    """`branch`를 main에 합친다(--no-ff). main worktree에서 한다."""
     trees = view.worktrees(root)
     if trees.get("state") != "ok":
         raise ActionError(trees.get("reason") or "git 저장소가 아니에요.")
@@ -58,7 +58,7 @@ def merge_to_main(root: str, branch: str) -> dict:
         raise ActionError("합칠 브랜치를 골라 주세요.")
     host = next((w for w in trees["worktrees"] if w["branch"] == main), None)
     if host is None:
-        raise ActionError(f"{main} 이 체크아웃된 worktree 가 없어요. 프로젝트 루트를 {main}으로 바꿔 주세요.")
+        raise ActionError(f"{main}이 체크아웃된 worktree가 없어요. 프로젝트 루트를 {main}으로 바꿔 주세요.")
     path = paths.real(host["path"])
     status = view.status(path)
     if status.get("state") != "ok" or status["changes"]:

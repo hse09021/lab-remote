@@ -1,4 +1,4 @@
-"""라이브러리에 묻기 — vault 를 **읽기만** 해서 답한다 (2026-11-24 결정).
+"""라이브러리에 묻기 — vault를 **읽기만** 해서 답한다 (2026-11-24 결정).
 
 - 사람이 보내기를 눌렀을 때만 돈다. 에이전트를 vault 폴더에서 계획 모드로, 도구는 읽기만
   (`Read` · `Glob` · `Grep`) 열고, 정해진 JSON 모양(답 + 근거 논문)으로 답하게 한다.
@@ -52,16 +52,16 @@ class AskError(ValueError):
 
 def _prompt(question: str, history: list[dict], listing: list[dict]) -> str:
     lines = [
-        "이 폴더는 연구자의 논문 vault(Obsidian)예요. Papers/*.md 가 논문 노트(앞쪽 메타 + 초록 · 메모),",
-        "Papers/pdf/*.pdf 가 원문이고, 나머지 MD 는 연구자의 메모예요.",
+        "이 폴더는 연구자의 논문 vault(Obsidian)예요. Papers/*.md가 논문 노트(앞쪽 메타 + 초록 · 메모),",
+        "Papers/pdf/*.pdf가 원문이고, 나머지 MD는 연구자의 메모예요.",
         "",
         "규칙:",
-        "- vault 의 파일을 읽어서 확인한 내용으로만 답하세요. 모르면 모른다고 하세요. 지어내지 마세요.",
-        "- 먼저 노트(MD)를 보고, 필요할 때만 PDF 를 읽으세요.",
+        "- vault의 파일을 읽어서 확인한 내용으로만 답하세요. 모르면 모른다고 하세요. 지어내지 마세요.",
+        "- 먼저 노트(MD)를 보고, 필요할 때만 PDF를 읽으세요.",
         "- 파일을 고치거나 명령을 돌리지 말고 읽기만 하세요.",
         "- 답은 한국어 해요체로 짧고 분명하게. 근거로 쓴 논문은 sources에 노트 파일 이름으로 적으세요.",
         "",
-        "vault 의 논문 (파일 이름 · 제목):",
+        "vault의 논문 (파일 이름 · 제목):",
     ]
     lines += [f"- {p['id']} · {p['title']}" for p in listing[:300]]
     if history:
@@ -86,7 +86,7 @@ async def _ask_agent(root: str, prompt: str, model: str, *, query_fn=None) -> tu
 
 
 def _sources(raw: list, listing: list[dict]) -> list[dict]:
-    """근거를 vault 의 실제 논문으로 — 파일 이름 · 제목 · 경로로 적어도 찾는다. 없는 건 버린다."""
+    """근거를 vault의 실제 논문으로 — 파일 이름 · 제목 · 경로로 적어도 찾는다. 없는 건 버린다."""
     alias: dict[str, dict] = {}
     for p in listing:
         for key in (p["id"], p["title"], os.path.basename(str(p.get("path") or "")).removesuffix(".md")):

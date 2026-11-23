@@ -66,7 +66,7 @@ def test_보내면_sent_로_적힌다(conn, monkeypatch):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster()
     result = notifier.send(
-        conn, "failure", project="p", title="EXP-001 이 실패했어요", poster=poster
+        conn, "failure", project="p", title="EXP-001이 실패했어요", poster=poster
     )
     assert result["sent"] is True
     assert N.get(conn, result["id"])["state"] == "sent"
@@ -76,7 +76,7 @@ def test_보내면_sent_로_적힌다(conn, monkeypatch):
 def test_쿨다운_안에서는_한_번만_보낸다(conn, monkeypatch):
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.test/x")
     poster = Poster()
-    kw = dict(project="p", subject="EXP-001", title="EXP-001 이 실패했어요", poster=poster)
+    kw = dict(project="p", subject="EXP-001", title="EXP-001이 실패했어요", poster=poster)
     first = notifier.send(conn, "failure", now_ts=1000.0, **kw)
     second = notifier.send(conn, "failure", now_ts=1001.0, **kw)
     assert first["sent"] is True
@@ -167,11 +167,11 @@ def test_종류별_채널로_보낸다(conn, monkeypatch):
     assert "discord.test" not in str(dict(row))
 
 
-# --- 🔑 Discord 가 파이썬 기본 User-Agent 를 막는다 (실측 2026-11-05) --------
+# --- 🔑 Discord가 파이썬 기본 User-Agent를 막는다 (실측 2026-11-05) --------
 
 
 def test_고정_User_Agent_를_보낸다(monkeypatch):
-    """같은 URL에 `curl` 은 204 인데 `urllib` 기본값은 403 이었다.
+    """같은 URL에 `curl`은 204 인데 `urllib` 기본값은 403 이었다.
 
     `HTTP Error 403: Forbidden` 때문에 **승인 알림이 한 건도 안 갔다.**
     배관은 돌고 있었고(훅이 전송을 시도하고 결과를 기록했다) 헤더만
@@ -203,7 +203,7 @@ def test_고정_User_Agent_를_보낸다(monkeypatch):
     got = notify.send_payload({"content": "x"})
 
     assert got["sent"] is True and got["status"] == 204
-    # urllib 은 헤더 이름을 Title-Case로 바꾼다
+    # urllib은 헤더 이름을 Title-Case로 바꾼다
     assert seen["headers"].get("User-agent") == notify.USER_AGENT
     assert seen["headers"].get("Content-type") == "application/json"
 

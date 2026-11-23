@@ -35,7 +35,7 @@ export interface ScheduleSeed {
 }
 
 /**
- * 예약 만들기 · 고치기 — Dashboard Schedule과 IDE 실행 탭의 "시간 정해서 실행…" 이 같은 창을 써요.
+ * 예약 만들기 · 고치기 — Dashboard Schedule과 IDE 실행 탭의 "시간 정해서 실행…"이 같은 창을 써요.
  * 시각으로만 걸어요(연쇄 예약 없음).
  */
 export function ScheduleDialog({
@@ -171,7 +171,7 @@ export function ScheduleDialog({
       </div>
       <span>
         {kind === 'command'
-          ? '그때 GPU 가 바쁘면 끝날 때까지 기다렸다가 시작하고 알려요.'
+          ? '그때 GPU가 바쁘면 끝날 때까지 기다렸다가 시작하고 알려요.'
           : '그 시각에 세션을 열고 요청만 보내요. 승인이 필요하면 거기서 멈춰요.'}{' '}
         서버가 꺼져 있으면 돌지 않아요.
       </span>

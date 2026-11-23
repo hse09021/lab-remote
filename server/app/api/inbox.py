@@ -125,7 +125,7 @@ def test_send():
 
 @router.get("/dashboard/git")
 def git_feed():
-    """열린 PR(gh 가 있을 때) · 최근 머지 — 느려서 Dashboard 본문과 따로, 60초 캐시."""
+    """열린 PR(gh가 있을 때) · 최근 머지 — 느려서 Dashboard 본문과 따로, 60초 캐시."""
     from .. import gitfeed
 
     return gitfeed.feed()

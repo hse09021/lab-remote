@@ -1,8 +1,8 @@
 """🧪 실행·설치에 쓸 conda 환경이 **lab.remote 자신의 환경이 아닌지.**
 
 `.pth` 파일은 **인터프리터가 뜰 때 실행된다.** lab.remote 서버는 `labremote`
-환경에서, `conda` 명령은 `base` 의 파이썬으로 돈다. 그 둘에 실험용 패키지를
-깔면 서버나 conda 가 뜰 때 임의 코드가 돈다 — 그래서 막는다.
+환경에서, `conda` 명령은 `base`의 파이썬으로 돈다. 그 둘에 실험용 패키지를
+깔면 서버나 conda가 뜰 때 임의 코드가 돈다 — 그래서 막는다.
 """
 
 import os
@@ -34,7 +34,7 @@ def fake_conda(tmp_path, monkeypatch):
 def test_우리_환경을_거부한다(fake_conda):
     got = C.check("labremote")
     assert got["ok"] is False
-    assert "lab.remote 가 도는 환경" in got["reason"]
+    assert "lab.remote가 도는 환경" in got["reason"]
     assert got["prefix"] == fake_conda["ours"]
 
 
@@ -46,7 +46,7 @@ def test_base_를_거부한다(fake_conda):
 
 
 def test_conda_설치_폴더를_가리키면_거부한다(fake_conda, monkeypatch):
-    """`<root>/envs/<이름>` 이 루트 자신이 되는 경우는 없지만, `CONDA_ENVS_PATH`
+    """`<root>/envs/<이름>`이 루트 자신이 되는 경우는 없지만, `CONDA_ENVS_PATH`
     로 루트를 가리킬 수 있다."""
     monkeypatch.setenv("CONDA_ENVS_PATH", os.path.dirname(fake_conda["root"]))
     got = C.check(os.path.basename(fake_conda["root"]))
@@ -87,8 +87,8 @@ def test_아직_없는_환경도_통과한다(fake_conda):
 
 
 def test_실행하지_않고_경로를_푼다(fake_conda, monkeypatch):
-    """`conda run -n <이름> python`으로 풀면 **그 .pth 가 이미 돈다.**
-    그래서 subprocess 를 쓰지 않는다."""
+    """`conda run -n <이름> python`으로 풀면 **그 .pth가 이미 돈다.**
+    그래서 subprocess를 쓰지 않는다."""
     import subprocess
 
     def boom(*a, **k):
@@ -110,9 +110,9 @@ def test_설치기가_우리_환경을_거부한다(fake_conda):
     parsed = PS.parse({"packages": [{"name": "peft"}]})
     with pytest.raises(PI.InstallError) as err:
         PI.build_argv(parsed, "labremote")
-    assert "lab.remote 가 도는 환경" in str(err.value)
+    assert "lab.remote가 도는 환경" in str(err.value)
 
-    # install() 은 던지지 않고 사유를 돌려준다
+    # install()은 던지지 않고 사유를 돌려준다
     got = PI.install(parsed, "labremote", runner=lambda *a, **k: None)
     assert got["ok"] is False and "환경" in got["reason"]
 

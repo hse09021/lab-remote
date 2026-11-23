@@ -1,7 +1,7 @@
 """📦 패키지 설치 — 검증·설치 명령·환경.
 
-Conda 화면에서 사람이 고른 패키지를 lab.remote 가 사용자 권한으로 설치한다.
-입력 칸의 글자가 명령에 섞이지 않게 `pkgspec` 이 막는다.
+Conda 화면에서 사람이 고른 패키지를 lab.remote가 사용자 권한으로 설치한다.
+입력 칸의 글자가 명령에 섞이지 않게 `pkgspec`이 막는다.
 """
 
 import json
@@ -149,7 +149,7 @@ def test_환경에_캐시_변수가_하나도_없다():
         assert name not in env, name
     assert "ANTHROPIC_API_KEY" not in env
     assert "LAB_DATA_DIR" not in env
-    # pip 전역 설정도 안 읽는다 — 거기 index-url 이 있으면 모르는 곳에서 받는다
+    # pip 전역 설정도 안 읽는다 — 거기 index-url이 있으면 모르는 곳에서 받는다
     assert env["PIP_CONFIG_FILE"] == os.devnull
 
 
@@ -172,7 +172,7 @@ def test_conda_환경_이름을_검사한다():
 
 
 def test_셸을_안_거친다(monkeypatch):
-    """`shell=False`로 넘긴다 — 인자에 `;` 가 있어도 해석되지 않는다."""
+    """`shell=False`로 넘긴다 — 인자에 `;`가 있어도 해석되지 않는다."""
     seen = {}
 
     def fake(argv, **kw):
@@ -208,7 +208,7 @@ def test_타임아웃도_던지지_않는다():
 # --- 환경 ------------------------------------------------------------------
 
 def test_require_made_는_없는_환경을_거절한다():
-    """`check()` 는 아직 없는 환경도 통과시킨다. **설치**는 있어야 한다."""
+    """`check()`는 아직 없는 환경도 통과시킨다. **설치**는 있어야 한다."""
     from app.runner import condaenv
 
     assert condaenv.check("not-made-yet")["ok"] is True

@@ -43,7 +43,7 @@ export function ErrorState({
   const detail =
     error instanceof ApiError
       ? error.message === `${error.status} ${error.path}` && error.status >= 500
-        ? `서버에 닿지 못했어요 (${error.status}) — labremote serve 가 떠 있는지 봐 주세요`
+        ? `서버에 닿지 못했어요 (${error.status}) — labremote serve가 떠 있는지 봐 주세요`
         : error.message
       : error instanceof Error
         ? error.message

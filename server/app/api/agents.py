@@ -83,14 +83,14 @@ async def account():
 async def info():
     try:
         got = await manager.info()
-    except Exception as exc:  # claude 가 없거나 로그인 안 됨
+    except Exception as exc:  # claude가 없거나 로그인 안 됨
         return _bad(exc, 503)
     return {
         **got,
         "modes": [{"id": m, "label": MODE_LABELS[m]} for m in MODES],
         "maxLive": MAX_LIVE,
         # Ultracode — Claude Code 설정 키를 세션마다 --settings로 넘긴다.
-        # xhigh 를 지원하는 모델에서만 켤 수 있다(문서: model-config)
+        # xhigh를 지원하는 모델에서만 켤 수 있다(문서: model-config)
         "ultracode": {"needsEffort": "xhigh"},
     }
 
@@ -188,7 +188,7 @@ def approvals():
 
 @router.post("/approvals/{aid}")
 async def answer(aid: str, body: AnswerBody):
-    # async 라서 이벤트 루프에서 돈다 — 기다리는 future 를 같은 루프에서 푼다
+    # async 라서 이벤트 루프에서 돈다 — 기다리는 future를 같은 루프에서 푼다
     try:
         return manager.answer(aid, body.choice, reason=body.reason, via=body.via, answers=body.answers, response=body.response)
     except AgentError as exc:

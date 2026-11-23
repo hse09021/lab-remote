@@ -34,8 +34,8 @@ export function AppShell() {
       {!down && loginNeeded && (
         <div role="alert" className={s.banner} data-tone="warn">
           {account.data?.installed === false
-            ? 'Claude Code 가 없어요 — 데스크톱에 설치하고 로그인해 주세요. 채팅 · 요약 · AI 기능이 안 돼요.'
-            : 'Claude Code 로그인이 풀렸어요 — 데스크톱 터미널에서 claude 를 열어 /login 해 주세요. 채팅 · 요약 · AI 기능이 안 돼요.'}
+            ? 'Claude Code가 없어요 — 데스크톱에 설치하고 로그인해 주세요. 채팅 · 요약 · AI 기능이 안 돼요.'
+            : 'Claude Code 로그인이 풀렸어요 — 데스크톱 터미널에서 claude를 열어 /login 해 주세요. 채팅 · 요약 · AI 기능이 안 돼요.'}
         </div>
       )}
       <div className={s.body}>

@@ -3,7 +3,7 @@
     code tunnel user login          # GitHub 로그인 (사람이)
     code tunnel service install     # 상시 켜기 (사람이, VS Code 공식 명령)
 
-lab.remote 가 부르는 것은 두 가지뿐이다 (둘 다 로그인 · 상태를 바꾸지 않는다):
+lab.remote가 부르는 것은 두 가지뿐이다 (둘 다 로그인 · 상태를 바꾸지 않는다):
 
     code tunnel status      → {"tunnel": null | {...}, "service_installed": bool}   (실측: 꺼져 있을 때)
     code tunnel user show   → "not logged in"(종료코드 1, 실측) | 로그인한 계정
@@ -12,10 +12,10 @@ lab.remote 가 부르는 것은 두 가지뿐이다 (둘 다 로그인 · 상태
       {"tunnel": {"name": "...", "started_at": "...", "tunnel": "Connected",
                   "last_connected_at": "...", "last_disconnected_at": null, "last_fail_reason": null},
        "service_installed": true}
-  안쪽 `tunnel` 이 "Connected" 일 때만 켜짐으로 본다. 그 밖의 값이면 그 값과 실패 사유를 보여 준다.
-- `code tunnel service install` 은 사용자 서비스 `~/.config/systemd/user/code-tunnel.service`
-  (→ `~/.vscode/cli/code-tunnel.service`)를 만들고 켠다. 로그아웃 뒤에도 돌려면 linger 가 필요하다.
-- VS Code 원격 창 안의 셸에는 `.../remote-cli/code` 가 PATH 앞에 있는데, 그건 터널 CLI 가 아니라 건너뛴다.
+  안쪽 `tunnel`이 "Connected" 일 때만 켜짐으로 본다. 그 밖의 값이면 그 값과 실패 사유를 보여 준다.
+- `code tunnel service install`은 사용자 서비스 `~/.config/systemd/user/code-tunnel.service`
+  (→ `~/.vscode/cli/code-tunnel.service`)를 만들고 켠다. 로그아웃 뒤에도 돌려면 linger가 필요하다.
+- VS Code 원격 창 안의 셸에는 `.../remote-cli/code`가 PATH 앞에 있는데, 그건 터널 CLI가 아니라 건너뛴다.
 - 느린 명령이라 30초 캐시한다. 화면을 볼 때만 불린다.
 """
 

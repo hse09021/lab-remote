@@ -43,11 +43,11 @@ export interface SystemOverview {
     installed: boolean
     enabled: string
     active: string
-    /** systemd 가 다시 띄운 횟수 */
+    /** systemd가 다시 띄운 횟수 */
     restarts: number | null
     port: number | null
     linger: boolean | null
-    /** 켜기 전 linger (lab.remote 가 기억한 값) */
+    /** 켜기 전 linger (lab.remote가 기억한 값) */
     lingerBefore?: boolean | null
     systemctl: boolean
     /** 이 서버가 그 서비스 안에서 도는가 */

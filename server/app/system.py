@@ -1,6 +1,6 @@
-"""System 화면 — 서버·터널·자동 시작·GPU 상태와 "lab.remote 가 바꾼 것".
+"""System 화면 — 서버·터널·자동 시작·GPU 상태와 "lab.remote가 바꾼 것".
 
-GPU 는 `nvidia-smi` 를 부르므로 짧게 캐시한다(여러 탭이 동시에 폴링해도 한 번).
+GPU는 `nvidia-smi`를 부르므로 짧게 캐시한다(여러 탭이 동시에 폴링해도 한 번).
 화면을 볼 때만 불린다 — 서버가 혼자 폴링하지 않는다(PLAN 1.3).
 """
 
@@ -88,7 +88,7 @@ def gpu_summary(*, probe=None) -> dict:
 
 
 def host_summary() -> dict:
-    """CPU 는 직전 호출과의 차분이다 — 첫 호출은 `None`."""
+    """CPU는 직전 호출과의 차분이다 — 첫 호출은 `None`."""
     global _cpu_sample
     raw = host_mod.probe(registry.data_dir(), before=_cpu_sample)
     _cpu_sample = raw.pop("cpuSample", None)
@@ -113,7 +113,7 @@ def autostart() -> dict:
         "linger": st.get("linger"),
         "lingerBefore": rec.get("lingerBefore"),
         "systemctl": bool(st.get("systemctl")),
-        # 이 서버가 그 유닛 안에서 도는가 — 아니면 "세션 다시 켜기" 가 이 서버를 다시 켜지 않는다
+        # 이 서버가 그 유닛 안에서 도는가 — 아니면 "세션 다시 켜기"가 이 서버를 다시 켜지 않는다
         "inside": units.inside(),
         "tmux": f"{units._tmux() or 'tmux'} -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}",
         "installCommand": "labremote autostart install",
@@ -140,7 +140,7 @@ def _conda_env_row() -> dict:
 
 
 def changes() -> list[dict]:
-    """"lab.remote 가 바꾼 것" — PLAN 1장 목록 그대로. 있는지만 본다."""
+    """"lab.remote가 바꾼 것" — PLAN 1장 목록 그대로. 있는지만 본다."""
     rows = [_conda_env_row()]
     unit_file = units.unit_path()
     from .service import autostart as auto
@@ -162,7 +162,7 @@ def changes() -> list[dict]:
             "where": f"loginctl · 사용자 {os.environ.get('USER') or ''}",
             "present": linger,
             "when": "labremote autostart install" + (" (원래 no)" if before is False else " (원래 yes)" if before is True else ""),
-            "undo": "uninstall 이 원래 값으로 (code tunnel 서비스가 있으면 그대로)" if before is False else "lab.remote 가 켠 게 아니라 그대로 둬요" if before is True else "loginctl disable-linger",
+            "undo": "uninstall이 원래 값으로 (code tunnel 서비스가 있으면 그대로)" if before is False else "lab.remote가 켠 게 아니라 그대로 둬요" if before is True else "loginctl disable-linger",
         }
     )
     for root, name in sorted(registry.load().items(), key=lambda kv: kv[1]):
@@ -170,7 +170,7 @@ def changes() -> list[dict]:
         present = os.path.isdir(folder) and not os.path.islink(folder)
         rows.append(
             {
-                "what": f"{name} 의 .labremote/",
+                "what": f"{name}의 .labremote/",
                 "where": projects.display_path(paths.real(folder)),
                 "present": present,
                 "when": "프로젝트를 등록할 때",
@@ -202,7 +202,7 @@ def uninstall_steps() -> list[str]:
     if not paths.is_inside(paths.real(repo), paths.real(data)):
         out.append(f"rm -rf {data}   # 데이터 폴더 (lab.remote 폴더 밖에 있어요)")
     out.append("# 등록했던 프로젝트의 .labremote/ 는 남아요. 필요하면 프로젝트마다 지워요.")
-    out.append("# code tunnel 을 켰다면: code tunnel service uninstall · code tunnel user logout")
+    out.append("# code tunnel을 켰다면: code tunnel service uninstall · code tunnel user logout")
     return out
 
 

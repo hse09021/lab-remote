@@ -1,7 +1,7 @@
 """SQLite 연결과 스키마 이행의 단일 출처.
 
-lab.remote 의 상태(지표·자원 표본·사건·보낸 알림)는 데이터 폴더의 `lab.db`
-하나에 있다. 위치는 `registry.data_dir()` 를 따른다.
+lab.remote의 상태(지표·자원 표본·사건·보낸 알림)는 데이터 폴더의 `lab.db`
+하나에 있다. 위치는 `registry.data_dir()`를 따른다.
 
 의존성은 표준 라이브러리뿐이다.
 """
@@ -29,16 +29,16 @@ __all__ = [
 
 #: 이 코드가 아는 스키마 판. 올릴 때는 `MIGRATIONS`에 줄을 더한다.
 #:
-#: 판 5 는 **v3 의 첫 판**이다. v1 은 판 1~4 를 썼다. 판 6에서 Inbox, 판 7에서 예약이 생겼다.
+#: 판 5는 **v3의 첫 판**이다. v1은 판 1~4를 썼다. 판 6에서 Inbox, 판 7에서 예약이 생겼다.
 SCHEMA_VERSION = 7
 
-#: v3 가 시작하는 판. 이보다 낮은 판은 **v1 DB** 다.
+#: v3가 시작하는 판. 이보다 낮은 판은 **v1 DB** 다.
 V3_BASE = 5
 
 #: 판을 올리는 SQL. `{이전 판: SQL 문자열}`. v3에서 판을 올릴 때 여기에 더한다.
 #:
 #: v1 판(1~4)에서 오는 이행은 **두지 않는다.** v1 표(승인·큐·루프·앵커…)를
-#: 지우는 이행은 되돌릴 수 없어서, 조용히 하지 않고 `migrate` 가 거절한다.
+#: 지우는 이행은 되돌릴 수 없어서, 조용히 하지 않고 `migrate`가 거절한다.
 MIGRATIONS: dict[int, str] = {
     # 판 7 — 예약 (v3 5단계)
     6: '''
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS schedules (
     # 판 6 — Inbox (v3 2단계)
     5: '''
 -- Inbox — 사람이 보는 알림. Discord로 보냈는지는 `sent`에 사람 말로 남긴다
--- (주소는 남기지 않는다). `act` 가 1 이면 "내가 처리해야 하는 것" 이라
+-- (주소는 남기지 않는다). `act`가 1 이면 "내가 처리해야 하는 것" 이라
 -- 헤더 배지에 센다(답 필요 · 실행 실패 · 끊김).
 CREATE TABLE IF NOT EXISTS inbox (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,7 +99,7 @@ BUSY_TIMEOUT_MS = 5000
 
 
 class DbError(RuntimeError):
-    """DB 를 믿을 수 없을 때. 큐를 돌리지 않고 멈춘다."""
+    """DB를 믿을 수 없을 때. 큐를 돌리지 않고 멈춘다."""
 
 
 def now() -> str:
@@ -110,7 +110,7 @@ def now() -> str:
 
 
 def path() -> str:
-    """`LAB_DB_PATH` 가 있으면 그것, 없으면 `<데이터 폴더>/lab.db`."""
+    """`LAB_DB_PATH`가 있으면 그것, 없으면 `<데이터 폴더>/lab.db`."""
     override = os.environ.get("LAB_DB_PATH")
     if override:
         return os.path.abspath(os.path.expanduser(override))
@@ -123,11 +123,11 @@ def schema_sql() -> str:
 
 
 def connect(db_path: str | None = None) -> sqlite3.Connection:
-    """PRAGMA 를 맞춘 연결. 이행은 하지 않는다 (`open_db` 가 한다)."""
+    """PRAGMA를 맞춘 연결. 이행은 하지 않는다 (`open_db`가 한다)."""
     target = db_path or path()
     os.makedirs(os.path.dirname(target) or ".", exist_ok=True)
     # isolation_level=None으로 자동 커밋을 끄고 트랜잭션을 우리가 연다.
-    # 큐 lease에 BEGIN IMMEDIATE 가 꼭 필요하다.
+    # 큐 lease에 BEGIN IMMEDIATE가 꼭 필요하다.
     conn = sqlite3.connect(target, timeout=BUSY_TIMEOUT_MS / 1000, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
@@ -156,20 +156,20 @@ def version(conn: sqlite3.Connection) -> int:
 def migrate(conn: sqlite3.Connection) -> dict:
     """판을 지금 코드의 판까지 올린다. 이미 같으면 아무것도 하지 않는다.
 
-    **앞으로 간 DB 는 건드리지 않고 거절한다.** 새 코드가 만든 표를 옛 코드가
+    **앞으로 간 DB는 건드리지 않고 거절한다.** 새 코드가 만든 표를 옛 코드가
     반쯤 이해한 채로 쓰면 조용히 틀린 값을 쓴다.
     """
     before = version(conn)
     if before > SCHEMA_VERSION:
         raise DbError(
-            f"DB 가 이 코드보다 새로워요 (DB 판 {before}, 코드 판 {SCHEMA_VERSION}). "
+            f"DB가 이 코드보다 새로워요 (DB 판 {before}, 코드 판 {SCHEMA_VERSION}). "
             "코드를 올리거나 데이터를 백업하고 지워 주세요: " + path()
         )
     if before == SCHEMA_VERSION:
         return {"from": before, "to": before, "changed": False}
     if 0 < before < V3_BASE:
         raise DbError(
-            f"v1 의 DB 예요 (판 {before}). v3 는 v1 표를 옮기지 않아요 — "
+            f"v1의 DB예요 (판 {before}). v3는 v1 표를 옮기지 않아요 — "
             "필요하면 백업해 두고 이 파일을 치운 뒤 다시 띄워 주세요: " + path()
         )
 
@@ -181,7 +181,7 @@ def migrate(conn: sqlite3.Connection) -> dict:
         while after < SCHEMA_VERSION:
             step = MIGRATIONS.get(after)
             if step is None:  # pragma: no cover - 판을 올릴 때 같이 넣는다
-                raise DbError(f"판 {after} -> {after + 1} 이행 SQL 이 없어요")
+                raise DbError(f"판 {after} -> {after + 1} 이행 SQL이 없어요")
             conn.executescript(step)
             after += 1
 

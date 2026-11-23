@@ -1,16 +1,16 @@
 """경로 정규화와 안전 비교.
 
-훅이 "프로젝트 폴더 밖" 을 판정하는 유일한 근거다. 이 모듈이 틀리면
-잠긴 항목 ①이 그대로 뚫리므로, 모든 함수는 tests/test_paths.py 가 지킨다.
+훅이 "프로젝트 폴더 밖"을 판정하는 유일한 근거다. 이 모듈이 틀리면
+잠긴 항목 ①이 그대로 뚫리므로, 모든 함수는 tests/test_paths.py가 지킨다.
 
 규칙 셋:
 1. 비교 전에 **양쪽 다** `os.path.realpath`로 해소한다. 프로젝트 루트가
    심볼릭 링크면 해소하지 않은 비교는 전부 "밖"으로 오판한다.
-2. 안쪽 판정은 `startswith(root + os.sep)`로 한다. `os.sep` 을 빼면
-   형제 폴더 `<root>-old` 가 안쪽으로 보인다.
-3. 아직 없는 파일에도 동작한다 (`realpath` 는 중간 디렉터리의 링크만 해소).
+2. 안쪽 판정은 `startswith(root + os.sep)`로 한다. `os.sep`을 빼면
+   형제 폴더 `<root>-old`가 안쪽으로 보인다.
+3. 아직 없는 파일에도 동작한다 (`realpath`는 중간 디렉터리의 링크만 해소).
 
-리눅스 전용이라 대소문자는 구분한 채 둔다 (`normcase` 를 쓰지 않는다).
+리눅스 전용이라 대소문자는 구분한 채 둔다 (`normcase`를 쓰지 않는다).
 표준 라이브러리만 쓴다 (훅 경로에서 import 된다).
 """
 
@@ -32,14 +32,14 @@ __all__ = [
 
 
 def real(path: str) -> str:
-    """심볼릭 링크와 `..`, `~` 를 모두 해소한 절대 경로. 멱등하다."""
+    """심볼릭 링크와 `..`, `~`를 모두 해소한 절대 경로. 멱등하다."""
     return os.path.realpath(os.path.expanduser(path))
 
 
 def safe_resolve(raw: str, cwd: str) -> str:
     """도구가 준 경로를 `cwd` 기준으로 해소한다.
 
-    `raw` 가 비면 `cwd` 자신을 가리킨다.
+    `raw`가 비면 `cwd` 자신을 가리킨다.
     """
     p = os.path.expanduser(raw)
     if not os.path.isabs(p):
@@ -48,7 +48,7 @@ def safe_resolve(raw: str, cwd: str) -> str:
 
 
 def is_inside(root_real: str, target_real: str) -> bool:
-    """`target_real` 이 `root_real` 안(또는 루트 자신)인가.
+    """`target_real`이 `root_real` 안(또는 루트 자신)인가.
 
     둘 다 이미 `real()`로 해소된 절대 경로여야 한다.
     """
@@ -71,7 +71,7 @@ def rel_or_none(root: str, target_real: str) -> str | None:
     """프로젝트 루트 기준 상대 경로. 밖이면 `None`.
 
     루트 자신은 `"."`로 돌려준다. 구분자는 항상 `/` 다 (glob과 맞추려고).
-    `root` 는 해소되지 않은 값을 줘도 된다 — 안에서 `real()` 한다.
+    `root`는 해소되지 않은 값을 줘도 된다 — 안에서 `real()` 한다.
     """
     root_real = real(root)
     if not is_inside(root_real, target_real):
@@ -83,7 +83,7 @@ def rel_or_none(root: str, target_real: str) -> str | None:
 
 
 # --- glob 매칭 -------------------------------------------------------------
-# fnmatch 의 '*' 는 '/' 까지 삼켜서 `experiments/*/config.yaml` 이
+# fnmatch의 '*'는 '/'까지 삼켜서 `experiments/*/config.yaml`이
 # `experiments/a/b/config.yaml`에도 걸린다. 그래서 직접 번역한다.
 
 _cache: dict[str, re.Pattern[str]] = {}
@@ -129,7 +129,7 @@ def match_glob(rel: str, pattern: str) -> bool:
     rel = rel.strip("/")
     if _compile(pattern).match(rel) is not None:
         return True
-    # `.claude/**` 는 폴더 자신(`.claude`)도 대상으로 본다.
+    # `.claude/**`는 폴더 자신(`.claude`)도 대상으로 본다.
     if pattern.endswith("/**"):
         return _compile(pattern[:-3]).match(rel) is not None
     return False
@@ -142,11 +142,11 @@ def match_globs(rel: str, patterns: list[str] | tuple[str, ...]) -> bool:
 def match_abs_globs(target: str, patterns: list[str] | tuple[str, ...]) -> bool:
     """**절대 경로**를 절대 경로 glob과 맞춘다 (보호 목록·비밀 파일용).
 
-    `match_glob` 은 프로젝트 루트 기준 상대 경로만 보므로, 프로젝트 밖
+    `match_glob`은 프로젝트 루트 기준 상대 경로만 보므로, 프로젝트 밖
     (`~/.claude/**`, `**/.env`)을 지키려면 이쪽이 필요하다.
 
-    패턴의 `~` 는 펼치고, 양쪽에서 맨 앞 `/` 를 떼고 같은 번역기에 넣는다.
-    그래서 `**/.env` 가 `/home/u/p/.env`에 걸린다.
+    패턴의 `~`는 펼치고, 양쪽에서 맨 앞 `/`를 떼고 같은 번역기에 넣는다.
+    그래서 `**/.env`가 `/home/u/p/.env`에 걸린다.
     """
     if not target:
         return False

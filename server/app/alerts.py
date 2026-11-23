@@ -30,12 +30,12 @@ __all__ = [
     "webhook_status",
 ]
 
-#: (키, 이름, 설명) — 목업 Inbox 의 "Discord로 보낼 알림" 순서
+#: (키, 이름, 설명) — 목업 Inbox의 "Discord로 보낼 알림" 순서
 RULES = (
     ("ask", "답이 필요할 때", "승인 요청 · 질문"),
     ("done", "실행이 끝났을 때", "종료코드 0"),
-    ("fail", "실행 실패 · 끊김", "종료코드가 0 이 아니거나 재부팅으로 끊김"),
-    ("plan", "예약 실행이 시작 · 대기할 때", "예약 시각에 시작했거나, GPU 가 바빠 기다리기 시작했을 때"),
+    ("fail", "실행 실패 · 끊김", "종료코드가 0이 아니거나 재부팅으로 끊김"),
+    ("plan", "예약 실행이 시작 · 대기할 때", "예약 시각에 시작했거나, GPU가 바빠 기다리기 시작했을 때"),
     ("pr", "PR 리뷰 · 변경 요청", "GitHub에서 읽어 와요"),
     ("merge", "머지", "main에 합쳐졌을 때"),
     ("sys", "시스템 경고", "VRAM · 디스크 · GPU 드라이버"),
@@ -168,7 +168,7 @@ def post(
 ) -> dict:
     """Inbox에 넣고, 규칙이 허락하면 Discord로도 보낸다. **던지지 않는다.**
 
-    `rule` 이 None 이면 Inbox에만 넣는다(사람이 직접 한 일 등).
+    `rule`이 None 이면 Inbox에만 넣는다(사람이 직접 한 일 등).
     """
     item_id = inbox.add(conn, kind, title, where=where, body=body, project=project, ref=ref, act=act, read=read)
     sent = ""

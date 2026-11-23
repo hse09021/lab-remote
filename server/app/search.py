@@ -1,7 +1,7 @@
-"""파일 내용 검색 — IDE 의 검색 패널.
+"""파일 내용 검색 — IDE의 검색 패널.
 
-git 저장소면 `git grep`(gitignore 를 따른다, 빠르다), 아니면 파이썬으로 걷는다
-(큰 데이터 폴더·.git·node_modules 는 건너뛴다). 결과 수에 상한을 둔다.
+git 저장소면 `git grep`(gitignore를 따른다, 빠르다), 아니면 파이썬으로 걷는다
+(큰 데이터 폴더·.git·node_modules는 건너뛴다). 결과 수에 상한을 둔다.
 """
 
 from __future__ import annotations

@@ -21,7 +21,7 @@ def test_등록하면_labremote_폴더와_gitignore_를_만든다(project_root):
         assert fh.read().splitlines()[-1] == "*"
     with open(os.path.join(folder, "settings.json"), encoding="utf-8") as fh:
         assert json.load(fh)["share"] is False
-    # 프로젝트의 .gitignore 는 만들지도 고치지도 않는다
+    # 프로젝트의 .gitignore는 만들지도 고치지도 않는다
     assert not os.path.exists(os.path.join(project_root, ".gitignore"))
     assert registry.root_of("demo") == project_root
 

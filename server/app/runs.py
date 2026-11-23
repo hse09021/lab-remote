@@ -1,13 +1,13 @@
-"""실행 — `labremote run`과 화면의 "새 실행" 이 같은 함수를 쓴다.
+"""실행 — `labremote run`과 화면의 "새 실행"이 같은 함수를 쓴다.
 
     systemd-run --user -p Type=forking -p Nice=0 -- tmux -L <소켓> new-session -d -s <세션> bash run.sh
     run.sh:  cd <위치> ; conda run -s -p <환경> bash -c <명령> 2>&1 | tee -a output.log
              ; echo <종료코드> > exit_code
 
-- **접속이 끊겨도, 서버가 다시 떠도 학습은 계속된다**(PLAN 1.5). scope 가
-  서버와 다른 cgroup 의 사용자 서비스이고(서버의 nice 19 를 물려받지 않음), tmux 서버는 실행마다 **따로**(`-L`) 띄운다 — 이미
+- **접속이 끊겨도, 서버가 다시 떠도 학습은 계속된다**(PLAN 1.5). scope가
+  서버와 다른 cgroup의 사용자 서비스이고(서버의 nice 19를 물려받지 않음), tmux 서버는 실행마다 **따로**(`-L`) 띄운다 — 이미
   떠 있는 tmux 서버에 세션을 만들면 학습이 그 서버의 cgroup으로 들어가
-  scope 가 소용없어진다.
+  scope가 소용없어진다.
 - 실행 기록은 프로젝트 안 `<root>/.labremote/runs/<EXP-NNN>/`에 있다
   (`run.json` · `run.sh` · `output.log` · `exit_code`). 그래서 프로젝트를
   옮기면 기록도 같이 간다.
@@ -99,7 +99,7 @@ def boot_id() -> str:
 
 
 def tmux_bin() -> str:
-    """시스템 tmux 를 먼저 쓴다 (conda base 의 tmux 는 라이브러리 경고를 낸다)."""
+    """시스템 tmux를 먼저 쓴다 (conda base의 tmux는 라이브러리 경고를 낸다)."""
     for candidate in ("/usr/bin/tmux", "/usr/local/bin/tmux"):
         if os.access(candidate, os.X_OK):
             return candidate
@@ -191,9 +191,9 @@ def _script(*, cwd: str, folder: str, command: str, conda: str, prefix: str, run
     else:
         inner = f"bash -c {q(command)}"
     return f"""#!/usr/bin/env bash
-# lab.remote 실행 {run_id} — lab.remote 가 만든 파일이에요. 고쳐도 이미 시작한 실행에는 안 먹어요.
+# lab.remote 실행 {run_id} — lab.remote가 만든 파일이에요. 고쳐도 이미 시작한 실행에는 안 먹어요.
 # 중지(Ctrl+C)는 프로그램에만 가게 한다 — 이 셸은 끝까지 남아 종료코드를 적고,
-# tee 는 SIGINT 를 무시해 프로그램이 정리하며 찍는 출력도 받는다(안 그러면 SIGPIPE로 죽는다).
+# tee는 SIGINT를 무시해 프로그램이 정리하며 찍는 출력도 받는다(안 그러면 SIGPIPE로 죽는다).
 trap 'true' INT
 cd -- {q(cwd)} || {{ echo 97 > {q(os.path.join(folder, "exit_code"))}; exit 97; }}
 echo $$ > {q(os.path.join(folder, "pid"))}
@@ -209,7 +209,7 @@ exit "$code"
 def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str = "") -> dict:
     """실행을 띄운다. 띄우기만 하고 기다리지 않는다.
 
-    `env` 가 비면 conda 없이 `bash -c`로 돈다. `cwd` 는 프로젝트 안 상대 경로
+    `env`가 비면 conda 없이 `bash -c`로 돈다. `cwd`는 프로젝트 안 상대 경로
     (worktree 등)다.
     """
     root = projects.require(project)
@@ -235,10 +235,10 @@ def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str
             raise RunError(str(exc)) from None
         conda = conda_bin()
         if not conda:
-            raise RunError("conda 를 찾지 못했어요 (CONDA_EXE · ~/miniconda3 등).")
+            raise RunError("conda를 찾지 못했어요 (CONDA_EXE · ~/miniconda3 등).")
     tmux = tmux_bin()
     if not tmux:
-        raise RunError("tmux 가 없어요 — sudo apt install tmux")
+        raise RunError("tmux가 없어요 — sudo apt install tmux")
 
     projects.ensure_labremote(root)
     os.makedirs(runs_dir(root), exist_ok=True)
@@ -262,7 +262,7 @@ def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str
     unit = process.scope_name(project, run_id) if use_scope else ""
     argv = [tmux, "-L", sock, "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "bash", script]
     if use_scope:
-        # scope 가 아니라 서비스로 — 서버의 nice 19 · ionice idle 을 물려받지 않게
+        # scope가 아니라 서비스로 — 서버의 nice 19 · ionice idle을 물려받지 않게
         argv = process.service_prefix(unit, f"lab.remote {project} {run_id}", run_env) + argv
 
     record = {
@@ -446,7 +446,7 @@ def get(project: str, run_id: str) -> dict:
 
 
 def stop(project: str, run_id: str, *, force: bool = False) -> dict:
-    """중지. 보통은 Ctrl+C(SIGINT) 를 보내 프로그램이 스스로 정리하게 하고,
+    """중지. 보통은 Ctrl+C(SIGINT)를 보내 프로그램이 스스로 정리하게 하고,
     `force` 면 tmux 서버를 통째로 끈다(체크포인트를 못 남길 수 있다)."""
     root = projects.require(project)
     record = _load(root, run_id)

@@ -1,11 +1,11 @@
 """git 저수준 — **로컬 브랜치만.**
 
-`push`·`merge`·PR 은 ②에서 만들지 않는다(결정: 로컬 브랜치만). `worktree` 도
-일부러 안 만든다 — 작업 트리 루트가 바뀌면 `registry.lookup` 이 깨져 훅이 안 뜬다.
+`push`·`merge`·PR은 ②에서 만들지 않는다(결정: 로컬 브랜치만). `worktree`도
+일부러 안 만든다 — 작업 트리 루트가 바뀌면 `registry.lookup`이 깨져 훅이 안 뜬다.
 
 > ⚠ **git 명령은 오케스트레이터가 직접 실행하므로 훅을 거치지 않는다.**
-> 그래서 `commit` 의 대상 경로를 코드가 화이트리스트로 지정한다 — 자유
-> `git add -A` 는 만들지 않는다. 이 비대칭은 의도된 것이다.
+> 그래서 `commit`의 대상 경로를 코드가 화이트리스트로 지정한다 — 자유
+> `git add -A`는 만들지 않는다. 이 비대칭은 의도된 것이다.
 """
 
 from __future__ import annotations
@@ -42,22 +42,22 @@ __all__ = [
 
 TIMEOUT_SEC = 60
 
-#: 빈 훅 폴더. `core.hooksPath` 를 여기로 돌려 `.git/hooks/*` 를 무력화한다.
+#: 빈 훅 폴더. `core.hooksPath`를 여기로 돌려 `.git/hooks/*`를 무력화한다.
 #: `server/data/` 아래라 샌드박스 안 코드가 **여기엔 못 쓴다**(M1b).
 NOHOOKS_NAME = "nohooks"
 
 #: git에 물려주는 환경. **화이트리스트다** — 오케스트레이터의 환경이 그대로
-#: 새면 `LAB_*`로 우리 폴더 위치까지 알려 주는 셈이고, `GIT_*` 가 섞이면
+#: 새면 `LAB_*`로 우리 폴더 위치까지 알려 주는 셈이고, `GIT_*`가 섞이면
 #: 아래 고정값을 덮어쓴다.
 ENV_KEEP = ("HOME", "USER", "LOGNAME", "PATH", "LANG", "LC_ALL", "TZ")
 
 #: 무조건 넣는 값. 저장소 **밖**의 설정과 대화형 입력을 끊는다.
 SAFE_ENV = {
-    # 전역·시스템 설정을 안 읽는다. 저장소 설정만 남는다(그건 guard 가 본다).
+    # 전역·시스템 설정을 안 읽는다. 저장소 설정만 남는다(그건 guard가 본다).
     "GIT_CONFIG_NOSYSTEM": "1",
     "GIT_CONFIG_GLOBAL": os.devnull,
     "GIT_CONFIG_SYSTEM": os.devnull,
-    # 시스템 gitattributes 를 안 읽는다
+    # 시스템 gitattributes를 안 읽는다
     "GIT_ATTR_NOSYSTEM": "1",
     # 자격 증명·암호를 물어보지 않는다. 물어보면 루프가 멈춘다.
     "GIT_TERMINAL_PROMPT": "0",
@@ -94,12 +94,12 @@ def nohooks_dir() -> str:
 def identity(base: dict | None = None) -> tuple[str, str]:
     """커밋에 쓸 `(이름, 메일)`.
 
-    `SAFE_ENV` 가 전역·시스템 설정을 끊으므로 신원도 같이 사라진다. 그래서
+    `SAFE_ENV`가 전역·시스템 설정을 끊으므로 신원도 같이 사라진다. 그래서
     **신원만** 전역 설정에서 읽어 `-c user.*`로 넘긴다. 설정을 읽는 것은
     훅·필터를 돌리지 않는다.
 
-    왜 전역 설정을 실행에는 안 쓰나: `~/.gitconfig` 는 AI 가 쓴 코드가 못
-    고치지만(홈 쓰기가 버려진다 · bwrap 은 읽기 전용), 거기 `core.hooksPath`
+    왜 전역 설정을 실행에는 안 쓰나: `~/.gitconfig`는 AI가 쓴 코드가 못
+    고치지만(홈 쓰기가 버려진다 · bwrap은 읽기 전용), 거기 `core.hooksPath`
     같은 게 있으면 우리 의도와 다르게 돈다. 신원만 가져오는 게 가장 좁다.
     """
     source = os.environ if base is None else base
@@ -124,19 +124,19 @@ def identity(base: dict | None = None) -> tuple[str, str]:
 
 
 def safe_config() -> list[str]:
-    """명령줄 `-c`로 덮는 값. **`-c` 는 저장소 설정을 이긴다.**
+    """명령줄 `-c`로 덮는 값. **`-c`는 저장소 설정을 이긴다.**
 
-    `.git/config` 는 AI 가 쓴 코드가 고칠 수 있다(M4) — 샌드박스는 작업
-    디렉터리 쓰기를 못 막는다. 그리고 오케스트레이터의 git 은 **샌드박스
-    밖에서 사용자 권한으로** 돈다. 그래서 git 이 무엇을 실행할 수 있는지를
+    `.git/config`는 AI가 쓴 코드가 고칠 수 있다(M4) — 샌드박스는 작업
+    디렉터리 쓰기를 못 막는다. 그리고 오케스트레이터의 git은 **샌드박스
+    밖에서 사용자 권한으로** 돈다. 그래서 git이 무엇을 실행할 수 있는지를
     우리가 정한다.
 
     와일드카드가 있는 것(`filter.*`·`diff.*.textconv`)과 파싱 시점에 끼어드는
-    것(`include.path`)은 `-c`로 덮을 수 없다 — `git/guard.py` 가 찾아서
-    **git 을 아예 안 돌린다.**
+    것(`include.path`)은 `-c`로 덮을 수 없다 — `git/guard.py`가 찾아서
+    **git을 아예 안 돌린다.**
     """
     return [
-        # `.git/hooks/*` 를 무력화한다 (빈 폴더를 가리킨다)
+        # `.git/hooks/*`를 무력화한다 (빈 폴더를 가리킨다)
         "-c", f"core.hooksPath={nohooks_dir()}",
         # status 할 때 실행되는 감시 프로그램
         "-c", "core.fsmonitor=false",
@@ -166,7 +166,7 @@ def commit_config() -> list[str]:
 
 
 def safe_env(base: dict | None = None) -> dict[str, str]:
-    """git 이 받을 환경. 화이트리스트 + 고정값."""
+    """git이 받을 환경. 화이트리스트 + 고정값."""
     source = os.environ if base is None else base
     out = {k: source[k] for k in ENV_KEEP if k in source}
     out.update(SAFE_ENV)
@@ -174,13 +174,13 @@ def safe_env(base: dict | None = None) -> dict[str, str]:
 
 
 class GitError(RuntimeError):
-    """git 이 실패했을 때. 메시지에 stderr 를 그대로 싣는다."""
+    """git이 실패했을 때. 메시지에 stderr를 그대로 싣는다."""
 
 
 def guard(root: str) -> dict:
-    """`.git` 이 코드를 실행하게 만드는 설정을 가졌나. 가졌으면 `GitRefused`.
+    """`.git`이 코드를 실행하게 만드는 설정을 가졌나. 가졌으면 `GitRefused`.
 
-    `run()` 이 매번 부른다. 한 번 보고 캐시하지 않는다 — 세션 사이에 바뀔 수
+    `run()`이 매번 부른다. 한 번 보고 캐시하지 않는다 — 세션 사이에 바뀔 수
     있다. (git 호출은 Claude 세션이 떠 있지 않을 때만 하지만, 학습 프로세스도
     프로젝트 안에 쓸 수 있다.)
     """
@@ -195,12 +195,12 @@ def guard(root: str) -> dict:
 def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True) -> str:
     """`git -C <root> <args>`. 실패하면 `GitError`.
 
-    `guarded=False` 는 `guard()` 자신이 쓰는 내부 경로용이다 — 밖에서는 쓰지
+    `guarded=False`는 `guard()` 자신이 쓰는 내부 경로용이다 — 밖에서는 쓰지
     않는다. 모든 호출이 `.git` 검사를 지나간다.
     """
     if guarded:
         guard(root)
-    # 커밋하는 명령에는 신원을 붙인다 — `SAFE_ENV` 가 전역 설정을 끊어서
+    # 커밋하는 명령에는 신원을 붙인다 — `SAFE_ENV`가 전역 설정을 끊어서
     # 그대로면 "who are you"로 실패한다.
     config = commit_config() if args and args[0] in NEEDS_IDENTITY else safe_config()
     try:
@@ -212,10 +212,10 @@ def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True)
             env=safe_env(),
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        raise GitError(f"git 을 띄우지 못했어요: {exc}") from None
+        raise GitError(f"git을 띄우지 못했어요: {exc}") from None
     if check and done.returncode != 0:
         raise GitError(
-            f"git {' '.join(args[:2])} 가 실패했어요 (종료코드 {done.returncode}): "
+            f"git {' '.join(args[:2])}가 실패했어요 (종료코드 {done.returncode}): "
             + (done.stderr or done.stdout or "").strip()[:400]
         )
     return done.stdout
@@ -279,12 +279,12 @@ def switch(root: str, name: str, *, retries: int = 1) -> dict:
 
 
 def commit(root: str, message: str, paths_list: list[str]) -> dict:
-    """**지정한 경로만** 담아 커밋한다. 자유 `add -A` 는 만들지 않는다.
+    """**지정한 경로만** 담아 커밋한다. 자유 `add -A`는 만들지 않는다.
 
-    바뀐 게 없으면 커밋하지 않고 `{"committed": False}` 를 돌려준다.
+    바뀐 게 없으면 커밋하지 않고 `{"committed": False}`를 돌려준다.
     """
     if not paths_list:
-        raise GitError("커밋할 경로를 지정해 주세요 (자유 add 는 안 만들어요).")
+        raise GitError("커밋할 경로를 지정해 주세요 (자유 add는 안 만들어요).")
     existing = [p for p in paths_list if os.path.exists(os.path.join(paths.real(root), p))]
     if not existing:
         return {"committed": False, "reason": "그 경로가 아직 없어요", "paths": []}
@@ -296,7 +296,7 @@ def commit(root: str, message: str, paths_list: list[str]) -> dict:
     ]
     if not staged:
         return {"committed": False, "reason": "바뀐 게 없어요", "paths": []}
-    # **담긴 파일만** 넘긴다. 빈 폴더를 pathspec으로 주면 git 이 거절한다.
+    # **담긴 파일만** 넘긴다. 빈 폴더를 pathspec으로 주면 git이 거절한다.
     run(root, ["commit", "-m", message, "--", *staged])
     return {"committed": True, "sha": head_sha(root), "paths": staged}
 

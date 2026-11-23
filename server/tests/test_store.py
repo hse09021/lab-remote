@@ -1,7 +1,7 @@
-"""`lab.db` 의 나머지 표.
+"""`lab.db`의 나머지 표.
 
 가장 중요한 두 가지:
-  - **NaN 은 숫자 칸에 넣지 않는다.** REAL에 NaN 을 넣으면 왕복이 깨지고
+  - **NaN은 숫자 칸에 넣지 않는다.** REAL에 NaN을 넣으면 왕복이 깨지고
     비교가 전부 거짓이 되는데, NaN 자체가 "즉시 중단" 신호다.
   - **중복 제거는 코드가 세는 게 아니라 UNIQUE 제약이다.** 프로세스가
     둘이어도 재시작해도 같은 답이 나온다.
@@ -68,9 +68,9 @@ def test_None_은_깃발도_없다(conn):
 
 def test_사건을_최근부터_읽는다(conn):
     E.add(conn, "p", "loop", "루프를 시작했어요")
-    E.add(conn, "p", "train", "EXP-001 을 시작했어요", tone="good", ref="EXP-001")
+    E.add(conn, "p", "train", "EXP-001을 시작했어요", tone="good", ref="EXP-001")
     recent = E.recent(conn, "p")
-    assert [e["text"] for e in recent] == ["EXP-001 을 시작했어요", "루프를 시작했어요"]
+    assert [e["text"] for e in recent] == ["EXP-001을 시작했어요", "루프를 시작했어요"]
     assert recent[0]["tone"] == "good"
 
 
@@ -125,7 +125,7 @@ def test_보냈는지_실패했는지_적는다(conn):
 
 
 def test_GPU_조회_실패도_표본으로_남는다(conn):
-    """드라이버 불일치로 nvidia-smi 가 죽어 있어도 "언제부터" 가 남아야 한다."""
+    """드라이버 불일치로 nvidia-smi가 죽어 있어도 "언제부터"가 남아야 한다."""
     R.add(conn, gpu_available=False, note="Driver/library version mismatch")
     latest = R.latest(conn)
     assert latest["gpu_available"] == 0

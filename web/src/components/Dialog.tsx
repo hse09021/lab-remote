@@ -17,8 +17,8 @@ interface Props {
 }
 
 /**
- * 한 번 더 묻는 창. 브라우저의 `<dialog>` 를 써서 포커스 가두기·Esc 닫기를
- * 그대로 얻어요. 안의 입력칸에서 Enter 를 누르면 확인과 같아요.
+ * 한 번 더 묻는 창. 브라우저의 `<dialog>`를 써서 포커스 가두기·Esc 닫기를
+ * 그대로 얻어요. 안의 입력칸에서 Enter를 누르면 확인과 같아요.
  */
 export function Dialog({
   open,

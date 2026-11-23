@@ -1,7 +1,7 @@
-"""CPU·RAM·디스크 — `/proc`와 `statvfs` 만.
+"""CPU·RAM·디스크 — `/proc`와 `statvfs`만.
 
-`psutil` 이 없고 ② 범위 밖이다. 특히 CPU 는 **두 표본의 차분**이어야 한다 —
-`/proc/stat` 은 부팅 이후 누적값이라 한 번만 읽으면 "부팅 이후 평균" 이 나온다.
+`psutil`이 없고 ② 범위 밖이다. 특히 CPU는 **두 표본의 차분**이어야 한다 —
+`/proc/stat`은 부팅 이후 누적값이라 한 번만 읽으면 "부팅 이후 평균"이 나온다.
 """
 
 import pytest
@@ -23,7 +23,7 @@ def test_CPU_사용률은_두_표본의_차분():
 
 
 def test_표본이_하나면_모른다고_한다():
-    """"부팅 이후 평균" 을 지금 사용률처럼 보여 주면 거짓말이다."""
+    """"부팅 이후 평균"을 지금 사용률처럼 보여 주면 거짓말이다."""
     assert H.cpu_pct(None, (100, 1000)) is None
     assert H.cpu_pct((100, 1000), None) is None
 
@@ -61,7 +61,7 @@ def test_메모리를_읽는다():
 
 
 def test_MemAvailable_을_쓴다(tmp_path, monkeypatch):
-    """`MemFree` 는 캐시를 빼서 "거의 꽉 찼다"로 보이게 한다."""
+    """`MemFree`는 캐시를 빼서 "거의 꽉 찼다"로 보이게 한다."""
     path = tmp_path / "meminfo"
     path.write_text(
         "MemTotal:       32000000 kB\nMemFree:          500000 kB\n"
@@ -70,7 +70,7 @@ def test_MemAvailable_을_쓴다(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(H, "PROC_MEMINFO", str(path))
     got = H.memory()
-    assert got["pct"] == 50.0  # MemFree로 계산하면 98% 가 된다
+    assert got["pct"] == 50.0  # MemFree로 계산하면 98%가 된다
 
 
 def test_meminfo_가_없으면_정상_실패(monkeypatch):

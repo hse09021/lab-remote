@@ -60,7 +60,7 @@ def test_GPU_가_바쁘면_기다렸다가_한_번만_알리고_시작(conn, pro
 
     assert run(schedules.tick(conn, now=at + 1, busy=lambda: busy["v"], start_run=start)) == [{"id": job["id"], "did": "waiting"}]
     assert run(schedules.tick(conn, now=at + 30, busy=lambda: busy["v"], start_run=start))[0]["did"] == "waiting"
-    # 한참 기다려도 "놓침" 이 아니다 — 기다리는 중이니까
+    # 한참 기다려도 "놓침"이 아니다 — 기다리는 중이니까
     busy["v"] = False
     got = run(schedules.tick(conn, now=at + 3600, busy=lambda: busy["v"], start_run=start))
     assert got == [{"id": job["id"], "did": "started", "run": "EXP-001"}]

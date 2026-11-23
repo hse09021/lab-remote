@@ -3,11 +3,11 @@ import type { Paper, ReadStatus } from './types'
 /**
  * 목업 모드에서 "내가 바꾼 것"을 담아 두는 모듈 단위 저장소예요.
  *
- * mock JSON 은 처음 상태이고, 여기 담긴 값이 그 위에 덮여요.
+ * mock JSON은 처음 상태이고, 여기 담긴 값이 그 위에 덮여요.
  * 화면 상태(useState)로 들고 있으면 다른 화면에 갔다 오거나 쿼리 캐시가
  * 비워질 때 사라지니, 모든 변경은 이 저장소를 고치고 쿼리를 무효화해요.
  *
- * FastAPI 가 붙으면 이 파일은 안 쓰여요 (client.ts 가 실제 요청으로 넘어가요).
+ * FastAPI가 붙으면 이 파일은 안 쓰여요 (client.ts가 실제 요청으로 넘어가요).
  */
 
 export interface UserAnnotation {

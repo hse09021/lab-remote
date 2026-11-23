@@ -9,7 +9,7 @@ import s from './Overlays.module.css'
 const labelOf = (cat: Highlight['category']) =>
   HIGHLIGHT_CATEGORIES.find((c) => c.id === cat)?.label ?? cat
 
-/** 카테고리별 색을 CSS 변수로 넘겨요 (tokens.css 의 --hl-* 를 가리켜요) */
+/** 카테고리별 색을 CSS 변수로 넘겨요 (tokens.css의 --hl-* 를 가리켜요) */
 const catVars = (cat: Highlight['category']): CSSProperties =>
   ({
     '--hl-rgb': `var(--hl-${cat}-rgb)`,
@@ -240,7 +240,7 @@ export function CiteHotspots({
   )
 }
 
-/* ── 본문 선택 흉내 (PDF 는 텍스트 레이어가 없어요) ────────── */
+/* ── 본문 선택 흉내 (PDF는 텍스트 레이어가 없어요) ────────── */
 
 export function SelectionHotspot({
   ctx,
@@ -250,7 +250,7 @@ export function SelectionHotspot({
   active = false,
   /** 하이라이트 H로 칠한 상태 */
   highlighted = false,
-  /** 주석 C 를 저장한 상태 — 보라 밑줄 */
+  /** 주석 C를 저장한 상태 — 보라 밑줄 */
   annotated = false,
 }: {
   ctx: PdfPageContext

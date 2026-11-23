@@ -221,7 +221,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
       ))}
       <Dialog
         open={asking}
-        title={`${st.branch} 을 main에 합칠까요?`}
+        title={`${st.branch}을 main에 합칠까요?`}
         confirmLabel="합치기"
         busy={merge.isPending}
         error={errText(merge.error) || undefined}
@@ -232,8 +232,8 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         onConfirm={() => merge.mutate(st.branch, { onSuccess: () => setAsking(false) })}
       >
         <span>
-          main worktree에서 <code>git merge --no-ff {st.branch}</code> 를 해요. main 쪽에 커밋 안 한 변경이 있으면 하지 않고, 충돌이 나면 바로
-          되돌려요. push 는 하지 않아요.
+          main worktree에서 <code>git merge --no-ff {st.branch}</code>를 해요. main 쪽에 커밋 안 한 변경이 있으면 하지 않고, 충돌이 나면 바로
+          되돌려요. push는 하지 않아요.
         </span>
       </Dialog>
     </div>
@@ -255,7 +255,7 @@ export function RunPanel({
   tree: string
   branch: string
   onAttach: (runId: string) => void
-  /** Scenario 의 "실행 탭에 채우기" — 명령만 채우고 실행은 사람이 눌러요 */
+  /** Scenario의 "실행 탭에 채우기" — 명령만 채우고 실행은 사람이 눌러요 */
   fill?: string
 }) {
   const runs = useQuery(runsQuery(project))

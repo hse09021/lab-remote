@@ -4,7 +4,7 @@ import type { PtRect } from '@/api/types'
 /**
  * PDF 렌더러 계약.
  *
- * 지금은 미리 뽑아 둔 쪽 이미지를 쓰는 ImagePdfRenderer 가 들어가고,
+ * 지금은 미리 뽑아 둔 쪽 이미지를 쓰는 ImagePdfRenderer가 들어가고,
  * 3단계에서 pdfjs-dist로 바꿔요. 바뀌는 건 그림을 그리는 방법뿐이고,
  * 좌표는 양쪽 다 PDF pt(612×792) 공간을 써서 오버레이 코드는 그대로예요.
  */

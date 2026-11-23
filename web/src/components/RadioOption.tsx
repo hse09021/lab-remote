@@ -14,7 +14,7 @@ interface Props {
 /**
  * 라디오처럼 동작하는 선택 버튼.
  * 목업은 <button aria-pressed>로 만들었는데, 하나만 고르는 묶음이라
- * role="radio" + aria-checked 가 맞아요. 묶음은 RadioOptionGroup 이 감싸요.
+ * role="radio" + aria-checked가 맞아요. 묶음은 RadioOptionGroup이 감싸요.
  */
 export function RadioOption({
   name,

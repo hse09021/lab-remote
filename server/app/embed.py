@@ -81,7 +81,7 @@ def build(
     if out:
         # 🔑 필드 수 상한에서 **조용히 사라지는 것**이 있었다. 승인 알림이면
         # 그 사라진 조각에 위험한 꼬리가 들어 있을 수 있다. 마지막 칸을 비워
-        # "잘렸다 + 전문은 어디서 보나" 를 싣는다.
+        # "잘렸다 + 전문은 어디서 보나"를 싣는다.
         if len(out) > FIELDS_MAX:
             dropped = len(out) - (FIELDS_MAX - 1)
             out = out[: FIELDS_MAX - 1]

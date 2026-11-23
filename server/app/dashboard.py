@@ -20,7 +20,7 @@ _cpu_prev: tuple[float, float] | None = None
 
 
 def self_usage() -> dict:
-    """lab.remote 서버 자신의 CPU·메모리 — "서버는 가볍다" 를 눈으로 보여 주려고."""
+    """lab.remote 서버 자신의 CPU·메모리 — "서버는 가볍다"를 눈으로 보여 주려고."""
     global _cpu_prev
     out: dict = {"cpuPct": None, "rssMb": None}
     try:

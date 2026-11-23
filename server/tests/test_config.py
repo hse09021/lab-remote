@@ -1,6 +1,6 @@
 """데이터 폴더의 Discord 설정 (`<data>/discord.json`, 권한 0600).
 
-v3 는 데이터 폴더 밖(`~/.config/labremote/`)에 설정을 두지 않는다
+v3는 데이터 폴더 밖(`~/.config/labremote/`)에 설정을 두지 않는다
 (PLAN 1장 · 3장). 웹훅 주소는 **어디에도 원문으로 나가지 않는다.**
 """
 
@@ -34,7 +34,7 @@ def test_데이터_폴더_안에_있다(isolated_data):
 
 def test_웹훅을_넣으면_0600_으로_쓴다():
     """만들 때부터 0600 이어야 한다 — 쓰고 나서 chmod 하면 그 사이가 열린다."""
-    old = os.umask(0o000)  # umask 가 느슨해도
+    old = os.umask(0o000)  # umask가 느슨해도
     try:
         path = config.set_webhook(URL)
     finally:
@@ -92,7 +92,7 @@ def test_쿨다운_기본값과_덮어쓰기():
     assert config.cooldown_sec("모르는-종류") == 300
     config.save({"cooldownSec": {"failure": 10, "gpu": True}})
     assert config.cooldown_sec("failure") == 10
-    # true 를 1로 읽지 않는다
+    # true를 1로 읽지 않는다
     assert config.cooldown_sec("gpu") == config.COOLDOWN_DEFAULTS["gpu"]
 
 
@@ -102,7 +102,7 @@ def test_v1_서명_키와_한도_패턴은_없다():
 
 
 def test_전송_실패_사유에_주소가_안_섞인다(monkeypatch):
-    """`URLError` 의 메시지에는 주소가 섞일 수 있다 — 이름만 싣는다."""
+    """`URLError`의 메시지에는 주소가 섞일 수 있다 — 이름만 싣는다."""
     import urllib.error
     import urllib.request
 

@@ -1,5 +1,5 @@
 /**
- * 선 아이콘 — docs/v3/mockups/IDE.dc.html · ADE.dc.html 의 SVG 를 그대로 옮겼어요.
+ * 선 아이콘 — docs/v3/mockups/IDE.dc.html · ADE.dc.html의 SVG를 그대로 옮겼어요.
  * 색은 `currentColor` 라 쓰는 쪽 글자색을 따라가요.
  */
 import type { ReactNode } from 'react'

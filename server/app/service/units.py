@@ -2,15 +2,15 @@
 
     ~/.config/systemd/user/labremote-session.service
       └ tmux -L labremote "labremote"
-          └ labremote serve   (127.0.0.1 · nice 19 · ionice idle — serve 가 스스로 낮춰요)
+          └ labremote serve   (127.0.0.1 · nice 19 · ionice idle — serve가 스스로 낮춰요)
 
 - 이 모듈은 유닛 **내용을 만들고 읽기만** 한다. 켜고 끄는 건 `autostart.py`
   (사람이 `labremote autostart install|uninstall`로 부를 때만).
-- code tunnel 은 여기서 띄우지 않는다 — 사람이 `code tunnel service install`
-  (VS Code 공식 명령)로 켜고, lab.remote 는 상태만 읽는다 (2026-11-23 결정).
+- code tunnel은 여기서 띄우지 않는다 — 사람이 `code tunnel service install`
+  (VS Code 공식 명령)로 켜고, lab.remote는 상태만 읽는다 (2026-11-23 결정).
 - tmux 안에 두는 까닭: `tmux -L labremote attach -t labremote`로 서버 출력을
-  바로 볼 수 있다. serve 가 끝나면 창이 닫히고 tmux 가 끝나서 systemd 가 다시 띄운다.
-- **`ANTHROPIC_*` 를 넣지 않고, 사용자 매니저 환경에 있어도 지운다.** 키가 섞이면
+  바로 볼 수 있다. serve가 끝나면 창이 닫히고 tmux가 끝나서 systemd가 다시 띄운다.
+- **`ANTHROPIC_*`를 넣지 않고, 사용자 매니저 환경에 있어도 지운다.** 키가 섞이면
   구독이 아니라 종량제로 과금된다.
 - 학습 실행 · 터미널은 각자 transient 사용자 서비스(`process.service_prefix`)라
   이 유닛을 다시 켜도 살아남는다. 에이전트 세션은 서버와 같이 끝나고, 다시 뜨면
@@ -52,7 +52,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-# tmux 가 스스로 뒤로 빠진다 (fork)
+# tmux가 스스로 뒤로 빠진다 (fork)
 Type=forking
 WorkingDirectory={server_dir}
 Environment=PATH={path}
@@ -75,7 +75,7 @@ WantedBy=default.target
 
 
 def unit_dir() -> str:
-    """`~/.config/systemd/user`. `XDG_CONFIG_HOME` 을 따른다."""
+    """`~/.config/systemd/user`. `XDG_CONFIG_HOME`을 따른다."""
     base = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
     return os.path.join(base, "systemd", "user")
 
@@ -90,7 +90,7 @@ def log_path() -> str:
     return os.path.join(registry.data_dir(), "logs", "session.log")
 
 
-#: 유닛의 `PATH`. **지금 셸의 PATH 를 베끼지 않는다** — 거기엔 VS Code 서버
+#: 유닛의 `PATH`. **지금 셸의 PATH를 베끼지 않는다** — 거기엔 VS Code 서버
 #: 경로처럼 나중에 없어질 것이 섞인다. 파이썬 환경 · `~/.local/bin`(`claude`) · 표준 폴더만.
 _BASE_PATH = ("/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin")
 
@@ -114,7 +114,7 @@ def _tmux() -> str:
 
 
 def _plain(value: str, what: str) -> str:
-    """유닛 줄에 그대로 넣을 수 있는 값인지 — 공백 · 따옴표 · 줄바꿈 · % 는 거절한다."""
+    """유닛 줄에 그대로 넣을 수 있는 값인지 — 공백 · 따옴표 · 줄바꿈 · %는 거절한다."""
     if not value or any(c in value for c in ' \t\n"\'\\%$'):
         raise ValueError(f"{what} 경로에 공백이나 특수 문자가 있어 유닛에 넣을 수 없어요: {value!r}")
     return value
@@ -127,7 +127,7 @@ def render(*, python: str = "", port: int = DEFAULT_PORT) -> str:
     port = int(port)
     if not 1024 <= port <= 65535:
         raise ValueError("포트는 1024~65535 사이로 정해 주세요.")
-    # tmux에는 셸 명령 한 줄로 넘긴다 (systemd 는 큰따옴표 하나를 인자 하나로 본다)
+    # tmux에는 셸 명령 한 줄로 넘긴다 (systemd는 큰따옴표 하나를 인자 하나로 본다)
     command = '"' + shlex.join(["exec", py, "-m", "app.cli", "serve", "--port", str(port)]) + '"'
     return _TEMPLATE.format(
         description=UNITS[NAME],
@@ -194,7 +194,7 @@ def linger() -> bool | None:
     except (OSError, subprocess.SubprocessError):
         return None
     if done.returncode != 0:
-        # 로그인 세션이 없으면 show-user 가 실패한다 — linger 파일로 본다
+        # 로그인 세션이 없으면 show-user가 실패한다 — linger 파일로 본다
         return os.path.exists(f"/var/lib/systemd/linger/{user}")
     return done.stdout.strip().split("=", 1)[-1].lower() == "yes"
 

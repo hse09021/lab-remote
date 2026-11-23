@@ -1,7 +1,7 @@
-"""학습 지표. 출처는 `experiments/EXP-NNN/result.csv` 다 (W&B 는 ② 범위 밖).
+"""학습 지표. 출처는 `experiments/EXP-NNN/result.csv` 다 (W&B는 ② 범위 밖).
 
-**NaN·Inf 는 `value` 를 NULL로 두고 `flag`에 적는다.** SQLite 의 REAL에
-NaN 을 넣으면 왕복이 깨지고(비교가 전부 거짓이 된다) 그래프가 조용히 틀어진다.
+**NaN·Inf는 `value`를 NULL로 두고 `flag`에 적는다.** SQLite의 REAL에
+NaN을 넣으면 왕복이 깨지고(비교가 전부 거짓이 된다) 그래프가 조용히 틀어진다.
 NaN 자체가 "즉시 중단" 신호라서 잃어버려서는 안 되는 값이다.
 """
 
@@ -56,7 +56,7 @@ def add(
 def series(
     conn: sqlite3.Connection, project: str, exp_id: str, name: str, limit: int = 2000
 ) -> list[dict]:
-    """학습 곡선용. 들어온 순서를 지킨다(step 이 없을 수도 있다)."""
+    """학습 곡선용. 들어온 순서를 지킨다(step이 없을 수도 있다)."""
     return rows(
         conn.execute(
             "SELECT * FROM metrics WHERE project=? AND exp_id=? AND name=? "
@@ -78,7 +78,7 @@ def last(
 
 
 def has_flag(conn: sqlite3.Connection, project: str, exp_id: str) -> list[dict]:
-    """NaN·Inf 가 한 번이라도 있었나. 있으면 즉시 중단 신호다 (spec III-4)."""
+    """NaN·Inf가 한 번이라도 있었나. 있으면 즉시 중단 신호다 (spec III-4)."""
     return rows(
         conn.execute(
             "SELECT * FROM metrics WHERE project=? AND exp_id=? AND flag IS NOT NULL "

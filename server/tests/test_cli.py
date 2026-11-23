@@ -28,7 +28,7 @@ def test_notify_test_는_주소가_없으면_안_보낸다(capsys):
 
 
 def test_notify_test_가_성공을_성공으로_본다(monkeypatch, capsys):
-    """`notifier.send` 는 `sent`·`status` 를 돌려준다 — `ok` 가 아니다."""
+    """`notifier.send`는 `sent`·`status`를 돌려준다 — `ok`가 아니다."""
     from app import notifier
 
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.com/api/webhooks/a/b")
@@ -63,7 +63,7 @@ def test_notify_test_가_중복_제거를_실패로_안_본다(monkeypatch, caps
 
 
 def test_notifier_의_반환_칸_이름을_고정한다(monkeypatch):
-    """CLI 가 보는 칸 이름이 바뀌면 조용히 뒤집힌다 — 그걸 막는다."""
+    """CLI가 보는 칸 이름이 바뀌면 조용히 뒤집힌다 — 그걸 막는다."""
     from app import db, notifier, notify
 
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.com/api/webhooks/a/b")
@@ -71,7 +71,7 @@ def test_notifier_의_반환_칸_이름을_고정한다(monkeypatch):
     with db.open_db() as conn:
         got = notifier.send(conn, "test", title="x", body="y", subject="s1")
     assert "sent" in got, got
-    assert "ok" not in got, "칸 이름이 바뀌었어요 — CLI 도 같이 고쳐 주세요"
+    assert "ok" not in got, "칸 이름이 바뀌었어요 — CLI도 같이 고쳐 주세요"
 
 
 # --- autostart ---------------------------------------------------------------
@@ -88,7 +88,7 @@ def user_config(tmp_path, monkeypatch):
 
 
 class FakeSystem:
-    """systemctl · loginctl 을 흉내 — 무엇을 불렀는지 남긴다."""
+    """systemctl · loginctl을 흉내 — 무엇을 불렀는지 남긴다."""
 
     def __init__(self, linger=False):
         self.calls = []
@@ -104,7 +104,7 @@ class FakeSystem:
 
 
 def test_유닛은_하나뿐이다(user_config):
-    """v3 가 만드는 사용자 서비스는 `labremote-session.service` 하나다 (PLAN 1.1)."""
+    """v3가 만드는 사용자 서비스는 `labremote-session.service` 하나다 (PLAN 1.1)."""
     assert list(user_config.UNITS) == ["labremote-session"]
     assert user_config.unit_path().endswith("systemd/user/labremote-session.service")
 
@@ -115,7 +115,7 @@ def test_유닛_내용(user_config):
     # 키가 섞이면 구독이 아니라 종량제 과금이다 — 넣지 않고, 매니저 환경에 있어도 지운다
     assert not any(d.startswith("Environment=ANTHROPIC") for d in directives)
     assert any(d.startswith("UnsetEnvironment=") and "ANTHROPIC_API_KEY" in d for d in directives)
-    # tmux "labremote" 안에서 serve 만 — code tunnel 은 여기서 띄우지 않는다 (2026-11-23 결정)
+    # tmux "labremote" 안에서 serve만 — code tunnel은 여기서 띄우지 않는다 (2026-11-23 결정)
     start = [d for d in directives if d.startswith("ExecStart=")][0]
     assert "-L labremote new-session -d -s labremote" in start and "-m app.cli serve --port 8123" in start
     assert "tunnel" not in body.split("[Service]")[1].split("#")[0]
@@ -125,7 +125,7 @@ def test_유닛_내용(user_config):
 
 
 def test_유닛_PATH_에_세션_전용_경로가_없다(user_config):
-    """지금 셸의 `PATH` 를 베끼면 나중에 없어질 경로가 섞인다."""
+    """지금 셸의 `PATH`를 베끼면 나중에 없어질 경로가 섞인다."""
     line = [l for l in user_config.render().splitlines() if l.startswith("Environment=PATH=")][0]
     assert "vscode-server" not in line and "/usr/bin" in line
     parts = line.split("=", 2)[-1].split(":")
@@ -167,7 +167,7 @@ def test_autostart_켜고_끄면_linger_가_원래대로(user_config, monkeypatc
     assert ["/bin/systemctl", "--user", "enable", "--now", "labremote-session.service"] in fake.calls
     assert os.path.exists(user_config.unit_path()) and user_config.port_of_unit() == 8001
     assert autostart.record()["lingerBefore"] is False
-    # 다시 켜도 "원래 값" 은 처음 것 그대로
+    # 다시 켜도 "원래 값"은 처음 것 그대로
     autostart.install(port=8001, run=fake)
     assert autostart.record()["lingerBefore"] is False
 
@@ -250,7 +250,7 @@ def test_setsid_는_cgroup_을_안_바꾼다():
     try:
         time.sleep(0.3)
         theirs = open(f"/proc/{child.pid}/cgroup").read().strip()
-        assert theirs == mine, "cgroup 이 달라졌어요 — 전제가 바뀌었어요"
+        assert theirs == mine, "cgroup이 달라졌어요 — 전제가 바뀌었어요"
         assert os.getsid(child.pid) != os.getsid(os.getpid())
     finally:
         child.kill()

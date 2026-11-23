@@ -69,7 +69,7 @@ def announce(conn, record: dict, *, poster=None) -> dict | None:
 def tick(conn, *, poster=None) -> list[dict]:
     """실행 기록을 한 번 훑는다. 끝났는데 아직 안 알린 것을 알리고 돌려준다.
 
-    `announced` 가 없는 옛 기록은 알린 것으로 본다(처음 띄울 때 과거 실행을
+    `announced`가 없는 옛 기록은 알린 것으로 본다(처음 띄울 때 과거 실행을
     한꺼번에 알리지 않으려고).
     """
     changed = []
@@ -120,7 +120,7 @@ def check_resources(conn, *, probe=None, poster=None) -> None:
         if isinstance(used, (int, float)) and isinstance(total, (int, float)) and total:
             pct = 100.0 * used / total
             if pct >= VRAM_WARN_PCT:
-                _sys_once(conn, f"vram:{d.get('index', 0)}", "VRAM 이 거의 찼어요",
+                _sys_once(conn, f"vram:{d.get('index', 0)}", "VRAM이 거의 찼어요",
                           f"{d.get('name', 'GPU')} · {used / 1024:.1f}/{total / 1024:.0f}G",
                           "새 실행은 메모리가 모자랄 수 있어요.", poster=poster)
     seen = set()

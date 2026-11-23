@@ -20,7 +20,7 @@ function aheadText(w: Worktree, main: string): string {
 
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : e ? String(e) : undefined)
 
-/** lab.remote 가 만든 worktree 만 정리할 수 있어요 */
+/** lab.remote가 만든 worktree만 정리할 수 있어요 */
 const ours = (w: Worktree) => !w.primary && (w.rel ?? '').startsWith('.labremote/worktrees/')
 
 export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees: UseQueryResult<WorktreeList> }) {
@@ -28,11 +28,11 @@ export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees
   const [adding, setAdding] = useState(false)
   const [cleaning, setCleaning] = useState<Worktree | null>(null)
 
-  if (trees.isPending) return <LoadingState label="worktree 를 불러오는 중이에요" />
+  if (trees.isPending) return <LoadingState label="worktree를 불러오는 중이에요" />
   if (trees.isError) return <ErrorState error={trees.error} onRetry={() => trees.refetch()} />
   const data = trees.data
   if (data.state !== 'ok') {
-    return <div className={s.notice}>{data.state === 'none' ? 'git 저장소가 아니라 worktree 가 없어요.' : data.reason}</div>
+    return <div className={s.notice}>{data.state === 'none' ? 'git 저장소가 아니라 worktree가 없어요.' : data.reason}</div>
   }
   const ade = `/projects/${encodeURIComponent(project.name)}/ade`
   const mine = (sessions.data?.sessions ?? []).filter((x) => x.project === project.name)
@@ -139,7 +139,7 @@ function CleanDialog({ name, tree, onClose }: { name: string; tree: Worktree; on
       onConfirm={() => remove.mutate({ rel: tree.rel ?? '' }, { onSuccess: onClose })}
     >
       <span>
-        <span className={s.mono}>{tree.rel}</span> 폴더를 지워요. 브랜치 <span className={s.mono}>{tree.branch}</span> 는 남아서
+        <span className={s.mono}>{tree.rel}</span> 폴더를 지워요. 브랜치 <span className={s.mono}>{tree.branch}</span>는 남아서
         다시 만들 수 있어요.
       </span>
       <span>커밋 안 한 변경이 있거나 이 worktree에서 학습 · 세션이 돌고 있으면 정리하지 않아요.</span>

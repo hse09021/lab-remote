@@ -68,7 +68,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
               ))}
             </select>
           ) : (
-            // conda 를 못 읽으면 직접 적어요
+            // conda를 못 읽으면 직접 적어요
             <input id="pj-env" className={s.input} value={env} onChange={(e) => setEnv(e.target.value)} placeholder="lora-env" />
           )}
           <Link to="/settings/conda" className={s.actLink}>
@@ -111,7 +111,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
           <div className={s.paperList} role="group" aria-label="쓰는 논문 고르기">
             {papers.isSuccess && papers.data.length === 0 && (
               <span className={s.muted}>
-                vault에 논문 노트가 없어요. <Link to="/papers">Papers</Link> 의 vault 위치에서 정해요.
+                vault에 논문 노트가 없어요. <Link to="/papers">Papers</Link>의 vault 위치에서 정해요.
               </span>
             )}
             {paperRows.map((p) => (
@@ -149,7 +149,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
 
       <div className={s.settingsNote}>
         이 설정은 프로젝트의 <span className={s.mono}>.labremote/settings.json</span> 에 저장돼요. 시나리오는{' '}
-        <span className={s.mono}>.labremote/scenarios/</span>, worktree 는 <span className={s.mono}>.labremote/worktrees/</span>{' '}
+        <span className={s.mono}>.labremote/scenarios/</span>, worktree는 <span className={s.mono}>.labremote/worktrees/</span>{' '}
         에 있어요.
       </div>
 
@@ -219,7 +219,7 @@ function UnregisterDialog({ name, open, onClose }: { name: string; open: boolean
       <label className={ds.check}>
         <input type="checkbox" checked={removeLabremote} onChange={(e) => setRemove(e.target.checked)} />
         <span>
-          <span className={s.mono}>.labremote/</span> 도 지우기 — 설정 · Scenario · worktree 폴더가 함께 지워지고 되돌릴 수
+          <span className={s.mono}>.labremote/</span>도 지우기 — 설정 · Scenario · worktree 폴더가 함께 지워지고 되돌릴 수
           없어요.
         </span>
       </label>

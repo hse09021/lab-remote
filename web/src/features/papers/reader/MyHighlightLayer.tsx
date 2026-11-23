@@ -26,7 +26,7 @@ interface Props {
 
 /**
  * HTML 보기에 내가 칠한 하이라이트를 다시 그려요.
- * 주입된 HTML 을 건드리지 않고, 블록 id + 글자 오프셋으로 Range 를 되살려
+ * 주입된 HTML을 건드리지 않고, 블록 id + 글자 오프셋으로 Range를 되살려
  * 그 줄 사각형만큼 덮어요 (줄바꿈이 있으면 여러 조각이 돼요).
  */
 export function MyHighlightLayer({

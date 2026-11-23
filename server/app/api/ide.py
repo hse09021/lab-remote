@@ -86,11 +86,11 @@ def kill_terminal(name: str, term: str):
 
 
 def _ws_allowed(ws: WebSocket) -> bool:
-    """🔑 WebSocket 은 HTTP 미들웨어를 안 지난다 — Host와 Origin 을 여기서 본다.
+    """🔑 WebSocket은 HTTP 미들웨어를 안 지난다 — Host와 Origin을 여기서 본다.
 
-    다른 사이트의 페이지도 브라우저로 이 주소에 WebSocket 을 열 수 있다
-    (cross-site WebSocket hijacking). 브라우저는 Origin 을 반드시 붙이므로,
-    Origin 이 없거나 허용 목록 밖이면 거절한다.
+    다른 사이트의 페이지도 브라우저로 이 주소에 WebSocket을 열 수 있다
+    (cross-site WebSocket hijacking). 브라우저는 Origin을 반드시 붙이므로,
+    Origin이 없거나 허용 목록 밖이면 거절한다.
     """
     from ..main import _hostname, allowed_hosts
 
@@ -123,7 +123,7 @@ async def terminal_ws(
         await ws.close(code=4400)
         return
     await ws.accept()
-    # 화면이 잰 크기로 시작한다 — 큰 크기로 그렸다 줄이면 tmux 가 남긴 줄이 깨져 보인다
+    # 화면이 잰 크기로 시작한다 — 큰 크기로 그렸다 줄이면 tmux가 남긴 줄이 깨져 보인다
     term = terminals.Pty(argv, cols=cols, rows=rows)
 
     async def send(chunk: bytes) -> None:

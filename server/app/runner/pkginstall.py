@@ -1,18 +1,18 @@
 """📦 패키지 설치 — 검증된 목록만 `conda run … pip install`로.
 
-들어가는 값은 `runner/pkgspec.py` 가 전부 검증한 것뿐이고, 환경은
-`runner/condaenv.py` 가 막는 곳(`base`·`labremote`)이 아니어야 한다.
+들어가는 값은 `runner/pkgspec.py`가 전부 검증한 것뿐이고, 환경은
+`runner/condaenv.py`가 막는 곳(`base`·`labremote`)이 아니어야 한다.
 
 ## 캐시를 쓰지 않는다
 
-`--no-cache-dir` 를 **반드시** 붙이고, 넘기는 환경에서 캐시 변수를 전부
+`--no-cache-dir`를 **반드시** 붙이고, 넘기는 환경에서 캐시 변수를 전부
 뺀다(`PIP_CACHE_DIR`·`HF_HOME`·`XDG_CACHE_HOME` …). 다른 곳이 쓴 캐시를
 설치 코드로 받지 않으려는 것이다. 테스트로 고정한다.
 
 ## 왜 휠만 받나
 
-소스 배포는 설치할 때 `setup.py` 를 **실행**한다. `--only-binary=:all:` 이
-기본이고, `allow_source` 를 켜야 소스를 받는다.
+소스 배포는 설치할 때 `setup.py`를 **실행**한다. `--only-binary=:all:`이
+기본이고, `allow_source`를 켜야 소스를 받는다.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ TIMEOUT_SEC = 600
 #: pip에 물려주는 환경. **화이트리스트다.**
 #:
 #: 캐시 변수가 여기 **없는 것이 요점**이다. `ENV_KEEP`에 없으면 물려받지
-#: 않으므로, 서버의 환경에 `PIP_CACHE_DIR` 이 섞여 있어도 안 간다.
+#: 않으므로, 서버의 환경에 `PIP_CACHE_DIR`이 섞여 있어도 안 간다.
 ENV_KEEP = (
     "HOME", "USER", "LOGNAME", "PATH", "LANG", "LC_ALL", "TZ",
     "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE",
@@ -66,16 +66,16 @@ ENV_STRIP = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL")
 def build_argv(parsed: dict, env_name: str, *, allow_source: bool = False) -> list[str]:
     """`conda run -n <환경> python -m pip install …` 전체.
 
-    `shell=False`로 넘긴다 — 인자에 `;` 가 있어도 셸이 해석하지 않는다.
-    (애초에 `pkgspec` 이 그런 글자를 거부한다. 두 겹이다.)
+    `shell=False`로 넘긴다 — 인자에 `;`가 있어도 셸이 해석하지 않는다.
+    (애초에 `pkgspec`이 그런 글자를 거부한다. 두 겹이다.)
     """
     name = str(env_name or "").strip()
     if not name or not pkgspec.NAME_RE.match(name):
         raise InstallError(
             f"conda 환경 이름이 이상해요: {env_name!r}"
         )
-    # 🔑 lab.remote 가 도는 환경(`labremote`)과 `base`에는 깔지 않는다.
-    # `.pth` 는 인터프리터가 뜰 때 실행된다 — 서버·conda 가 뜰 때 돌게 된다.
+    # 🔑 lab.remote가 도는 환경(`labremote`)과 `base`에는 깔지 않는다.
+    # `.pth`는 인터프리터가 뜰 때 실행된다 — 서버·conda가 뜰 때 돌게 된다.
     try:
         condaenv.require(name)
     except condaenv.EnvRefused as exc:
@@ -95,14 +95,14 @@ def build_argv(parsed: dict, env_name: str, *, allow_source: bool = False) -> li
         "--disable-pip-version-check",
     ]
     if not (allow_source and parsed.get("allowSource")):
-        # 소스 배포는 setup.py 를 **실행**한다. 휠만 받는다.
+        # 소스 배포는 setup.py를 **실행**한다. 휠만 받는다.
         argv.append("--only-binary=:all:")
     argv += items
     return argv
 
 
 def build_env(base: dict | None = None) -> dict[str, str]:
-    """pip 가 받을 환경. 화이트리스트 + 캐시 변수 제거 + API 키 제거."""
+    """pip가 받을 환경. 화이트리스트 + 캐시 변수 제거 + API 키 제거."""
     source = os.environ if base is None else base
     out = {k: source[k] for k in ENV_KEEP if k in source}
     for name in ENV_STRIP:
@@ -110,7 +110,7 @@ def build_env(base: dict | None = None) -> dict[str, str]:
     for name in CACHE_ENV_NAMES:
         # 화이트리스트에 없어서 애초에 안 들어오지만, 명세를 코드로도 적어 둔다.
         out.pop(name, None)
-    # pip 가 전역 설정 파일을 읽지 않게 — 거기 index-url 이 있으면 우리가 모르는
+    # pip가 전역 설정 파일을 읽지 않게 — 거기 index-url이 있으면 우리가 모르는
     # 곳에서 받는다.
     out["PIP_CONFIG_FILE"] = os.devnull
     return out

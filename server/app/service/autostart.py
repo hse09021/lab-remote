@@ -1,15 +1,15 @@
 """`labremote autostart install|uninstall` — 자동 시작 켜고 끄기 (PLAN 1.1 · 6장 9단계).
 
-lab.remote 가 바꾸는 시스템 설정은 **이것뿐**이고, 사람이 명령을 부르고 확인했을 때만 바꾼다.
+lab.remote가 바꾸는 시스템 설정은 **이것뿐**이고, 사람이 명령을 부르고 확인했을 때만 바꾼다.
 
     켜기   ① ~/.config/systemd/user/labremote-session.service 쓰기
-           ② linger 가 꺼져 있으면 `loginctl enable-linger` (원래 값을 기억)
+           ② linger가 꺼져 있으면 `loginctl enable-linger` (원래 값을 기억)
            ③ `systemctl --user daemon-reload` · `enable --now`
     끄기   ① `disable` ② 유닛 파일 지우기 · daemon-reload
-           ③ linger 를 **lab.remote 가 켰을 때만** 원래대로(`disable-linger`)
+           ③ linger를 **lab.remote가 켰을 때만** 원래대로(`disable-linger`)
            ④ 마지막에 멈추기 — 이 서버가 그 유닛 안에서 돌면 여기서 같이 끝난다
 
-sudo 는 필요 없다. 원래 linger 값은 데이터 폴더 `autostart.json`에 둔다.
+sudo는 필요 없다. 원래 linger 값은 데이터 폴더 `autostart.json`에 둔다.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def record() -> dict:
 def _systemctl() -> str:
     path = units._systemctl()
     if not path:
-        raise AutostartError("systemctl 이 없어요 — systemd 가 아닌 환경이라 자동 시작을 쓸 수 없어요.")
+        raise AutostartError("systemctl이 없어요 — systemd가 아닌 환경이라 자동 시작을 쓸 수 없어요.")
     return path
 
 
@@ -93,7 +93,7 @@ def install(*, port: int = units.DEFAULT_PORT, python: str = "", run: Runner = _
         raise AutostartError(str(exc)) from None
     done.append({"what": "사용자 서비스 파일", "ok": True, "detail": written["path"] + (" (바뀜)" if written["changed"] else " (그대로)")})
 
-    # 원래 linger 값은 처음 켤 때 한 번만 기억한다 (다시 켜도 "원래" 가 바뀌지 않게)
+    # 원래 linger 값은 처음 켤 때 한 번만 기억한다 (다시 켜도 "원래"가 바뀌지 않게)
     rec = record()
     before = units.linger()
     if "lingerBefore" not in rec:
@@ -104,7 +104,7 @@ def install(*, port: int = units.DEFAULT_PORT, python: str = "", run: Runner = _
     if before is not True:
         user = units._user()
         if not user:
-            raise AutostartError("사용자 이름을 몰라 linger 를 켤 수 없어요.")
+            raise AutostartError("사용자 이름을 몰라 linger를 켤 수 없어요.")
         step("linger 켜기", ["loginctl", "enable-linger", user])
     step("daemon-reload", [systemctl, "--user", "daemon-reload"])
     step("서비스 켜기", [systemctl, "--user", "enable", "--now", f"{units.NAME}.service"])
@@ -137,7 +137,7 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
         user = units._user()
         step("linger 원래대로 (끄기)", ["loginctl", "disable-linger", user], must=False)
     elif "lingerBefore" not in rec:
-        done.append({"what": "linger", "ok": True, "detail": "lab.remote 가 켠 기록이 없어 그대로 둬요"})
+        done.append({"what": "linger", "ok": True, "detail": "lab.remote가 켠 기록이 없어 그대로 둬요"})
     else:
         done.append({"what": "linger", "ok": True, "detail": "원래 켜져 있어서 그대로 둬요"})
     try:
@@ -154,7 +154,7 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
 
 
 def later(argv_tail: list[str], *, delay: float = 1.0) -> None:
-    """화면의 요청에 답을 돌려준 뒤 systemctl 을 부른다 (이 서버가 그 유닛 안일 때)."""
+    """화면의 요청에 답을 돌려준 뒤 systemctl을 부른다 (이 서버가 그 유닛 안일 때)."""
     import threading
 
     systemctl = _systemctl()
@@ -162,7 +162,7 @@ def later(argv_tail: list[str], *, delay: float = 1.0) -> None:
 
 
 def _tunnel_service() -> bool:
-    """`code tunnel service install`로 깐 터널 서비스가 있나 (linger 를 같이 쓴다)."""
+    """`code tunnel service install`로 깐 터널 서비스가 있나 (linger를 같이 쓴다)."""
     try:
         from .. import tunnel
 
