@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { sessionQuery, useCloseSession, useConfigure, useInterrupt, useRenameSession, useSendMessage } from '@/api/agents'
 import type { AgentEvent, AgentSession } from '@/api/agents'
-import { ApiError } from '@/api/client'
+import { ApiError, upload } from '@/api/client'
 import { ApprovalCard, DiffView } from './ApprovalCard'
 import { Composer } from './Composer'
 import type { ComposerSettings } from './Composer'
@@ -14,7 +14,8 @@ import s from './Agents.module.css'
  * 채팅 패널 — ADE 가운데와 (4단계) IDE 오른쪽이 같은 컴포넌트를 써요.
  * 도구 사용 줄 · 할 일 · 하위 에이전트 · 승인 카드 · 결과(사용량)를 그려요.
  */
-export function ChatPanel({ session, actions }: { session: AgentSession; actions?: ReactNode }) {
+/** `via` — 승인 기록에 남는 곳 (ADE 가운데 · IDE 오른쪽) */
+export function ChatPanel({ session, actions, via = 'ADE' }: { session: AgentSession; actions?: ReactNode; via?: string }) {
   const detail = useQuery(sessionQuery(session.id))
   const sendMsg = useSendMessage()
   const configure = useConfigure()
@@ -110,7 +111,7 @@ export function ChatPanel({ session, actions }: { session: AgentSession; actions
         <EventList events={events} />
         {session.note && <div className={s.sysNote}>{session.note}</div>}
         {session.pending.map((p) => (
-          <ApprovalCard key={p.id} p={p} via="ADE" />
+          <ApprovalCard key={p.id} p={p} via={via} />
         ))}
         {session.busy && session.pending.length === 0 && <div className={s.typing}>작업 중이에요…</div>}
         <div ref={end} />
@@ -127,6 +128,12 @@ export function ChatPanel({ session, actions }: { session: AgentSession; actions
         onSend={(text) => sendMsg.mutate({ sid: session.id, text })}
         busy={session.busy || sendMsg.isPending}
         placeholder={session.state === 'ask' ? '승인에 먼저 답해 주세요 · 답하면 이어서 해요' : undefined}
+        onAttachFile={(file) =>
+          upload<{ path: string; rel: string }>(
+            `/agents/attachments?project=${encodeURIComponent(session.project)}&name=${encodeURIComponent(file.name)}`,
+            file,
+          ).then((r) => r.path)
+        }
       />
     </section>
   )

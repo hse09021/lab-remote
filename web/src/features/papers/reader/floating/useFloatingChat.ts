@@ -62,8 +62,9 @@ const sessionKey = (paper: string, topicKey: string, context: string | null) => 
 
 /** 열린 창이 그 대화가 아니어도 저장소에 답을 넣어요 (창을 닫은 뒤에 온 답) */
 function patchSaved(key: string, fn: (s: Saved) => Saved) {
-  const cur = SAVED.get(key) ?? { log: [], asked: {}, liveTopic: null }
-  SAVED.set(key, fn(cur))
+  // 휴지통으로 지운 대화에 늦게 온 답은 버려요
+  const cur = SAVED.get(key)
+  if (cur) SAVED.set(key, fn(cur))
 }
 
 const fillAnswer = (log: ChatEntry[], answer: ChatEntry) => {
@@ -152,10 +153,12 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
     setState(EMPTY)
   }, [])
 
-  /** 휴지통 — 이 대화만 지워요 */
+  /** 휴지통 — 이 대화를 설명까지 통째로 지우고 창을 닫아요. 다시 열면 처음부터 설명해요 */
   const clearLog = useCallback(() => {
-    if (current.current) patchSaved(current.current, (x) => ({ ...x, log: [], asked: {} }))
-    setState((p) => ({ ...p, log: [], asked: {} }))
+    if (current.current) SAVED.delete(current.current)
+    current.current = null
+    seq.current++
+    setState(EMPTY)
   }, [])
 
   const minimize = useCallback(() => setState((p) => ({ ...p, minimized: true })), [])

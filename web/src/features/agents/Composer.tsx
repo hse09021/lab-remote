@@ -33,6 +33,8 @@ interface Props {
   placeholder?: string
   /** 처음에 채워 둘 글 (예: Papers 그래프의 "Claude에게 묻기"). 보내기는 사람이 눌러요 */
   initialText?: string
+  /** `+`의 "파일 고르기" — 올리고 붙일 경로를 돌려줘요 (없으면 경로 적기만) */
+  onAttachFile?: (file: File) => Promise<string>
 }
 
 function chipName(m: AgentModel | undefined) {
@@ -42,12 +44,15 @@ function chipName(m: AgentModel | undefined) {
   return m.displayName
 }
 
-export function Composer({ settings, onSettings, onSend, busy = false, disabled = false, placeholder, initialText = '' }: Props) {
+export function Composer({ settings, onSettings, onSend, busy = false, disabled = false, placeholder, initialText = '', onAttachFile }: Props) {
   const info = useQuery(agentInfoQuery())
   const [text, setText] = useState(initialText)
   const [menu, setMenu] = useState<'' | 'model' | 'mode' | 'slash' | 'attach'>('')
   const [note, setNote] = useState('')
   const [attach, setAttach] = useState('')
+  const [uploading, setUploading] = useState('')
+  const picker = useRef<HTMLInputElement>(null)
+  const addMention = (path: string) => setText((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}@${path.includes(' ') ? `"${path}"` : path} `)
   const wrap = useRef<HTMLDivElement>(null)
   const area = useRef<HTMLTextAreaElement>(null)
   useOutsideClick(wrap, () => setMenu(''), menu !== '')
@@ -328,12 +333,41 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
         )}
         {menu === 'attach' && (
           <div className={`${s.menu} ${s.menuUp}`}>
+            {onAttachFile && (
+              <>
+                <span className={s.menuTitle}>내 컴퓨터에서 파일 고르기</span>
+                <input
+                  ref={picker}
+                  type="file"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = ''
+                    if (!f) return
+                    setUploading(`${f.name} 올리는 중…`)
+                    onAttachFile(f)
+                      .then((path) => {
+                        addMention(path)
+                        setUploading('')
+                        setMenu('')
+                        area.current?.focus()
+                      })
+                      .catch((err: unknown) => setUploading(`올리지 못했어요 — ${err instanceof Error ? err.message : String(err)}`))
+                  }}
+                />
+                <button type="button" className={s.ghostBtn} onClick={() => picker.current?.click()}>
+                  파일 고르기…
+                </button>
+                {uploading && <span className={s.muted}>{uploading}</span>}
+                <span className={s.muted}>프로젝트의 .labremote/attachments/에 두고 경로를 붙여요</span>
+              </>
+            )}
             <span className={s.menuTitle}>파일 경로 붙이기</span>
             <form
               className={s.attachForm}
               onSubmit={(e) => {
                 e.preventDefault()
-                if (attach.trim()) setText((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}@${attach.trim()} `)
+                if (attach.trim()) addMention(attach.trim())
                 setAttach('')
                 setMenu('')
                 area.current?.focus()

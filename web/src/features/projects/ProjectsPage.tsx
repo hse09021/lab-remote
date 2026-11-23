@@ -11,6 +11,7 @@ import {
 import type { GitSummary, ProjectRow } from '@/api/projects'
 import { ApiError } from '@/api/client'
 import { sessionsQuery } from '@/api/agents'
+import { dirsQuery } from '@/api/system'
 import { Dialog, dialogStyles as ds, ErrorState, LoadingState } from '@/components'
 import { agoShort, whenShort } from '@/lib/time'
 import { FilesTab } from './FilesTab'
@@ -198,8 +199,14 @@ function RegisterDialog({ open, onClose, initialMode = 'existing' }: { open: boo
   const [path, setPath] = useState('')
   const [name, setName] = useState('')
   const [gitInit, setGitInit] = useState(true)
+  // 찾아보기 — 홈 폴더 안을 걸어 들어가며 고르기
+  const [browsing, setBrowsing] = useState(false)
+  const [at, setAt] = useState('~')
+  const [hidden, setHidden] = useState(false)
+  const dirs = useQuery(dirsQuery(at, hidden, open && browsing))
 
   const close = () => {
+    setBrowsing(false)
     register.reset()
     setPath('')
     setName('')
@@ -246,6 +253,69 @@ function RegisterDialog({ open, onClose, initialMode = 'existing' }: { open: boo
           required
         />
       </label>
+      <button
+        type="button"
+        className={s.browseToggle}
+        aria-expanded={browsing}
+        onClick={() => {
+          // 적어 둔 경로가 있으면 거기서(새 폴더면 위 폴더에서) 시작해요
+          const start = path.trim() ? (mode === 'new' ? path.trim().replace(/\/[^/]*\/?$/, '') || '~' : path.trim()) : '~'
+          setAt(start)
+          setBrowsing((v) => !v)
+        }}
+      >
+        {browsing ? '▾' : '▸'} 폴더 찾아보기
+      </button>
+      {browsing && (
+        <div className={s.browser}>
+          <div className={s.browserHead}>
+            <button type="button" className={s.browserUp} disabled={!dirs.data?.parent} onClick={() => dirs.data?.parent && setAt(dirs.data.parent)}>
+              ↑ 위로
+            </button>
+            <span className={s.browserPath}>{dirs.data?.path ?? at}</span>
+            <label className={s.browserHidden}>
+              <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> 숨김 폴더
+            </label>
+          </div>
+          <div className={s.browserList}>
+            {dirs.isPending && <span className={s.muted}>불러오는 중이에요…</span>}
+            {dirs.isError && <span className={s.muted}>{dirs.error instanceof ApiError ? dirs.error.message : '폴더를 읽지 못했어요'}</span>}
+            {dirs.data?.dirs.length === 0 && <span className={s.muted}>하위 폴더가 없어요.</span>}
+            {dirs.data?.dirs.map((d) => (
+              <div key={d.path} className={s.browserRow}>
+                <button type="button" className={s.browserName} onClick={() => setAt(d.path)} title="들어가기">
+                  📁 {d.name}
+                  {d.git && <span className={s.browserTag}>git</span>}
+                  {d.registered && <span className={s.browserTag}>등록됨</span>}
+                </button>
+                <button
+                  type="button"
+                  className={s.browserPick}
+                  onClick={() => {
+                    // 새 폴더면 그 안에 만들 이름을 이어 적게 해요
+                    setPath(mode === 'new' ? `${d.path}/` : d.path)
+                    if (mode !== 'new') setBrowsing(false)
+                  }}
+                >
+                  {mode === 'new' ? '여기 안에' : '고르기'}
+                </button>
+              </div>
+            ))}
+          </div>
+          {dirs.data && (
+            <button
+              type="button"
+              className={s.browserPick}
+              onClick={() => {
+                setPath(mode === 'new' ? `${dirs.data.path}/` : dirs.data.path)
+                if (mode !== 'new') setBrowsing(false)
+              }}
+            >
+              {mode === 'new' ? `${dirs.data.path} 안에 만들기` : `${dirs.data.path} 고르기`}
+            </button>
+          )}
+        </div>
+      )}
       <label className={ds.field}>
         이름 (비우면 폴더 이름으로)
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="lora-rank-ablation" />

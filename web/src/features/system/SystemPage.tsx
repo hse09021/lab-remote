@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ApiError } from '@/api/client'
+import { sessionsQuery } from '@/api/agents'
 import { notifyQuery, useTestSend } from '@/api/inbox'
 import { systemQuery, useRestartSession, useSetRemote, useUninstallAutostart } from '@/api/system'
 import type { SystemOverview } from '@/api/system'
@@ -72,7 +73,7 @@ function cards(d: SystemOverview): Card[] {
   ]
 }
 
-function tree(d: SystemOverview) {
+function tree(d: SystemOverview, live: { live: number; open: number } | null) {
   const a = d.autostart
   const t = d.tunnel
   const clock = d.clock
@@ -87,12 +88,14 @@ function tree(d: SystemOverview) {
   └ tmux "labremote"
       └ labremote serve    ● 127.0.0.1:${d.server.port ?? '?'} · nice ${d.server.nice ?? '?'}
           ├ 예약 시계      ${clock?.running ? '●' : '○'} ${next}${clock?.waiting.length ? ` · GPU 기다리는 중 ${clock.waiting.length}` : ''}
-          └ 에이전트 세션  Agent SDK · 동시 4개까지
+          └ 에이전트 세션  Agent SDK · ${live ? `연결 ${live.live} / 4 · 열린 세션 ${live.open}` : '동시 4개까지'}
 code tunnel (VS Code가 따로 띄워요)   ${tunnelLine}`
 }
 
 export default function SystemPage() {
   const sys = useQuery(systemQuery())
+  // 지금 연결된 에이전트 세션 수 (자동 시작 구조 그림에)
+  const agents = useQuery(sessionsQuery())
   const notify = useQuery(notifyQuery())
   const restart = useRestartSession()
   const uninstall = useUninstallAutostart()
@@ -171,7 +174,7 @@ export default function SystemPage() {
           <h2 id="sys-auto" className={s.h2}>
             자동 시작
           </h2>
-          <pre className={s.pre}>{tree(d)}</pre>
+          <pre className={s.pre}>{tree(d, agents.data ? { live: agents.data.live, open: agents.data.sessions.length } : null)}</pre>
           {a.installed ? (
             <p className={s.text}>
               재부팅해도 로그인 없이 바로 떠요. 학습은 이 서비스와 분리돼서 세션을 다시 켜도 살아요. 예약은 이 서버가 시간을 재서, 서버가 꺼져

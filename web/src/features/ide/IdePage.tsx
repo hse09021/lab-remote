@@ -322,6 +322,7 @@ export default function IdePage() {
             <ChatPanel
               key={chat.id}
               session={chat}
+              via="IDE"
               actions={
                 <>
                   <Link to={`/projects/${encodeURIComponent(project)}/ade?session=${encodeURIComponent(chat.id)}`} aria-label="세션 기록" title="세션 기록 (ADE)" className={s.chatIconBtn}>

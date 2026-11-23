@@ -13,6 +13,7 @@ const KINDS = [
   'approval.done',
   'inbox.new',
   'scenario.updated',
+  'run.state',
 ] as const
 
 const LOCK = 'labremote-events'
@@ -109,6 +110,12 @@ function dispatch(qc: QueryClient, kind: string, data: unknown) {
       break
     case 'inbox.new':
       qc.invalidateQueries({ queryKey: ['inbox'] })
+      break
+    case 'run.state':
+      // 실행 시작 · 끝 · 끊김 — 실행 목록 · 대시보드 · 알림을 새로
+      qc.invalidateQueries({ queryKey: ['runs'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
       break
     case 'scenario.updated':
       qc.invalidateQueries({ queryKey: ['scenario', (data as { project: string }).project] })

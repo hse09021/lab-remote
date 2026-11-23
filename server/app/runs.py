@@ -158,8 +158,21 @@ def _load(root: str, run_id: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+_last_state: dict[tuple[str, str], str] = {}
+
+
 def _save(root: str, record: dict) -> None:
     registry.write_json(os.path.join(_run_dir(root, record["id"]), "run.json"), record)
+    # 상태가 바뀌면 화면에 바로 알려요 (실행 목록 · 대시보드가 기다리지 않게)
+    key, state = (root, record["id"]), str(record.get("state") or "")
+    if _last_state.get(key) != state:
+        _last_state[key] = state
+        try:
+            from .events import bus
+
+            bus.publish("run.state", {"project": record.get("project") or registry.load().get(root, ""), "run": record["id"], "state": state})
+        except Exception:
+            pass  # 알림이 실패해도 기록은 남아요
 
 
 def _next_id(root: str) -> str:

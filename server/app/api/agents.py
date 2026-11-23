@@ -216,3 +216,43 @@ async def events(request: Request):
             bus.unsubscribe(queue)
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+#: 채팅에 붙이는 파일 하나의 크기 상한
+MAX_ATTACH = 30 * 1024 * 1024
+
+
+@router.put("/agents/attachments")
+async def attach(request: Request, project: str, name: str):
+    """채팅 입력창 `+` — 고른 파일을 프로젝트의 `.labremote/attachments/`에 두고 그 경로를 돌려준다.
+
+    연구 폴더의 다른 곳은 건드리지 않는다(lab.remote가 만드는 건 `.labremote/` 뿐). 이름이 겹치면 번호를 붙인다.
+    """
+    import os
+    import re
+
+    from .. import projects
+
+    try:
+        root = projects.require(project)
+    except Exception as exc:  # 없는 프로젝트
+        return JSONResponse({"detail": str(exc)}, status_code=404)
+    base = os.path.basename(name or "").strip()
+    base = re.sub(r"[\x00-\x1f/\\\\]", "", base)[:120]
+    if not base or base in (".", ".."):
+        return JSONResponse({"detail": "파일 이름이 올바르지 않아요."}, status_code=400)
+    folder = os.path.join(projects.labremote_dir(root), "attachments")
+    os.makedirs(folder, exist_ok=True)
+    stem, ext = os.path.splitext(base)
+    target, n = os.path.join(folder, base), 1
+    while os.path.lexists(target):
+        n += 1
+        target = os.path.join(folder, f"{stem} ({n}){ext}")
+    data = bytearray()
+    async for chunk in request.stream():
+        data += chunk
+        if len(data) > MAX_ATTACH:
+            return JSONResponse({"detail": "파일이 너무 커요 (30MB까지)."}, status_code=400)
+    with open(target, "xb") as fh:
+        fh.write(bytes(data))
+    return {"path": target, "rel": os.path.relpath(target, root), "size": len(data)}

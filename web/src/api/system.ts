@@ -147,3 +147,17 @@ export function useUninstallAutostart() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['system'] }),
   })
 }
+
+/** 폴더 등록의 "찾아보기" — 홈 폴더 안의 하위 폴더 */
+export interface DirList {
+  path: string
+  parent: string | null
+  dirs: { name: string; path: string; git: boolean; registered: boolean }[]
+}
+
+export const dirsQuery = (path: string, hidden: boolean, enabled: boolean) =>
+  queryOptions({
+    queryKey: ['system', 'dirs', path, hidden],
+    queryFn: () => get<DirList>(`/system/dirs?path=${encodeURIComponent(path)}${hidden ? '&hidden=true' : ''}`),
+    enabled,
+  })

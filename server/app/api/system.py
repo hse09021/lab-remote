@@ -16,6 +16,17 @@ def overview(request: Request):
     return system.overview(port=request.app.state.port)
 
 
+@router.get("/system/dirs")
+def dirs(path: str = "", hidden: bool = False):
+    """폴더 등록의 "찾아보기" — 홈 폴더 안의 하위 폴더 목록 (읽기만)"""
+    from .. import projects
+
+    try:
+        return projects.browse(path, hidden=hidden)
+    except projects.ProjectError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
 @router.get("/system/gpu")
 def gpu():
     return system.gpu_summary()

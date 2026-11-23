@@ -399,3 +399,21 @@ def test_세션_이름_바꾸기와_닫기(fake, project):
         assert (await m.close(s["id"], False)).get("closed") is None
 
     run(go())
+
+
+def test_채팅_첨부는_labremote_폴더에만(project, tmp_path):
+    import os
+
+    from fastapi.testclient import TestClient
+
+    from app import main
+
+    client = TestClient(main.create_app(web_dist=str(tmp_path)), base_url="http://127.0.0.1:8000")
+    h = {"X-Lab-Remote": "1", "Content-Type": "application/octet-stream"}
+    r = client.put("/api/agents/attachments?project=demo&name=../../evil.txt", content=b"x", headers=h)
+    assert r.status_code == 200
+    got = r.json()
+    assert got["rel"] == os.path.join(".labremote", "attachments", "evil.txt") and open(got["path"], "rb").read() == b"x"
+    again = client.put("/api/agents/attachments?project=demo&name=evil.txt", content=b"y", headers=h).json()
+    assert again["rel"].endswith("evil (2).txt")
+    assert client.put("/api/agents/attachments?project=nope&name=a.txt", content=b"y", headers=h).status_code == 404

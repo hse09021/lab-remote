@@ -156,3 +156,26 @@ def test_새_폴더를_만들어_등록(tmp_path):
     with _pytest.raises(projects.ProjectError, match="이미 쓰는 이름"):
         projects.register(str(tmp_path / "projects" / "other"), "new-exp", create=True)
     assert not (tmp_path / "projects" / "other").exists()
+
+
+def test_폴더_찾아보기는_홈_안에서만(tmp_path, monkeypatch):
+    import os
+
+    from app import projects as P
+
+    home = tmp_path / "home"
+    (home / "projects" / "a").mkdir(parents=True)
+    (home / "projects" / "a" / ".git").mkdir()
+    (home / "projects" / "b").mkdir()
+    (home / "projects" / ".hidden").mkdir()
+    (home / "projects" / "file.txt").write_text("x")
+    monkeypatch.setenv("HOME", str(home))
+    got = P.browse("~/projects")
+    assert got["path"] == "~/projects" and got["parent"] == "~"
+    assert [(d["name"], d["git"]) for d in got["dirs"]] == [("a", True), ("b", False)]
+    assert got["dirs"][0]["path"] == "~/projects/a"
+    assert [d["name"] for d in P.browse("~/projects", hidden=True)["dirs"]] == [".hidden", "a", "b"]
+    # 홈 밖은 홈으로 돌려요
+    assert P.browse("/etc")["path"] == "~" and P.browse("/etc")["parent"] is None
+    assert P.browse("~/projects/../../")["path"] == "~"
+    assert os.path.isdir(str(home))

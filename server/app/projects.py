@@ -354,3 +354,41 @@ def list_projects() -> list[dict]:
         )
     out.sort(key=lambda p: -(p["activityAt"] or 0))
     return out
+
+
+MAX_BROWSE = 500
+
+
+def browse(path: str = "", *, hidden: bool = False) -> dict:
+    """폴더 등록 창의 "찾아보기" — 홈 폴더 안의 하위 폴더만 보여 준다(파일은 안 보여요).
+
+    읽기만 한다. 홈 밖은 보여 주지 않는다(터널로 열어도 시스템 폴더가 드러나지 않게).
+    """
+    home = paths.real("~")
+    want = paths.real(os.path.expanduser(path or "~"))
+    if not paths.is_inside(home, want) and want != home:
+        want = home
+    if not os.path.isdir(want):
+        want = home
+    dirs = []
+    try:
+        names = sorted(os.listdir(want), key=str.lower)
+    except OSError as exc:
+        raise ProjectError(f"폴더를 읽지 못했어요: {type(exc).__name__}") from None
+    registered = set(registry.load())
+    for n in names:
+        if not hidden and n.startswith("."):
+            continue
+        full = os.path.join(want, n)
+        if not os.path.isdir(full) or os.path.islink(full):
+            continue
+        dirs.append({
+            "name": n,
+            "path": display_path(full),
+            "git": os.path.exists(os.path.join(full, ".git")),
+            "registered": paths.real(full) in registered,
+        })
+        if len(dirs) >= MAX_BROWSE:
+            break
+    parent = os.path.dirname(want) if want != home else None
+    return {"path": display_path(want) if want != home else "~", "parent": display_path(parent) if parent and parent != home else ("~" if parent else None), "dirs": dirs}
