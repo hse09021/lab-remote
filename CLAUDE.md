@@ -6,8 +6,8 @@
 ## 먼저 읽을 것
 - `docs/v3/PLAN.md` — v3 원칙, 구조, 화면별 요구, 진행 단계. **다른 문서와 부딪히면 이게 우선**
 - `docs/v3/mockups/` — 화면별 목업(구조·문구·동작의 기준). 안내는 `README.md`
-- `docs/v1/HANDOFF.md` 1장·3장 — 목업 파일 읽는 법, 디자인 토큰
-- `docs/v1/` 의 나머지 — v1 보관용. 참고만 하고 규칙으로 따르지 않기
+- `docs/v1/HANDOFF.md` 1장·3장 — 목업 파일 읽는 법, 디자인 토큰 (나머지 장은 v1 기준이라 참고만)
+- `README.md` — 이 시스템 소개와 설치 (사람용). 자세한 설치는 `docs/SETUP.md`, 운영은 `docs/operations.md`
 
 ## 원칙 (자세한 건 PLAN.md 1장)
 - 시스템 설정은 최소한만: `~/.claude`, `.bashrc`, `.condarc`, cron, systemd 타이머, 연구 프로젝트의 `.gitignore` 는 건드리지 않기. lab.remote 가 만드는 건 conda 환경 `labremote`, (자동 시작 켤 때만) 사용자 서비스 + linger, 프로젝트마다 `.labremote/` 뿐

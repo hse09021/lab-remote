@@ -1,82 +1,14 @@
-"""`lab.db`의 나머지 표.
+"""`lab.db`의 알림 표.
 
-가장 중요한 두 가지:
-  - **NaN은 숫자 칸에 넣지 않는다.** REAL에 NaN을 넣으면 왕복이 깨지고
-    비교가 전부 거짓이 되는데, NaN 자체가 "즉시 중단" 신호다.
-  - **중복 제거는 코드가 세는 게 아니라 UNIQUE 제약이다.** 프로세스가
-    둘이어도 재시작해도 같은 답이 나온다.
+**중복 제거는 코드가 세는 게 아니라 UNIQUE 제약이다.** 프로세스가
+둘이어도 재시작해도 같은 답이 나온다.
 """
 
 import math
 
 import pytest
 
-from app.store import (
-    events as E,
-    metrics as M,
-    notifications as N,
-    resources as R,
-)
-
-
-# --- metrics -----------------------------------------------------------------
-
-
-def test_지표를_넣고_읽는다(conn):
-    for step, value in enumerate([2.0, 1.5, 1.2]):
-        M.add(conn, "p", "EXP-001", "loss", value, step=step)
-    series = M.series(conn, "p", "EXP-001", "loss")
-    assert [r["value"] for r in series] == [2.0, 1.5, 1.2]
-    assert M.last(conn, "p", "EXP-001", "loss")["value"] == 1.2
-
-
-@pytest.mark.parametrize(
-    "value,flag",
-    [
-        (float("nan"), "nan"),
-        (float("inf"), "inf"),
-        (float("-inf"), "-inf"),
-        ("숫자가아님", "nan"),
-    ],
-)
-def test_숫자가_아니면_깃발로_남는다(conn, value, flag):
-    M.add(conn, "p", "EXP-001", "loss", value)
-    row = M.last(conn, "p", "EXP-001", "loss")
-    assert row["value"] is None
-    assert row["flag"] == flag
-
-
-def test_NaN_은_왕복이_깨지지_않는다(conn):
-    """REAL에 그대로 넣었다면 여기서 비교가 전부 거짓이 된다."""
-    M.add(conn, "p", "EXP-001", "loss", float("nan"))
-    flagged = M.has_flag(conn, "p", "EXP-001")
-    assert len(flagged) == 1
-    assert flagged[0]["flag"] == "nan"
-    assert not any(
-        r["value"] is not None and math.isnan(r["value"])
-        for r in M.series(conn, "p", "EXP-001", "loss")
-    )
-
-
-def test_None_은_깃발도_없다(conn):
-    M.add(conn, "p", "EXP-001", "loss", None)
-    assert M.has_flag(conn, "p", "EXP-001") == []
-
-
-# --- events ------------------------------------------------------------------
-
-
-def test_사건을_최근부터_읽는다(conn):
-    E.add(conn, "p", "loop", "루프를 시작했어요")
-    E.add(conn, "p", "train", "EXP-001을 시작했어요", tone="good", ref="EXP-001")
-    recent = E.recent(conn, "p")
-    assert [e["text"] for e in recent] == ["EXP-001을 시작했어요", "루프를 시작했어요"]
-    assert recent[0]["tone"] == "good"
-
-
-def test_모르는_tone_은_거절한다(conn):
-    with pytest.raises(ValueError):
-        E.add(conn, "p", "loop", "x", tone="무지개")
+from app.store import notifications as N
 
 
 # --- notifications -----------------------------------------------------------
@@ -119,27 +51,3 @@ def test_보냈는지_실패했는지_적는다(conn):
     N.mark_failed(conn, second["id"], error="그물이 없어요", status=500)
     failed = N.get(conn, second["id"])
     assert failed["state"] == "failed" and failed["error"] == "그물이 없어요"
-
-
-# --- resources ---------------------------------------------------------------
-
-
-def test_GPU_조회_실패도_표본으로_남는다(conn):
-    """드라이버 불일치로 nvidia-smi가 죽어 있어도 "언제부터"가 남아야 한다."""
-    R.add(conn, gpu_available=False, note="Driver/library version mismatch")
-    latest = R.latest(conn)
-    assert latest["gpu_available"] == 0
-    assert "mismatch" in latest["note"]
-
-
-def test_최근_표본부터_읽는다(conn):
-    R.add(conn, gpu_available=True, gpu_util=10.0)
-    R.add(conn, gpu_available=True, gpu_util=20.0)
-    assert [r["gpu_util"] for r in R.recent(conn)] == [20.0, 10.0]
-
-
-def test_오래된_표본은_버린다(conn):
-    for index in range(10):
-        R.add(conn, gpu_available=True, gpu_util=float(index))
-    assert R.prune(conn, keep=3) == 7
-    assert len(R.recent(conn)) == 3

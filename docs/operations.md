@@ -1,7 +1,7 @@
 # lab.remote 운영
 
 설치는 [SETUP.md](SETUP.md), 설계 기준은 [v3/PLAN.md](v3/PLAN.md)예요. 이 문서는 켜 둔 뒤에 볼 것들이에요.
-`docs/v1/`은 v1 보관용이에요.
+`docs/v1/HANDOFF.md`는 목업 읽는 법 · 디자인 토큰 참고용으로만 남겨 뒀어요.
 
 ## 어디에 무엇이 있나
 
@@ -56,6 +56,35 @@ code tunnel VS Code가 따로 (code tunnel service install)
 | 헤더가 "서버 끊김" | 서버가 안 떠 있어요 — `labremote autostart status` · `journalctl --user -u labremote-session` |
 | GPU "조회 불가" | 드라이버가 올라가고 재부팅 전일 수 있어요 — `labremote doctor`의 GPU 드라이버 줄 |
 | 채팅이 안 열려요 | `claude`를 터미널에서 열어 로그인이 살아 있는지 — `doctor`의 Claude Code 줄 |
+
+## GPU 드라이버 자동 업데이트 막기 (선택)
+
+우분투 자동 업데이트가 드라이버를 올리고 재부팅을 안 하면 커널 · 유저랜드 판이 어긋나
+`nvidia-smi`가 통째로 죽어요(`Failed to initialize NVML`). 그러면 학습이 전부 실패해요.
+lab.remote는 시스템 설정을 고치지 않아요. 막고 싶으면 직접 `/etc/apt/apt.conf.d/52labremote-nvidia`를 만들어요(`sudo` 필요).
+
+```
+Unattended-Upgrade::Package-Blacklist {
+    "nvidia-";
+    "libnvidia-";
+    "cuda-";
+    "linux-image-";
+    "linux-headers-";
+    "linux-modules-";
+    "linux-objects-nvidia-";
+    "linux-signatures-nvidia-";
+};
+Unattended-Upgrade::Automatic-Reboot "false";
+```
+
+확인:
+
+```bash
+apt-config dump | grep Package-Blacklist
+labremote doctor          # "드라이버 자동 업데이트" 참고 줄이 사라져요
+```
+
+`doctor`는 파일 이름이 아니라 `apt-config dump`의 적용값을 봐요. 드라이버는 일부러 올리고, 올린 뒤에는 재부팅해요.
 
 ## 보안 규칙 (코드에 박혀 있는 것)
 

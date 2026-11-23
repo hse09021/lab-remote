@@ -4,7 +4,7 @@
 목업은 `docs/v3/mockups/` 에 있고, 화면별 안내는 `docs/v3/mockups/README.md` 에 있어요.
 목업 파일을 읽는 법(`<x-dc>`, `{{ }}`, `sc-if`, `sc-for`, `class Component`)은 `docs/v1/HANDOFF.md` 1장과 같아요.
 
-> 이 문서와 기존 문서(`docs/v1/spec.md`, `docs/v1/HANDOFF.md`, `CLAUDE.md`)가 부딪히면 **이 문서가 우선**이에요.
+> 이 문서와 기존 문서(`docs/v1/HANDOFF.md`, `CLAUDE.md`)가 부딪히면 **이 문서가 우선**이에요. (v1의 spec · plan 등은 2026-11-24에 정리했어요 — git 기록에 남아 있어요.)
 > 특히 v1의 "Hooks로 강제하는 잠금", "권한 프리셋", "연구 전체 자동화 루프", "실험 큐", "AI 실험 설계 초안"은 v3에서 모두 빠져요.
 
 ---

@@ -319,7 +319,7 @@ def nvidia_hold_note() -> str | None:
         why.append("Automatic-Reboot가 켜져 있어요")
     return (
         "참고 · 드라이버 자동 업데이트를 막고 싶으면 직접 설정해요 (" + " · ".join(why) + "). "
-        "lab.remote는 바꾸지 않아요 — 방법은 docs/v1/SETUP.md의 Package-Blacklist 예시."
+        "lab.remote는 바꾸지 않아요 — 방법은 docs/operations.md의 \"GPU 드라이버 자동 업데이트 막기\"."
     )
 
 
