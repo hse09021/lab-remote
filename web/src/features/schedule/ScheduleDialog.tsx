@@ -81,7 +81,8 @@ export function ScheduleDialog({
       effort: edit?.effort ?? '',
       at: fromLocal(when),
       repeat,
-      enabled: true,
+      // 꺼 둔 예약을 고쳐도 꺼진 채로 둬요
+      enabled: edit?.enabled ?? true,
     }
     if (edit) update.mutate({ id: edit.id, ...body }, { onSuccess: onClose })
     else create.mutate(body, { onSuccess: onClose })
