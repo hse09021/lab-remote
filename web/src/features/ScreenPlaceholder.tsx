@@ -19,7 +19,7 @@ export function ScreenPlaceholder({ title, mono = false, mockup, note }: Props) 
     <main className={s.screen}>
       <h1 className={clsx(s.title, mono && s.mono)}>{title}</h1>
       {note && <p className={s.note}>{note}</p>}
-      <p className={s.source}>docs/mockups/{mockup}</p>
+      <p className={s.source}>docs/v3/mockups/{mockup}</p>
     </main>
   )
 }

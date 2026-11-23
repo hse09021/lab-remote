@@ -1,4 +1,4 @@
-import { ApiError, apiBase, isMockMode } from '@/api/client'
+import { ApiError, apiBase, isMockPath } from '@/api/client'
 import { sanitizePaperHtml } from '@/lib/sanitize'
 
 const API_BASE = apiBase()
@@ -34,7 +34,7 @@ export async function loadPaperHtml(paperId: string): Promise<LoadedPaperHtml> {
     }
   }
 
-  if (isMockMode()) {
+  if (isMockPath(`/papers/${paperId}/html`)) {
     // mock 으로 돌 때만 골격을 가져와요. 실제 서버를 볼 땐 번들에 안 들어가요
     const sample = await import('@/api/mock/attn.sample.html?raw')
     return { html: sanitizePaperHtml(sample.default), isReal: false }

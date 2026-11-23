@@ -9,8 +9,8 @@ export default function NotFound() {
       <h1 className={s.title}>없는 화면이에요</h1>
       <p className={s.note}>주소를 다시 확인해 주세요.</p>
       <div>
-        <Button variant="primary" onClick={() => navigate('/experiments')}>
-          실험으로 가기
+        <Button variant="primary" onClick={() => navigate('/dashboard')}>
+          Dashboard 로 가기
         </Button>
       </div>
     </main>

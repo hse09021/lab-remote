@@ -16,7 +16,7 @@ import type {
 export const projectsQuery = () =>
   queryOptions({
     queryKey: ['projects'],
-    queryFn: () => get<ProjectsPayload>('/projects'),
+    queryFn: () => get<ProjectsPayload>('/v1/projects'),
   })
 
 export const dashboardQuery = () =>

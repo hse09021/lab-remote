@@ -2,31 +2,36 @@
 
 ## 왜 필요한가
 
-오케스트레이터의 git 은 **샌드박스 밖에서 사용자 권한으로** 돈다(의도된
-비대칭 — 커밋·브랜치는 훅을 거치지 않는다). 그런데 샌드박스는 작업 디렉터리
-쓰기를 못 막으므로(M4) AI 가 쓴 코드가 `.git/` 에 쓸 수 있다.
-
-    .git/hooks/post-commit          커밋할 때 실행된다
-    .git/config  core.hooksPath     훅 폴더를 바꾼다
-                 filter.X.process   add·checkout 할 때 실행된다
-                 core.fsmonitor     status 할 때 실행된다
-                 core.sshCommand    fetch·push 할 때 실행된다
-                 include.path       다른 파일에서 위 전부를 끌어온다
-    .gitattributes  * filter=X      어느 파일에 필터를 걸지 정한다
+lab.remote 의 git 은 사람이 화면에서 누를 때 **사용자 권한으로** 돈다. 그런데
+에이전트 세션이 쓴 코드는 프로젝트 안 `.git/` 에도 쓸 수 있다. `.git/config`
+에 필터 드라이버를 심어 두면, 사람이 Files 탭을 여는 순간의 `git status` 가
+그 명령을 실행한다.
 
 그래서 **두 겹**이다.
 
-1. `ops.SAFE_CONFIG` — 명령줄 `-c` 로 덮는다. `-c` 는 저장소 설정을 **이긴다.**
-2. 이 모듈 — `-c` 로 **못 덮는 것**(`filter.*`·`include.path`·`url.*.insteadOf`
-   처럼 와일드카드가 없거나 파싱 시점에 끼어드는 것)을 찾아 **git 을 아예 안
-   돌린다.** 열려 있는 구멍을 들고 커밋하는 것보다 멈추는 게 낫다.
+1. `ops.safe_config()` — 명령줄 `-c` 로 덮는다. `-c` 는 저장소 설정을 **이긴다.**
+   훅 폴더는 빈 폴더를 가리키고, fsmonitor·pager·editor·askpass 는 끈다.
+2. 이 모듈 — `-c` 로 **못 덮는 것**(`filter.X.clean` 처럼 이름 가운데가 바뀌는
+   드라이버, 다른 파일을 끌어오는 `include.path`, `protocol.<이름>.allow` …)을
+   찾아 **git 을 아예 안 돌린다.**
+
+## 거절하지 않고 알리기만 하는 것 (v3)
+
+`-c` 가 이미 무력화하는 것은 막지 않는다. 사람의 연구 저장소에는 흔하다.
+
+| 있는 것 | 왜 괜찮나 |
+|---|---|
+| `.git/hooks/*` 실행 파일 (pre-commit·husky) | `core.hooksPath` 를 빈 폴더로 덮는다 |
+| `core.hooksPath`·`core.fsmonitor`·`core.pager` 등 | `-c` 로 덮는다 |
+| `.gitattributes` 의 `filter=lfs` 등 | 드라이버(`filter.X.*`)가 없으면 아무것도 안 돈다. 드라이버는 위에서 막고, 전역·시스템 설정은 끊는다 |
+| 서브모듈 · `alias.*` | 우리가 부르는 읽기 명령은 이것들을 실행하지 않는다 |
+
+이것들은 `notes` 로 돌려준다.
 
 ## 설정은 git 으로 읽는다
 
 `.git/config` 를 손으로 파싱하면 `include.path` 가 끌어온 값을 놓친다. 그래서
-`git config --list --local` 로 **효과 있는 값**을 읽는다. 설정을 읽는 것은
-훅·필터를 돌리지 않으므로 그 자체는 안전하다. 물론 그때도 `SAFE_CONFIG` 와
-화이트리스트 환경을 쓴다.
+`git config --list --local` 로 **효과 있는 값**을 읽는다.
 """
 
 from __future__ import annotations
@@ -42,7 +47,10 @@ __all__ = [
     "GitRefused",
     "FORBIDDEN_KEYS",
     "FORBIDDEN_PATTERNS",
+    "NOTED_KEYS",
+    "NOTED_PATTERNS",
     "ATTR_FILES",
+    "noted_config",
     "config_entries",
     "bad_config",
     "bad_hooks",
@@ -56,9 +64,18 @@ class GitRefused(RuntimeError):
     """`.git` 이 코드를 실행하게 만드는 설정을 가졌다. **git 을 안 돌린다.**"""
 
 
-#: 이름이 정확히 이것이면 거부. `-c` 로 덮을 수 있는 것도 넣는다 — 덮을 수
-#: **있다**는 것과 **누가 심어 뒀다**는 것은 다른 문제다. 심겼으면 알려야 한다.
+#: 이름이 정확히 이것이면 거부 — `ops.safe_config()` 가 **덮지 않는** 것.
 FORBIDDEN_KEYS = frozenset(
+    {
+        "core.alternaterefscommand",
+        "core.alternaterefsprefixes",
+        "uploadpack.packobjectshook",
+        "ssh.variant",
+    }
+)
+
+#: 있으면 **알리기만** 하는 키 — `ops.safe_config()` 의 `-c` 가 이긴다.
+NOTED_KEYS = frozenset(
     {
         "core.hookspath",
         "core.fsmonitor",
@@ -69,15 +86,10 @@ FORBIDDEN_KEYS = frozenset(
         "core.editor",
         "core.pager",
         "core.attributesfile",
-        "core.alternaterefscommand",
-        "core.alternaterefsprefixes",
         "diff.external",
         "sequence.editor",
-        "uploadpack.packobjectshook",
         "credential.helper",
-        "protocol.ext.allow",
         "gpg.program",
-        "ssh.variant",
     }
 )
 
@@ -96,9 +108,12 @@ FORBIDDEN_PATTERNS = (
     re.compile(r"^url\..*\.(insteadof|pushinsteadof)$"),
     re.compile(r"^http\..*\.proxy$"),
     re.compile(r"^credential\..*\.helper$"),
-    # 별칭은 빌트인을 못 가리지만, 심겼으면 손댄 흔적이다
-    re.compile(r"^alias\..+$"),
+    # `protocol.<이름>.allow` 는 `protocol.allow=never` 보다 우선한다
+    re.compile(r"^protocol\..+\.allow$"),
 )
+
+#: 있으면 알리기만 하는 패턴 — 별칭은 빌트인을 못 가린다
+NOTED_PATTERNS = (re.compile(r"^alias\..+$"),)
 
 #: 필터·textconv 를 **어느 파일에 걸지** 정하는 곳
 ATTR_FILES = (".gitattributes", ".git/info/attributes")
@@ -154,6 +169,15 @@ def bad_config(entries: dict) -> list[str]:
     return out
 
 
+def noted_config(entries: dict) -> list[str]:
+    """있지만 `-c` 가 이기는 설정. 알리기만 한다."""
+    out = []
+    for key, value in sorted(entries.items()):
+        if key in NOTED_KEYS or any(p.match(key) for p in NOTED_PATTERNS):
+            out.append(f".git/config · {key} — lab.remote 의 git 에서는 꺼져요")
+    return out
+
+
 def bad_hooks(root: str) -> list[str]:
     """`.git/hooks` 에 **실행 권한이 있는** 파일. `*.sample` 은 봐준다."""
     folder = os.path.join(_git_dir(root), "hooks")
@@ -171,21 +195,22 @@ def bad_hooks(root: str) -> list[str]:
         except OSError:
             continue
         if stat.S_ISREG(mode) and mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH):
-            out.append(f".git/hooks/{name} — 실행 권한이 있어요. git 이 이걸 실행해요")
+            out.append(f".git/hooks/{name} — lab.remote 의 git 에서는 안 돌아요")
     return out
 
 
 def bad_attributes(root: str) -> list[str]:
-    """`filter=`·`diff=`·`merge=` 속성. 필터를 **어느 파일에 걸지** 정하는 곳."""
+    """`filter=`·`diff=`·`merge=` 속성. **알리기만** 한다.
+
+    드라이버 정의(`filter.X.*`)가 없으면 아무것도 안 돈다 — 드라이버는
+    `bad_config` 가 막는다. 저장소 전체를 걷지 않는다(큰 연구 저장소에서
+    git 을 부를 때마다 걸으면 느리다). 맨 위 `.gitattributes` 와
+    `.git/info/attributes` 만 본다.
+    """
     out = []
     base = paths.real(root)
-    found = [os.path.join(base, rel) for rel in ATTR_FILES]
-    # 하위 폴더의 `.gitattributes` 도 먹는다
-    for folder, dirs, files in os.walk(base):
-        dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", "node_modules")]
-        if ".gitattributes" in files:
-            found.append(os.path.join(folder, ".gitattributes"))
-    for path in sorted(set(found)):
+    for rel in ATTR_FILES:
+        path = os.path.join(base, rel)
         if not os.path.isfile(path):
             continue
         try:
@@ -193,37 +218,33 @@ def bad_attributes(root: str) -> list[str]:
                 lines = fh.read().splitlines()
         except OSError:
             continue
-        rel = os.path.relpath(path, base)
         for number, line in enumerate(lines, 1):
             text = line.strip()
-            if not text or text.startswith("#"):
-                continue
-            if _ATTR_RE.search(text):
-                out.append(f"{rel}:{number} · {text[:80]} — 필터·textconv 가 걸려 있어요")
+            if text and not text.startswith("#") and _ATTR_RE.search(text):
+                out.append(f"{rel}:{number} · {text[:80]}")
     return out
 
 
 def bad_submodules(root: str) -> list[str]:
-    """서브모듈은 쓰지 않는다 — `.gitmodules` 로 다른 저장소를 끌어온다."""
+    """서브모듈 흔적. 알리기만 한다."""
     out = []
     base = paths.real(root)
     if os.path.exists(os.path.join(base, ".gitmodules")):
-        out.append(".gitmodules — 서브모듈은 쓰지 않아요")
+        out.append(".gitmodules — 서브모듈이 있어요")
     if os.path.isdir(os.path.join(_git_dir(root), "modules")):
         out.append(".git/modules — 서브모듈 흔적이 있어요")
     return out
 
 
 def check(root: str, *, git: str = "git", config_args=(), env=None) -> dict:
-    """`{"ok": bool, "problems": [...]}`. **git 을 돌리기 전에** 부른다."""
-    problems: list[str] = []
-    problems += bad_hooks(root)
-    problems += bad_attributes(root)
-    problems += bad_submodules(root)
-    problems += bad_config(
-        config_entries(root, git=git, config_args=config_args, env=env)
-    )
-    return {"ok": not problems, "root": paths.real(root), "problems": problems}
+    """`{"ok", "problems", "notes"}`. **git 을 돌리기 전에** 부른다.
+
+    `problems` 가 있으면 git 을 안 돌린다. `notes` 는 알리기만 한다.
+    """
+    entries = config_entries(root, git=git, config_args=config_args, env=env)
+    problems = bad_config(entries)
+    notes = noted_config(entries) + bad_hooks(root) + bad_attributes(root) + bad_submodules(root)
+    return {"ok": not problems, "root": paths.real(root), "problems": problems, "notes": notes}
 
 
 def describe(report: dict) -> str:
@@ -231,5 +252,5 @@ def describe(report: dict) -> str:
         return ".git 이 깨끗해요."
     lines = [".git 이 코드를 실행하게 만드는 설정을 가졌어요 — git 을 돌리지 않았어요:"]
     lines += [f"  · {p}" for p in report.get("problems") or []]
-    lines.append("AI 가 쓴 코드가 심었을 수 있어요. 무엇이 들어갔는지 먼저 보세요.")
+    lines.append("에이전트 세션이 쓴 코드가 심었을 수 있어요. 무엇이 들어갔는지 먼저 보세요.")
     return "\n".join(lines)

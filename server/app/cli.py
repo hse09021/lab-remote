@@ -3,8 +3,8 @@
 서브커맨드는 라이브러리 함수를 얇게 감싼다. 로직은 모듈에 있고 여기는 인자
 해석과 출력만 맡는다 — 서버(FastAPI)가 같은 함수를 부를 수 있게.
 
-지금 있는 것: `doctor`, `notify test`, `service install|status`, `monitor once`.
-`serve`(1단계), `run`(2단계), `autostart`(9단계)는 해당 단계에서 더한다
+지금 있는 것: `serve`, `doctor`, `notify test`, `service install|status`,
+`monitor once`. `run`(2단계), `autostart`(9단계)는 해당 단계에서 더한다
 (docs/v3/PLAN.md 4.1 · 6장).
 """
 
@@ -129,6 +129,50 @@ def cmd_monitor(args) -> int:
     return 0
 
 
+def lower_priority() -> dict:
+    """nice 19 + ionice idle. 실패해도 서버는 뜬다 — 무엇이 됐는지만 알린다."""
+    import shutil
+    import subprocess
+
+    out = {"nice": None, "ionice": False}
+    try:
+        current = os.getpriority(os.PRIO_PROCESS, 0)
+        if current < 19:
+            os.setpriority(os.PRIO_PROCESS, 0, 19)
+        out["nice"] = os.getpriority(os.PRIO_PROCESS, 0)
+    except OSError:
+        pass
+    ionice = shutil.which("ionice")
+    if ionice:
+        try:
+            done = subprocess.run(
+                [ionice, "-c", "3", "-p", str(os.getpid())], capture_output=True, timeout=5
+            )
+            out["ionice"] = done.returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return out
+
+
+def cmd_serve(args) -> int:
+    """`127.0.0.1` 에만 연다. 다른 주소로 여는 옵션은 일부러 없다."""
+    try:
+        import uvicorn
+
+        from .main import create_app
+    except ImportError:
+        print("✘ fastapi·uvicorn 이 없어요 — pip install -e '.[api]'", file=sys.stderr)
+        return 2
+    prio = lower_priority()
+    print(
+        f"lab.remote · http://127.0.0.1:{args.port} · nice {prio['nice']} · "
+        f"ionice {'idle' if prio['ionice'] else '그대로'}",
+        flush=True,
+    )
+    uvicorn.run(create_app(port=args.port), host="127.0.0.1", port=args.port, log_level="warning")
+    return 0
+
+
 # --- 파서 -------------------------------------------------------------------
 
 
@@ -136,6 +180,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="labremote", description="lab.remote")
     parser.add_argument("--json", action="store_true", help="JSON 으로 출력해요")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("serve", help="서버를 띄워요 (127.0.0.1 만)")
+    p.add_argument("--port", type=int, default=8000)
+    p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("doctor", help="설치와 환경 점검")
     p.set_defaults(func=cmd_doctor)

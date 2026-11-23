@@ -108,24 +108,23 @@ def test_신원이_없어도_커밋된다(repo):
     assert any("user.name=" in x for x in ops.commit_config())
 
 
-# --- 🔑 훅이 실행되지 않는다 ---------------------------------------------------
+# --- 🔑 훅이 실행되지 않는다 (거절은 안 한다) ---------------------------------------------------
 
 
 def test_악성_post_commit_훅이_실행되지_않는다(repo, tmp_path):
-    """가장 직접적인 길 — 오케스트레이터가 커밋할 때 실행된다."""
+    """훅이 있어도 거절하지 않는다 (pre-commit·husky 가 흔하다). 대신 **안 돈다** —
+    `-c core.hooksPath` 가 빈 폴더를 가리킨다. 보통 경로(guard 를 지나는 run)로 잰다."""
     mark = _mark_path(tmp_path)
     _plant_hook(repo, "post-commit", mark)
 
-    # 1차 방어: guard 가 먼저 거부한다
-    with pytest.raises(G.GitRefused) as err:
-        ops.guard(repo)
-    assert "post-commit" in str(err.value)
+    report = ops.guard(repo)
+    assert report["ok"] is True
+    assert any("post-commit" in n for n in report["notes"])
 
-    # 2차 방어: 검사를 건너뛰어도 `-c core.hooksPath` 가 이긴다
     with open(os.path.join(repo, "src", "d.txt"), "w", encoding="utf-8") as fh:
         fh.write("d\n")
-    ops.run(repo, ["add", "--", "src"], guarded=False)
-    ops.run(repo, ["commit", "-m", "훅이 돌면 안 돼요"], guarded=False)
+    ops.run(repo, ["add", "--", "src"])
+    ops.run(repo, ["commit", "-m", "훅이 돌면 안 돼요"])
     assert not mark.exists(), "post-commit 훅이 실행됐어요"
 
 
@@ -140,7 +139,7 @@ def test_pre_commit_훅도_실행되지_않는다(repo, tmp_path):
 
 
 def test_core_hooksPath_를_심어도_이긴다(repo, tmp_path):
-    """저장소 설정으로 훅 폴더를 바꿔도 `-c` 가 이긴다."""
+    """저장소 설정으로 훅 폴더를 바꿔도 `-c` 가 이긴다 — 그래서 알리기만 한다."""
     folder = tmp_path / "evil-hooks"
     folder.mkdir()
     mark = _mark_path(tmp_path)
@@ -149,13 +148,13 @@ def test_core_hooksPath_를_심어도_이긴다(repo, tmp_path):
     path.chmod(0o755)
     _append_config(repo, f"\n[core]\n\thooksPath = {folder}\n")
 
-    with pytest.raises(G.GitRefused):
-        ops.guard(repo)
+    report = ops.guard(repo)
+    assert any("core.hookspath" in n for n in report["notes"])
 
     with open(os.path.join(repo, "src", "f.txt"), "w", encoding="utf-8") as fh:
         fh.write("f\n")
-    ops.run(repo, ["add", "--", "src"], guarded=False)
-    ops.run(repo, ["commit", "-m", "x"], guarded=False)
+    ops.run(repo, ["add", "--", "src"])
+    ops.run(repo, ["commit", "-m", "x"])
     assert not mark.exists()
 
 
@@ -173,9 +172,7 @@ def test_filter_설정이면_git_을_안_돌린다(repo, tmp_path):
 
     with pytest.raises(G.GitRefused) as err:
         ops.guard(repo)
-    text = str(err.value)
-    assert "filter.evil.clean" in text
-    assert ".gitattributes" in text
+    assert "filter.evil.clean" in str(err.value)
 
     # guard 를 지나가는 모든 호출이 막힌다 — 커밋도 status 도
     for call in (
@@ -195,12 +192,17 @@ def test_textconv_도_잡는다(repo):
     assert "diff.evil.textconv" in str(err.value)
 
 
-def test_fsmonitor_를_잡는다(repo):
-    """`git status` 할 때 실행된다."""
-    _append_config(repo, "\n[core]\n\tfsmonitor = /tmp/evil.sh\n")
-    with pytest.raises(G.GitRefused) as err:
-        ops.guard(repo)
-    assert "core.fsmonitor" in str(err.value)
+def test_fsmonitor_를_심어도_status_에서_안_돈다(repo, tmp_path):
+    """`git status` 할 때 실행되는 감시 프로그램 — `-c core.fsmonitor=false` 가 이긴다."""
+    mark = _mark_path(tmp_path)
+    script = tmp_path / "evil.sh"
+    script.write_text(f"#!/bin/sh\necho pwned > {mark}\n", encoding="utf-8")
+    script.chmod(0o755)
+    _append_config(repo, f"\n[core]\n\tfsmonitor = {script}\n")
+
+    assert any("core.fsmonitor" in n for n in ops.guard(repo)["notes"])
+    ops.status_porcelain(repo)
+    assert not mark.exists()
 
 
 def test_include_path_자체를_거부한다(repo, tmp_path):
@@ -235,11 +237,9 @@ def test_includeIf_도_거부한다(repo, tmp_path):
     assert "includeif" in str(err.value).lower()
 
 
-def test_sshCommand_와_insteadOf_를_잡는다(repo):
+def test_sshCommand_는_알리고_insteadOf_는_거부한다(repo):
     _append_config(repo, "\n[core]\n\tsshCommand = /tmp/evil.sh\n")
-    with pytest.raises(G.GitRefused) as err:
-        ops.guard(repo)
-    assert "core.sshcommand" in str(err.value).lower()
+    assert any("core.sshcommand" in n for n in ops.guard(repo)["notes"])
 
     os.truncate(os.path.join(repo, ".git", "config"), 0)
     _append_config(repo, "[url \"/tmp/evil\"]\n\tinsteadOf = https://github.com/\n")
@@ -248,29 +248,49 @@ def test_sshCommand_와_insteadOf_를_잡는다(repo):
     assert "insteadof" in str(err.value).lower()
 
 
-def test_alias_와_credential_helper_를_잡는다(repo):
-    _append_config(repo, "\n[alias]\n\tst = !sh -c 'echo pwned'\n")
-    with pytest.raises(G.GitRefused):
-        ops.guard(repo)
-    os.truncate(os.path.join(repo, ".git", "config"), 0)
-    _append_config(repo, "[credential]\n\thelper = !sh -c 'echo pwned'\n")
-    with pytest.raises(G.GitRefused):
-        ops.guard(repo)
-
-
-def test_서브모듈을_거부한다(repo):
-    with open(os.path.join(repo, ".gitmodules"), "w", encoding="utf-8") as fh:
-        fh.write('[submodule "x"]\n\tpath = x\n\turl = /tmp/x\n')
+def test_protocol_이름별_허용은_거부한다(repo):
+    """`protocol.<이름>.allow` 는 `protocol.allow=never` 보다 우선한다."""
+    _append_config(repo, "\n[protocol \"ext\"]\n\tallow = always\n")
     with pytest.raises(G.GitRefused) as err:
         ops.guard(repo)
-    assert ".gitmodules" in str(err.value)
+    assert "protocol.ext.allow" in str(err.value)
 
 
-def test_하위_폴더의_gitattributes_도_본다(repo):
+def test_alias_와_credential_helper_는_알리기만(repo):
+    """별칭은 빌트인을 못 가리고, `credential.helper` 는 `-c` 가 비운다."""
+    _append_config(repo, "\n[alias]\n\tst = !sh -c 'echo pwned'\n")
+    assert any("alias.st" in n for n in ops.guard(repo)["notes"])
+    os.truncate(os.path.join(repo, ".git", "config"), 0)
+    _append_config(repo, "[credential]\n\thelper = !sh -c 'echo pwned'\n")
+    assert any("credential.helper" in n for n in ops.guard(repo)["notes"])
+    # URL 별 helper 는 `-c` 로 못 비운다 — 거부
+    os.truncate(os.path.join(repo, ".git", "config"), 0)
+    _append_config(repo, "[credential \"https://x\"]\n\thelper = !sh -c 'echo pwned'\n")
+    with pytest.raises(G.GitRefused):
+        ops.guard(repo)
+
+
+def test_서브모듈은_알리기만(repo):
+    with open(os.path.join(repo, ".gitmodules"), "w", encoding="utf-8") as fh:
+        fh.write('[submodule "x"]\n\tpath = x\n\turl = /tmp/x\n')
+    assert any(".gitmodules" in n for n in ops.guard(repo)["notes"])
+
+
+def test_LFS_저장소는_거부하지_않는다(repo):
+    """`filter=lfs` 만 있고 드라이버가 저장소 설정에 없으면 아무것도 안 돈다."""
+    with open(os.path.join(repo, ".gitattributes"), "w", encoding="utf-8") as fh:
+        fh.write("*.bin filter=lfs diff=lfs merge=lfs -text\n")
+    report = ops.guard(repo)
+    assert report["ok"] is True
+    assert any(".gitattributes:1" in n for n in report["notes"])
+    ops.status_porcelain(repo)  # 돈다
+
+
+def test_저장소를_걷지_않는다(repo):
+    """큰 연구 저장소에서 git 을 부를 때마다 걸으면 느리다 — 맨 위만 본다."""
     with open(os.path.join(repo, "src", ".gitattributes"), "w", encoding="utf-8") as fh:
         fh.write("*.py diff=evil\n")
-    got = G.bad_attributes(repo)
-    assert got and "src/.gitattributes" in got[0]
+    assert G.bad_attributes(repo) == []
 
 
 def test_주석과_빈_줄은_넘어간다(repo):

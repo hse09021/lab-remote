@@ -44,3 +44,6 @@ export { SectionHeader } from './SectionHeader'
 export { IconButton } from './IconButton'
 
 export { EmptyState, ErrorState, LoadingState, Skeleton } from './StateMessage'
+
+export { Dialog } from './Dialog'
+export { default as dialogStyles } from './Dialog.module.css'

@@ -2,8 +2,43 @@ import { loadMock } from './mock'
 import { applyMockWrite } from './mock/writes'
 import { resetMockStore } from './mockStore'
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+/**
+ * 어느 API 를 서버에서 받나 (v3 는 화면을 한 단계씩 실제 API 로 옮겨요).
+ *
+ * - `VITE_USE_MOCK=true`(또는 안 줌) — **섞어 써요**: `LIVE_PREFIXES` 는 서버, 나머지는 mock.
+ *   v1 의 `.env`(`true`)를 그대로 둬도 실제 API 가 생긴 화면은 서버로 가요.
+ * - `VITE_USE_MOCK=all` — 전부 mock (서버 없이 화면만 볼 때. 실제 API 화면은 비어요)
+ * - `VITE_USE_MOCK=false` — 전부 서버
+ */
+const MOCK_MODE = import.meta.env.VITE_USE_MOCK
 const BASE = import.meta.env.VITE_API_BASE ?? '/api'
+
+/** 서버 API 가 생긴 경로. 단계마다 늘어나요 (PLAN 6장). */
+const LIVE_PREFIXES = ['/health', '/projects', '/system'] as const
+
+/** 바꾸는 요청에 붙이는 헤더 — 서버가 다른 사이트에서 온 요청을 거절하는 근거예요 */
+const MUTATION_HEADER = { 'X-Lab-Remote': '1' }
+
+const isLive = (path: string) =>
+  LIVE_PREFIXES.some((p) => path === p || path.startsWith(p + '/') || path.startsWith(p + '?'))
+
+function useMockFor(path: string) {
+  if (MOCK_MODE === 'all') return true
+  if (MOCK_MODE === 'false') return false
+  return !isLive(path)
+}
+
+/** 서버가 준 `{detail}` 을 그대로 보여 줘요 (한국어 해요체로 와요) */
+async function errorOf(res: Response, path: string) {
+  let message: string | undefined
+  try {
+    const body = (await res.json()) as { detail?: unknown }
+    if (typeof body.detail === 'string') message = body.detail
+  } catch {
+    // 본문이 JSON 이 아니면 상태 코드만
+  }
+  return new ApiError(res.status, path, message)
+}
 
 export class ApiError extends Error {
   constructor(
@@ -27,7 +62,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
  * 준비되면 VITE_USE_MOCK=false 로 바꾸는 것만으로 넘어가야 하니까요.
  */
 export async function get<T>(path: string): Promise<T> {
-  if (USE_MOCK) {
+  if (useMockFor(path)) {
     await sleep(MOCK_DELAY_MS)
     return loadMock<T>(path)
   }
@@ -36,8 +71,7 @@ export async function get<T>(path: string): Promise<T> {
     headers: { Accept: 'application/json' },
   })
 
-  // TODO(인증): 401이면 로그인으로 보내요. spec IV의 인증 레이어가 붙으면 채워요.
-  if (!res.ok) throw new ApiError(res.status, path)
+  if (!res.ok) throw await errorOf(res, path)
   return (await res.json()) as T
 }
 
@@ -46,7 +80,7 @@ export async function send<T>(
   path: string,
   body?: unknown,
 ): Promise<T> {
-  if (USE_MOCK) {
+  if (useMockFor(path)) {
     await sleep(MOCK_DELAY_MS)
     // 목업 모드에서는 모듈 저장소를 고쳐요. 부른 쪽이 쿼리를 무효화해요.
     return applyMockWrite(method, path, body) as T
@@ -54,23 +88,38 @@ export async function send<T>(
 
   const res = await fetch(BASE + path, {
     method,
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...MUTATION_HEADER },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 
-  if (!res.ok) throw new ApiError(res.status, path)
+  if (!res.ok) throw await errorOf(res, path)
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
 }
 
-export const isMockMode = () => USE_MOCK
+/** 파일 내용을 그대로 올려요 (multipart 를 쓰지 않아요). 서버 전용이에요. */
+export async function upload<T>(path: string, file: Blob): Promise<T> {
+  const res = await fetch(BASE + path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/octet-stream', ...MUTATION_HEADER },
+    body: file,
+  })
+  if (!res.ok) throw await errorOf(res, path)
+  return (await res.json()) as T
+}
+
+/** 내려받기·링크용 주소 */
+export const apiUrl = (path: string) => BASE + path
+
+export const isMockMode = () => MOCK_MODE === 'all'
+export const isMockPath = (path: string) => useMockFor(path)
 
 /**
  * 개발 모드에서 ?reset-mock 을 붙이면 목업 저장소를 처음 상태로 돌려요.
  * 주소에서 바로 빼서 새로 고침해도 다시 지워지지 않게 해요.
  */
 export function resetMockFromUrl() {
-  if (!import.meta.env.DEV || !USE_MOCK) return false
+  if (!import.meta.env.DEV || MOCK_MODE === 'false') return false
   const url = new URL(window.location.href)
   if (!url.searchParams.has('reset-mock')) return false
   resetMockStore()
