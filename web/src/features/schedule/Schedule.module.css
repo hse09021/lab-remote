@@ -313,3 +313,10 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+
+/* 예약 창의 짧은 안내 */
+.note {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { runReaderAi } from '@/api/papers'
+import { useQuery } from '@tanstack/react-query'
+import { runReaderAi, vaultQuery } from '@/api/papers'
+import { copyText } from '@/lib/clipboard'
 import type { ExplainResult } from '@/api/papers'
 import type { CSSProperties, ReactNode } from 'react'
 import type { UserAnnotation } from '@/api/annotations'
@@ -59,6 +61,10 @@ interface Props {
   sectionLabel: (sectionId: string) => string
   onEditNote: (annotation: UserAnnotation, text: string) => void
   onDeleteNote: (annotation: UserAnnotation) => void
+  /** 노트 탭의 "새 메모" — 지금 보는 섹션에 붙여요 */
+  onAddNote?: (text: string) => void
+  /** 지금 보는 섹션 (새 메모 위치) */
+  currentLabel?: string
   /** 인용 카드로 보관한 참고문헌인지 — 라이브러리 캐시에서 봐요 */
   isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
 }
@@ -89,6 +95,8 @@ export function AiPanel({
   sectionLabel,
   onEditNote,
   onDeleteNote,
+  onAddNote,
+  currentLabel = '',
   isRefSaved,
 }: Props) {
   return (
@@ -139,6 +147,7 @@ export function AiPanel({
                 textareaId="reader-md"
                 onJump={() => undefined}
               />
+              <ObsidianLine path={summary.path} />
             </div>
           ) : (
             <div className={s.pad}>
@@ -177,10 +186,36 @@ export function AiPanel({
             label={sectionLabel}
             onEdit={onEditNote}
             onDelete={onDeleteNote}
+            onAdd={onAddNote}
+            currentLabel={currentLabel}
+            onAsk={chatPaperId ? () => onTabChange('chat') : undefined}
           />
         )}
       </div>
     </aside>
+  )
+}
+
+/** "vault/Papers/X 요약.md 저장됨 · Obsidian 링크 복사" — Obsidian에서 바로 열리는 주소 */
+function ObsidianLine({ path }: { path: string }) {
+  const vault = useQuery(vaultQuery())
+  const [copied, setCopied] = useState(false)
+  if (!path) return null
+  const rel = path.replace(/^vault\//, '').replace(/\.md$/, '')
+  const name = (vault.data?.path ?? '').replace(/\/+$/, '').split('/').pop() ?? ''
+  const link = `obsidian://open?vault=${encodeURIComponent(name)}&file=${encodeURIComponent(rel)}`
+  return (
+    <div className={s.obsidianLine}>
+      <span className={s.obsidianPath}>{path} 저장됨</span>
+      <button
+        type="button"
+        className={s.chatClear}
+        disabled={!name}
+        onClick={() => void copyText(link).then((ok) => setCopied(ok))}
+      >
+        {copied ? '복사했어요' : 'Obsidian 링크 복사'}
+      </button>
+    </div>
   )
 }
 
@@ -245,7 +280,13 @@ function NotesTab({
   label: locationLabel,
   onEdit,
   onDelete,
+  onAdd,
+  currentLabel,
+  onAsk,
 }: {
+  onAdd?: (text: string) => void
+  currentLabel: string
+  onAsk?: () => void
   highlights: Highlight[]
   sections: PaperReaderPayload['sections']
   toggles: HighlightToggles
@@ -261,12 +302,45 @@ function NotesTab({
   const sectionOf = (id: string) => sections.find((x) => x.id === id)
 
   const rows = highlights.filter((h) => toggles[h.category])
+  const [draft, setDraft] = useState('')
 
   return (
     <div className={s.pad}>
       <span className={s.caption}>
-        하이라이트와 주석을 모아 둬요. 아웃라인에서 종류를 끄면 여기서도 숨겨져요.
+        AI 하이라이트와 내 메모예요. 누르면 해당 위치로 이동해요.
       </span>
+      {onAdd && (
+        // 새 메모 — 글자를 고르지 않고 지금 보는 섹션에 바로 남겨요
+        <div className={s.newNote}>
+          <span className={s.newNoteHead}>새 메모{currentLabel ? ` · ${currentLabel}` : ''}</span>
+          <textarea
+            className={s.newNoteInput}
+            rows={3}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="이 섹션에 남길 메모"
+            aria-label="새 메모"
+          />
+          <div className={s.newNoteActions}>
+            <button
+              type="button"
+              className={s.analyzeBtn}
+              disabled={!draft.trim()}
+              onClick={() => {
+                onAdd(draft.trim())
+                setDraft('')
+              }}
+            >
+              메모 저장
+            </button>
+            {onAsk && (
+              <button type="button" className={s.chatClear} onClick={onAsk}>
+                이 논문에 질문하기
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {userNotes.map((n) => (
         <MyNoteRow
           key={n.id}

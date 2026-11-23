@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { projectsQuery, worktreesQuery } from '@/api/projects'
 import { useScheduleActions } from '@/api/schedules'
 import type { Repeat, Schedule, ScheduleInput, ScheduleKind } from '@/api/schedules'
+import { agentInfoQuery } from '@/api/agents'
 import type { ModeId } from '@/api/agents'
+import { MODE_INFO } from '../agents/Composer'
 import { ApiError } from '@/api/client'
 import { Dialog, dialogStyles as ds } from '@/components'
 import s from './Schedule.module.css'
@@ -61,6 +63,14 @@ export function ScheduleDialog({
   const [name, setName] = useState(init.name ?? '')
   const [when, setWhen] = useState(toLocal(edit?.at ?? nextHour()))
   const [repeat, setRepeat] = useState<Repeat>(edit?.repeat ?? 'once')
+  // 에이전트 예약 — 세션을 열 때 쓸 Mode · 모델 · Effort (목록은 에이전트에서 받아요)
+  const [mode, setMode] = useState<ModeId>((edit?.mode as ModeId) || 'manual')
+  const [model, setModel] = useState(edit?.model ?? '')
+  const [effort, setEffort] = useState(edit?.effort ?? '')
+  const info = useQuery({ ...agentInfoQuery(), enabled: open && kind === 'agent' })
+  const models = info.data?.models ?? []
+  const curModel = models.find((m) => m.value === (model || 'default')) ?? models[0]
+  const efforts = curModel?.supportsEffort ? (curModel.supportedEffortLevels ?? []) : []
   const proj = project || list.data?.projects[0]?.name || ''
   const trees = useQuery({ ...worktreesQuery(proj), enabled: !!proj })
   const places = trees.data?.state === 'ok' ? trees.data.worktrees.filter((w) => w.rel !== null) : []
@@ -76,9 +86,9 @@ export function ScheduleDialog({
       command: kind === 'command' ? command : '',
       env: kind === 'command' ? env.trim() : '',
       prompt: kind === 'agent' ? prompt : '',
-      mode: (edit?.mode ?? 'manual') as ModeId,
-      model: edit?.model ?? '',
-      effort: edit?.effort ?? '',
+      mode: kind === 'agent' ? mode : 'manual',
+      model: kind === 'agent' ? model : '',
+      effort: kind === 'agent' && efforts.includes(effort) ? effort : '',
       at: fromLocal(when),
       repeat,
       // 꺼 둔 예약을 고쳐도 꺼진 채로 둬요
@@ -152,6 +162,45 @@ export function ScheduleDialog({
           <textarea className={ds.input} rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="이번 주 실험 결과를 README 표로 정리해 줘" />
         </label>
       )}
+      {kind === 'agent' && (
+        <div className={s.whenRow}>
+          <label className={ds.field}>
+            Mode
+            <select className={ds.input} value={mode} onChange={(e) => setMode(e.target.value as ModeId)}>
+              {(Object.keys(MODE_INFO) as ModeId[]).map((m) => (
+                <option key={m} value={m}>
+                  {MODE_INFO[m].name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={ds.field}>
+            모델
+            <select className={ds.input} value={model || 'default'} onChange={(e) => setModel(e.target.value === 'default' ? '' : e.target.value)}>
+              {models.length === 0 && <option value="default">기본</option>}
+              {models.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          {efforts.length > 0 && (
+            <label className={ds.field}>
+              Effort
+              <select className={ds.input} value={effort} onChange={(e) => setEffort(e.target.value)}>
+                <option value="">기본</option>
+                {efforts.map((e) => (
+                  <option key={e} value={e}>
+                    {e}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+      {kind === 'agent' && mode === 'auto' && <span className={s.note}>{MODE_INFO.auto.desc}</span>}
       <label className={ds.field}>
         이름
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="r32 학습" />

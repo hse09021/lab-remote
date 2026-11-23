@@ -364,3 +364,56 @@
 .chatClear:hover {
   color: var(--text);
 }
+
+/* 노트 탭 — 새 메모 */
+.newNote {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.newNoteHead {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.newNoteInput {
+  resize: vertical;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.newNoteActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* 요약 탭 — 저장 위치 · Obsidian 링크 */
+.obsidianLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 12px;
+}
+
+.obsidianPath {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  word-break: break-all;
+}

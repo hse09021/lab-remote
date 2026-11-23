@@ -259,3 +259,38 @@ def test_세션_카드_git_상태(repo, monkeypatch):
     ], fresh=True)
     assert got["s1"] == {"add": 2, "del": 0, "files": 1, "pr": {"number": 3, "state": "리뷰 기다림", "url": "u"}}
     assert got["s2"] == {"add": 0, "del": 0, "files": 0, "pr": None}
+
+
+def test_파일_되돌리기(repo):
+    with open(os.path.join(repo, "src", "train.py"), "a") as fh:
+        fh.write("bad = 1\n")
+    with open(os.path.join(repo, "src", "new.py"), "w") as fh:
+        fh.write("x\n")
+    assert actions.discard(repo, "src/train.py") == {"path": "src/train.py", "removed": False}
+    assert open(os.path.join(repo, "src", "train.py")).read() == "lr = 0.001\nepochs = 10\n"
+    assert actions.discard(repo, "src/new.py")["removed"] is True
+    assert not os.path.exists(os.path.join(repo, "src", "new.py"))
+    with pytest.raises(actions.ActionError):
+        actions.discard(repo, "src/train.py")  # 이제 변경이 없어요
+    with pytest.raises(actions.ActionError):
+        actions.discard(repo, "../outside.txt")
+
+
+def test_파일_출처(repo, tmp_path):
+    import json as _json
+
+    from app.agents.manager import manager
+
+    d = manager._dir(repo)
+    os.makedirs(d, exist_ok=True)
+    sid = "s-0123456789"
+    with open(os.path.join(d, f"{sid}.json"), "w") as fh:
+        _json.dump({"id": sid, "project": "demo", "title": "rank 64 설정", "tree": ".", "state": "idle", "updatedAt": 1}, fh)
+    with open(os.path.join(d, f"{sid}.jsonl"), "w") as fh:
+        fh.write(_json.dumps({"at": 100, "type": "tool", "name": "Write", "input": {"file_path": os.path.join(repo, "src", "r64.yaml")}}) + "\n")
+        fh.write(_json.dumps({"at": 200, "type": "tool", "name": "Read", "input": {"file_path": os.path.join(repo, "src", "train.py")}}) + "\n")
+    got = manager.file_origin("demo", repo, "src/r64.yaml")
+    assert got == {"session": sid, "title": "rank 64 설정", "at": 100.0, "tool": "Write", "closed": False}
+    assert manager.file_origin("demo", repo, "src/train.py") is None  # 읽기만 한 건 출처가 아니에요
+    client = TestClient(main.create_app(web_dist=str(tmp_path)), base_url="http://127.0.0.1:8000")
+    assert client.get("/api/projects/demo/files/origin", params={"path": "src/r64.yaml"}).json()["origin"]["session"] == sid

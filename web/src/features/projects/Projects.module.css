@@ -1195,3 +1195,21 @@ button.nameBtn:hover .fileName {
     text-decoration: none;
   }
 }
+
+/* 새 실행 창의 "시간 정해서 실행…" */
+.linkBtn {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkBtn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}

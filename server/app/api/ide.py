@@ -74,6 +74,30 @@ def merge(name: str, body: MergeBody):
     return got
 
 
+class DiscardBody(BaseModel):
+    tree: str = ""
+    path: str
+
+
+@router.post("/projects/{name}/git/discard")
+def discard(name: str, body: DiscardBody):
+    """한 파일의 커밋 안 한 변경 되돌리기 (화면에서 확인을 받은 뒤)"""
+    base = files.base_of(projects.require(name), body.tree)
+    try:
+        return actions.discard(base, body.path)
+    except actions.ActionError as exc:
+        return _bad(exc, 409)
+
+
+@router.get("/projects/{name}/files/origin")
+def file_origin(name: str, path: str, tree: str = ""):
+    """이 파일을 마지막으로 쓰거나 고친 에이전트 세션 (IDE 편집기 위 출처 줄)"""
+    from ..agents.manager import manager
+
+    base = files.base_of(projects.require(name), tree)
+    return {"origin": manager.file_origin(name, base, path)}
+
+
 @router.post("/projects/{name}/git/pr")
 def open_pr(name: str, body: PrBody):
     """PR 열기 (gh) — 브랜치가 원격에 올라가 있을 때만. lab.remote는 push하지 않는다."""

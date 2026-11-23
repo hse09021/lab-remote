@@ -89,6 +89,14 @@ export function useGitAction(project: string) {
       mutationFn: (branch: string) => send<{ main: string; sha: string }>('POST', `/projects/${enc(project)}/git/merge`, { branch }),
       onSuccess: done,
     }),
+    /** 한 파일의 커밋 안 한 변경 되돌리기 (화면에서 확인을 받은 뒤) */
+    discard: useMutation({
+      mutationFn: (v: { tree: string; path: string }) => send<{ path: string; removed: boolean }>('POST', `/projects/${enc(project)}/git/discard`, v),
+      onSuccess: (_r, v) => {
+        done()
+        qc.invalidateQueries({ queryKey: ['projects', project, 'origin', v.tree, v.path] })
+      },
+    }),
     /** PR 열기 (gh) — 브랜치가 원격에 올라가 있을 때만. lab.remote는 push하지 않아요 */
     pr: useMutation({
       mutationFn: (v: { tree: string; title: string; body: string }) =>
@@ -128,3 +136,19 @@ export function terminalSocketUrl(params: { project: string; name?: string; run?
   const base = import.meta.env.VITE_API_BASE ?? '/api'
   return `${proto}//${window.location.host}${base}/terminals/ws?${sp}`
 }
+
+/** 이 파일을 마지막으로 쓰거나 고친 에이전트 세션 (IDE 편집기 위 출처 줄) */
+export interface FileOrigin {
+  session: string
+  title: string
+  at: number
+  tool: string
+  closed: boolean
+}
+
+export const fileOriginQuery = (project: string, tree: string, path: string) =>
+  queryOptions({
+    queryKey: ['projects', project, 'origin', tree, path],
+    queryFn: () => get<{ origin: FileOrigin | null }>(`/projects/${enc(project)}/files/origin?tree=${encodeURIComponent(tree)}&path=${encodeURIComponent(path)}`),
+    staleTime: 15_000,
+  })

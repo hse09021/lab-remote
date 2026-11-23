@@ -9,6 +9,7 @@ import { ApiError } from '@/api/client'
 import { Dialog, dialogStyles as ds, ErrorState, LoadingState } from '@/components'
 import { copyText } from '@/lib/clipboard'
 import { duration, whenShort } from '@/lib/time'
+import { ScheduleDialog } from '../schedule/ScheduleDialog'
 import s from './Projects.module.css'
 
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : e ? String(e) : undefined)
@@ -207,6 +208,8 @@ function NewRunDialog({
   const [env, setEnv] = useState(from?.env ?? project.settings.condaEnv)
   const [cwd, setCwd] = useState(from?.cwd && from.cwd !== '.' ? from.cwd : '')
   const [name, setName] = useState(from?.name ?? '')
+  // "시간 정해서 실행" — 같은 값으로 예약 창을 열어요
+  const [scheduling, setScheduling] = useState(false)
 
   const places = [
     { rel: '', label: `프로젝트 루트${project.git.state === 'ok' ? ` (${project.git.branch})` : ''}` },
@@ -219,6 +222,19 @@ function NewRunDialog({
   const shown = env.trim()
     ? `conda run -s -n ${env.trim()} bash -c '${command}'`
     : `bash -c '${command}'`
+
+  if (scheduling) {
+    return (
+      <ScheduleDialog
+        open
+        seed={{ kind: 'command', project: project.name, tree: cwd, command, env: env.trim(), name: name.trim() }}
+        onClose={() => {
+          setScheduling(false)
+          onClose()
+        }}
+      />
+    )
+  }
 
   return (
     <Dialog
@@ -282,6 +298,9 @@ function NewRunDialog({
           체크포인트에서 이어 가려면 명령에 직접 재개 옵션을 붙여 주세요. lab.remote는 명령을 바꾸지 않아요.
         </span>
       )}
+      <button type="button" className={s.linkBtn} disabled={!command.trim()} onClick={() => setScheduling(true)}>
+        시간 정해서 실행…
+      </button>
     </Dialog>
   )
 }

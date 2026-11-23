@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { closedSessionsQuery, sessionsQuery, useCloseSession, useCreateSession } from '@/api/agents'
@@ -141,7 +141,21 @@ export default function AdePage() {
           {all.isPending && <LoadingState label="세션을 불러오는 중이에요" />}
           {all.isError && <ErrorState error={all.error} onRetry={() => all.refetch()} />}
           {current ? (
-            <ChatPanel key={current.id} session={current} />
+            <ChatPanel
+              key={current.id}
+              session={current}
+              actions={
+                <>
+                  {/* 같은 위치(worktree)를 들고 IDE로 · 그 위치에 터미널을 열고 */}
+                  <Link className={s.ghostBtn} to={`/projects/${encodeURIComponent(project)}/ide${tree ? `?tree=${encodeURIComponent(tree)}` : ''}`}>
+                    IDE에서 열기
+                  </Link>
+                  <Link className={s.ghostBtn} to={`/projects/${encodeURIComponent(project)}/ide?${new URLSearchParams({ ...(tree ? { tree } : {}), term: 'new' })}`}>
+                    터미널로 열기
+                  </Link>
+                </>
+              }
+            />
           ) : (
             all.isSuccess && <NewSession project={project} defaultTree={params.get('tree') ?? ''} draft={params.get('draft') ?? ''} />
           )}
@@ -244,7 +258,8 @@ function SessionList({
               <div key={branch} className={s.treeGroup}>
                 <span className={s.treeLabel}>⎇ {branch}</span>
                 {list.map((x) => (
-                  <button key={x.id} type="button" aria-current={x.id === current ? 'true' : undefined} className={s.sessionItem} onClick={() => onPick(x)}>
+                  <Fragment key={x.id}>
+                  <button type="button" aria-current={x.id === current ? 'true' : undefined} className={s.sessionItem} onClick={() => onPick(x)}>
                     <span aria-hidden="true" className={s.dot} data-state={x.state} />
                     <span className={s.sessionText}>
                       <span className={s.sessionTitle}>{x.title}</span>
@@ -254,6 +269,19 @@ function SessionList({
                     </span>
                     <span className={s.muted}>{agoShort(x.updatedAt)}</span>
                   </button>
+                    {/* 하위 에이전트 — 일하는 중인 것만 (끝난 건 채팅 안에 남아요) */}
+                    {(x.subagents ?? [])
+                      .filter((t) => t.status === 'running')
+                      .map((t) => (
+                        <button key={t.taskId} type="button" className={s.subItem} onClick={() => onPick(x)} title={`${x.title}의 하위 에이전트`}>
+                          <span aria-hidden="true" className={s.dot} data-state="working" />
+                          <span className={s.sessionText}>
+                            <span className={s.sessionTitle}>{t.description || '하위 에이전트'}</span>
+                            <span className={s.sessionSub}>하위 에이전트 · 작업 중</span>
+                          </span>
+                        </button>
+                      ))}
+                  </Fragment>
                 ))}
               </div>
             ))}

@@ -1353,3 +1353,25 @@ kbd {
   opacity: 0.4;
   cursor: default;
 }
+
+/* ADE 세션 목록 — 하위 에이전트 줄 (부모 아래 들여서) */
+.subItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 18px;
+  padding: 5px 8px;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.subItem:hover {
+  background: var(--hover);
+}

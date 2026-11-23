@@ -8,11 +8,12 @@ import type { editor } from 'monaco-editor'
 import '@/styles/monaco-worker'
 import { EDITOR_OPTIONS, LAB_THEME, labTheme, languageLabel, languageOf } from '@/styles/monaco-theme'
 import { gitDiffQuery, gitStatusQuery, projectQuery, worktreesQuery } from '@/api/projects'
-import { fileContentQuery, terminalsQuery, useSaveFile, useTerminalActions } from '@/api/ide'
+import { fileContentQuery, fileOriginQuery, terminalsQuery, useGitAction, useSaveFile, useTerminalActions } from '@/api/ide'
 import { sessionsQuery } from '@/api/agents'
 import { ApiError } from '@/api/client'
-import { ErrorState, LoadingState, Resizer } from '@/components'
+import { Dialog, ErrorState, LoadingState, Resizer } from '@/components'
 import { usePaneResize } from '@/lib/usePaneResize'
+import { agoShort } from '@/lib/time'
 import { useIsMobile } from '@/lib/useMediaQuery'
 import { FilesIcon, GearIcon, PlusIcon, GitIcon, HistoryIcon, NewSessionIcon, RunIcon, ScenarioIcon, SearchIcon } from '@/components/icons'
 import { ChatPanel } from '../agents/ChatPanel'
@@ -127,6 +128,14 @@ export default function IdePage() {
         setBottomOpen(true)
       },
     })
+  // ADE의 "터미널로 열기" — ?term=new로 들어오면 그 위치에 새 터미널을 한 번 열어요
+  const wantTerm = useRef(params.get('term') === 'new')
+  useEffect(() => {
+    if (!wantTerm.current) return
+    wantTerm.current = false
+    newTerminal()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const attachRun = (run: string) => {
     const term: Term = { kind: 'run', run }
     setOpenTerms((old) => (old.some((x) => termKey(x) === termKey(term)) ? old : [...old, term]))
@@ -262,6 +271,7 @@ export default function IdePage() {
                   jumpLine={jump?.path === activeTab.path ? jump.line : undefined}
                   onCursor={setCursor}
                   onDirty={(d) => setDirty((old) => ({ ...old, [tabKey(activeTab)]: d }))}
+                  onDiff={() => openDiff(activeTab.path)}
                 />
               ) : (
                 <DiffTab project={project} tree={tree} path={activeTab.path} onOpen={() => openFile(activeTab.path)} />
@@ -353,6 +363,7 @@ function FileEditor({
   jumpLine,
   onCursor,
   onDirty,
+  onDiff,
 }: {
   project: string
   tree: string
@@ -360,8 +371,15 @@ function FileEditor({
   jumpLine?: number
   onCursor: (p: { line: number; column: number } | null) => void
   onDirty: (d: boolean) => void
+  onDiff: () => void
 }) {
   const file = useQuery(fileContentQuery(project, tree, path))
+  // 출처 — 이 파일을 쓰거나 고친 에이전트 세션 · 커밋 안 한 변경인지
+  const origin = useQuery(fileOriginQuery(project, tree, path))
+  const status = useQuery(gitStatusQuery(project, tree))
+  const change = status.data?.state === 'ok' ? status.data.changes.find((c) => c.path === path) : undefined
+  const { discard } = useGitAction(project)
+  const [asking, setAsking] = useState(false)
   const save = useSaveFile(project)
   const monaco = useMonaco()
   const ed = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -410,6 +428,26 @@ function FileEditor({
     <div className={s.editorWrap}>
       <div className={s.crumb}>
         <span className={s.mono}>{path}</span>
+        {origin.data?.origin && (
+          <>
+            <span className={s.muted}>
+              Claude가 {agoShort(origin.data.origin.at)} 전에 {change?.label === 'U' || origin.data.origin.tool === 'Write' ? '만듦' : '고침'} · 세션 · {origin.data.origin.title}
+            </span>
+            <Link className={s.linkBtn} to={`/projects/${encodeURIComponent(project)}/ade?session=${encodeURIComponent(origin.data.origin.session)}`}>
+              세션 보기
+            </Link>
+          </>
+        )}
+        {change && (
+          <>
+            <button type="button" className={s.linkBtn} onClick={onDiff}>
+              변경 보기
+            </button>
+            <button type="button" className={s.linkBtn} onClick={() => setAsking(true)}>
+              되돌리기…
+            </button>
+          </>
+        )}
         {save.isPending && <span className={s.muted}>저장하는 중…</span>}
         {err && <span className={s.errText}>저장하지 못했어요: {err}</span>}
       </div>
@@ -432,6 +470,38 @@ function FileEditor({
           }
         }}
       />
+      <Dialog
+        open={asking}
+        title={`${path}의 변경을 되돌릴까요?`}
+        confirmLabel="되돌리기"
+        busy={discard.isPending}
+        error={discard.error ? (discard.error instanceof ApiError ? discard.error.message : String(discard.error)) : undefined}
+        onClose={() => {
+          discard.reset()
+          setAsking(false)
+        }}
+        onConfirm={() =>
+          discard.mutate(
+            { tree, path },
+            {
+              onSuccess: async (r) => {
+                setAsking(false)
+                onDirty(false)
+                // 편집기는 처음 값으로만 열려서, 되돌린 내용을 직접 넣어요
+                const got = await file.refetch()
+                if (!r.removed && got.data?.text != null) {
+                  saved.current = got.data.text
+                  ed.current?.setValue(got.data.text)
+                }
+              },
+            },
+          )
+        }
+      >
+        <span>
+          {change?.label === 'U' ? '새로 만든 파일이라 지워져요.' : '마지막 커밋 상태로 돌아가요.'} 되돌린 내용은 다시 살릴 수 없어요.
+        </span>
+      </Dialog>
     </div>
   )
 }

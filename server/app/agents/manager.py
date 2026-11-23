@@ -233,6 +233,31 @@ class Manager:
         out.sort(key=lambda r: -(r.get("updatedAt") or 0))
         return out
 
+    def file_origin(self, project: str, base: str, rel: str) -> dict | None:
+        """이 파일을 마지막으로 쓰거나 고친 세션 (IDE 편집기 위 출처 줄). 없으면 None."""
+        target = os.path.realpath(os.path.join(base, rel))
+        best = None
+        for rec in self.list(project, include_closed=True):
+            try:
+                events = self.events(rec["id"], limit=5000)
+            except Exception:
+                continue
+            for ev in events:
+                if ev.get("type") != "tool" or ev.get("name") not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
+                    continue
+                inp = ev.get("input") or {}
+                fp = str(inp.get("file_path") or inp.get("notebook_path") or "")
+                if not fp:
+                    continue
+                cwd = base
+                full = os.path.realpath(fp if os.path.isabs(fp) else os.path.join(cwd, fp))
+                if full != target:
+                    continue
+                at = float(ev.get("at") or 0)
+                if best is None or at > best["at"]:
+                    best = {"session": rec["id"], "title": rec.get("title") or "", "at": at, "tool": ev.get("name"), "closed": bool(rec.get("closed"))}
+        return best
+
     def get(self, sid: str) -> dict:
         _, rec = self._find(sid)
         return {**self._view(rec), "events": self.events(sid)}

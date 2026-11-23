@@ -9,13 +9,14 @@ PR은 `gh`가 있을 때만(없으면 화면에서 버튼을 숨긴다). lab.rem
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 
 from .. import paths
 from . import ops, view
 
-__all__ = ["ActionError", "commit", "merge_to_main", "gh_available", "create_pr"]
+__all__ = ["ActionError", "commit", "merge_to_main", "gh_available", "create_pr", "discard"]
 
 
 class ActionError(ValueError):
@@ -107,3 +108,28 @@ def create_pr(base: str, title: str, body: str = "", *, runner=None) -> dict:
     url = next((line.strip() for line in (done.stdout or "").splitlines() if line.strip().startswith("https://")), "")
     number = url.rstrip("/").rsplit("/", 1)[-1] if "/pull/" in url else ""
     return {"url": url, "number": number, "branch": branch}
+
+
+def discard(base: str, rel: str) -> dict:
+    """한 파일의 커밋 안 한 변경을 되돌린다 — 추적 중이면 HEAD로, 새 파일이면 지운다. 화면에서 한 번 더 묻고 부른다."""
+    rel = (rel or "").strip().lstrip("/")
+    full = paths.real(os.path.join(base, rel))
+    if not rel or not paths.is_inside(paths.real(base), full) or "/.git/" in f"/{rel}/":
+        raise ActionError("되돌릴 파일을 골라 주세요.")
+    info = view.status(base)
+    if info.get("state") != "ok":
+        raise ActionError(info.get("reason") or "git 저장소가 아니에요.")
+    change = next((c for c in info["changes"] if c["path"] == rel), None)
+    if change is None:
+        raise ActionError("커밋 안 한 변경이 없는 파일이에요.")
+    try:
+        tracked = bool(ops.run(base, ["ls-files", "--", rel]).strip())
+        if tracked:
+            ops.run(base, ["restore", "--staged", "--worktree", "--source=HEAD", "--", rel])
+        else:
+            ops.run(base, ["rm", "--cached", "-q", "--ignore-unmatch", "--", rel], check=False)
+            if os.path.isfile(full):
+                os.remove(full)
+    except ops.GitError as exc:
+        raise ActionError(str(exc)) from None
+    return {"path": rel, "removed": not tracked}

@@ -717,6 +717,20 @@ export default function PaperReader() {
               toast.show('주석을 고쳤어요')
             }}
             onDeleteNote={deleteAnnotation}
+            currentLabel={activeId ? sectionLabel(activeId) : ''}
+            onAddNote={(text) => {
+              const sid = activeId ?? data.sections[0]?.id ?? ''
+              addAnn.mutate({
+                kind: 'note',
+                text,
+                source: '',
+                sectionId: sid,
+                page: data.sections.find((x) => x.id === sid)?.page ?? 1,
+                anchor: null,
+                boxes: null,
+              })
+              toast.show('메모를 남겼어요')
+            }}
             onJumpSection={(sectionId) => {
               setActiveId(sectionId)
               requestJump({ sectionId })
