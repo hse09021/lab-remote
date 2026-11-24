@@ -4,7 +4,32 @@ import DOMPurify from 'dompurify'
  * 바깥에서 온 논문 HTML을 주입하기 전에 정리해요.
  * arXiv HTML도, 개발용 샘플도 똑같이 이 길을 지나요.
  */
+/*
+ * 참고문헌 안의 바깥 링크(arXiv · DOI 등)는 살려서 새 탭으로 열어요.
+ * 그림 주소는 같은 서버(`/api/...`)만 — 바깥 그림은 불러오지 않아요.
+ */
+let hooked = false
+function ensureHooks() {
+  if (hooked) return
+  hooked = true
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (!(node instanceof Element)) return
+    if (node.tagName === 'IMG') {
+      const src = node.getAttribute('src') ?? ''
+      if (!src.startsWith('/')) node.removeAttribute('src')
+    }
+    if (node.tagName === 'A') {
+      const href = node.getAttribute('href') ?? ''
+      if (/^https?:/i.test(href)) {
+        node.setAttribute('target', '_blank')
+        node.setAttribute('rel', 'noopener noreferrer')
+      }
+    }
+  })
+}
+
 export function sanitizePaperHtml(raw: string): string {
+  ensureHooks()
   return DOMPurify.sanitize(raw, {
     // 표·수식·그림 구조와 앵커만 남기면 돼요
     ALLOWED_TAGS: [
@@ -33,12 +58,13 @@ export function sanitizePaperHtml(raw: string): string {
       'displaystyle', 'depth', 'voffset', 'notation', 'rowalign', 'form', 'mathsize',
     ],
     /*
-     * 바깥 주소로 나가는 건 막아요 (이미지는 같은 출처 fixtures만).
+     * 주소는 같은 서버(/) · 본문 안 앵커(#) · http(s) 링크만 받아요. javascript: 같은 건 떨어져요.
+     * 그림 src는 위 훅이 같은 서버 주소만 남겨요.
      * DOMPurify는 URI-safe로 알려진 속성(alt·class·id·style·title·xmlns …)이
      * 아니면 **모든** 속성 값을 이 정규식으로 검사해서 떨어뜨려요.
      * 그래서 주소가 아닌 구조 속성은 아래 ADD_URI_SAFE_ATTR로 빼 둬야 해요.
      */
-    ALLOWED_URI_REGEXP: /^(?:\/|#)/,
+    ALLOWED_URI_REGEXP: /^(?:\/|#|https?:)/,
     ADD_URI_SAFE_ATTR: [
       'colspan', 'rowspan', 'scope', 'width', 'height', 'loading', 'target', 'rel', 'type',
       // MathML

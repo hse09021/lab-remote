@@ -273,7 +273,7 @@ async function fromAnalysis(
   doc: PDFDocumentProxy,
   base: PaperReaderPayload,
   analysis: PaperAnalysis,
-): Promise<Pick<PaperReaderPayload, 'highlights' | 'references' | 'referenceTotal' | 'citationsCaption'>> {
+): Promise<Pick<PaperReaderPayload, 'highlights' | 'references' | 'referenceTotal' | 'citationsCaption' | 'citeSpots'>> {
   const highlights: Highlight[] = []
   for (const [i, h] of analysis.highlights.entries()) {
     const found = await locateNear(doc, h.page, h.quote, base.pageSize.height, base.pageCount)
@@ -293,18 +293,68 @@ async function fromAnalysis(
       title: r.title,
       venue: r.venue,
       arxiv: r.arxiv || null,
+      url: r.url || null,
       year: r.year,
       citedCount: 0,
       inLibrary: false,
       why: r.why,
     }
   })
+  // 본문의 인용 번호 [12] · [3, 4] — 누르면 인용 카드가 떠요. 본문에서 몇 번 나왔는지도 세요
+  const citeSpots = await findCiteSpots(doc, base, new Set(references.map((r) => r.n)))
+  const count = new Map<number, number>()
+  for (const c of citeSpots) if (!c.inBib) count.set(c.n, (count.get(c.n) ?? 0) + 1)
+  for (const r of references) r.citedCount = count.get(r.n) ?? 0
   return {
     highlights,
     references,
     referenceTotal: references.length,
-    citationsCaption: `AI 분석으로 뽑은 참고문헌 ${references.length}개`,
+    citationsCaption: `AI 분석으로 뽑은 참고문헌 ${references.length}개 · 본문에서 많이 인용된 순서예요`,
+    citeSpots: citeSpots.map(({ n, page, box }) => ({ n, page, box })),
   }
+}
+
+/**
+ * PDF 글자 층에서 숫자 인용([12], [3, 4], [5; 7])을 찾아 번호마다 누르는 자리를 만들어요.
+ * 참고문헌 목록(References 섹션 뒤)의 번호는 `inBib`으로 표시해 횟수에서 빼요.
+ */
+async function findCiteSpots(doc: PDFDocumentProxy, base: PaperReaderPayload, known: Set<number>) {
+  const out: Array<{ n: number; page: number; box: PtRect; inBib: boolean }> = []
+  if (!known.size) return out
+  const bib = base.sections.find((x) => /^(references|bibliography)$/i.test(x.title.trim()))
+  const h = base.pageSize.height
+  const BRACKET = /\[(\d{1,3}(?:\s*[,;\u2013-]\s*\d{1,3})*)\]/g
+  for (let p = 1; p <= doc.numPages && out.length < 2000; p++) {
+    let items: Array<{ str: string; transform: number[]; width: number; height: number }>
+    try {
+      const tc = await (await doc.getPage(p)).getTextContent()
+      items = tc.items.filter((it): it is typeof it & { str: string; transform: number[]; width: number; height: number } => 'str' in it)
+    } catch {
+      continue
+    }
+    for (const it of items) {
+      if (!it.str.includes('[')) continue
+      const [, , , d, e, f] = it.transform
+      const ih = it.height || Math.abs(d!) || 10
+      const len = Math.max(1, it.str.length)
+      const top = h - f! - ih
+      const inBib = !!bib && (p > bib.page || (p === bib.page && top >= bib.y))
+      for (const m of it.str.matchAll(BRACKET)) {
+        // 괄호 안 번호 하나하나의 글자 자리 (폭은 조각 폭을 글자 수로 나눠 어림해요)
+        const start = (m.index ?? 0) + 1
+        for (const num of m[1]!.matchAll(/\d{1,3}/g)) {
+          const n = Number(num[0])
+          if (!known.has(n)) continue
+          const a = start + (num.index ?? 0)
+          const b = a + num[0].length
+          const x0 = e! + (it.width * a) / len
+          const x1 = e! + (it.width * b) / len
+          out.push({ n, page: p, box: [x0 - 1, top, Math.max(x1 + 1, x0 + 5), h - f! + ih * 0.2], inBib })
+        }
+      }
+    }
+  }
+  return out
 }
 
 /** 쪽 번호가 한 쪽 어긋나도 찾아요 */

@@ -358,7 +358,7 @@ export async function runReaderAi<T>(paperId: string, body: ReaderAiBody): Promi
 
 export interface PaperAnalysis {
   highlights: { category: 'core' | 'method' | 'result' | 'check'; quote: string; page: number; note: string }[]
-  references: { n: number; title: string; authors: string; year: number; venue: string; arxiv: string; why: string }[]
+  references: { n: number; title: string; authors: string; year: number; venue: string; arxiv: string; url?: string; why: string }[]
 }
 
 export const analysisQuery = (paperId: string, enabled: boolean) =>

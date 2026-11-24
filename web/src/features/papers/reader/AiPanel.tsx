@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { runReaderAi, vaultQuery } from '@/api/papers'
 import { copyText } from '@/lib/clipboard'
+import { referenceLinks } from '@/lib/referenceLinks'
 import type { ExplainResult } from '@/api/papers'
 import type { CSSProperties, ReactNode } from 'react'
 import type { UserAnnotation } from '@/api/annotations'
@@ -248,27 +249,43 @@ function CitationsTab({
 }
 
 function RefRow({ r, added }: { r: Reference; added: boolean }) {
-  const badge: { kind: 'in' | 'none'; label: string } = added
+  const links = referenceLinks(r)
+  // 바로 열 수 있는 곳이 없으면 배지 없이 찾기 링크만 보여요
+  const badge: { kind: 'in' | 'none'; label: string } | null = added
     ? { kind: 'in', label: '추가됨' }
     : r.inLibrary
       ? { kind: 'in', label: '라이브러리' }
-      : { kind: 'none', label: r.arxiv ? 'arXiv' : '없음' }
+      : r.arxiv
+        ? { kind: 'none', label: 'arXiv' }
+        : r.url
+          ? { kind: 'none', label: r.url.includes('doi.org/') ? 'DOI' : 'URL' }
+          : null
 
   return (
     <div className={s.refRow}>
       <span className={s.refNum}>[{r.n}]</span>
       <div className={s.refBody}>
-        <button type="button" className={s.refTitle}>
+        {/* 제목을 누르면 인용된 자료를 새 탭으로 (arXiv · DOI · URL, 없으면 찾기) */}
+        <a href={links.primary.href} target="_blank" rel="noopener noreferrer" className={s.refTitle} title={links.primary.label}>
           {r.title}
-        </button>
+        </a>
         <span className={s.refMeta}>
           {r.short}
           {r.citedCount > 0 && ` · 본문 ${r.citedCount}회`}
         </span>
+        <span className={s.refLinks}>
+          {links.all.map((l) => (
+            <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">
+              {l.label} ↗
+            </a>
+          ))}
+        </span>
       </div>
-      <span data-kind={badge.kind} className={s.refBadge}>
-        {badge.label}
-      </span>
+      {badge && (
+        <span data-kind={badge.kind} className={s.refBadge}>
+          {badge.label}
+        </span>
+      )}
     </div>
   )
 }

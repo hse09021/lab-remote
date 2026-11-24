@@ -197,6 +197,8 @@ export interface Reference {
   title: string
   venue: string
   arxiv: string | null
+  /** 참고문헌에 적힌 DOI · URL (AI 분석이 읽어 온 것, 없으면 없음) */
+  url?: string | null
   year: number
   /** 본문에서 인용된 횟수 */
   citedCount: number

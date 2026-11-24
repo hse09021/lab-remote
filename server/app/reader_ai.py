@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 import os
 import time
 import uuid
@@ -70,9 +71,10 @@ ANALYZE = {
                     "year": {"type": "integer"},
                     "venue": {"type": "string"},
                     "arxiv": {"type": "string", "description": "arXiv 번호 (참고문헌에 적혀 있을 때만, 없으면 빈 문자열)"},
+                    "url": {"type": "string", "description": "참고문헌에 적힌 DOI(10.로 시작)나 URL 그대로 (없으면 빈 문자열, 지어내지 마세요)"},
                     "why": {"type": "string", "description": "본문이 이 논문을 왜 인용했는지 (한국어, 한 줄)"},
                 },
-                "required": ["n", "title", "authors", "year", "venue", "arxiv", "why"],
+                "required": ["n", "title", "authors", "year", "venue", "arxiv", "url", "why"],
             },
         },
     },
@@ -101,6 +103,16 @@ def _where(p: dict) -> str:
 
 def _analysis_path(pid: str) -> str:
     return os.path.join(registry.data_dir(), "analysis", hashlib.sha1(pid.encode()).hexdigest()[:16] + ".json")
+
+
+def _ref_url(value) -> str:
+    """참고문헌 링크 — http(s) 주소나 DOI만 받아요 (DOI는 doi.org 링크로). 나머지는 버려요."""
+    u = str(value or "").strip().rstrip(".,;")
+    if re.fullmatch(r"(?i)(?:doi:\s*)?(10\.\d{4,9}/\S+)", u):
+        return "https://doi.org/" + re.sub(r"(?i)^doi:\s*", "", u)
+    if re.fullmatch(r"https?://[^\s<>\"']+", u):
+        return u[:500]
+    return ""
 
 
 def analysis(pid: str) -> dict | None:
@@ -165,6 +177,8 @@ async def _work(jid: str, kind: str, pid: str, req: dict, model: str, query_fn) 
         if kind == "analyze":
             hl = [h for h in data.get("highlights") or [] if isinstance(h, dict) and h.get("category") in ("core", "method", "result", "check") and str(h.get("quote") or "").strip()]
             refs = [r for r in data.get("references") or [] if isinstance(r, dict) and str(r.get("title") or "").strip()]
+            for r in refs:
+                r["url"] = _ref_url(r.get("url"))
             out = {"id": pid, "model": used, "createdAt": time.time(), "highlights": hl[:40], "references": refs[:80]}
             os.makedirs(os.path.dirname(_analysis_path(pid)), exist_ok=True)
             registry.write_json(_analysis_path(pid), out)

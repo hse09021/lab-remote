@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { usePopAt } from './usePopAt'
 import type { Reference } from '@/api/types'
 import { copyText } from '@/lib/clipboard'
+import { referenceLinks } from '@/lib/referenceLinks'
 import s from './CiteCard.module.css'
 
 export interface CiteAnchor {
@@ -33,9 +34,9 @@ export function CiteCard({
 }: Props) {
   const [whyOpen, setWhyOpen] = useState(false)
 
-  const href = r.arxiv
-    ? `https://arxiv.org/abs/${r.arxiv}`
-    : `https://scholar.google.com/scholar?q=${encodeURIComponent(r.title)}`
+  // arXiv · DOI · URL이 있으면 거기로, 없으면 제목으로 찾기
+  const links = referenceLinks(r)
+  const href = links.primary.href
 
   const bibtex = [
     `@article{ref${r.n},`,
@@ -59,7 +60,7 @@ export function CiteCard({
       className={s.card}
     >
       <div className={s.head}>
-        <a href={href} target="_blank" rel="noopener" className={s.title}>
+        <a href={href} target="_blank" rel="noopener noreferrer" className={s.title} title={links.primary.label}>
           {r.title}
         </a>
       </div>
@@ -77,11 +78,16 @@ export function CiteCard({
         >
           {r.inLibrary ? '라이브러리에 있어요' : saved ? '보관했어요' : '라이브러리에 보관'}
         </button>
-        <span className={s.statePill}>
-          {r.arxiv ? `arXiv:${r.arxiv}` : '원문 링크 없음'}
-        </span>
-        {/* 실제 값은 Semantic Scholar에서 받아요 */}
-        <span className={s.cited}>피인용 [Semantic Scholar 값]</span>
+        {r.arxiv && <span className={s.statePill}>arXiv:{r.arxiv}</span>}
+      </div>
+
+      {/* 인용된 자료 열기 — 새 탭으로 */}
+      <div className={s.links}>
+        {links.all.map((l) => (
+          <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className={s.link}>
+            {l.label} ↗
+          </a>
+        ))}
       </div>
 
       <p className={s.full}>

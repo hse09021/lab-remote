@@ -452,6 +452,12 @@ def test_리더_AI(vault, monkeypatch):
         assert got["result"] == {"highlights": 1, "references": 1}
         stored = reader_ai.analysis("LoRA")
         assert stored["highlights"][0]["quote"] == "We propose LoRA" and stored["references"][0]["arxiv"] == "1706.03762"
+        # 참고문헌 링크는 http(s) · DOI만 (DOI는 doi.org로)
+        assert reader_ai._ref_url("10.18653/v1/P19-1285") == "https://doi.org/10.18653/v1/P19-1285"
+        assert reader_ai._ref_url("doi: 10.1000/xyz.") == "https://doi.org/10.1000/xyz"
+        assert reader_ai._ref_url("https://openreview.net/forum?id=abc") == "https://openreview.net/forum?id=abc"
+        assert reader_ai._ref_url("javascript:alert(1)") == "" and reader_ai._ref_url("see paper") == ""
+        assert stored["references"][0]["url"] == ""
 
     asyncio.run(go())
 

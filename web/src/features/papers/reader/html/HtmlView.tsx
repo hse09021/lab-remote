@@ -189,6 +189,24 @@ export function HtmlView({
     const root = bodyRef.current
     if (!root || !html) return
     const onClick = (e: Event) => {
+      // arXiv 본문의 인용 링크(#bib.bib13) — 분석한 참고문헌에 그 번호가 있으면 인용 카드를 띄워요
+      const bib = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#bib"]')
+      if (bib) {
+        const n = Number(bib.getAttribute('href')?.match(/bib(\d+)$/)?.[1])
+        const scroller = scrollRef.current
+        if (n && scroller && reader.references.some((r) => r.n === n)) {
+          e.preventDefault()
+          onCite(n, anchorFrom(bib, scroller))
+          return
+        }
+        // 분석 전이면 본문 아래 참고문헌으로 옮겨 가요 (주소는 바꾸지 않고)
+        const target = bodyRef.current?.querySelector<HTMLElement>(`#${CSS.escape((bib.getAttribute('href') ?? '').slice(1))}`)
+        if (target) {
+          e.preventDefault()
+          target.scrollIntoView({ block: 'center' })
+        }
+        return
+      }
       const t = (e.target as HTMLElement).closest<HTMLElement>('[data-cite],[data-explain]')
       if (!t) return
       const scroller = scrollRef.current
@@ -238,7 +256,7 @@ export function HtmlView({
       root.removeEventListener('mouseup', onMouseUp)
       root.removeEventListener('mouseover', onOver)
     }
-  }, [html, onCite, onExplain, onSelect, onHover, reader.sections])
+  }, [html, onCite, onExplain, onSelect, onHover, reader.sections, reader.references])
 
   /*
    * ── vault 논문: PDF 목차 섹션 ↔ arXiv HTML 제목 잇기 ────────
