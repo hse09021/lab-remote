@@ -24,6 +24,13 @@
   overflow-y: auto;
 }
 
+/* 채팅 탭 — 대화만 스크롤하고 입력창은 아래에 고정 */
+.bodyChat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .pad {
   padding: 16px 18px;
   display: flex;

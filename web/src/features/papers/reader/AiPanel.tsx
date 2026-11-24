@@ -140,7 +140,7 @@ export function AiPanel({
         </div>
       )}
 
-      <div className={s.body}>
+      <div className={tab === 'chat' && chatPaperId ? `${s.body} ${s.bodyChat}` : s.body}>
         {tab === 'summary' &&
           (summary ? (
             <div className={s.pad}>
