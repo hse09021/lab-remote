@@ -15,7 +15,7 @@ export interface UserAnnotation {
   paperId: string
   /** 내가 칠한 하이라이트 / 내가 쓴 주석. AI 하이라이트는 여기 안 들어와요 */
   kind: 'highlight' | 'note'
-  /** 하이라이트면 고른 글, 주석이면 내가 쓴 메모 */
+  /** 하이라이트면 선택한 텍스트, 주석이면 내가 쓴 메모 */
   text: string
   /** 주석이 어떤 글에 달렸는지 (하이라이트는 text와 같아요) */
   source: string

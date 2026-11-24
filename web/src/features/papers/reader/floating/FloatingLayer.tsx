@@ -15,7 +15,7 @@ export interface FloatingHandlers {
   chat: ReturnType<typeof useFloatingChat>
   overlays: ReturnType<typeof useReaderOverlays>
   reader: PaperReaderPayload
-  /** 실시간 번역 (vault 논문) — 고른 글이 같을 때만 */
+  /** 실시간 번역 (vault 논문) — 선택한 텍스트가 같을 때만 */
   liveTranslation?: { text: string; translation: string | null; note: string | null } | null
   onSelectionAct: (a: SelectionAction) => void
   onJump: (sectionId: string) => void
@@ -23,7 +23,7 @@ export interface FloatingHandlers {
   onSaveRef: (n: number) => void
   /** 라이브러리에 들어 있는지 — papers 캐시에서 봐요 */
   isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
-  /** 고른 글이 이미 내 하이라이트인지 (저장소에서 봐요) */
+  /** 선택한 텍스트가 이미 내 하이라이트인지 (저장소에서 봐요) */
   isMine: (text: string) => boolean
   /** 본문에서 내 하이라이트를 눌렀을 때 뜨는 메뉴 */
   myMenu: { annotation: UserAnnotation; anchor: SelectionAnchor } | null

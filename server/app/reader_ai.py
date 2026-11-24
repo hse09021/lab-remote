@@ -1,8 +1,8 @@
 """리더 AI — 누를 때만 Claude가 그 논문(노트 · PDF)을 읽기 전용으로 읽고 답한다.
 
 세 가지:
-- 설명 · 질문 (`explain`): 섹션 · 고른 글 · 질문에 대한 풀이. 대화창에 나온다.
-- 번역 (`translate`): 고른 글을 한국어로.
+- 설명 · 질문 (`explain`): 섹션 · 선택한 텍스트 · 질문에 대한 풀이. 대화창에 나온다.
+- 번역 (`translate`): 선택한 텍스트를 한국어로.
 - AI 분석 (`analyze`): 핵심 · 방법 · 결과 · 확인 필요 구절과 참고문헌. 데이터 폴더 `analysis/`에 저장.
   구절 자리는 화면이 PDF 글자 층에서 찾는다(여기서는 쪽 번호와 원문 구절만 받는다).
 
@@ -197,7 +197,7 @@ def start(pid: str, kind: str, req: dict | None = None, *, model: str = "", quer
     _paper(pid)
     req = req or {}
     if kind in ("selection", "translate") and not str(req.get("text") or "").strip():  # element는 글자 없이도 돼요(쪽 + 이름)
-        raise ReaderAiError("고른 글이 없어요.")
+        raise ReaderAiError("선택한 텍스트가 없어요.")
     if kind == "ask" and not str(req.get("question") or "").strip():
         raise ReaderAiError("질문을 적어 주세요.")
     running = [j for j in _jobs.values() if j["state"] == "running"]

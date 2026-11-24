@@ -17,7 +17,7 @@ export interface FloatingChatState {
   anchor: ChatAnchor | null
   log: ChatEntry[]
   asked: Record<string, true>
-  /** 메모 카드에서 열었을 때 붙는 맥락 (실시간 모드에서는 고른 글) */
+  /** 메모 카드에서 열었을 때 붙는 맥락 (실시간 모드에서는 선택한 텍스트) */
   context: string | null
   /** 실시간 모드 — 서버가 만든 설명 */
   liveTopic: Topic | null
@@ -49,7 +49,7 @@ const toTopic = (r: ExplainResult): Topic => ({
 })
 
 /**
- * 닫아도 남는 대화 — 논문마다, 대화(설명 주제 + 고른 글)마다 둬요.
+ * 닫아도 남는 대화 — 논문마다, 대화(설명 주제 + 선택한 텍스트)마다 둬요.
  * X는 창만 닫고, 휴지통을 눌러야 그 대화가 지워져요. 다른 논문에 갔다 와도 남아요(새로 고치면 비워져요).
  */
 interface Saved {
@@ -80,7 +80,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([])
   // 늦게 온 답이 다른 대화를 덮지 않게
   const seq = useRef(0)
-  // 앞 대화 · 고른 글을 보낼 때 읽는 지금 상태
+  // 앞 대화 · 선택한 텍스트를 보낼 때 읽는 지금 상태
   const now = useRef(state)
   now.current = state
   const paperKey = live?.paperId ?? 'local'
@@ -168,7 +168,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
   const ask = useCallback(
     (question: string, canned?: { a: string; go: string; src: string }) => {
       if (live && !canned?.a) {
-        // 실시간 — 앞 대화와 고른 글을 같이 보내요
+        // 실시간 — 앞 대화와 선택한 텍스트를 같이 보내요
         const n = seq.current
         type Turn = { role: 'user' | 'assistant'; text: string }
         const history = now.current.log.flatMap<Turn>((e) =>

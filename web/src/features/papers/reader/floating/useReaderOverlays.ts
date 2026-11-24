@@ -20,7 +20,7 @@ export function useReaderOverlays() {
   const [popover, setPopover] = useState<{
     kind: 'translate' | 'note'
     anchor: SelectionAnchor
-    /** 팝오버를 열면 선택은 닫히니 고른 글·섹션·자리를 들고 가요 */
+    /** 팝오버를 열면 선택은 닫히니 선택한 텍스트 · 섹션·자리를 들고 가요 */
     text: string
     sectionId: string
     place: SelectionPlace | null

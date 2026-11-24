@@ -348,7 +348,7 @@ function DesktopReader() {
     const sel = overlays.selection
     if (!sel) return
     switch (a) {
-      // vault 논문은 고른 글을 맥락으로 넘겨 서버가 그 구절을 풀어요
+      // vault 논문은 선택한 텍스트를 맥락으로 넘겨 서버가 그 구절을 풀어요
       case 'explain':
         openChat('lstm', sel.anchor, aiLive ? sel.text : null)
         break

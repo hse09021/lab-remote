@@ -1,7 +1,7 @@
 import type { PtRect } from '@/api/types'
 
 /**
- * 고른 글이 본문 어디인지 — 나중에 그 자리에 다시 그리기 위한 값이에요.
+ * 선택한 텍스트가 본문 어디인지 — 나중에 그 자리에 다시 그리기 위한 값이에요.
  * HTML은 블록 id + 글자 오프셋, PDF는 pt(612×792) 사각형을 써요.
  */
 export interface SelectionPlace {
