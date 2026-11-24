@@ -44,7 +44,7 @@ export function SelectionMenu({ anchor, highlighted, onAct }: Props) {
     { id: 'info', label: '인포그래픽', key: 'I', icon: <ChartIcon />, badge: 'NEW' },
     {
       id: 'highlight',
-      label: highlighted ? '하이라이트 지우기' : '하이라이트',
+      label: highlighted ? '하이라이트 삭제' : '하이라이트',
       key: 'H',
       icon: <PenIcon />,
       swatch: true,
@@ -105,7 +105,7 @@ export function SelectionMenu({ anchor, highlighted, onAct }: Props) {
             ))}
           </div>
           <span className={s.previewNote}>
-            선택한 부분을 흐름도로 만들어 vault에 저장해요. 지금은 미리보기만 보여 줘요.
+            선택한 부분을 흐름도로 만들어 vault에 저장해요. 지금은 미리보기만 볼 수 있어요.
           </span>
         </div>
       )}

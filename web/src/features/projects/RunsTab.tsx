@@ -272,7 +272,7 @@ function NewRunDialog({
         </datalist>
       </label>
       <label className={ds.field}>
-        conda 환경 (비우면 conda 없이)
+        conda 환경 (비워 두면 conda 없이 실행)
         <input className={ds.input} value={env} onChange={(e) => setEnv(e.target.value)} placeholder="lora-env" />
       </label>
       <label className={ds.field}>
@@ -290,12 +290,12 @@ function NewRunDialog({
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="sweep-lr" />
       </label>
       <span className={s.muted}>
-        실제로 실행되는 명령: <span className={s.mono}>{shown}</span> — tmux 안에서 실행되고 로그는{' '}
-        <span className={s.mono}>.labremote/runs/</span>에 남아요. 접속이 끊겨도 계속 실행돼요.
+        실제 실행 명령: <span className={s.mono}>{shown}</span>. tmux 안에서 실행되고 로그는{' '}
+        <span className={s.mono}>.labremote/runs/</span>에 저장돼요. 브라우저를 닫아도 계속 실행돼요.
       </span>
       {from && from.state === 'cut' && (
         <span className={s.muted}>
-          체크포인트에서 이어 가려면 명령에 직접 재개 옵션을 추가해 주세요. lab.remote는 명령을 변경하지 않아요.
+          체크포인트에서 이어서 실행하려면 명령에 직접 재개 옵션을 추가해 주세요. lab.remote는 명령을 변경하지 않아요.
         </span>
       )}
       <button type="button" className={s.linkBtn} disabled={!command.trim()} onClick={() => setScheduling(true)}>

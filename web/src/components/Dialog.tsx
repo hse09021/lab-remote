@@ -62,7 +62,7 @@ export function Dialog({
             닫기
           </Button>
           <Button type="submit" size="md" variant={tone === 'danger' ? 'danger' : 'accent'} disabled={busy}>
-            {busy ? '하는 중…' : confirmLabel}
+            {busy ? '처리 중…' : confirmLabel}
           </Button>
         </div>
       </form>

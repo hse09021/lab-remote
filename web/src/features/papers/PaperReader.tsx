@@ -275,12 +275,12 @@ function DesktopReader() {
           </div>
           <p className={s.noteHint}>
             PDF가 없어서 vault 노트({paper.path})만 보여요.
-            {paper.arxiv ? ' arXiv에서 PDF를 받으면 리더로 열려요. PDF는 데이터 폴더에 저장하고, 노트는 수정하지 않아요.' : ' 라이브러리에서 PDF를 올리면 리더로 열려요.'}
+            {paper.arxiv ? ' arXiv에서 PDF를 다운로드하면 리더로 열 수 있어요. PDF는 데이터 폴더에 저장되고, 노트는 수정하지 않아요.' : ' 라이브러리에서 PDF를 업로드하면 리더로 열 수 있어요.'}
           </p>
           {paper.arxiv && (
             <div className={s.noteActions}>
               <Button variant="primary" size="md" disabled={fetchPdf.isPending} onClick={() => fetchPdf.mutate(id)}>
-                {fetchPdf.isPending ? 'arXiv에서 받는 중…' : 'arXiv에서 PDF 받기'}
+                {fetchPdf.isPending ? 'arXiv에서 다운로드하는 중…' : 'arXiv에서 PDF 다운로드'}
               </Button>
               {fetchPdf.error && <span className={s.noteHint}>{fetchPdf.error instanceof Error ? fetchPdf.error.message : String(fetchPdf.error)}</span>}
             </div>
@@ -363,7 +363,7 @@ function DesktopReader() {
         overlays.closeAll()
         if (mine) {
           removeAnn.mutate(mine.id)
-          toast.show('하이라이트를 지웠어요')
+          toast.show('하이라이트를 삭제했어요')
         } else {
           addAnn.mutate({
             kind: 'highlight',
@@ -491,7 +491,7 @@ function DesktopReader() {
           { reference, save, savedId: savedPaper(reference)?.id },
           { onError: (e) => toast.show(e instanceof Error ? e.message : String(e)) },
         )
-        toast.show(save ? '라이브러리에 보관했어요' : '보관을 취소했어요 · 휴지통에서 되돌릴 수 있어요')
+        toast.show(save ? '라이브러리에 보관했어요' : '보관을 취소했어요 · 휴지통에서 복원할 수 있어요')
       }}
       onWorth={(n) => {
         const anchor = overlays.cite?.anchor
@@ -643,13 +643,13 @@ function DesktopReader() {
                   <p>arXiv에 이 논문의 HTML 본문이 없어요. PDF로 읽어 주세요.</p>
                 ) : htmlState === 'error' || fetchHtml.isError ? (
                   <>
-                    <p>arXiv HTML을 받지 못했어요.</p>
+                    <p>arXiv HTML을 불러오지 못했어요.</p>
                     <Button variant="outline" size="md" onClick={() => fetchHtml.mutate(id)}>
-                      다시 받기
+                      다시 시도
                     </Button>
                   </>
                 ) : (
-                  <p>arXiv HTML 본문과 그림을 받는 중이에요… 처음 한 번만 받으면 다음부터 바로 열려요.</p>
+                  <p>arXiv에서 HTML 본문과 그림을 다운로드하는 중이에요… 한 번 다운로드하면 다음부터는 바로 열려요.</p>
                 )}
                 <Button variant="outline" size="md" onClick={() => setSource('pdf')}>
                   PDF로 보기

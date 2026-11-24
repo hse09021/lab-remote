@@ -106,7 +106,7 @@ function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; 
                   <span className={s.laneHint}>실행 중 · 오늘 종료</span>
                 </div>
                 {dash.data.runs.running.length + dash.data.runs.finishedToday.length === 0 && (
-                  <div className={s.empty}>오늘은 실행이 없어요. Projects › 세션 · 실행에서 시작해요.</div>
+                  <div className={s.empty}>오늘은 실행이 없어요. Projects › 세션 · 실행에서 시작할 수 있어요.</div>
                 )}
                 {[...dash.data.runs.running, ...dash.data.runs.finishedToday].map((r) => (
                   <RunCard key={`${r.project}/${r.id}`} r={r} />
@@ -216,7 +216,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
     {
       label: '답이 필요해요',
       value: String(lanes.ask.length),
-      sub: oldest ? `가장 오래된 요청 ${whenShort(oldest.createdAt)}` : '기다리는 승인이 없어요',
+      sub: oldest ? `가장 오래된 요청 ${whenShort(oldest.createdAt)}` : '대기 중인 승인 요청이 없어요',
       tone: lanes.ask.length ? 'attention' : 'default',
     },
     run
@@ -224,7 +224,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
           label: `${run.name || run.id} 학습 중`,
           value: prog?.value ?? duration(run.durationSec),
           unit: prog?.unit ?? '',
-          sub: `${run.project} · ${prog ? `${duration(run.durationSec)}째` : '지표 파일을 아직 못 찾았어요'}${d.runs.running.length > 1 ? ` · 외 ${d.runs.running.length - 1}개` : ''}`,
+          sub: `${run.project} · ${prog ? `${duration(run.durationSec)}째` : '지표 파일을 아직 찾지 못했어요'}${d.runs.running.length > 1 ? ` · 외 ${d.runs.running.length - 1}개` : ''}`,
           tone: 'default',
         }
       : {
@@ -240,7 +240,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
           sub: summarizePrs(git.prs.items),
           tone: 'default',
         }
-      : { label: '열린 PR', value: '—', sub: git ? 'gh가 없어 불러올 수 없어요' : '…', tone: 'muted' },
+      : { label: '열린 PR', value: '—', sub: git ? 'gh가 설치되어 있지 않아 불러올 수 없어요' : '…', tone: 'muted' },
     git
       ? {
           label: '이번 주 머지',
@@ -341,10 +341,10 @@ function Resources({ self }: { self: DashboardPayload['self'] }) {
         </>
       )}
       {vramPct !== null && vramPct >= 80 && (
-        <div className={s.warn}>VRAM이 거의 찼어요 — 새 실행은 메모리가 부족할 수 있어요</div>
+        <div className={s.warn}>VRAM이 거의 찼어요. 지금 새로 실행하면 메모리가 부족할 수 있어요.</div>
       )}
       <div className={s.selfLine}>
-        lab.remote 서버 자체: CPU {self.cpuPct ?? '…'}% · RAM {self.rssMb ?? '?'}MB · GPU 0
+        lab.remote 서버 사용량: CPU {self.cpuPct ?? '…'}% · RAM {self.rssMb ?? '?'}MB · GPU 0
       </div>
     </section>
   )

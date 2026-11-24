@@ -28,14 +28,14 @@ export function AppShell() {
       <AppHeader />
       {down && (
         <div role="alert" className={s.banner} data-tone="bad">
-          서버에 연결되지 않아요 — 다시 연결하는 중이에요. 오래 이어지면 데스크톱에서 <code>labremote autostart status</code>로 확인해 주세요.
+          서버에 연결되지 않아 다시 연결하는 중이에요. 계속 연결되지 않으면 데스크톱에서 <code>labremote autostart status</code>로 확인해 주세요.
         </div>
       )}
       {!down && loginNeeded && (
         <div role="alert" className={s.banner} data-tone="warn">
           {account.data?.installed === false
-            ? 'Claude Code가 없어요 — 데스크톱에 설치하고 로그인해 주세요. 채팅, 요약 같은 AI 기능을 쓸 수 없어요.'
-            : 'Claude Code 로그인이 풀렸어요 — 데스크톱 터미널에서 claude를 열어 /login 해 주세요. 채팅, 요약 같은 AI 기능을 쓸 수 없어요.'}
+            ? 'Claude Code가 설치되어 있지 않아 채팅, 요약 같은 AI 기능을 사용할 수 없어요. 데스크톱에 설치하고 로그인해 주세요.'
+            : 'Claude Code에서 로그아웃되어 채팅, 요약 같은 AI 기능을 사용할 수 없어요. 데스크톱 터미널에서 claude를 실행하고 /login으로 다시 로그인해 주세요.'}
         </div>
       )}
       <div className={s.body}>

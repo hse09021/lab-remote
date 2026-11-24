@@ -43,8 +43,8 @@ export function AppHeader() {
   const connTitle = !connected
     ? 'lab.remote 서버에 연결되지 않아요'
     : tunnelUp
-      ? 'code tunnel이 켜져 있어요'
-      : 'code tunnel이 꺼져 있어요 — 이 데스크톱에서만 열려요'
+      ? 'code tunnel이 실행 중이에요'
+      : 'code tunnel이 실행 중이 아니에요. 이 데스크톱에서만 접속할 수 있어요'
 
   return (
     <header className={s.header}>
@@ -59,7 +59,7 @@ export function AppHeader() {
               {tab.label}
               {/* 배지는 "내가 처리해야 하는 것"(답 필요 · 실행 실패·끊김) 중 안 읽은 것만 (2026-11-23 결정) */}
               {tab.to === '/inbox' && inboxCount > 0 && (
-                <span className={s.badge} aria-label={`처리할 알림 ${inboxCount}`}>
+                <span className={s.badge} aria-label={`처리할 알림 ${inboxCount}개`}>
                   {inboxCount}
                 </span>
               )}

@@ -33,7 +33,7 @@ export function VaultDialog({ open, onClose }: { open: boolean; onClose: () => v
       onConfirm={() => save.mutate(path.trim(), { onSuccess: onClose })}
     >
       <p style={{ margin: 0 }}>
-        Obsidian vault 폴더 경로를 입력해 주세요. <code>Papers/</code> 안의 MD가 논문 노트, 나머지 MD는 내 메모예요. 비워 두면 데이터 폴더의{' '}
+        Obsidian vault 폴더 경로를 입력해 주세요. <code>Papers/</code> 안의 MD 파일은 논문 노트로, 나머지 MD 파일은 내 메모로 읽어요. 비워 두면 데이터 폴더의{' '}
         <code>vault/</code>를 사용해요.
       </p>
       <label className={ds.field}>

@@ -23,19 +23,19 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : e ? String(
 
 function tunnelCard(d: SystemOverview): Card {
   const t = d.tunnel
-  if (t.state === 'absent') return { label: 'code tunnel', value: '없음', sub: ['VS Code CLI를 못 찾았어요', '외부에서 접속할 때만 필요해요'], tone: 'off' }
-  if (t.state === 'unknown') return { label: 'code tunnel', value: '모름', sub: [t.detail || '상태를 확인하지 못했어요'], tone: 'warn' }
+  if (t.state === 'absent') return { label: 'code tunnel', value: '없음', sub: ['VS Code CLI를 찾지 못했어요', '원격 접속할 때만 필요해요'], tone: 'off' }
+  if (t.state === 'unknown') return { label: 'code tunnel', value: '알 수 없음', sub: [t.detail || '상태를 확인하지 못했어요'], tone: 'warn' }
   if (t.state === 'off')
     return {
       label: 'code tunnel',
-      value: '꺼짐',
-      sub: [t.loggedIn === false ? '로그인 안 됨' : t.loggedIn ? '로그인됨' : '로그인 상태 모름', t.service ? '서비스는 설치됨' : '서비스 없음'],
+      value: '중지됨',
+      sub: [t.loggedIn === false ? '로그인 안 됨' : t.loggedIn ? '로그인됨' : '로그인 상태 알 수 없음', t.service ? '서비스는 설치됨' : '서비스 없음'],
       tone: 'off',
     }
   return {
     label: 'code tunnel',
     value: '연결됨',
-    sub: [t.url ? t.url.replace(/^https:\/\//, '') : '주소를 확인하지 못했어요', t.service ? '서비스로 실행 중이에요' : '직접 실행 · 재부팅하면 꺼져요'],
+    sub: [t.url ? t.url.replace(/^https:\/\//, '') : '주소를 확인하지 못했어요', t.service ? '서비스로 실행 중이에요' : '직접 실행 · 재부팅하면 종료돼요'],
     tone: t.service ? 'ok' : 'warn',
   }
 }
@@ -55,10 +55,10 @@ function cards(d: SystemOverview): Card[] {
     tunnelCard(d),
     {
       label: '자동 시작',
-      value: !a.installed ? '꺼짐' : on ? '켜짐' : a.active || '설치만 됨',
+      value: !a.installed ? '비활성' : on ? '활성' : a.active || '설치만 됨',
       sub: [
         a.installed ? `labremote-session${a.restarts ? ` · 재시작 ${a.restarts}회` : ''}` : '사용자 서비스 없음',
-        `linger ${a.linger === null ? '모름' : a.linger ? 'yes' : 'no'}`,
+        `linger ${a.linger === null ? '알 수 없음' : a.linger ? 'yes' : 'no'}`,
       ],
       tone: on && a.linger ? 'ok' : a.installed ? 'warn' : 'off',
     },
@@ -66,7 +66,7 @@ function cards(d: SystemOverview): Card[] {
       label: 'GPU',
       value: g.available ? (dev?.name ?? 'GPU') : '조회 불가',
       sub: g.available
-        ? [`드라이버 ${g.driver.userland ?? dev?.driver ?? '?'}`, g.driver.mismatch ? '커널·유저랜드 다름 — 재부팅 필요' : '커널·유저랜드 같음']
+        ? [`드라이버 ${g.driver.userland ?? dev?.driver ?? '?'}`, g.driver.mismatch ? '커널 · 유저랜드 버전 불일치 (재부팅 필요)' : '커널 · 유저랜드 버전 일치']
         : [g.reason || 'nvidia-smi 결과를 읽지 못했어요'],
       tone: !g.available || g.driver.mismatch ? 'warn' : 'ok',
     },
@@ -82,8 +82,8 @@ function tree(d: SystemOverview, live: { live: number; open: number } | null) {
     : '예약 없음'
   const head = a.installed
     ? `부팅 → labremote-session.service   ${a.active === 'active' ? '●' : '○'} ${a.active || '?'}${a.restarts ? ` (재시작 ${a.restarts}회)` : ''}`
-    : '부팅 → (자동 시작 꺼짐 — 지금은 직접 실행한 서버)'
-  const tunnelLine = t.state === 'up' ? `● 연결됨${t.service ? ' · VS Code 서비스' : ' · 직접 실행'}` : t.state === 'off' ? '○ 꺼짐' : t.state === 'absent' ? '○ 없음' : '? 모름'
+    : '부팅 → (자동 시작 비활성 · 지금은 직접 실행한 서버)'
+  const tunnelLine = t.state === 'up' ? `● 연결됨${t.service ? ' · VS Code 서비스' : ' · 직접 실행'}` : t.state === 'off' ? '○ 중지됨' : t.state === 'absent' ? '○ 없음' : '? 알 수 없음'
   return `${head}
   └ tmux "labremote"
       └ labremote serve    ● 127.0.0.1:${d.server.port ?? '?'} · nice ${d.server.nice ?? '?'}
@@ -112,7 +112,7 @@ export default function SystemPage() {
     <main className={s.page}>
       <div>
         <h1 className={s.title}>시스템</h1>
-        <p className={s.text}>lab.remote가 이 데스크톱에서 어떻게 실행되고 있는지, 무엇을 변경했는지 보여 줘요. 여기 없는 시스템 설정은 건드리지 않아요.</p>
+        <p className={s.text}>lab.remote가 이 데스크톱에서 어떻게 실행되고 있는지, 무엇을 변경했는지 보여 줘요. 여기에 없는 시스템 설정은 변경하지 않아요.</p>
       </div>
 
       <div className={s.cards}>
@@ -137,8 +137,8 @@ export default function SystemPage() {
           lab.remote가 변경한 항목
         </h2>
         <p className={s.text}>
-          이게 전부예요. 나머지 상태는 lab.remote 데이터 폴더(<span className={s.mono}>{d.server.dataDir}</span>)와, 등록한 프로젝트마다 하나씩
-          있는 <span className={s.mono}>.labremote/</span>에만 있어요.
+          이 목록이 전부예요. 그 밖의 데이터는 lab.remote 데이터 폴더(<span className={s.mono}>{d.server.dataDir}</span>)와, 등록한 프로젝트마다 하나씩
+          있는 <span className={s.mono}>.labremote/</span>에만 저장돼요.
         </p>
         <div className={s.tableWrap}>
           <table className={s.table}>
@@ -177,14 +177,14 @@ export default function SystemPage() {
           <pre className={s.pre}>{tree(d, agents.data ? { live: agents.data.live, open: agents.data.sessions.length } : null)}</pre>
           {a.installed ? (
             <p className={s.text}>
-              재부팅하면 로그인하지 않아도 바로 실행돼요. 학습은 이 서비스와 분리돼 있어서 세션을 다시 시작해도 계속 실행돼요. 예약은 이 서버가 시각을 확인하므로
-              서버가 꺼져 있으면 실행되지 않아요. 서버 출력은 <span className={s.mono}>{a.tmux}</span>로 봐요.
+              재부팅하면 로그인하지 않아도 바로 실행돼요. 학습은 이 서비스와 분리돼 있어서 세션을 다시 시작해도 계속 실행돼요. 예약 실행은 이 서버가 시각을 확인하므로
+              서버가 중지되어 있으면 실행되지 않아요. 서버 출력은 <span className={s.mono}>{a.tmux}</span> 명령으로 확인할 수 있어요.
               {!a.inside && ' 지금 보고 있는 서버는 자동 시작과 별개로 직접 실행한 서버예요.'}
             </p>
           ) : (
             <p className={s.text}>
-              꺼져 있어요. 켜려면 데스크톱 터미널에서 <span className={s.mono}>{a.installCommand}</span> 명령을 실행해 주세요. 무엇이 바뀌는지 먼저 보여 주고 물어봐요.
-              {a.systemctl ? '' : ' (systemctl이 없어 이 컴퓨터에서는 쓸 수 없어요)'}
+              자동 시작이 비활성화되어 있어요. 활성화하려면 데스크톱 터미널에서 <span className={s.mono}>{a.installCommand}</span> 명령을 실행해 주세요. 변경될 내용을 먼저 보여 주고 확인을 받아요.
+              {a.systemctl ? '' : ' (systemctl이 없어 이 컴퓨터에서는 사용할 수 없어요)'}
             </p>
           )}
           {a.installed && (
@@ -202,7 +202,7 @@ export default function SystemPage() {
               </button>
             </div>
           )}
-          {restart.isSuccess && a.inside && <p className={s.note}>이 서버도 다시 시작돼요. 잠깐 끊겼다가 자동으로 다시 연결돼요.</p>}
+          {restart.isSuccess && a.inside && <p className={s.note}>이 서버도 다시 시작돼요. 잠시 연결이 끊겼다가 자동으로 다시 연결돼요.</p>}
           {restart.isError && <p className={s.err}>{errText(restart.error)}</p>}
         </section>
 
@@ -213,7 +213,7 @@ export default function SystemPage() {
           <div className={s.rows}>
             <div className={s.row}>
               <span>Discord 웹훅</span>
-              <span>{notify.data ? (notify.data.webhook.set ? `설정됨 · ${notify.data.webhook.masked}` : '없음') : '…'}</span>
+              <span>{notify.data ? (notify.data.webhook.set ? `설정됨 · ${notify.data.webhook.masked}` : '설정 안 됨') : '…'}</span>
             </div>
             <div className={s.row}>
               <span>보낼 알림</span>
@@ -230,7 +230,7 @@ export default function SystemPage() {
             <button type="button" className={s.btn} disabled={!notify.data?.webhook.set || test.isPending} onClick={() => test.mutate()}>
               테스트 알림 보내기
             </button>
-            {test.isSuccess && <span className={s.note}>{test.data.sent ? '보냈어요' : (test.data.detail ?? '못 보냈어요')}</span>}
+            {test.isSuccess && <span className={s.note}>{test.data.sent ? '보냈어요' : (test.data.detail ?? '보내지 못했어요')}</span>}
           </div>
         </section>
       </div>
@@ -242,14 +242,14 @@ export default function SystemPage() {
           보안
         </h2>
         <p className={s.text}>
-          터널이 열려 있으면 그 GitHub 계정만으로 이 데스크톱의 터미널과 파일에 접근할 수 있어요. GitHub 2단계 인증을 꼭 활성화해 주세요. 서버는
-          127.0.0.1에서만 열려 있어서 터널을 거치지 않으면 접속할 수 없고, 등록한 외부 주소가 아닌 곳에서 온 요청은 거부해요.
+          터널이 실행 중이면 해당 GitHub 계정만으로 이 데스크톱의 터미널과 파일에 접근할 수 있어요. GitHub 2단계 인증을 꼭 활성화해 주세요. 서버는
+          127.0.0.1에서만 요청을 받으므로 터널을 거치지 않으면 접속할 수 없고, 등록한 외부 주소가 아닌 곳에서 온 요청은 거부해요.
         </p>
       </section>
 
       <section className={s.section} aria-labelledby="sys-rm">
         <h2 id="sys-rm" className={s.h2}>
-          지우기
+          삭제
         </h2>
         <pre className={s.pre}>{d.uninstall.join('\n')}</pre>
       </section>
@@ -268,14 +268,14 @@ export default function SystemPage() {
         onConfirm={() => uninstall.mutate(undefined, { onSuccess: () => setAsking(false) })}
       >
         <span>
-          labremote-session 서비스를 멈추고 유닛 파일을 지워요.{' '}
+          labremote-session 서비스를 중지하고 유닛 파일을 삭제해요.{' '}
           {a.lingerBefore === false
             ? d.tunnel.service
               ? 'linger는 code tunnel 서비스도 사용하고 있어서 그대로 유지해요.'
-              : 'linger는 원래대로(no) 되돌려요.'
-            : 'linger는 lab.remote가 켠 게 아니어서 그대로 유지해요.'}
+              : 'linger는 원래 값(no)으로 되돌려요.'
+            : 'linger는 lab.remote가 활성화한 것이 아니어서 그대로 유지해요.'}
         </span>
-        <span>학습 실행은 별도로 실행되므로 멈추지 않아요. {a.inside && '지금 보고 있는 이 서버도 꺼져서 화면이 끊겨요.'} 다시 켜려면 터미널에서 labremote autostart install을 실행해요.</span>
+        <span>학습은 별도로 실행되므로 중지되지 않아요. {a.inside && '지금 보고 있는 이 서버도 종료되어 화면 연결이 끊겨요.'} 다시 활성화하려면 터미널에서 labremote autostart install을 실행해 주세요.</span>
       </Dialog>
     </main>
   )
@@ -293,7 +293,7 @@ function RemoteSection({ d }: { d: SystemOverview }) {
         원격 접속
       </h2>
       <p className={s.text}>
-        터널은 VS Code가 실행해요 — lab.remote는 상태만 확인해요. 한 번만 설정하면 돼요{t.state === 'up' ? ' (터널은 이미 켜져 있어요)' : ''}.
+        터널은 VS Code가 실행하고, lab.remote는 상태만 확인해요. 처음 한 번만 설정하면 돼요{t.state === 'up' ? ' (터널은 이미 실행 중이에요)' : ''}.
       </p>
       <pre className={s.pre}>{`code tunnel user login --provider github
 code tunnel service install --accept-server-license-terms

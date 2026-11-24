@@ -106,7 +106,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
             className={s.input}
             value={paperFind}
             onChange={(e) => setPaperFind(e.target.value)}
-            placeholder={`vault 논문 ${papers.data?.length ?? 0}편에서 찾기`}
+            placeholder={`vault 논문 ${papers.data?.length ?? 0}편에서 검색`}
           />
           <div className={s.paperList} role="group" aria-label="사용하는 논문 선택">
             {papers.isSuccess && papers.data.length === 0 && (
@@ -130,7 +130,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
             ))}
           </div>
           <span className={s.muted}>
-            선택한 논문은 Papers › Graph에서 "프로젝트에서 사용"으로 연결돼요. 지금 {used.length}편 선택했어요.
+            선택한 논문은 Papers › Graph에서 "프로젝트에서 사용"으로 연결돼요. 현재 {used.length}편을 선택했어요.
           </span>
         </div>
         <span />
@@ -148,7 +148,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
       </form>
 
       <div className={s.settingsNote}>
-        이 설정은 프로젝트의 <span className={s.mono}>.labremote/settings.json</span>에 저장돼요. 시나리오는{' '}
+        이 설정은 프로젝트의 <span className={s.mono}>.labremote/settings.json</span>에 저장돼요. Scenario는{' '}
         <span className={s.mono}>.labremote/scenarios/</span>, worktree는 <span className={s.mono}>.labremote/worktrees/</span>에
         있어요.
       </div>
@@ -165,7 +165,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
         }
       >
         <span className={s.switchText}>
-          <span className={s.switchTitle}>repo에 포함하기</span>
+          <span className={s.switchTitle}>git 저장소에 포함</span>
           <span className={s.muted}>
             켜면 settings.json과 scenarios/만 git에 포함돼요. worktree와 실행 기록은 계속 제외돼요.
           </span>
@@ -219,7 +219,7 @@ function UnregisterDialog({ name, open, onClose }: { name: string; open: boolean
       <label className={ds.check}>
         <input type="checkbox" checked={removeLabremote} onChange={(e) => setRemove(e.target.checked)} />
         <span>
-          <span className={s.mono}>.labremote/</span>도 지우기 — 설정, Scenario, worktree 폴더가 함께 지워지고 되돌릴 수
+          <span className={s.mono}>.labremote/</span>도 삭제 — 설정, Scenario, worktree 폴더가 함께 삭제되며 되돌릴 수
           없어요.
         </span>
       </label>

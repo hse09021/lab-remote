@@ -166,7 +166,7 @@ export default function IdePage() {
       <main style={{ padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <h1 style={{ margin: 0, fontSize: 20 }}>IDE는 넓은 화면에서 사용해요</h1>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--text-soft)' }}>
-          편집기와 터미널은 휴대폰 화면에 맞지 않아요. 에이전트에게 작업을 맡기고 답하는 건 ADE에서 할 수 있어요.
+          편집기와 터미널은 휴대폰 화면에 맞지 않아요. 에이전트에게 작업을 맡기거나 요청에 답하는 건 ADE에서 할 수 있어요.
         </p>
         <Link to={`/projects/${encodeURIComponent(project)}/ade${tree ? `?tree=${encodeURIComponent(tree)}` : ''}`} style={{ fontSize: 14 }}>
           ADE로 가기
@@ -473,7 +473,7 @@ function FileEditor({
       />
       <Dialog
         open={asking}
-        title={`${path}의 변경을 되돌릴까요?`}
+        title={`${path} 파일의 변경을 되돌릴까요?`}
         confirmLabel="되돌리기"
         busy={discard.isPending}
         error={discard.error ? (discard.error instanceof ApiError ? discard.error.message : String(discard.error)) : undefined}
@@ -500,7 +500,7 @@ function FileEditor({
         }
       >
         <span>
-          {change?.label === 'U' ? '새로 만든 파일이라 지워져요.' : '마지막 커밋 상태로 돌아가요.'} 되돌린 내용은 다시 살릴 수 없어요.
+          {change?.label === 'U' ? '새로 만든 파일이라 삭제돼요.' : '마지막 커밋 상태로 돌아가요.'} 되돌린 내용은 복구할 수 없어요.
         </span>
       </Dialog>
     </div>
@@ -513,13 +513,13 @@ function DiffTab({ project, tree, path, onOpen }: { project: string; tree: strin
     <div className={s.editorWrap}>
       <div className={s.crumb}>
         <span className={s.mono}>{path}</span>
-        <span className={s.muted}>커밋 안 한 변경</span>
+        <span className={s.muted}>커밋하지 않은 변경</span>
         <button type="button" className={s.linkBtn} onClick={onOpen}>
           편집기로 열기
         </button>
       </div>
       <pre className={s.diff}>
-        {(diff.data?.diff || (diff.isPending ? '불러오는 중이에요…' : '바뀐 내용이 없거나 git이 아직 추적하지 않는 새 파일이에요.'))
+        {(diff.data?.diff || (diff.isPending ? '불러오는 중이에요…' : '변경 내용이 없거나 git이 아직 추적하지 않는 새 파일이에요.'))
           .split('\n')
           .map((line, i) => (
             <span key={i} data-sign={line.startsWith('+') && !line.startsWith('+++') ? '+' : line.startsWith('-') && !line.startsWith('---') ? '-' : line.startsWith('@@') ? '@' : ''}>

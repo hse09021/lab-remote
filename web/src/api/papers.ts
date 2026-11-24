@@ -351,7 +351,7 @@ export async function runReaderAi<T>(paperId: string, body: ReaderAiBody): Promi
     await new Promise((r) => setTimeout(r, 1500))
     const j = await get<{ state: string; result: T; error: string }>(`/papers/ai/${job.id}`)
     if (j.state === 'done') return j.result
-    if (j.state === 'failed') throw new Error(j.error || '답하지 못했어요')
+    if (j.state === 'failed') throw new Error(j.error || '답변하지 못했어요')
   }
   throw new Error('응답 시간이 초과됐어요')
 }

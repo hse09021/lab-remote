@@ -28,7 +28,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
       {q.isPending && <span className={s.muted}>불러오는 중이에요…</span>}
       {sc && (
         <span className={s.muted}>
-          Claude가 {new Date(sc.createdAt * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}에 생성 · 파일{' '}
+          생성일 {new Date(sc.createdAt * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })} · Claude · 파일{' '}
           {Object.keys(sc.hashes).length}개 분석 · <span className={s.mono}>{data?.path}</span>
         </span>
       )}
@@ -90,7 +90,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
         </ol>
       )}
       <p className={s.footer}>
-        순서만 보여 줘요. 단계를 자동으로 연달아 실행하지 않아요. "실행 탭에 채우기"는 명령만 채우고, 실행은 직접 해요.
+        순서만 보여 줘요. 단계를 자동으로 연달아 실행하지 않아요. "실행 탭에 채우기"는 명령만 입력하고, 실행은 직접 해야 해요.
       </p>
 
       <Dialog

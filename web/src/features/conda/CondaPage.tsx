@@ -61,7 +61,7 @@ function EnvPanel({ name, onClone }: { name: string; onClone: () => void }) {
         <div>
           <h1 className={s.title}>{d.name}</h1>
           <div className={s.meta}>
-            <span className={s.mono}>{d.prefix}</span> · Python {d.python || '없음'} · 패키지 {d.packages.length}
+            <span className={s.mono}>{d.prefix}</span> · Python {d.python || '없음'} · 패키지 {d.packages.length}개
           </div>
         </div>
         <div className={s.headActions}>
@@ -76,12 +76,12 @@ function EnvPanel({ name, onClone }: { name: string; onClone: () => void }) {
 
       {d.protected ? (
         <div role="status" className={s.banner}>
-          <b>지울 수 없는 환경이에요</b>
+          <b>삭제할 수 없는 환경이에요</b>
           <span>
             {d.name === 'base'
-              ? 'conda의 기본 환경이라 삭제하거나 패키지를 변경할 수 없어요. 읽기 전용이에요.'
+              ? 'conda 기본 환경이라 읽기 전용이에요. 삭제하거나 패키지를 변경할 수 없어요.'
               : d.name === 'labremote'
-                ? 'lab.remote 서버가 쓰는 환경이에요. 삭제하면 lab.remote가 멈추므로 여기서는 삭제할 수 없어요.'
+                ? 'lab.remote 서버가 사용하는 환경이에요. 삭제하면 lab.remote가 중지되므로 여기서는 삭제할 수 없어요.'
                 : d.protectedReason}
           </span>
         </div>
@@ -89,8 +89,8 @@ function EnvPanel({ name, onClone }: { name: string; onClone: () => void }) {
         <div role="status" className={s.banner}>
           <b>사용 중이라 잠겨 있어요</b>
           <span>
-            {d.usedBy.join(', ')}에서 이 환경으로 학습하고 있어요. 패키지를 변경하면 학습이 깨질 수 있어서 학습이 끝날 때까지 설치, 제거, 삭제를 할 수 없어요.
-            에이전트가 이 환경에 설치하려 하면 승인 카드에 경고가 표시돼요.
+            이 환경으로 실행 중인 학습이 있어요({d.usedBy.join(', ')}). 패키지를 변경하면 학습이 실패할 수 있어서 학습이 끝날 때까지 설치, 제거, 삭제를 할 수 없어요.
+            에이전트가 이 환경에 패키지를 설치하려고 하면 승인 카드에 경고가 표시돼요.
           </span>
           <Link to={`/projects/${encodeURIComponent(d.usedBy[0].split(' · ')[0])}?tab=work&run=${d.usedBy[0].split(' · ')[1]}`}>학습 보기</Link>
         </div>
@@ -120,7 +120,7 @@ function JobResult({ job, done }: { job?: CondaJob; done: string }) {
   if (job.dry) {
     return (
       <div className={s.preview}>
-        <div className={s.previewHead}>미리 보기 · 다음과 같이 변경돼요 (아직 아무것도 변경하지 않았어요)</div>
+        <div className={s.previewHead}>미리 보기 · 다음과 같이 변경돼요(아직 적용하지 않았어요)</div>
         {(job.changes ?? []).length === 0 && <div className={s.muted}>변경 사항이 없어요 (이미 설치돼 있거나 최신 버전이에요).</div>}
         {(job.changes ?? []).map((c, i) => (
           <div key={i} className={s.change} data-action={c.action}>
@@ -202,7 +202,7 @@ function InstallBox({ env }: { env: CondaEnvDetail }) {
             설치
           </button>
           <span className={s.muted}>
-            설치 기록은 lab.remote 데이터 폴더에 남아요. pip는 휠만 내려받고 캐시를 쓰지 않아요(설치 중에 코드가 실행되지 않도록).
+            설치 기록은 lab.remote 데이터 폴더에 저장돼요. 설치 중에 코드가 실행되지 않도록 pip는 휠만 다운로드하고 캐시를 사용하지 않아요.
           </span>
         </div>
       )}
@@ -234,7 +234,7 @@ function PackageTable({ env }: { env: CondaEnvDetail }) {
               <th>이름</th>
               <th>버전</th>
               <th>출처</th>
-              <th>동작</th>
+              <th>작업</th>
             </tr>
           </thead>
           <tbody>
@@ -260,7 +260,7 @@ function PackageTable({ env }: { env: CondaEnvDetail }) {
           </tbody>
         </table>
       </div>
-      {shown.length > 400 && <div className={s.muted}>앞의 400개만 보여요. 검색으로 좁혀 주세요.</div>}
+      {shown.length > 400 && <div className={s.muted}>처음 400개만 표시돼요. 검색해서 범위를 좁혀 주세요.</div>}
       {target && <ChangeDialog key={`${target.pkg.name}-${target.action}`} env={env.name} target={target} onClose={() => setTarget(null)} />}
     </section>
   )
@@ -329,11 +329,11 @@ function DeleteBox({ env }: { env: CondaEnvDetail }) {
         </button>
       </div>
       {remove.error && <div className={s.warn}>{errText(remove.error)}</div>}
-      {job.data?.state === 'running' && <div className={s.notice}>백업하고 지우는 중이에요…</div>}
-      {job.data?.state === 'failed' && <div className={s.warn}>지우지 못했어요: {job.data.error}</div>}
+      {job.data?.state === 'running' && <div className={s.notice}>백업한 뒤 삭제하는 중이에요…</div>}
+      {job.data?.state === 'failed' && <div className={s.warn}>삭제하지 못했어요: {job.data.error}</div>}
       {job.data?.state === 'done' && (
         <div className={s.ok}>
-          지웠어요. 백업: <span className={s.mono}>{job.data.backup}</span>{' '}
+          삭제했어요. 백업: <span className={s.mono}>{job.data.backup}</span>{' '}
           <button type="button" className={s.link} onClick={() => navigate('/settings/conda', { replace: true })}>
             목록으로
           </button>

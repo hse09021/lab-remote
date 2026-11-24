@@ -97,10 +97,10 @@ export function TerminalView({ project, name, run, write = false }: { project: s
     <div className={s.termWrap}>
       {(status !== 'open' || error) && (
         <div className={s.termStatus} data-tone={error || status === 'closed' ? 'warn' : undefined}>
-          {error || (status === 'connecting' ? '연결 중이에요…' : '연결이 끊겼어요. 탭을 다시 열면 이어서 연결돼요 (셸은 데스크톱에서 계속 실행돼요).')}
+          {error || (status === 'connecting' ? '연결 중이에요…' : '연결이 끊겼어요. 탭을 다시 열면 다시 연결돼요. 셸은 데스크톱에서 계속 실행 중이에요.')}
         </div>
       )}
-      {run && !write && <div className={s.termNote}>학습 실행은 읽기 전용이에요 · 실수로 Ctrl+C를 눌러 중단되지 않도록 입력을 막았어요</div>}
+      {run && !write && <div className={s.termNote}>학습 실행은 읽기 전용이에요. 실수로 Ctrl+C를 눌러 중단되지 않도록 입력을 차단했어요</div>}
       <div ref={host} className={s.term} />
     </div>
   )

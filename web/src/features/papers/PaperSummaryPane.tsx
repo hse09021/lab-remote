@@ -8,7 +8,7 @@ import s from './PaperSummaryPane.module.css'
 export type SummaryView = 'nice' | 'raw'
 
 const VIEW_ITEMS: SegmentedItem<SummaryView>[] = [
-  { value: 'nice', label: '정리된 보기' },
+  { value: 'nice', label: '미리보기' },
   { value: 'raw', label: 'MD 원문' },
 ]
 

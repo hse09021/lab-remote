@@ -33,7 +33,7 @@ export function gitLine(git: GitSummary, { long = false } = {}): string {
   }
   if (git.state === 'none') return 'git 저장소 아님'
   if (git.state === 'missing') return '폴더가 없어요'
-  if (git.state === 'refused') return 'git을 실행하지 않았어요 (.git 설정 때문)'
+  if (git.state === 'refused') return '.git 설정 때문에 git을 실행하지 않았어요'
   return 'git 상태를 읽지 못했어요'
 }
 
@@ -130,7 +130,7 @@ export default function ProjectsPage() {
             <ProjectItem key={p.name} p={p} current={p.name === id} />
           ))}
           {list.isSuccess && projects.length > 0 && shown.length === 0 && (
-            <div className={s.noMatch}>맞는 프로젝트가 없어요.</div>
+            <div className={s.noMatch}>일치하는 프로젝트가 없어요.</div>
           )}
         </div>
         <div className={s.asideFoot}>
@@ -294,7 +294,7 @@ function RegisterDialog({ open, onClose, startNew = false }: { open: boolean; on
             </button>
             <span className={s.browserPath}>{dirs.data?.path ?? at}</span>
             <label className={s.browserHidden}>
-              <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> 숨김 폴더
+              <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> 숨김 폴더 표시
             </label>
           </div>
           <div className={s.browserList}>
@@ -361,7 +361,7 @@ function RegisterDialog({ open, onClose, startNew = false }: { open: boolean; on
       </label>
       <span>
         폴더 안에 <span className={s.mono}>.labremote/</span>를 만들어요. 이 폴더는 자체 .gitignore로 git에서 제외되고, 프로젝트의{' '}
-        <span className={s.mono}>.gitignore</span>는 건드리지 않아요.
+        <span className={s.mono}>.gitignore</span>는 변경하지 않아요.
       </span>
     </Dialog>
   )
@@ -449,7 +449,7 @@ function ProjectDetail({ name }: { name: string }) {
       </div>
 
       {!p.exists ? (
-        <div className={s.notice}>폴더가 없어요: {p.root} — 옮겼다면 등록을 해제하고 새 경로로 다시 등록해 주세요.</div>
+        <div className={s.notice}>폴더를 찾을 수 없어요: {p.root}. 폴더를 옮겼다면 등록을 해제하고 새 경로로 다시 등록해 주세요.</div>
       ) : tab === 'files' ? (
         <FilesTab project={p} trees={trees.data} />
       ) : tab === 'worktrees' ? (

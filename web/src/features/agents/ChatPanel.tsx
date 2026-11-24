@@ -54,7 +54,7 @@ export function ChatPanel({ session, actions, via = 'ADE' }: { session: AgentSes
           className={s.chatIconBtn}
           aria-label="세션 닫기"
           disabled={close.isPending || session.busy}
-          title={session.busy ? '작업 중에는 닫을 수 없어요 — 먼저 중지해 주세요' : '세션 닫기 — 목록에서 숨겨요 (기록은 남고, 메시지를 보내면 다시 열려요)'}
+          title={session.busy ? '작업 중에는 닫을 수 없어요 — 먼저 중지해 주세요' : '세션 닫기 — 목록에서 숨기고 기록은 유지해요. 메시지를 보내면 다시 열려요'}
           onClick={() => close.mutate({ sid: session.id, closed: true })}
         >
           <CloseIcon />

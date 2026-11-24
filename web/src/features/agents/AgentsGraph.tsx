@@ -183,8 +183,8 @@ export function AgentsGraph({ sessions, runs, finished }: { sessions: AgentSessi
         </div>
       </div>
       <p className={s.note}>
-        lab.remote에서 시작한 세션, 하위 에이전트, 학습 실행만 보여요. 실선은 부모와 하위 에이전트 사이, 점선은 서로 참고하는 관계(같은 worktree), 주황
-        점선은 나를 기다리는 요청이에요. 노드를 누르면 그 세션이나 실행으로 가요.
+        lab.remote에서 시작한 세션, 하위 에이전트, 학습 실행만 표시돼요. 실선은 부모 세션과 하위 에이전트, 점선은 같은 worktree를 쓰는 관계, 주황 점선은
+        나를 기다리는 요청을 나타내요. 노드를 누르면 해당 세션이나 실행으로 이동해요.
       </p>
     </section>
   )

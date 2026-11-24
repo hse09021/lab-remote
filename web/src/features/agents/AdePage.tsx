@@ -436,7 +436,7 @@ function Explorer({ project, tree, branch, onOpen }: { project: string; tree: st
         ))}
       </ul>
       <div className={s.muted}>
-        바뀐 파일을 누르면 오른쪽 변경 탭에 diff가 열려요. 직접 수정하려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열어요</Link>.
+        변경된 파일을 누르면 오른쪽 변경 탭에 diff가 열려요. 직접 수정하려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열어요</Link>.
       </div>
     </div>
   )
@@ -458,7 +458,7 @@ function Changes({
   const diff = useQuery(gitDiffQuery(project, tree, path))
   return (
     <div className={s.changes}>
-      {changes.length === 0 && <div className={s.muted}>커밋 안 한 변경이 없어요.</div>}
+      {changes.length === 0 && <div className={s.muted}>커밋하지 않은 변경 사항이 없어요.</div>}
       {changes.map((c) => (
         <button key={c.path} type="button" aria-pressed={c.path === path} className={s.fileBtn} onClick={() => onPick(c.path)}>
           <span className={s.mono}>{c.path}</span>
@@ -470,7 +470,7 @@ function Changes({
           {diff.isPending
             ? '불러오는 중이에요…'
             : diff.data?.diff ||
-              (changes.find((c) => c.path === path)?.label === '새 파일' ? 'git이 아직 추적하지 않는 새 파일이라 diff가 없어요.' : '바뀐 내용이 없어요.')}
+              (changes.find((c) => c.path === path)?.label === '새 파일' ? 'git이 아직 추적하지 않는 새 파일이라 diff가 없어요.' : '변경 내용이 없어요.')}
         </pre>
       )}
     </div>

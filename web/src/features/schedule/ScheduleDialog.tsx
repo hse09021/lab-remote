@@ -152,7 +152,7 @@ export function ScheduleDialog({
             <input className={ds.input} value={command} onChange={(e) => setCommand(e.target.value)} placeholder="python src/train.py --config configs/r32.yaml" />
           </label>
           <label className={ds.field}>
-            conda 환경 (비우면 conda 없이)
+            conda 환경 (비워 두면 conda 없이 실행)
             <input className={ds.input} value={env} onChange={(e) => setEnv(e.target.value)} placeholder="lora-env" />
           </label>
         </>
@@ -221,9 +221,9 @@ export function ScheduleDialog({
       </div>
       <span>
         {kind === 'command'
-          ? '그 시각에 GPU가 사용 중이면 끝날 때까지 기다렸다가 시작하고 알려 줘요.'
-          : '그 시각에 세션을 열고 요청만 보내요. 승인이 필요하면 거기서 멈춰요.'}{' '}
-        서버가 꺼져 있으면 실행되지 않아요.
+          ? '예약 시각에 GPU가 사용 중이면 끝날 때까지 기다렸다가 시작하고 알려 줘요.'
+          : '예약 시각에 세션을 열고 요청만 보내요. 승인이 필요하면 승인할 때까지 기다려요.'}{' '}
+        서버가 중지되어 있으면 실행되지 않아요.
       </span>
     </Dialog>
   )

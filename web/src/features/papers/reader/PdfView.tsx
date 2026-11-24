@@ -276,7 +276,7 @@ export function PdfView({
     // 그림 — 화면에 그려진 쪽(canvas)에서 그 영역만 잘라 이미지로
     const canvas = pageEls.current.get(z.page)?.querySelector('canvas')
     if (!canvas || !canvas.width) {
-      onToast('아직 불러오지 않은 쪽이에요 — 해당 쪽까지 스크롤한 뒤 다시 눌러 주세요')
+      onToast('아직 불러오지 않은 쪽이에요. 해당 쪽까지 스크롤한 뒤 다시 눌러 주세요')
       return
     }
     const k = canvas.width / reader.pageSize.width

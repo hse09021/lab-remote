@@ -11,7 +11,7 @@ import s from './Projects.module.css'
 
 function aheadText(w: Worktree, main: string): string {
   if (w.primary || w.branch === main) return '—'
-  if (w.merged) return `${main}에 머지됨`
+  if (w.merged) return '머지됨'
   const parts: string[] = []
   if (w.ahead) parts.push(`커밋 ${w.ahead}개 앞섬`)
   if (w.changed) parts.push(`변경 ${w.changed} (커밋 전)`)
@@ -63,7 +63,7 @@ export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees
               const tree = w.primary ? '' : (w.rel ?? '')
               return (
                 <tr key={w.path}>
-                  <td className={`${s.tdFirst} ${s.monoCell}`}>{w.branch || `(분리됨 ${w.head})`}</td>
+                  <td className={`${s.tdFirst} ${s.monoCell}`}>{w.branch || `(분리된 HEAD ${w.head})`}</td>
                   <td>{aheadText(w, data.main)}</td>
                   <td className={here.length ? undefined : s.muted}>
                     {here.length ? `${here.length}개 · ${here[0].stateLabel}` : '—'}
@@ -88,7 +88,7 @@ export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees
         </table>
       </div>
       <p className={`${s.muted} ${s.treesFoot}`}>
-        정리는 {data.main || 'main'}에 머지된 worktree에서만 할 수 있어요. 폴더만 삭제하고 브랜치는 유지해요.
+        정리는 {data.main || 'main'} 브랜치에 머지된 worktree에서만 할 수 있어요. 폴더만 삭제하고 브랜치는 유지해요.
       </p>
       <AddDialog name={project.name} open={adding} onClose={() => setAdding(false)} />
       {cleaning && <CleanDialog name={project.name} tree={cleaning} onClose={() => setCleaning(null)} />}
@@ -119,7 +119,7 @@ function AddDialog({ name, open, onClose }: { name: string; open: boolean; onClo
         <input className={ds.input} value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="exp/early-stop" autoFocus />
       </label>
       <span>
-        <span className={s.mono}>.labremote/worktrees/</span>에 만들어요. 브랜치가 없으면 지금 위치에서 새로 만들어요.
+        <span className={s.mono}>.labremote/worktrees/</span>에 만들어요. 브랜치가 없으면 프로젝트 루트의 현재 커밋에서 새로 만들어요.
       </span>
     </Dialog>
   )
@@ -139,10 +139,10 @@ function CleanDialog({ name, tree, onClose }: { name: string; tree: Worktree; on
       onConfirm={() => remove.mutate({ rel: tree.rel ?? '' }, { onSuccess: onClose })}
     >
       <span>
-        <span className={s.mono}>{tree.rel}</span> 폴더를 지워요. <span className={s.mono}>{tree.branch}</span> 브랜치는 남아서
+        <span className={s.mono}>{tree.rel}</span> 폴더를 삭제해요. <span className={s.mono}>{tree.branch}</span> 브랜치는 유지되므로
         다시 만들 수 있어요.
       </span>
-      <span>커밋 안 한 변경이 있거나 이 worktree에서 학습이나 세션이 실행 중이면 정리하지 않아요.</span>
+      <span>커밋하지 않은 변경이 있거나 이 worktree에서 학습이나 세션이 실행 중이면 정리하지 않아요.</span>
     </Dialog>
   )
 }

@@ -247,10 +247,10 @@ function PapersList() {
             type="button"
             className={s.makeSummary}
             disabled={makeSummary.isPending}
-            title="Claude가 노트와 PDF를 읽고 요약해요 · vault에 '이름 요약.md'를 새로 만들어요"
+            title="Claude가 노트와 PDF를 읽고 요약해요. 요약은 vault에 '이름 요약.md' 파일로 새로 만들어요"
             onClick={() =>
               makeSummary.mutate(p.id, {
-                onSuccess: () => setAdded({ text: `${p.title} 요약을 만드는 중이에요 · 1~2분 걸려요`, tone: 'ok' }),
+                onSuccess: () => setAdded({ text: `${p.title} 요약을 만드는 중이에요. 1~2분 정도 걸려요`, tone: 'ok' }),
                 onError: onFail,
               })
             }
@@ -409,7 +409,7 @@ function PapersList() {
             minWidth={820}
             emptyMessage={
               papers.data.length === 0
-                ? `vault에 논문 노트가 없어요 — ${vault.data?.path ?? 'vault'}/Papers/에 MD 파일을 넣거나, 사이드바의 'vault 위치'에서 폴더를 지정해 주세요.`
+                ? `vault에 논문 노트가 없어요. ${vault.data?.path ?? 'vault'}/Papers/에 MD 파일을 넣거나, 사이드바의 'vault 위치'에서 폴더를 지정해 주세요.`
                 : '조건에 맞는 논문이 없어요.'
             }
           />
@@ -422,16 +422,16 @@ function PapersList() {
             <span className={s.selectionCount}>{selectedCount}편 선택됨</span>
             {view !== 'trash' && (cols.data?.length ?? 0) > 0 && (
               <select
-                aria-label="모음에 넣기"
+                aria-label="모음에 추가"
                 className={s.onDarkSelect}
                 value=""
                 onChange={(e) => {
                   const name = e.target.value
                   if (!name) return
-                  act.setMembers.mutate({ name, ids: selectedIds, on: true }, { onSuccess: () => setAdded({ text: `${selectedCount}편을 '${name}' 모음에 넣었어요`, tone: 'ok' }) })
+                  act.setMembers.mutate({ name, ids: selectedIds, on: true }, { onSuccess: () => setAdded({ text: `${selectedCount}편을 '${name}' 모음에 추가했어요`, tone: 'ok' }) })
                 }}
               >
-                <option value="">모음에 넣기…</option>
+                <option value="">모음에 추가…</option>
                 {cols.data?.map((c) => (
                   <option key={c.name} value={c.name}>
                     {c.name}
@@ -448,7 +448,7 @@ function PapersList() {
                   setSelected({})
                 }}
               >
-                모음에서 빼기
+                모음에서 제거
               </button>
             )}
             {view === 'trash' ? (
@@ -460,7 +460,7 @@ function PapersList() {
                   setSelected({})
                 }}
               >
-                되돌리기
+                복원
               </button>
             ) : (
               <button
@@ -472,7 +472,7 @@ function PapersList() {
                   setSelected({})
                 }}
               >
-                휴지통
+                휴지통으로 이동
               </button>
             )}
             <button
@@ -514,11 +514,11 @@ function PapersList() {
             모음 이름
             <input className={ds.input} value={colName} onChange={(e) => setColName(e.target.value)} placeholder="LoRA 계열" autoFocus />
           </label>
-          <span>모음은 lab.remote에만 저장돼요. vault 파일은 옮기지 않아요. 논문을 선택한 뒤 아래 선택 바에서 넣을 수 있어요.</span>
+          <span>모음은 lab.remote에만 저장돼요. vault 파일은 옮기지 않아요. 논문을 선택한 뒤 아래 선택 바에서 모음에 추가할 수 있어요.</span>
         </Dialog>
         <Dialog
           open={typeof colDialog === 'object'}
-          title={typeof colDialog === 'object' ? `'${colDialog.remove}' 모음 지우기` : ''}
+          title={typeof colDialog === 'object' ? `'${colDialog.remove}' 모음 삭제` : ''}
           confirmLabel="지우기"
           tone="danger"
           busy={act.removeCollection.isPending}
@@ -533,7 +533,7 @@ function PapersList() {
             })
           }}
         >
-          <span>모음만 지워요. 안에 있던 논문은 라이브러리에 그대로 있어요.</span>
+          <span>모음만 삭제해요. 모음에 있던 논문은 라이브러리에 그대로 남아요.</span>
         </Dialog>
 
         <AskLibrary
@@ -546,18 +546,18 @@ function PapersList() {
 
       {openNote && noteBody !== undefined && (
         <div className={s.drawerWrap}>
-          <Resizer handle={drawer.resizerProps} label="요약 패널 너비 조절" />
+          <Resizer handle={drawer.resizerProps} label="노트 패널 너비 조절" />
           <aside aria-label="논문 노트 미리보기" style={drawer.style} className={s.drawer}>
             <div className={s.drawerHead}>
               <span className={s.drawerTitle}>논문 노트</span>
               <span className={s.drawerPath}>{openNote.path}</span>
-              <IconButton label="이전 요약" size={34} variant="outline" onClick={() => step(-1)}>
+              <IconButton label="이전 노트" size={34} variant="outline" onClick={() => step(-1)}>
                 <ChevronLeft />
               </IconButton>
-              <IconButton label="다음 요약" size={34} variant="outline" onClick={() => step(1)}>
+              <IconButton label="다음 노트" size={34} variant="outline" onClick={() => step(1)}>
                 <ChevronRight />
               </IconButton>
-              <IconButton label="요약 닫기" size={34} onClick={() => setOpenSummaryId(null)}>
+              <IconButton label="노트 닫기" size={34} onClick={() => setOpenSummaryId(null)}>
                 <CloseIcon />
               </IconButton>
             </div>
@@ -589,7 +589,7 @@ function PapersList() {
                   disabled={makeSummary.isPending}
                   onClick={() =>
                     makeSummary.mutate(openNote.id, {
-                      onSuccess: () => setAdded({ text: `${openNote.title} 요약을 만드는 중이에요 · 1~2분 걸려요`, tone: 'ok' }),
+                      onSuccess: () => setAdded({ text: `${openNote.title} 요약을 만드는 중이에요. 1~2분 정도 걸려요`, tone: 'ok' }),
                       onError: onFail,
                     })
                   }

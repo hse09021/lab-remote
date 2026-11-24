@@ -138,8 +138,8 @@ export function SearchPanel({ project, tree, onOpen }: { project: string; tree: 
           Aa
         </button>
       </form>
-      <div className={s.muted}>파일 내용을 검색해요 · {got.data?.via ?? 'git grep'} · 두 글자부터</div>
-      {got.isFetching && <div className={s.muted}>찾는 중이에요…</div>}
+      <div className={s.muted}>파일 내용을 검색해요 · {got.data?.via ?? 'git grep'} · 두 글자 이상</div>
+      {got.isFetching && <div className={s.muted}>검색하는 중이에요…</div>}
       {got.data && got.data.results.length === 0 && <div className={s.muted}>검색 결과가 없어요.</div>}
       {[...groups.entries()].map(([path, hits]) => (
         <div key={path} className={s.hitGroup}>
@@ -154,7 +154,7 @@ export function SearchPanel({ project, tree, onOpen }: { project: string; tree: 
           ))}
         </div>
       ))}
-      {got.data?.truncated && <div className={s.muted}>결과가 많아 앞의 500개만 보여요.</div>}
+      {got.data?.truncated && <div className={s.muted}>결과가 많아 처음 500개만 표시해요.</div>}
     </div>
   )
 }
@@ -182,7 +182,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         <span className={s.panelTitle}>소스 제어</span>
       </div>
       <div className={s.muted}>
-        {st.branch || '(분리됨)'} · 커밋 안 한 변경 {st.changed}
+        {st.branch || '(분리된 HEAD)'} · 커밋하지 않은 변경 {st.changed}
       </div>
       <textarea
         className={s.textarea}
@@ -192,7 +192,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) doCommit()
         }}
-        placeholder={`메시지 (Ctrl+Enter로 ${st.branch}에 커밋)`}
+        placeholder={`메시지 (Ctrl+Enter로 ${st.branch} 브랜치에 커밋)`}
         aria-label="커밋 메시지"
       />
       <div className={s.row}>
@@ -203,7 +203,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
           <button
             type="button"
             className={s.ghostBtn}
-            title="gh로 PR을 열어요 — 브랜치가 원격에 올라가 있어야 해요"
+            title="gh로 PR을 만들어요. 브랜치를 먼저 원격 저장소에 push해야 해요"
             onClick={() => {
               setPrTitle(st.branch.replace(/^[^/]*\//, '').replace(/[-_]/g, ' '))
               setPrBody('')
@@ -222,10 +222,10 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
       </div>
       {commit.isError && <div className={s.errText}>{errText(commit.error)}</div>}
       {commit.data && <div className={s.okText}>커밋했어요 · {commit.data.sha}</div>}
-      {merge.data && <div className={s.okText}>{merge.data.main}에 머지했어요 · {merge.data.sha}</div>}
+      {merge.data && <div className={s.okText}>{merge.data.main} 브랜치에 머지했어요 · {merge.data.sha}</div>}
       {pr.data && (
         <div className={s.okText}>
-          PR을 열었어요 ·{' '}
+          PR을 만들었어요 ·{' '}
           <a href={pr.data.url} target="_blank" rel="noreferrer">
             {pr.data.number ? `#${pr.data.number}` : pr.data.url}
           </a>
@@ -261,7 +261,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
           <textarea className={s.textarea} rows={4} value={prBody} onChange={(e) => setPrBody(e.target.value)} />
         </label>
         <span>
-          <code>gh pr create</code>로 열어요. lab.remote는 push하지 않아요 — 브랜치를 먼저 원격에 올려 주세요 (
+          <code>gh pr create</code>로 만들어요. lab.remote는 push하지 않으니 브랜치를 먼저 원격 저장소에 push해 주세요 (
           <code>git push -u origin {st.branch}</code>).
         </span>
       </Dialog>
@@ -278,8 +278,8 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         onConfirm={() => merge.mutate(st.branch, { onSuccess: () => setAsking(false) })}
       >
         <span>
-          main worktree에서 <code>git merge --no-ff {st.branch}</code> 명령을 실행해요. main 쪽에 커밋 안 한 변경이 있으면 머지하지 않고, 충돌이 나면 바로
-          되돌려요. push는 하지 않아요.
+          main worktree에서 <code>git merge --no-ff {st.branch}</code> 명령을 실행해요. main 쪽에 커밋하지 않은 변경이 있으면 머지하지 않고, 충돌이 나면
+          머지를 바로 취소해요. push는 하지 않아요.
         </span>
       </Dialog>
     </div>
@@ -335,13 +335,13 @@ export function RunPanel({
         <span className={s.mono}>{branch || tree || '프로젝트 루트'}</span>
       </div>
       <label className={s.field}>
-        conda 환경 (비우면 conda 없이)
+        conda 환경 (비워 두면 conda 없이 실행)
         <input className={s.input} value={env} onChange={(e) => setEnv(e.target.value)} />
       </label>
       <details className={s.details}>
         <summary>실제 실행 명령 보기</summary>
         <pre className={s.code}>{shown}</pre>
-        <span className={s.muted}>tmux 안에서 실행되고 로그와 종료 코드는 .labremote/runs/에 남아요. 지표 파일은 설정에 적은 규칙으로 찾아요.</span>
+        <span className={s.muted}>tmux 안에서 실행되고 로그와 종료 코드는 .labremote/runs/에 저장돼요. 지표 파일은 설정에 입력한 규칙으로 찾아요.</span>
       </details>
       <div className={s.row}>
         <button

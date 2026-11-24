@@ -148,7 +148,7 @@ export function LibrarySidebar({
             <span className={s.count}>{c.count}</span>
           </button>
           {onRemoveCollection && (
-            <button type="button" aria-label={`${c.name} 모음 지우기`} title="모음만 지워요 (논문은 그대로)" className={s.colRemove} onClick={() => onRemoveCollection(c.name)}>
+            <button type="button" aria-label={`${c.name} 모음 삭제`} title="모음만 삭제해요 (논문은 그대로 남아요)" className={s.colRemove} onClick={() => onRemoveCollection(c.name)}>
               ×
             </button>
           )}

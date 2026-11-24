@@ -34,13 +34,13 @@ export function StartGuide({ projects }: { projects: number }) {
       to: '',
     },
     { done: projects > 0, loading: false, unknown: false, title: '프로젝트 등록', text: '연구 폴더를 등록하거나 새 폴더를 만들어요.', to: '/projects' },
-    { done: !!notify.data?.webhook.set, loading: notify.isPending, unknown: notify.isError, title: 'Discord 알림', text: '답이 필요하거나 실행이 끝나면 휴대폰으로 알림을 받아요.', to: '/inbox' },
+    { done: !!notify.data?.webhook.set, loading: notify.isPending, unknown: notify.isError, title: 'Discord 알림', text: '에이전트가 답을 기다리거나 실행이 끝나면 휴대폰으로 알림을 받아요.', to: '/inbox' },
     {
       done: health.data?.tunnel === 'up',
       loading: health.isPending,
       unknown: health.isError,
       title: '원격 접속 (선택)',
-      text: 'code tunnel로 휴대폰이나 다른 PC에서 열어요.',
+      text: 'code tunnel로 휴대폰이나 다른 PC에서 접속해요.',
       to: '/settings/system',
     },
   ]

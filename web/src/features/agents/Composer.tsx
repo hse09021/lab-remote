@@ -13,7 +13,7 @@ export const MODE_INFO: Record<ModeId, { name: string; desc: string; icon: strin
   manual: { name: 'Manual', desc: '파일을 수정하기 전에 매번 승인을 받아요.', icon: '✋' },
   edit: { name: 'Edit automatically', desc: '파일 수정은 바로 하고, 명령 실행은 물어봐요.', icon: '</>' },
   plan: { name: 'Plan', desc: '코드를 살펴보고 계획을 먼저 보여 준 뒤 수정해요.', icon: '☰' },
-  auto: { name: 'Auto', desc: '안전 검사를 통과한 작업은 바로 진행하고, 위험해 보이면 멈추고 물어봐요. 학습이 실행 중일 때는 Manual로 지켜보는 게 좋아요(묻지 않고 실행한 명령에는 경고가 표시되지 않아요).', icon: 'ϟ' },
+  auto: { name: 'Auto', desc: '안전 검사를 통과한 작업은 바로 진행하고, 위험해 보이면 확인을 요청해요. 학습이 실행 중일 때는 Manual을 권장해요. 확인 없이 실행한 명령에는 경고가 표시되지 않아요.', icon: 'ϟ' },
 }
 const EFFORT_NAMES: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' }
 
@@ -115,12 +115,12 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
       className={s.ultraRow}
       onClick={() => {
         onSettings({ ultracode: !settings.ultracode })
-        setNote(`Ultracode ${settings.ultracode ? '끔' : '켬'} · 다음 요청부터 적용돼요. 켜면 큰 작업을 워크플로로 나눠 실행해서 사용량이 많이 들어요.`)
+        setNote(`Ultracode ${settings.ultracode ? '비활성화' : '활성화'} · 다음 요청부터 적용돼요. 활성화하면 큰 작업을 워크플로로 나눠 실행하므로 사용량이 많아요.`)
       }}
     >
       <span className={s.menuText}>
         <span className={s.menuName}>Ultracode</span>
-        <span className={s.menuDesc}>큰 작업을 여러 하위 작업으로 나눠 실행해요 · 사용량이 많이 들어요</span>
+        <span className={s.menuDesc}>큰 작업을 여러 하위 작업으로 나눠 실행해요. 사용량이 많아요.</span>
       </span>
       <span aria-hidden="true" className={s.switchTrack} data-on={!!settings.ultracode}>
         <span className={s.switchKnob} />

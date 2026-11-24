@@ -155,17 +155,17 @@ export function FilesTab({ project, trees }: { project: ProjectDetail; trees?: W
               {entries.length === 0 && (
                 <tr>
                   <td colSpan={5} className={s.emptyRow}>
-                    {find ? '맞는 파일이 없어요.' : '빈 폴더예요.'}
+                    {find ? '일치하는 파일이 없어요.' : '빈 폴더예요.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         )}
-        {listing.data?.truncated && <div className={s.muted}>항목이 많아 앞의 2000개만 보여요.</div>}
+        {listing.data?.truncated && <div className={s.muted}>항목이 많아 처음 2000개만 표시해요.</div>}
       </div>
       <div className={s.note}>
-        이름 바꾸기, 이동, 삭제는 ··· 메뉴에 있어요. 삭제는 한 번 더 확인하고, 실행 중인 학습이 쓰는 폴더는 지울 수 없어요.
+        이름 바꾸기, 이동, 삭제는 ··· 메뉴에 있어요. 삭제할 때는 한 번 더 확인하고, 실행 중인 학습이 사용하는 폴더는 삭제할 수 없어요.
       </div>
 
       <FileDialogs project={project.name} tree={tree} dir={path} ask={ask} onClose={() => setAsk(null)} />
@@ -204,7 +204,7 @@ function FileRow({
               ·
             </span>
             <span className={s.fileName}>{e.name}</span>
-            {e.link && <span className={s.linkTag}>{e.outside ? '링크 · 프로젝트 밖' : '링크'}</span>}
+            {e.link && <span className={s.linkTag}>{e.outside ? '링크 · 프로젝트 외부' : '링크'}</span>}
           </span>
         )}
       </td>
@@ -339,7 +339,7 @@ function FileDialogs({ project, tree, dir, ask, onClose }: { project: string; tr
         {ask?.kind === 'delete' && (
           <span>
             <b className={s.mono}>{ask.entry.path}</b>
-            {ask.entry.kind === 'dir' && !ask.entry.link ? ' 폴더와 그 안의 모든 파일을' : ask.entry.link ? ' 링크를' : ' 파일을'} 지워요. 되돌릴 수 없어요.
+            {ask.entry.kind === 'dir' && !ask.entry.link ? ' 폴더와 그 안의 모든 파일을' : ask.entry.link ? ' 링크를' : ' 파일을'} 삭제해요. 되돌릴 수 없어요.
             {ask.entry.link && ' 링크만 삭제하고 링크 대상은 그대로 유지해요.'}
           </span>
         )}

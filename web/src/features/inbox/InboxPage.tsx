@@ -75,7 +75,7 @@ export default function InboxPage() {
           읽지 않은 알림만
         </button>
         <button type="button" className={s.readAll} disabled={markRead.isPending} onClick={() => markRead.mutate(null)}>
-          모두 읽음 표시
+          모두 읽음으로 표시
         </button>
       </nav>
 
@@ -99,7 +99,7 @@ function actions(it: InboxItem): { primary?: [string, string, boolean]; secondar
   const p = it.ref.project
   const r = it.ref.run
   if (it.kind === 'ask' && p && it.ref.session) {
-    return { primary: [`/projects/${encodeURIComponent(p)}/ade?session=${encodeURIComponent(it.ref.session)}`, 'ADE에서 답하기', true], secondary: ['/dashboard', '대시보드'] }
+    return { primary: [`/projects/${encodeURIComponent(p)}/ade?session=${encodeURIComponent(it.ref.session)}`, 'ADE에서 답하기', true], secondary: ['/dashboard', 'Dashboard'] }
   }
   if (it.kind === 'run' && p && r) {
     const base = `/projects/${encodeURIComponent(p)}?tab=work&run=${encodeURIComponent(r)}`
@@ -198,20 +198,20 @@ function DiscordPanel() {
           {w.set ? w.masked : '아직 연결하지 않았어요'}
         </div>
         <p className={s.note}>
-          웹훅 주소는 lab.remote 데이터 폴더에만 저장해요 (소유자만 읽기 가능{w.private === false ? ' — ⚠ 지금은 권한이 너무 넓어요' : ''}). repo에는
+          웹훅 주소는 lab.remote 데이터 폴더에만 저장돼요(소유자만 읽기 가능{w.private === false ? ' · ⚠ 지금은 권한이 너무 넓어요' : ''}). Git 저장소에는
           포함되지 않아요.
           {w.last && ` 마지막 전송 · ${whenShort(new Date(w.last.at).getTime() / 1000)} ${w.last.state === 'sent' ? '성공' : '실패'}`}
         </p>
         <div className={s.row}>
           <button type="button" className={s.btn} disabled={!w.set || test.isPending} onClick={() => test.mutate()}>
-            {test.isPending ? '보내는 중…' : '테스트 보내기'}
+            {test.isPending ? '보내는 중…' : '테스트 알림 보내기'}
           </button>
           <button type="button" className={s.btn} onClick={() => setEditing(true)}>
             {w.set ? '주소 변경' : '주소 입력'}
           </button>
           {w.set && (
             <button type="button" className={s.btnDanger} onClick={() => setConfirmClear(true)}>
-              연결 끊기
+              연결 해제
             </button>
           )}
         </div>
@@ -246,27 +246,27 @@ function DiscordPanel() {
         ))}
         <div className={s.quiet}>
           조용한 시간{' '}
-          <b>{d.quiet.on ? `${d.quiet.start} – ${d.quiet.end}` : '꺼짐'}</b>
-          {d.quiet.on && ' · 이때는 답 필요와 실패만 보내요.'}{' '}
+          <b>{d.quiet.on ? `${d.quiet.start} – ${d.quiet.end}` : '비활성'}</b>
+          {d.quiet.on && ' · 이 시간에는 답 필요와 실패 알림만 보내요.'}{' '}
           <button type="button" className={s.link} onClick={() => setQuietOpen(true)}>
             변경
           </button>
         </div>
-        <p className={s.note}>PR 리뷰 알림은 gh(GitHub CLI)가 있을 때 10분마다 GitHub에서 가져와요. 머지 알림은 lab.remote에서 main에 머지할 때 와요.</p>
+        <p className={s.note}>PR 리뷰 알림은 gh(GitHub CLI)가 설치되어 있으면 10분마다 GitHub에서 가져와요. 머지 알림은 lab.remote에서 main에 머지하면 받아요.</p>
       </section>
 
       <WebhookDialog open={editing} onClose={() => setEditing(false)} />
       <Dialog
         open={confirmClear}
-        title="Discord 연결 끊기"
-        confirmLabel="끊기"
+        title="Discord 연결 해제"
+        confirmLabel="해제"
         tone="danger"
         busy={clear.isPending}
         error={errText(clear.error)}
         onClose={() => setConfirmClear(false)}
         onConfirm={() => clear.mutate(undefined, { onSuccess: () => setConfirmClear(false) })}
       >
-        <span>저장한 웹훅 주소를 지워요. Inbox에는 알림이 계속 쌓이고, Discord로는 보내지 않아요.</span>
+        <span>저장한 웹훅 주소를 삭제해요. 알림은 Inbox에만 계속 쌓이고 Discord로는 보내지 않아요.</span>
       </Dialog>
       <QuietDialog key={String(quietOpen)} open={quietOpen} quiet={d.quiet} busy={setQuiet.isPending} error={errText(setQuiet.error)}
         onClose={() => setQuietOpen(false)}
@@ -308,7 +308,7 @@ function WebhookDialog({ open, onClose }: { open: boolean; onClose: () => void }
           required
         />
       </label>
-      <span>저장하면 데이터 폴더의 discord.json에 권한 600으로 저장해요. 화면과 로그에는 일부를 가린 주소만 표시돼요.</span>
+      <span>주소는 데이터 폴더의 discord.json에 권한 600으로 저장돼요. 화면과 로그에는 일부를 가린 주소만 표시돼요.</span>
     </Dialog>
   )
 }
@@ -335,14 +335,14 @@ function QuietDialog({
     <Dialog open={open} title="조용한 시간" confirmLabel="저장" busy={busy} error={error} onClose={onClose} onConfirm={() => onSave({ on, start, end })}>
       <label className={ds.check}>
         <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
-        <span>조용한 시간 켜기 — 이때는 답 필요와 실패만 Discord로 보내요.</span>
+        <span>조용한 시간 사용 · 이 시간에는 답 필요와 실패 알림만 Discord로 보내요.</span>
       </label>
       <label className={ds.field}>
         시작
         <input className={ds.input} type="time" value={start} onChange={(e) => setStart(e.target.value)} disabled={!on} />
       </label>
       <label className={ds.field}>
-        끝
+        종료
         <input className={ds.input} type="time" value={end} onChange={(e) => setEnd(e.target.value)} disabled={!on} />
       </label>
     </Dialog>

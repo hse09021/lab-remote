@@ -138,7 +138,7 @@ function SessionCard({ x, kind, git }: { x: AgentSession; kind: 'ask' | 'work' |
             type="button"
             className={s.secondary}
             disabled={close.isPending}
-            title="목록에서 숨겨요 · 기록은 남고, 메시지를 보내면 다시 열려요"
+            title="목록에서 숨기고 기록은 유지해요. 메시지를 보내면 다시 열려요"
             onClick={() => close.mutate({ sid: x.id, closed: true })}
           >
             보관

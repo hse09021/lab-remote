@@ -129,7 +129,7 @@ export function GotoPalette({ open, onClose }: { open: boolean; onClose: () => v
               </button>
             </li>
           ))}
-          {shown.length === 0 && <li className={s.empty}>맞는 결과가 없어요.</li>}
+          {shown.length === 0 && <li className={s.empty}>검색 결과가 없어요.</li>}
         </ul>
         <div className={s.foot}>↑↓ 선택 · Enter 이동 · Esc 닫기</div>
       </div>

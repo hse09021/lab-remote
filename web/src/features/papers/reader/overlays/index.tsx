@@ -199,7 +199,7 @@ export function ExplainZones({
               className={s.zoneBtn}
             >
               {z.kind === 'fig'
-                ? '이 그림(figure) 자세히 설명 보기'
+                ? '이 그림 자세히 설명 보기'
                 : '이 수식 자세히 설명 보기'}
             </button>
             <button
