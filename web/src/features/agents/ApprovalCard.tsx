@@ -3,6 +3,7 @@ import { useAnswer } from '@/api/agents'
 import type { PendingApproval } from '@/api/agents'
 import { ApiError } from '@/api/client'
 import s from './Agents.module.css'
+import { WarningIcon } from '@/components/icons'
 
 /** diff 한 줄 */
 interface Line {
@@ -198,7 +199,8 @@ function PermissionCard({ p, via }: { p: PendingApproval; via: string }) {
       </div>
       {p.warning && (
         <div role="alert" className={s.approvalWarn}>
-          ⚠ {p.warning}
+          <WarningIcon />
+          <span>{p.warning}</span>
         </div>
       )}
       {(p.title || p.reason) && <div className={s.approvalWhy}>{p.title || p.reason}</div>}

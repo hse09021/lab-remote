@@ -1,20 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { ComponentType, KeyboardEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { agentInfoQuery } from '@/api/agents'
 import type { AgentModel, ModeId } from '@/api/agents'
 import { useOutsideClick } from '@/lib/useOutsideClick'
+import { BoltIcon, CheckIcon, CodeIcon, HandIcon, MicIcon, PlanIcon, PlusIcon, SlashIcon } from '@/components/icons'
 import s from './Agents.module.css'
 
 /* ChatPanel 입력창 — VS Code Claude Code 확장과 같은 구성 (목업 IDE · ADE).
  * 모델 목록과 Effort 단계는 에이전트에서 받아요(하드코딩하지 않아요). */
 
-export const MODE_INFO: Record<ModeId, { name: string; desc: string; icon: string }> = {
-  manual: { name: 'Manual', desc: '파일을 수정하기 전에 매번 승인을 받아요.', icon: '✋' },
-  edit: { name: 'Edit automatically', desc: '파일 수정은 바로 하고, 명령 실행은 물어봐요.', icon: '</>' },
-  plan: { name: 'Plan', desc: '코드를 살펴보고 계획을 먼저 보여 준 뒤 수정해요.', icon: '☰' },
-  auto: { name: 'Auto', desc: '안전 검사를 통과한 작업은 바로 진행하고, 위험해 보이면 확인을 요청해요. 학습이 실행 중일 때는 Manual을 권장해요. 확인 없이 실행한 명령에는 경고가 표시되지 않아요.', icon: 'ϟ' },
+export const MODE_INFO: Record<ModeId, { name: string; desc: string; icon: ComponentType<{ size?: number }> }> = {
+  manual: { name: 'Manual', desc: '파일을 수정하기 전에 매번 승인을 받아요.', icon: HandIcon },
+  edit: { name: 'Edit automatically', desc: '파일 수정은 바로 하고, 명령 실행은 물어봐요.', icon: CodeIcon },
+  plan: { name: 'Plan', desc: '코드를 살펴보고 계획을 먼저 보여 준 뒤 수정해요.', icon: PlanIcon },
+  auto: { name: 'Auto', desc: '안전 검사를 통과한 작업은 바로 진행하고, 위험해 보이면 확인을 요청해요. 학습이 실행 중일 때는 Manual을 권장해요. 확인 없이 실행한 명령에는 경고가 표시되지 않아요.', icon: BoltIcon },
 }
+function ModeIcon({ mode, size }: { mode: ModeId; size?: number }) {
+  const Icon = MODE_INFO[mode].icon
+  return <Icon size={size} />
+}
+
 const EFFORT_NAMES: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' }
 
 export interface ComposerSettings {
@@ -191,14 +197,14 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
           />
           {speech && (
             <button type="button" aria-label="음성 입력" title="음성 입력" className={s.iconBtn} onClick={listen}>
-              🎙
+              <MicIcon />
             </button>
           )}
         </div>
 
         <div className={s.ccRow}>
           <button type="button" aria-label="파일 첨부" title="파일 경로 첨부" className={s.iconBtn} onClick={() => setMenu(menu === 'attach' ? '' : 'attach')}>
-            +
+            <PlusIcon />
           </button>
           <button
             type="button"
@@ -211,7 +217,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
               area.current?.focus()
             }}
           >
-            /
+            <SlashIcon />
           </button>
 
           <div className={s.ccModel}>
@@ -248,7 +254,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
                         <span className={s.menuDesc}>{m.description}</span>
                       </span>
                       <span aria-hidden="true" className={s.check}>
-                        ✓
+                        <CheckIcon />
                       </span>
                     </button>
                   ))}
@@ -269,7 +275,9 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
               className={s.modeBtn}
               onClick={() => setMenu(menu === 'mode' ? '' : 'mode')}
             >
-              <span aria-hidden="true">{MODE_INFO[settings.mode].icon}</span>
+              <span aria-hidden="true" className={s.modeIcon}>
+                <ModeIcon mode={settings.mode} size={15} />
+              </span>
               <span className={s.ccModeName}>{MODE_INFO[settings.mode].name}</span>
             </button>
             {menu === 'mode' && (
@@ -283,14 +291,14 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
                 {modes.map((m) => (
                   <button key={m} type="button" role="menuitemradio" aria-checked={settings.mode === m} className={s.menuItem} onClick={() => pickMode(m)}>
                     <span aria-hidden="true" className={s.modeIcon}>
-                      {MODE_INFO[m].icon}
+                      <ModeIcon mode={m} />
                     </span>
                     <span className={s.menuText}>
                       <span className={s.menuName}>{MODE_INFO[m].name}</span>
                       <span className={s.menuDesc}>{MODE_INFO[m].desc}</span>
                     </span>
                     <span aria-hidden="true" className={s.check}>
-                      ✓
+                      <CheckIcon />
                     </span>
                   </button>
                 ))}

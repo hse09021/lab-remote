@@ -427,3 +427,11 @@
     border-bottom: 1px solid var(--border);
   }
 }
+
+.warnInline {
+  color: var(--attention-text);
+}
+
+.warnInline svg {
+  vertical-align: -2px;
+}

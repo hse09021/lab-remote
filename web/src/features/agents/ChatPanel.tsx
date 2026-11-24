@@ -7,7 +7,7 @@ import { ApiError, upload } from '@/api/client'
 import { ApprovalCard, DiffView } from './ApprovalCard'
 import { Composer } from './Composer'
 import type { ComposerSettings } from './Composer'
-import { CloseIcon } from '@/components/icons'
+import { CheckIcon, ChevronRightIcon, CircleIcon, CloseIcon, PencilIcon } from '@/components/icons'
 import s from './Agents.module.css'
 
 /**
@@ -94,7 +94,7 @@ export function ChatPanel({ session, actions, via = 'ADE' }: { session: AgentSes
                 setRenaming(true)
               }}
             >
-              ✎
+              <PencilIcon />
             </button>
           </>
         )}
@@ -261,7 +261,9 @@ function Todos({ items }: { items: { content: string; status: string }[] }) {
       <ul className={s.todoList}>
         {items.map((t, i) => (
           <li key={i} data-status={t.status}>
-            <span aria-hidden="true">{t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '▸' : '○'}</span>
+            <span aria-hidden="true" className={s.todoMark}>
+              {t.status === 'completed' ? <CheckIcon size={13} /> : t.status === 'in_progress' ? <ChevronRightIcon size={13} /> : <CircleIcon size={12} />}
+            </span>
             <span>{t.content}</span>
           </li>
         ))}

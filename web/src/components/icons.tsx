@@ -146,3 +146,95 @@ export const CloseIcon = (p: P) => (
     <path d="M6 6l12 12M18 6L6 18" />
   </Svg>
 )
+
+/* ── 이모지 · 기호 대신 쓰는 선 아이콘 (Mode · 입력창 · 체크 · 경고) ── */
+
+/** Manual — 손바닥 */
+export const HandIcon = (p: P) => (
+  <Svg size={16} weight={1.8} {...p}>
+    <path d="M18 11V6a2 2 0 00-4 0" />
+    <path d="M14 10V4a2 2 0 00-4 0v2" />
+    <path d="M10 10.5V6a2 2 0 00-4 0v8" />
+    <path d="M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 012.8-2.8L7 15" />
+  </Svg>
+)
+
+/** Edit automatically — 코드 꺾쇠 */
+export const CodeIcon = (p: P) => (
+  <Svg size={16} weight={1.8} {...p}>
+    <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
+  </Svg>
+)
+
+/** Plan — 목록 */
+export const PlanIcon = (p: P) => (
+  <Svg size={16} weight={1.8} {...p}>
+    <path d="M9 6h11M9 12h11M9 18h11" />
+    <path d="M4 6h.01M4 12h.01M4 18h.01" strokeWidth={2.6} />
+  </Svg>
+)
+
+/** Auto — 번개 */
+export const BoltIcon = (p: P) => (
+  <Svg size={16} weight={1.8} {...p}>
+    <path d="M13 2L4 14h8l-1 8 9-12h-8l1-8z" />
+  </Svg>
+)
+
+/** 음성 입력 — 마이크 */
+export const MicIcon = (p: P) => (
+  <Svg size={17} weight={1.8} {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M18.5 11a6.5 6.5 0 01-13 0M12 17.5V21" />
+  </Svg>
+)
+
+/** 슬래시 명령 */
+export const SlashIcon = (p: P) => (
+  <Svg size={17} weight={1.8} {...p}>
+    <path d="M15.5 4l-7 16" />
+  </Svg>
+)
+
+/** 선택됨 · 완료 — 체크 */
+export const CheckIcon = (p: P) => (
+  <Svg size={14} weight={2.2} {...p}>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Svg>
+)
+
+/** 폴더 */
+export const FolderIcon = (p: P) => (
+  <Svg size={16} weight={1.7} {...p}>
+    <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+  </Svg>
+)
+
+/** 경고 — 세모 느낌표 */
+export const WarningIcon = (p: P) => (
+  <Svg size={15} weight={1.9} {...p}>
+    <path d="M10.3 4.2L2.5 18a2 2 0 001.7 3h15.6a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z" />
+    <path d="M12 10v4M12 17.5h.01" />
+  </Svg>
+)
+
+/** 이름 바꾸기 — 연필 */
+export const PencilIcon = (p: P) => (
+  <Svg size={15} weight={1.8} {...p}>
+    <path d="M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z" />
+    <path d="M14 6l3 3" />
+  </Svg>
+)
+
+/** 할 일 — 진행 중(꺾쇠) · 대기(빈 동그라미) */
+export const ChevronRightIcon = (p: P) => (
+  <Svg size={14} weight={2} {...p}>
+    <path d="M9 6l6 6-6 6" />
+  </Svg>
+)
+
+export const CircleIcon = (p: P) => (
+  <Svg size={14} weight={1.8} {...p}>
+    <circle cx="12" cy="12" r="7" />
+  </Svg>
+)

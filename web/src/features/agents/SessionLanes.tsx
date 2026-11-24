@@ -9,6 +9,7 @@ import { ApiError } from '@/api/client'
 import { agoShort, whenShort } from '@/lib/time'
 import { DiffView } from './ApprovalCard'
 import s from './Lanes.module.css'
+import { WarningIcon } from '@/components/icons'
 
 /* Dashboard의 에이전트 부분 — 왼쪽 목록 · 숫자 · 답 필요/작업 중/완료 레인. */
 
@@ -164,7 +165,12 @@ export function QuickAllow({ p, via = 'Dashboard' }: { p: PendingApproval; via?:
   }
   return (
     <div className={s.quick}>
-      {p.warning && <div className={s.warn}>⚠ {p.warning}</div>}
+      {p.warning && (
+        <div className={s.warn}>
+          <WarningIcon />
+          <span>{p.warning}</span>
+        </div>
+      )}
       <DiffView tool={p.tool} input={p.input} />
       <div className={s.quickActions}>
         <button type="button" className={s.allow} disabled={answer.isPending} onClick={() => answer.mutate({ id: p.id, choice: 'allow', via })}>

@@ -266,6 +266,9 @@
 }
 
 .warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   padding: 8px 10px;
   border-radius: var(--radius-md);
   background: var(--attention-tint);
@@ -303,4 +306,9 @@
 
 .prPill:hover {
   color: var(--text);
+}
+
+.warn svg {
+  flex: none;
+  margin-top: 1px;
 }

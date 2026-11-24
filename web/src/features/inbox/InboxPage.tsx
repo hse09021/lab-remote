@@ -19,6 +19,7 @@ import { sessionsQuery } from '@/api/agents'
 import type { PendingApproval } from '@/api/agents'
 import { QuickAllow } from '../agents/SessionLanes'
 import s from './Inbox.module.css'
+import { CheckIcon, WarningIcon } from '@/components/icons'
 
 /** Inbox — docs/v3/mockups/Inbox.dc.html */
 const KINDS: { id: '' | InboxKind; label: string }[] = [
@@ -70,7 +71,7 @@ export default function InboxPage() {
         })}
         <button type="button" role="checkbox" aria-checked={unread} className={s.unreadToggle} onClick={() => set('unread', unread ? '' : '1')}>
           <span className={s.box} data-on={unread}>
-            {unread ? '✓' : ''}
+            {unread ? <CheckIcon size={12} /> : null}
           </span>
           읽지 않은 알림만
         </button>
@@ -198,7 +199,12 @@ function DiscordPanel() {
           {w.set ? w.masked : '아직 연결하지 않았어요'}
         </div>
         <p className={s.note}>
-          웹훅 주소는 lab.remote 데이터 폴더에만 저장돼요(소유자만 읽기 가능{w.private === false ? ' · ⚠ 지금은 권한이 너무 넓어요' : ''}). Git 저장소에는
+          웹훅 주소는 lab.remote 데이터 폴더에만 저장돼요(소유자만 읽기 가능{w.private === false && (
+            <span className={s.warnInline}>
+              {' · '}
+              <WarningIcon size={13} /> 지금은 권한이 너무 넓어요
+            </span>
+          )}). Git 저장소에는
           포함되지 않아요.
           {w.last && ` 마지막 전송 · ${whenShort(new Date(w.last.at).getTime() / 1000)} ${w.last.state === 'sent' ? '성공' : '실패'}`}
         </p>

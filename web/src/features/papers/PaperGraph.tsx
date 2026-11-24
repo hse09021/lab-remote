@@ -9,6 +9,7 @@ import { Button, ErrorState, LoadingState, VisuallyHidden } from '@/components'
 import { layoutGraph } from '@/lib/graphLayout'
 import { VaultDialog } from './VaultDialog'
 import s from './PaperGraph.module.css'
+import { CheckIcon } from '@/components/icons'
 
 /** 연결 종류 — 목업 PaperGraph의 KIND */
 const KINDS: Array<{ id: GraphEdgeKind; label: string; color: string; dash: string; w: number }> = [
@@ -240,7 +241,7 @@ export default function PaperGraph() {
               className={s.kind}
             >
               <span aria-hidden="true" className={s.check}>
-                {on[k.id] ? '✓' : ''}
+                {on[k.id] ? <CheckIcon size={12} /> : null}
               </span>
               <svg aria-hidden="true" width="28" height="8">
                 <line x1="0" y1="4" x2="28" y2="4" style={{ stroke: k.color }} strokeWidth="2" strokeDasharray={k.dash} />

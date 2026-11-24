@@ -5,6 +5,7 @@ import { accountQuery } from '@/api/agents'
 import { notifyQuery } from '@/api/inbox'
 import { healthQuery } from '@/api/system'
 import s from './StartGuide.module.css'
+import { CheckIcon } from '@/components/icons'
 
 const KEY = 'labremote:start-guide-closed'
 
@@ -73,7 +74,7 @@ export function StartGuide({ projects }: { projects: number }) {
         {steps.map((x) => (
           <li key={x.title} className={s.step} data-done={x.done}>
             <span aria-hidden="true" className={s.mark}>
-              {x.done ? '✓' : ''}
+              {x.done ? <CheckIcon size={12} /> : null}
             </span>
             <span className={s.body}>
               <span className={s.stepTitle}>{x.to && !x.done ? <Link to={x.to}>{x.title}</Link> : x.title}</span>

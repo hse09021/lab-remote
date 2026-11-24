@@ -1027,7 +1027,15 @@
 
 .modeIcon {
   width: 20px;
-  text-align: center;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-soft);
+}
+
+.check {
+  display: inline-flex;
 }
 
 .effortRow {
@@ -1217,6 +1225,9 @@ kbd {
 }
 
 .approvalWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   padding: 8px 10px;
   border-radius: var(--radius-md);
   background: var(--attention);
@@ -1374,4 +1385,20 @@ kbd {
 
 .subItem:hover {
   background: var(--hover);
+}
+
+.todoMark {
+  flex: none;
+  display: inline-flex;
+  padding-top: 3px;
+  color: var(--text-muted);
+}
+
+.todoList li[data-status='completed'] .todoMark {
+  color: var(--accent);
+}
+
+.approvalWarn svg {
+  flex: none;
+  margin-top: 2px;
 }

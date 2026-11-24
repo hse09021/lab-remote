@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { AgentSession } from '@/api/agents'
 import type { Run } from '@/api/runs'
 import s from './Graph.module.css'
+import { CheckIcon } from '@/components/icons'
 
 /**
  * Dashboard › Agents — 프로젝트별 상자, You, 세션 · 하위 에이전트 · 학습 실행 노드.
@@ -143,7 +144,7 @@ export function AgentsGraph({ sessions, runs, finished }: { sessions: AgentSessi
         </div>
         <button type="button" role="checkbox" aria-checked={showDone} className={s.check} onClick={() => setShowDone(!showDone)}>
           <span className={s.box} data-on={showDone}>
-            {showDone ? '✓' : ''}
+            {showDone ? <CheckIcon size={12} /> : null}
           </span>
           오늘 끝난 항목도 보기
         </button>

@@ -20,6 +20,7 @@ import { SettingsTab } from './SettingsTab'
 import { RunsTab } from './RunsTab'
 import { useIsMobile } from '@/lib/useMediaQuery'
 import s from './Projects.module.css'
+import { FolderIcon } from '@/components/icons'
 
 type Tab = 'files' | 'worktrees' | 'work' | 'settings'
 const TABS: Tab[] = ['files', 'worktrees', 'work', 'settings']
@@ -304,7 +305,8 @@ function RegisterDialog({ open, onClose, startNew = false }: { open: boolean; on
             {dirs.data?.dirs.map((d) => (
               <div key={d.path} className={s.browserRow}>
                 <button type="button" className={s.browserName} onClick={() => setAt(d.path)} title="열기">
-                  📁 {d.name}
+                  <FolderIcon />
+                  {d.name}
                   {d.git && <span className={s.browserTag}>git</span>}
                   {d.registered && <span className={s.browserTag}>등록됨</span>}
                 </button>

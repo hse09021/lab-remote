@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import type { ReadStatus } from "@/api/types";
 import s from "./StatusPill.module.css";
+import { CheckIcon } from "@/components/icons";
 
 const MENU_W = 160;
 const MENU_H = 118;
@@ -125,7 +126,7 @@ export function StatusPill({
                 className={s.item}
               >
                 <span aria-hidden="true" className={s.mark}>
-                  {key === status ? "✓" : ""}
+                  {key === status ? <CheckIcon /> : null}
                 </span>
                 {READ_STATUS_LABEL[key]}
               </button>
