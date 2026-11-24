@@ -36,7 +36,7 @@ def _bad(message: str) -> JSONResponse:
 @router.get("/inbox")
 def list_inbox(kind: str = "", unread: bool = False):
     if kind and kind not in inbox.KINDS:
-        return _bad(f"모르는 알림 종류예요: {kind}")
+        return _bad(f"알 수 없는 알림 종류예요: {kind}")
     with db.open_db() as conn:
         return {
             "items": inbox.items(conn, kind=kind, unread=unread),
@@ -107,13 +107,13 @@ def delete_webhook():
 @router.post("/notify/test")
 def test_send():
     if not config.discord_webhook("test"):
-        return _bad("웹훅 주소가 없어요. 먼저 주소를 넣어 주세요.")
+        return _bad("웹훅 주소가 없어요. 먼저 주소를 입력해 주세요.")
     with db.open_db() as conn:
         result = notifier.send(
             conn,
             "test",
             subject="test",
-            title="lab.remote 시험 알림이에요",
+            title="lab.remote 테스트 알림이에요",
             body="이 알림이 보이면 Discord 연결이 잘 된 거예요.",
             cooldown_sec=0,
         )

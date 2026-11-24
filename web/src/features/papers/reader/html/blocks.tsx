@@ -100,7 +100,7 @@ export function MemoCard({ data, paperId }: { data: InlineMemo; paperId: string 
       </div>
       {editing ? (
         <>
-          <textarea className={s.memoInput} value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} autoFocus aria-label="메모 고치기" />
+          <textarea className={s.memoInput} value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} autoFocus aria-label="메모 수정" />
           <div className={s.memoActions}>
             <button type="button" className={s.ref} onClick={() => setEditing(false)}>
               취소

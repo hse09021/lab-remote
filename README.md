@@ -1,18 +1,18 @@
 # lab.remote — Remote AI Research Workbench
 
-GPU 데스크톱에서 돌리는 AI 연구를 어디서든 브라우저로 **보고 · 실행하고 · 알림 받는** 개인용 웹 도구입니다.
+GPU 데스크톱에서 진행하는 AI 연구를 어디서든 브라우저로 **보고 · 실행하고 · 알림 받는** 개인용 웹 도구입니다.
 
 연구 폴더를 등록하면 파일 · git · 학습 실행 · Claude Code 세션을 한 화면에서 다룰 수 있습니다. 휴대폰에서 에이전트의 승인 요청에 답하고, 학습이 끝나거나 끊기면 Discord로 알림을 받습니다. 논문은 Obsidian vault를 그대로 읽어 라이브러리 · 지식 그래프 · 리더로 보여 줍니다.
 
 ## 특징
 
-- **원격 접속** — 서버는 로컬 컴퓨터(`127.0.0.1`)에만 열리고, 밖에서는 VS Code의 code tunnel로 접속합니다. 휴대폰 화면도 지원합니다.
-- **학습 지속성** — 학습은 tmux 안에서 돌기 때문에 브라우저를 닫거나 접속이 끊겨도 멈추지 않습니다. 서버를 다시 켜도 실행은 살아 있습니다.
-- **Claude Code 세션 관리** — 사용자가 로그인해 둔 Claude Code를 `claude-agent-sdk`로 불러 씁니다. 도구 승인과 질문 답변, Mode · 모델 · Effort 설정을 화면에서 처리합니다.
-- **논문 읽기 도구** — PDF와 arXiv HTML을 오가며 읽습니다. 섹션 · 그림 · 표 · 수식 설명, 번역, AI 요약 · 분석은 누를 때만 받아 옵니다.
+- **원격 접속** — 서버는 로컬 컴퓨터(`127.0.0.1`)에만 열리고, 외부에서는 VS Code의 code tunnel로 접속합니다. 휴대폰 화면도 지원합니다.
+- **학습 지속성** — 학습은 tmux 안에서 실행되기 때문에 브라우저를 닫거나 접속이 끊겨도 멈추지 않습니다. 서버를 다시 시작해도 실행은 중단되지 않습니다.
+- **Claude Code 세션 관리** — 사용자가 로그인해 둔 Claude Code를 `claude-agent-sdk`로 불러와 사용합니다. 도구 승인과 질문 답변, Mode · 모델 · Effort 설정을 화면에서 처리합니다.
+- **논문 읽기 도구** — PDF와 arXiv HTML을 오가며 읽습니다. 섹션 · 그림 · 표 · 수식 설명, 번역, AI 요약 · 분석은 버튼을 누를 때만 요청합니다.
 - **알림** — 승인 요청 · 실행 결과 · 예약 · PR · 머지 · 시스템 경고를 Inbox에 모으고, 규칙에 따라 Discord로 보냅니다.
 - **시스템 설정 최소화** — `~/.bashrc` · `~/.claude/` · `.condarc` · cron · systemd 타이머 · 연구 프로젝트의 `.gitignore`는 절대 수정하지 않습니다. `--dangerously-skip-permissions`도 사용하지 않습니다.
-- **경량 서버 관리 프로그램** — nice 19 · ionice idle로 돌고 GPU를 사용하지 않습니다.
+- **경량 서버 관리 프로그램** — nice 19 · ionice idle로 실행되며 GPU를 사용하지 않습니다.
 
 ## 화면
 
@@ -33,7 +33,7 @@ GPU 데스크톱에서 돌리는 AI 연구를 어디서든 브라우저로 **보
 - tmux (`sudo apt install tmux`)
 - **Claude Code — 설치와 로그인까지 완료된 상태** (터미널에서 `claude`를 한 번 실행해 로그인)
 - Node.js >= 20 (웹 화면 빌드용)
-- (선택) VS Code — 밖에서 접속할 때 code tunnel용
+- (선택) VS Code — 원격 접속(code tunnel)용
 - (선택) `gh` (GitHub CLI) — PR 만들기 · 열린 PR 보기
 
 lab.remote는 Claude 로그인을 대신 제공하지 않습니다. 환경에 `ANTHROPIC_API_KEY`가 설정되어 있으면 구독이 아닌 종량제로 과금될 수 있으며, `labremote doctor`가 이를 알려 줍니다.
@@ -73,7 +73,7 @@ git pull
 systemctl --user restart labremote-session    # 자동 시작을 켠 경우
 ```
 
-등록한 프로젝트 · 알림 설정 · 웹훅 주소는 데이터 폴더(`server/data/`)에 있으므로 업데이트해도 유지됩니다. 실행 중인 학습은 서비스를 다시 켜도 멈추지 않습니다.
+등록한 프로젝트 · 알림 설정 · 웹훅 주소는 데이터 폴더(`server/data/`)에 있으므로 업데이트해도 유지됩니다. 실행 중인 학습은 서비스를 다시 시작해도 멈추지 않습니다.
 
 ## 사용법
 
@@ -92,11 +92,11 @@ labremote autostart install     # 변경 내용을 먼저 보여 주고 확인�
 labremote autostart status
 ```
 
-사용자 서비스 `labremote-session`이 tmux 안에서 서버를 띄웁니다. 재부팅하거나 로그아웃해도 서버가 계속 떠 있습니다. linger는 꺼져 있었던 경우에만 켜고, 해제할 때 원래 값으로 되돌립니다.
+사용자 서비스 `labremote-session`이 tmux 안에서 서버를 실행합니다. 재부팅하거나 로그아웃해도 서버가 계속 실행됩니다. linger는 꺼져 있던 경우에만 활성화하고, 해제할 때 원래 값으로 되돌립니다.
 
 ### 3. 원격 접속 (선택)
 
-터널은 VS Code가 띄우고, lab.remote는 상태만 읽습니다.
+터널은 VS Code가 실행하고, lab.remote는 상태만 읽습니다.
 
 ```bash
 code tunnel user login --provider github
@@ -109,13 +109,13 @@ code tunnel service install --accept-server-license-terms
 labremote remote set https://<전달된 주소>
 ```
 
-등록하지 않은 주소로 들어온 요청은 서버가 거절합니다. 등록하면 Discord 알림에 "답하기" 링크가 붙습니다.
+등록하지 않은 주소로 들어온 요청은 서버가 거절합니다. 등록하면 Discord 알림에 "답하기" 링크가 추가됩니다.
 
-> 터널이 열려 있으면 해당 GitHub 계정으로 이 컴퓨터의 터미널과 파일에 접근할 수 있습니다. **GitHub 2단계 인증을 반드시 켜 두세요.**
+> 터널이 열려 있으면 해당 GitHub 계정으로 이 컴퓨터의 터미널과 파일에 접근할 수 있습니다. **GitHub 2단계 인증을 반드시 활성화하세요.**
 
 ### 4. 알림 (선택)
 
-Inbox › 알림 설정에서 Discord 웹훅 주소를 입력합니다. 시험 전송은 아래 명령으로 합니다.
+Inbox › 알림 설정에서 Discord 웹훅 주소를 입력합니다. 테스트 알림은 아래 명령으로 보냅니다.
 
 ```bash
 labremote notify test

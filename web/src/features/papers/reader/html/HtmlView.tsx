@@ -114,7 +114,7 @@ export function HtmlView({
       sparkles.push({
         key: sec.id,
         el: slot,
-        label: `${sec.n ? sec.n + ' ' : ''}${sec.title} 설명받기`,
+        label: `${sec.n ? sec.n + ' ' : ''}${sec.title} 설명 보기`,
       })
     }
 
@@ -406,9 +406,9 @@ export function HtmlView({
       <div className={s.scroll} ref={scrollRef}>
         {!isReal && html && (
           <div className={s.sampleBar}>
-            구조만 담은 샘플 골격이에요 · 실제 본문을 보려면
+            구조만 있는 샘플 HTML이에요 · 실제 본문을 보려면
             <span className={s.sampleMono}>web/fixtures/{reader.paperId}.arxiv.html</span>
-            을 두세요
+            파일을 넣어 주세요
           </div>
         )}
 
@@ -456,7 +456,7 @@ export function HtmlView({
         {slots.elements.map((x) =>
           createPortal(
             <Sparkle
-              label={`${x.label} 설명받기`}
+              label={`${x.label} 설명 보기`}
               tip={x.tip}
               onClick={(el) => {
                 const scroller = scrollRef.current

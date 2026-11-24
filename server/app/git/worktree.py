@@ -69,7 +69,7 @@ def remove(root: str, rel: str) -> dict:
     from .. import runs
 
     if any(paths.is_inside(target, d) for d in runs.busy_dirs(root)):
-        raise WorktreeError("이 worktree에서 학습이 돌고 있어요. 끝난 뒤에 정리해 주세요.")
+        raise WorktreeError("이 worktree에서 학습이 실행 중이에요. 끝난 뒤에 정리해 주세요.")
     try:
         ops.run(root, ["worktree", "remove", "--", target])
     except ops.GitError as exc:

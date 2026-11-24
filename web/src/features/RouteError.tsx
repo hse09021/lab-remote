@@ -9,11 +9,11 @@ export default function RouteError() {
   const detail = isRouteErrorResponse(err) ? `${err.status} ${err.statusText}` : err instanceof Error ? err.message : String(err)
   return (
     <main style={{ padding: '40px 32px', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720 }}>
-      <h1 style={{ margin: 0, fontSize: 20 }}>{chunk ? 'lab.remote가 업데이트됐어요' : '화면을 그리다가 문제가 생겼어요'}</h1>
+      <h1 style={{ margin: 0, fontSize: 20 }}>{chunk ? 'lab.remote가 업데이트됐어요' : '화면을 표시하다가 문제가 생겼어요'}</h1>
       <p style={{ margin: 0, fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.6 }}>
         {chunk
-          ? '이 탭에는 업데이트 전 화면이 남아 있어요. 새로 고침하면 새 화면을 받아요.'
-          : '새로 고침해도 같으면 아래 내용을 알려 주세요.'}
+          ? '이 탭에는 업데이트 전 화면이 남아 있어요. 새로 고침하면 최신 화면을 불러와요.'
+          : '새로 고침해도 계속되면 아래 내용을 알려 주세요.'}
       </p>
       <code style={{ fontSize: 12, color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{detail}</code>
       <button

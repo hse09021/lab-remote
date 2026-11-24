@@ -162,7 +162,7 @@ def changes() -> list[dict]:
             "where": f"loginctl · 사용자 {os.environ.get('USER') or ''}",
             "present": linger,
             "when": "labremote autostart install" + (" (원래 no)" if before is False else " (원래 yes)" if before is True else ""),
-            "undo": "uninstall하면 원래대로 돌려요 (code tunnel 서비스가 있으면 그대로 둬요)" if before is False else "lab.remote가 켠 게 아니라 그대로 둬요" if before is True else "loginctl disable-linger",
+            "undo": "uninstall하면 원래대로 되돌려요 (code tunnel 서비스가 있으면 그대로 둬요)" if before is False else "lab.remote가 켠 것이 아니라서 그대로 둬요" if before is True else "loginctl disable-linger",
         }
     )
     for root, name in sorted(registry.load().items(), key=lambda kv: kv[1]):
@@ -201,7 +201,7 @@ def uninstall_steps() -> list[str]:
     out = ["labremote autostart uninstall   # 자동 시작을 켰다면", "conda env remove -n labremote", f"rm -rf {repo}"]
     if not paths.is_inside(paths.real(repo), paths.real(data)):
         out.append(f"rm -rf {data}   # 데이터 폴더 (lab.remote 폴더 밖에 있어요)")
-    out.append("# 등록했던 프로젝트의 .labremote/ 는 남아요. 필요하면 프로젝트마다 지워요.")
+    out.append("# 등록했던 프로젝트의 .labremote/는 남아요. 필요하면 프로젝트마다 지워요.")
     out.append("# code tunnel을 켰다면: code tunnel service uninstall · code tunnel user logout")
     return out
 

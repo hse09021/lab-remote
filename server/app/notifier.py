@@ -52,7 +52,7 @@ def build(
 ) -> dict:
     """Discord 임베드 payload. 사유가 길면 필드를 나눠 담는다."""
     if kind not in KINDS:
-        raise ValueError(f"모르는 알림 종류예요: {kind!r}")
+        raise ValueError(f"알 수 없는 알림 종류예요: {kind!r}")
     return embed.build(
         kind,
         project=project,

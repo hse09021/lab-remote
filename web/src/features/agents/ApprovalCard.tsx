@@ -117,7 +117,7 @@ export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
           <legend className={s.questionText}>
             {q.header && <span className={s.questionHeader}>{q.header}</span>}
             {q.question}
-            {q.multiSelect && <span className={s.muted}> · 여러 개 골라도 돼요</span>}
+            {q.multiSelect && <span className={s.muted}> · 여러 개 선택할 수 있어요</span>}
           </legend>
           <div className={s.options}>
             {(q.options ?? []).map((o) => {
@@ -141,7 +141,7 @@ export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
             className={s.reason}
             value={other[q.question] ?? ''}
             onChange={(e) => setOther((old) => ({ ...old, [q.question]: e.target.value }))}
-            placeholder="기타 — 직접 적기"
+            placeholder="기타 — 직접 입력"
             aria-label={`${q.question} — 기타`}
           />
         </fieldset>
@@ -165,7 +165,7 @@ export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
         >
           건너뛰기
         </button>
-        <span className={s.muted}>같은 질문이 대시보드와 Inbox에도 떠요. 먼저 답한 곳의 답이 적용돼요.</span>
+        <span className={s.muted}>같은 질문이 대시보드와 Inbox에도 표시돼요. 먼저 답한 곳의 답이 적용돼요.</span>
       </div>
       {err && (
         <div role="alert" className={s.errText}>
@@ -223,7 +223,7 @@ function PermissionCard({ p, via }: { p: PendingApproval; via: string }) {
         <button type="button" className={s.denyBtn} disabled={answer.isPending} onClick={() => answer.mutate({ id: p.id, choice: 'deny', reason, via })}>
           거부
         </button>
-        <span className={s.muted}>같은 요청이 대시보드, Inbox, Discord에도 떠요. 먼저 답한 곳의 답이 적용돼요.</span>
+        <span className={s.muted}>같은 요청이 대시보드, Inbox, Discord에도 표시돼요. 먼저 답한 곳의 답이 적용돼요.</span>
       </div>
       {err && (
         <div role="alert" className={s.errText}>

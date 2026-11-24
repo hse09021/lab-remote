@@ -209,7 +209,7 @@ def _argv(kind: str, env: str, *, tool: str = "", action: str = "", specs: list[
         return argv + [f"python={extra.get('python') or '3.11'}"]
     if kind == "delete":
         return [conda, "env", "remove", "-n", env, "-y"]
-    raise CondaError("모르는 작업이에요.")
+    raise CondaError("알 수 없는 작업이에요.")
 
 
 def _changes_from(tool: str, action: str, names: list[str], out: str, env: str) -> list[dict]:
@@ -276,11 +276,11 @@ def start_job(kind: str, env: str, *, tool: str = "", action: str = "", packages
         if not any(e["name"] == env for e in list_envs()):
             raise CondaError(f"없는 환경이에요: {env}")
     else:
-        raise CondaError("모르는 작업이에요.")
+        raise CondaError("알 수 없는 작업이에요.")
 
     with _lock:
         if any(j["env"] == env and j["state"] == "running" for j in _jobs.values()):
-            raise CondaError("이 환경에서 다른 작업이 아직 돌고 있어요.")
+            raise CondaError("이 환경에서 다른 작업이 아직 진행 중이에요.")
         jid = uuid.uuid4().hex[:10]
         record = {
             "id": jid, "kind": kind, "env": env, "tool": tool, "action": action, "dry": dry,

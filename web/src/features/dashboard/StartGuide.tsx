@@ -9,7 +9,7 @@ import s from './StartGuide.module.css'
 const KEY = 'labremote:start-guide-closed'
 
 /**
- * 처음 실행 안내 (PLAN 7장) — Claude Code 로그인 → 프로젝트 등록 → Discord → (선택) 밖에서 접속.
+ * 처음 실행 안내 (PLAN 7장) — Claude Code 로그인 → 프로젝트 등록 → Discord → (선택) 외부 접속.
  * 필수 세 단계를 마치면 저절로 사라지고, 닫으면 이 브라우저에서는 다시 안 보여요.
  */
 export function StartGuide({ projects }: { projects: number }) {
@@ -30,7 +30,7 @@ export function StartGuide({ projects }: { projects: number }) {
       loading: account.isPending,
       unknown: !!account.data && account.data.loggedIn === null,
       title: 'Claude Code 로그인',
-      text: '데스크톱 터미널에서 claude를 열어 로그인해요. lab.remote는 그 로그인을 불러 써요.',
+      text: '데스크톱 터미널에서 claude를 실행해 로그인해요. lab.remote는 그 로그인 정보를 사용해요.',
       to: '',
     },
     { done: projects > 0, loading: false, unknown: false, title: '프로젝트 등록', text: '연구 폴더를 등록하거나 새 폴더를 만들어요.', to: '/projects' },
@@ -39,7 +39,7 @@ export function StartGuide({ projects }: { projects: number }) {
       done: health.data?.tunnel === 'up',
       loading: health.isPending,
       unknown: health.isError,
-      title: '밖에서 접속 (선택)',
+      title: '원격 접속 (선택)',
       text: 'code tunnel로 휴대폰이나 다른 PC에서 열어요.',
       to: '/settings/system',
     },

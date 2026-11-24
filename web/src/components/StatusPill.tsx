@@ -96,7 +96,7 @@ export function StatusPill({
         data-interactive="true"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={label ?? "읽음 상태 바꾸기"}
+        aria-label={label ?? "읽음 상태 변경"}
         onClick={() => {
           if (!open) place();
           setOpen((v) => !v);

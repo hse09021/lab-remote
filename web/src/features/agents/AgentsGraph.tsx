@@ -100,7 +100,7 @@ export function AgentsGraph({ sessions, runs, finished }: { sessions: AgentSessi
         href: `/projects/${encodeURIComponent(p)}?tab=work&run=${r.id}`,
         isRun: true,
       })
-      // 같은 worktree에서 도는 세션과는 "참고" 점선
+      // 같은 worktree에서 실행 중인 세션과는 "참고" 점선
       for (const x of ss) {
         if ((x.tree === '.' ? '.' : x.tree) === (r.cwd || '.')) edges.push({ from: `s:${x.id}`, to: key, style: 'ref' })
       }
@@ -145,7 +145,7 @@ export function AgentsGraph({ sessions, runs, finished }: { sessions: AgentSessi
           <span className={s.box} data-on={showDone}>
             {showDone ? '✓' : ''}
           </span>
-          오늘 끝난 것도 보기
+          오늘 끝난 항목도 보기
         </button>
       </div>
 
@@ -179,11 +179,11 @@ export function AgentsGraph({ sessions, runs, finished }: { sessions: AgentSessi
               </span>
             </Link>
           ))}
-          {nodes.length === 0 && <div className={s.empty}>지금 돌고 있는 세션이나 학습이 없어요. "오늘 끝난 것도 보기"로 오늘 것을 볼 수 있어요.</div>}
+          {nodes.length === 0 && <div className={s.empty}>지금 실행 중인 세션이나 학습이 없어요. "오늘 끝난 항목도 보기"를 켜면 오늘 끝난 항목을 볼 수 있어요.</div>}
         </div>
       </div>
       <p className={s.note}>
-        lab.remote로 띄운 세션, 하위 에이전트, 학습 실행만 보여요. 실선은 부모와 하위 에이전트 사이, 점선은 서로 참고하는 관계(같은 worktree), 주황
+        lab.remote에서 시작한 세션, 하위 에이전트, 학습 실행만 보여요. 실선은 부모와 하위 에이전트 사이, 점선은 서로 참고하는 관계(같은 worktree), 주황
         점선은 나를 기다리는 요청이에요. 노드를 누르면 그 세션이나 실행으로 가요.
       </p>
     </section>

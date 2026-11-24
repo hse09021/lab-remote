@@ -81,7 +81,7 @@ async def _ask_agent(root: str, prompt: str, model: str, *, query_fn=None) -> tu
     except ReadOnlyError as exc:
         raise AskError(str(exc)) from None
     if not isinstance(data.get("answer"), str):
-        raise AskError("정해진 모양(JSON)으로 답을 받지 못했어요.")
+        raise AskError("지정한 형식(JSON)으로 답을 받지 못했어요.")
     return data, used
 
 
@@ -151,5 +151,5 @@ def start(question: str, history: list | None = None, *, model: str = "", query_
 def job(jid: str) -> dict:
     found = _jobs.get(jid)
     if not found:
-        raise AskError("없는 질문이에요 (서버를 다시 켰으면 사라져요).")
+        raise AskError("없는 질문이에요 (서버를 다시 시작하면 사라져요).")
     return dict(found)

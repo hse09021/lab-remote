@@ -73,9 +73,9 @@ fi
 
 cat <<EOF
 
-다 됐어요. 서버 띄우기:
+설치를 마쳤어요. 서버 실행:
   $ENV_PREFIX/bin/labremote serve            # http://127.0.0.1:8000
-재부팅해도 켜 두려면:
+재부팅 후에도 자동으로 실행하려면:
   $ENV_PREFIX/bin/labremote autostart install
-밖에서 접속하려면 docs/SETUP.md의 "밖에서 접속"을 봐 주세요.
+원격으로 접속하려면 docs/SETUP.md의 "원격 접속"을 봐 주세요.
 EOF

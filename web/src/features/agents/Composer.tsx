@@ -10,10 +10,10 @@ import s from './Agents.module.css'
  * 모델 목록과 Effort 단계는 에이전트에서 받아요(하드코딩하지 않아요). */
 
 export const MODE_INFO: Record<ModeId, { name: string; desc: string; icon: string }> = {
-  manual: { name: 'Manual', desc: '파일을 고치기 전에 매번 승인을 받아요.', icon: '✋' },
+  manual: { name: 'Manual', desc: '파일을 수정하기 전에 매번 승인을 받아요.', icon: '✋' },
   edit: { name: 'Edit automatically', desc: '파일 수정은 바로 하고, 명령 실행은 물어봐요.', icon: '</>' },
-  plan: { name: 'Plan', desc: '코드를 살펴보고 계획을 먼저 보여 준 뒤 고쳐요.', icon: '☰' },
-  auto: { name: 'Auto', desc: '안전 검사를 통과한 작업은 바로 진행하고, 위험해 보이면 멈추고 물어봐요. 학습이 도는 동안에는 Manual로 지켜보는 게 좋아요(묻지 않고 실행한 명령에는 경고가 뜨지 않아요).', icon: 'ϟ' },
+  plan: { name: 'Plan', desc: '코드를 살펴보고 계획을 먼저 보여 준 뒤 수정해요.', icon: '☰' },
+  auto: { name: 'Auto', desc: '안전 검사를 통과한 작업은 바로 진행하고, 위험해 보이면 멈추고 물어봐요. 학습이 실행 중일 때는 Manual로 지켜보는 게 좋아요(묻지 않고 실행한 명령에는 경고가 표시되지 않아요).', icon: 'ϟ' },
 }
 const EFFORT_NAMES: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' }
 
@@ -33,7 +33,7 @@ interface Props {
   placeholder?: string
   /** 처음에 채워 둘 글 (예: Papers 그래프의 "Claude에게 묻기"). 보내기는 사람이 눌러요 */
   initialText?: string
-  /** `+`의 "파일 고르기" — 올리고 붙일 경로를 돌려줘요 (없으면 경로 적기만) */
+  /** `+`의 "파일 선택" — 업로드하고 첨부할 경로를 돌려줘요 (없으면 경로 적기만) */
   onAttachFile?: (file: File) => Promise<string>
 }
 
@@ -115,12 +115,12 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
       className={s.ultraRow}
       onClick={() => {
         onSettings({ ultracode: !settings.ultracode })
-        setNote(`Ultracode ${settings.ultracode ? '끔' : '켬'} · 다음 요청부터 적용돼요. 켜면 큰 작업을 워크플로로 나눠 돌려서 사용량이 많이 들어요.`)
+        setNote(`Ultracode ${settings.ultracode ? '끔' : '켬'} · 다음 요청부터 적용돼요. 켜면 큰 작업을 워크플로로 나눠 실행해서 사용량이 많이 들어요.`)
       }}
     >
       <span className={s.menuText}>
         <span className={s.menuName}>Ultracode</span>
-        <span className={s.menuDesc}>큰 작업을 여러 하위 작업으로 나눠 돌려요 · 사용량이 많이 들어요</span>
+        <span className={s.menuDesc}>큰 작업을 여러 하위 작업으로 나눠 실행해요 · 사용량이 많이 들어요</span>
       </span>
       <span aria-hidden="true" className={s.switchTrack} data-on={!!settings.ultracode}>
         <span className={s.switchKnob} />
@@ -197,7 +197,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
         </div>
 
         <div className={s.ccRow}>
-          <button type="button" aria-label="파일 첨부" title="파일 경로 붙이기" className={s.iconBtn} onClick={() => setMenu(menu === 'attach' ? '' : 'attach')}>
+          <button type="button" aria-label="파일 첨부" title="파일 경로 첨부" className={s.iconBtn} onClick={() => setMenu(menu === 'attach' ? '' : 'attach')}>
             +
           </button>
           <button
@@ -219,7 +219,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
               type="button"
               aria-haspopup="menu"
               aria-expanded={menu === 'model'}
-              aria-label={`모델: ${chipName(current)}, Effort ${effortName}, 바꾸기`}
+              aria-label={`모델: ${chipName(current)}, Effort ${effortName}, 변경`}
               className={s.chipBtn}
               onClick={() => setMenu(menu === 'model' ? '' : 'model')}
             >
@@ -252,7 +252,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
                       </span>
                     </button>
                   ))}
-                  {info.isError && <span className={s.menuDesc}>모델 목록을 받지 못했어요 — Claude Code 설치와 로그인 상태를 확인해 주세요.</span>}
+                  {info.isError && <span className={s.menuDesc}>모델 목록을 불러오지 못했어요 — Claude Code 설치와 로그인 상태를 확인해 주세요.</span>}
                 </div>
                 {effortRow}
                 {ultraRow}
@@ -265,7 +265,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
               type="button"
               aria-haspopup="menu"
               aria-expanded={menu === 'mode'}
-              aria-label={`Mode: ${MODE_INFO[settings.mode].name}, Effort ${effortName}, 바꾸기`}
+              aria-label={`Mode: ${MODE_INFO[settings.mode].name}, Effort ${effortName}, 변경`}
               className={s.modeBtn}
               onClick={() => setMenu(menu === 'mode' ? '' : 'mode')}
             >
@@ -335,7 +335,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
           <div className={`${s.menu} ${s.menuUp}`}>
             {onAttachFile && (
               <>
-                <span className={s.menuTitle}>내 컴퓨터에서 파일 고르기</span>
+                <span className={s.menuTitle}>내 컴퓨터에서 파일 선택</span>
                 <input
                   ref={picker}
                   type="file"
@@ -344,7 +344,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
                     const f = e.target.files?.[0]
                     e.target.value = ''
                     if (!f) return
-                    setUploading(`${f.name} 올리는 중…`)
+                    setUploading(`${f.name} 업로드 중…`)
                     onAttachFile(f)
                       .then((path) => {
                         addMention(path)
@@ -352,17 +352,17 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
                         setMenu('')
                         area.current?.focus()
                       })
-                      .catch((err: unknown) => setUploading(`올리지 못했어요 — ${err instanceof Error ? err.message : String(err)}`))
+                      .catch((err: unknown) => setUploading(`업로드하지 못했어요 — ${err instanceof Error ? err.message : String(err)}`))
                   }}
                 />
                 <button type="button" className={s.ghostBtn} onClick={() => picker.current?.click()}>
-                  파일 고르기…
+                  파일 선택…
                 </button>
                 {uploading && <span className={s.muted}>{uploading}</span>}
-                <span className={s.muted}>프로젝트의 .labremote/attachments/에 두고 경로를 붙여요</span>
+                <span className={s.muted}>프로젝트의 .labremote/attachments/에 저장하고 경로를 첨부해요</span>
               </>
             )}
-            <span className={s.menuTitle}>파일 경로 붙이기</span>
+            <span className={s.menuTitle}>파일 경로 첨부</span>
             <form
               className={s.attachForm}
               onSubmit={(e) => {
@@ -375,7 +375,7 @@ export function Composer({ settings, onSettings, onSend, busy = false, disabled 
             >
               <input className={s.reason} value={attach} onChange={(e) => setAttach(e.target.value)} placeholder="src/train.py" autoFocus />
               <button type="submit" className={s.ghostBtn}>
-                붙이기
+                첨부
               </button>
             </form>
           </div>

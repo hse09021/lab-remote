@@ -15,7 +15,7 @@ from app import doctor
 def test_경고는_종료코드를_안_바꾼다():
     report = {"ok": True, "checks": [doctor.warn("x", "y")], "limitations": []}
     text = doctor.render(report)
-    assert "⚠ x" in text and "⚠는 종료 코드를 바꾸지 않아요" in text
+    assert "⚠ x" in text and "⚠는 종료 코드에 영향을 주지 않아요" in text
 
 
 def test_run_은_v3_점검만_돈다(monkeypatch):
@@ -135,7 +135,7 @@ def test_웹훅_권한이_넓으면_거부하고_주소는_안_찍는다():
     path = config.set_webhook("https://discord.com/api/webhooks/a/b")
     os.chmod(path, 0o644)
     got = doctor.webhook_check()
-    assert got["level"] == "bad" and "권한이 넓어요" in got["detail"]
+    assert got["level"] == "bad" and "권한이 너무 넓어요" in got["detail"]
 
     os.chmod(path, 0o600)
     fixed = doctor.webhook_check()
@@ -146,7 +146,7 @@ def test_웹훅_권한이_넓으면_거부하고_주소는_안_찍는다():
 
 def test_웹훅이_없으면_경고한다():
     got = doctor.webhook_check()
-    assert got["level"] == "warn" and "알림이 안 가요" in got["detail"]
+    assert got["level"] == "warn" and "알림이 전송되지 않아요" in got["detail"]
 
 
 def test_환경_변수로_들어오면_통과한다(monkeypatch):
@@ -162,7 +162,7 @@ def test_스키마_판이_맞으면_통과한다():
     from app import db
 
     got = doctor.schema_check()
-    assert got["ok"] is True and f"판 {db.SCHEMA_VERSION}" in got["detail"]
+    assert got["ok"] is True and f"버전 {db.SCHEMA_VERSION}" in got["detail"]
 
 
 def test_앞서_간_DB_는_거부한다():

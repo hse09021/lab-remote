@@ -81,7 +81,7 @@ export function MobilePapers() {
         />
       </label>
 
-      <div className={s.chipRow} role="group" aria-label="읽음 상태 거르기">
+      <div className={s.chipRow} role="group" aria-label="읽음 상태 필터">
         {FILTERS.map((f) => (
           <button
             key={f.id}
@@ -123,7 +123,7 @@ export function MobilePapers() {
         </ul>
       )}
 
-      <p className={s.footNote}>논문 읽기와 하이라이트는 PC 리더에서 해요</p>
+      <p className={s.footNote}>논문 읽기와 하이라이트는 PC 리더에서 할 수 있어요</p>
 
       <button type="button" onClick={() => setAskOpen(true)} className={s.fab}>
         라이브러리에 묻기
@@ -137,7 +137,7 @@ export function MobilePapers() {
             summary={summaries.data?.[open.id]}
             onStatus={(status) => {
               setStatus.mutate({ id: open.id, status })
-              toast.show('읽음 상태를 바꿨어요')
+              toast.show('읽음 상태를 변경했어요')
             }}
           />
         )}
@@ -151,7 +151,7 @@ export function MobilePapers() {
       >
         <p className={s.sheetText}>{ask.live ? LIVE_HEAD.caption : chat.data?.caption}</p>
         {ask.live && ask.log.length === 0 && (
-          <span className={s.sheetNote}>보내기를 누를 때만 Claude에게 가요. 답이 오기까지 1분쯤 걸릴 수 있어요.</span>
+          <span className={s.sheetNote}>보내기를 누를 때만 Claude에게 전송돼요. 답변까지 1분 정도 걸릴 수 있어요.</span>
         )}
         {(ask.live ? ask.log : (chat.data?.messages ?? [])).map((m, i) => (
           <p key={i} className={m.role === 'user' ? s.askUser : s.sheetText}>
@@ -261,7 +261,7 @@ function PaperSheet({
 
       <span className={s.sheetPath}>{paper.path ?? '아직 요약 없음'}</span>
       <span className={s.sheetNote}>
-        본문은 PC 리더에서 열어 주세요. 모바일에서는 본문을 보여 주지 않아요.
+        본문은 PC 리더에서 열어 주세요. 모바일에서는 본문을 표시하지 않아요.
       </span>
     </div>
   )

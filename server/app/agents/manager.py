@@ -53,7 +53,7 @@ def _backend_class(kind: str):
         from .claude import ClaudeBackend
 
         return ClaudeBackend
-    raise AgentError(f"모르는 에이전트예요: {kind}")
+    raise AgentError(f"알 수 없는 에이전트예요: {kind}")
 
 
 @dataclass
@@ -117,7 +117,7 @@ def install_warning(project: str, req: ApprovalRequest) -> str:
             busy.append(f"{r.get('name') or r['id']}이 {env}로" if env else f"{r.get('name') or r['id']}이 conda 없이")
     if not busy:
         return ""
-    return f"{', '.join(busy[:3])} 학습 중이에요. 지금 패키지를 바꾸면 학습이 깨질 수 있어요."
+    return f"{', '.join(busy[:3])} 학습 중이에요. 지금 패키지를 바꾸면 학습에 문제가 생길 수 있어요."
 
 
 def _allow_key(req: ApprovalRequest) -> tuple:
@@ -274,8 +274,8 @@ class Manager:
         try:
             with db.open_db() as conn:
                 conn.execute(
-                    "UPDATE inbox SET read_at = ?, sent = CASE WHEN sent = '' THEN '서버가 다시 떠서 사라졌어요' "
-                    "ELSE sent || ' · 서버가 다시 떠서 사라졌어요' END WHERE kind = 'ask' AND read_at IS NULL",
+                    "UPDATE inbox SET read_at = ?, sent = CASE WHEN sent = '' THEN '서버가 다시 시작돼서 사라졌어요' "
+                    "ELSE sent || ' · 서버가 다시 시작돼서 사라졌어요' END WHERE kind = 'ask' AND read_at IS NULL",
                     (db.now(),),
                 )
         except Exception:
@@ -285,7 +285,7 @@ class Manager:
             if rec.get("state") in ("working", "ask"):
                 root, raw = self._find(rec["id"])
                 raw["state"] = "idle"
-                raw["note"] = "서버가 다시 떠서 연결이 끊겼어요. 메시지를 보내면 이어서 해요."
+                raw["note"] = "서버가 다시 시작돼서 연결이 끊겼어요. 메시지를 보내면 이어서 진행해요."
                 self._save(root, raw)
                 n += 1
         return n
@@ -325,9 +325,9 @@ class Manager:
         if not text:
             raise AgentError("첫 메시지를 적어 주세요.")
         if mode not in MODES:
-            raise AgentError(f"모르는 Mode예요: {mode}")
+            raise AgentError(f"알 수 없는 Mode예요: {mode}")
         if effort not in EFFORTS:
-            raise AgentError(f"모르는 Effort예요: {effort}")
+            raise AgentError(f"알 수 없는 Effort예요: {effort}")
         _backend_class(kind)
         if new_branch:
             made = await asyncio.to_thread(worktree_mod.add, root, new_branch)
@@ -377,7 +377,7 @@ class Manager:
                 key=lambda x: x[1].last_used,
             )
             if not idle:
-                raise AgentError(f"동시에 돌 수 있는 세션은 {MAX_LIVE}개예요. 다른 세션이 끝나면 다시 보내 주세요.")
+                raise AgentError(f"동시에 실행할 수 있는 세션은 {MAX_LIVE}개예요. 다른 세션이 끝나면 다시 보내 주세요.")
             await self.disconnect(idle[0][0])
         from .. import files
 
@@ -394,7 +394,7 @@ class Manager:
         try:
             await backend.connect()
         except Exception as exc:
-            raise AgentError(f"에이전트를 띄우지 못했어요: {exc}") from None
+            raise AgentError(f"에이전트를 시작하지 못했어요: {exc}") from None
         live = Live(backend=backend, allow_keys={tuple(k) for k in rec.get("allowKeys") or []})
         self.live[sid] = live
         bus.publish("session.state", {"session": sid})
@@ -531,7 +531,7 @@ class Manager:
         if not p or p.future.done():
             raise AgentError("이미 답했거나 사라진 승인 요청이에요.")
         if choice not in ("allow", "allowSession", "deny", "answer"):
-            raise AgentError(f"모르는 답이에요: {choice}")
+            raise AgentError(f"알 수 없는 답이에요: {choice}")
         if choice == "answer":
             return self._answer_questions(p, answers or {}, response, via)
         root, rec = self._find(p.session)
@@ -640,7 +640,7 @@ class Manager:
                 live = None
         if mode is not None:
             if mode not in MODES:
-                raise AgentError(f"모르는 Mode예요: {mode}")
+                raise AgentError(f"알 수 없는 Mode예요: {mode}")
             rec["mode"] = mode
             if live:
                 await live.backend.set_mode(mode)
@@ -650,7 +650,7 @@ class Manager:
                 await live.backend.set_model(model)
         if effort is not None:
             if effort not in EFFORTS:
-                raise AgentError(f"모르는 Effort예요: {effort}")
+                raise AgentError(f"알 수 없는 Effort예요: {effort}")
             if effort != rec.get("effort") and live and not live.backend.busy:
                 await self.disconnect(sid)
             rec["effort"] = effort
@@ -673,7 +673,7 @@ class Manager:
         root, rec = self._find(sid)
         if closed:
             if sid in self.live and self.live[sid].backend.busy:
-                raise AgentError("아직 일하는 중이에요. 멈춘 뒤에 닫아 주세요.")
+                raise AgentError("아직 작업 중이에요. 중지한 뒤에 닫아 주세요.")
             await self.disconnect(sid)
             root, rec = self._find(sid)
             rec["closed"] = True

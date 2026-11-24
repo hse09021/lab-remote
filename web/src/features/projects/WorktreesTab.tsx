@@ -11,7 +11,7 @@ import s from './Projects.module.css'
 
 function aheadText(w: Worktree, main: string): string {
   if (w.primary || w.branch === main) return '—'
-  if (w.merged) return `${main}에 합쳐짐`
+  if (w.merged) return `${main}에 머지됨`
   const parts: string[] = []
   if (w.ahead) parts.push(`커밋 ${w.ahead}개 앞섬`)
   if (w.changed) parts.push(`변경 ${w.changed} (커밋 전)`)
@@ -41,7 +41,7 @@ export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees
   return (
     <div className={s.treesWrap}>
       <div className={s.treesHead}>
-        <span className={s.muted}>작업마다 worktree를 하나씩 둬요 · ADE에서 세션을 만들면 함께 생겨요</span>
+        <span className={s.muted}>작업마다 worktree를 하나씩 사용해요 · ADE에서 세션을 만들면 함께 생성돼요</span>
         <button type="button" className={s.primaryBtn} onClick={() => setAdding(true)}>
           + worktree
         </button>
@@ -88,7 +88,7 @@ export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees
         </table>
       </div>
       <p className={`${s.muted} ${s.treesFoot}`}>
-        정리는 {data.main || 'main'}에 합쳐진 worktree에만 나와요. 폴더만 지우고 브랜치는 남겨요.
+        정리는 {data.main || 'main'}에 머지된 worktree에서만 할 수 있어요. 폴더만 삭제하고 브랜치는 유지해요.
       </p>
       <AddDialog name={project.name} open={adding} onClose={() => setAdding(false)} />
       {cleaning && <CleanDialog name={project.name} tree={cleaning} onClose={() => setCleaning(null)} />}
@@ -142,7 +142,7 @@ function CleanDialog({ name, tree, onClose }: { name: string; tree: Worktree; on
         <span className={s.mono}>{tree.rel}</span> 폴더를 지워요. <span className={s.mono}>{tree.branch}</span> 브랜치는 남아서
         다시 만들 수 있어요.
       </span>
-      <span>커밋 안 한 변경이 있거나 이 worktree에서 학습이나 세션이 돌고 있으면 정리하지 않아요.</span>
+      <span>커밋 안 한 변경이 있거나 이 worktree에서 학습이나 세션이 실행 중이면 정리하지 않아요.</span>
     </Dialog>
   )
 }

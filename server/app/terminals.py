@@ -87,7 +87,7 @@ def create(project: str, tree: str = "") -> dict:
         argv = process.service_prefix(f"{sock}-{n}", f"lab.remote 터미널 {project}", env) + argv
     done = subprocess.run(argv, capture_output=True, text=True, timeout=20, env=env)
     if done.returncode != 0:
-        raise TerminalError("터미널을 띄우지 못했어요: " + (done.stderr or done.stdout).strip()[:300])
+        raise TerminalError("터미널을 열지 못했어요: " + (done.stderr or done.stdout).strip()[:300])
     return {"name": name, "cwd": cwd}
 
 
@@ -108,7 +108,7 @@ def attach_argv(project: str, *, name: str = "", run: str = "", write: bool = Fa
         got = runs.get(project, run)
         t = got.get("tmux") or {}
         if got["state"] != "running" or not t.get("socket"):
-            raise TerminalError("실행 중이 아니라 붙을 수 없어요. 로그는 실행 목록에서 볼 수 있어요.")
+            raise TerminalError("실행 중이 아니라 접속할 수 없어요. 로그는 실행 목록에서 볼 수 있어요.")
         argv = [tmux, "-L", t["socket"], "attach-session", "-t", t.get("session") or "run"]
         return argv if write else argv + ["-r"]
     if not NAME_RE.match(name or "") or name not in {t["name"] for t in list_sessions(project)}:

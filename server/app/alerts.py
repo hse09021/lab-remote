@@ -96,7 +96,7 @@ def save_rules(changes: dict) -> dict:
     data = load()
     for k, v in (changes or {}).items():
         if k not in DEFAULT_RULES or not isinstance(v, bool):
-            raise ValueError(f"모르는 알림 규칙이에요: {k!r}")
+            raise ValueError(f"알 수 없는 알림 규칙이에요: {k!r}")
         data["rules"][k] = v
     return _write(data)
 
@@ -176,13 +176,13 @@ def post(
     if rule:
         settings = load()
         if not settings["rules"].get(rule, False):
-            sent = "보내지 않음 · 꺼 둔 알림"
+            sent = "보내지 않음 · 비활성화된 알림"
         elif in_quiet(settings["quiet"], now) and rule not in URGENT:
             sent = "보내지 않음 · 조용한 시간"
         elif not config.discord_webhook(DISCORD_KIND.get(rule, "")):
             sent = ""
         else:
-            fields = [("어디", where)] if where else []
+            fields = [("위치", where)] if where else []
             # 바깥 주소(터널)를 적어 두었으면 그 화면으로 바로 가는 링크 — 답은 거기서 한다
             from . import remote
 

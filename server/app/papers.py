@@ -396,7 +396,7 @@ def _get(url: str, *, limit: int, timeout: int = 30) -> bytes:
     except urllib.error.HTTPError as exc:
         raise PapersError(f"arXiv가 거절했어요 ({exc.code}). 잠시 뒤 다시 해 주세요.") from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise PapersError(f"arXiv에 닿지 못했어요: {getattr(exc, 'reason', exc)}") from None
+        raise PapersError(f"arXiv에 연결하지 못했어요: {getattr(exc, 'reason', exc)}") from None
     if len(data) > limit:
         raise PapersError("파일이 너무 커요.")
     return data
@@ -429,7 +429,7 @@ def add_arxiv(link: str, *, fetch=_get) -> dict:
     try:
         root = ET.fromstring(xml)
     except ET.ParseError:
-        raise PapersError("arXiv 답을 읽지 못했어요.") from None
+        raise PapersError("arXiv 응답을 읽지 못했어요.") from None
     entry = root.find("a:entry", ns)
     entry_id = (entry.findtext("a:id", "", ns) if entry is not None else "") or ""
     if entry is None or "/abs/" not in entry_id:
@@ -513,7 +513,7 @@ def fetch_pdf(pid: str, *, fetch=None) -> dict:
         raise PapersError("arXiv 번호가 없는 논문이에요. PDF를 직접 올려 주세요.")
     data = fetch(ARXIV_PDF.format(id=aid), limit=MAX_PDF, timeout=120)
     if not data.startswith(b"%PDF-"):
-        raise PapersError("arXiv가 PDF가 아닌 걸 돌려줬어요. 잠시 뒤 다시 해 주세요.")
+        raise PapersError("arXiv가 PDF가 아닌 응답을 보냈어요. 잠시 뒤 다시 시도해 주세요.")
     target = cached_pdf_path(pid)
     os.makedirs(os.path.dirname(target), exist_ok=True)
     tmp = target + ".tmp"

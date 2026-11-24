@@ -64,7 +64,7 @@ export function SelectionMenu({ anchor, highlighted, onAct }: Props) {
       <div
         ref={ref}
         role="menu"
-        aria-label="선택한 글"
+        aria-label="선택한 텍스트"
         data-reader-overlay=""
         style={style}
         className={s.menu}
@@ -105,7 +105,7 @@ export function SelectionMenu({ anchor, highlighted, onAct }: Props) {
             ))}
           </div>
           <span className={s.previewNote}>
-            고른 부분을 흐름도로 만들어 vault에 저장해요. 지금은 미리보기만 보여 줘요.
+            선택한 부분을 흐름도로 만들어 vault에 저장해요. 지금은 미리보기만 보여 줘요.
           </span>
         </div>
       )}
@@ -179,7 +179,7 @@ export function NotePopover({
         autoFocus
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        placeholder="이 부분에 남길 생각을 적어요"
+        placeholder="이 부분에 대한 주석을 입력하세요"
         aria-label="주석 내용"
         className={s.popArea}
       />

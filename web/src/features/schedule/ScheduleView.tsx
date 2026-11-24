@@ -55,7 +55,7 @@ export function ScheduleView({ running }: { running: Run[] }) {
         <h2 className={s.h2}>
           예약 <span className={s.count}>{items.length}</span>
         </h2>
-        <span className={s.muted}>IDE 실행 탭의 "시간 정해서 실행…"이나 여기서 만들어요</span>
+        <span className={s.muted}>IDE 실행 탭의 "예약 실행…"이나 여기서 만들어요</span>
         <button type="button" className={s.primary} onClick={() => setDialog({ open: true })}>
           + 예약 만들기
         </button>
@@ -113,7 +113,7 @@ export function ScheduleView({ running }: { running: Run[] }) {
                 <th>반복</th>
                 <th>위치</th>
                 <th>마지막 결과</th>
-                <th>켜짐</th>
+                <th>활성</th>
                 <th>동작</th>
               </tr>
             </thead>
@@ -135,7 +135,7 @@ export function ScheduleView({ running }: { running: Run[] }) {
                     <span className={s.what}>{x.kind === 'command' ? x.command : '세션을 열고 알리기만 해요'}</span>
                   </td>
                   <td>
-                    {x.waitingSince ? <span className={s.waiting}>GPU 기다리는 중</span> : fmtNext(x.nextAt)}
+                    {x.waitingSince ? <span className={s.waiting}>GPU 대기 중</span> : fmtNext(x.nextAt)}
                   </td>
                   <td>{x.repeatLabel}</td>
                   <td className={s.mono}>
@@ -155,10 +155,10 @@ export function ScheduleView({ running }: { running: Run[] }) {
                       type="button"
                       role="switch"
                       aria-checked={x.enabled}
-                      aria-label={`${x.name} 켜짐`}
+                      aria-label={`${x.name} 활성화`}
                       className={s.switch}
                       disabled={update.isPending || (!x.enabled && x.repeat === 'once' && !x.nextAt)}
-                      title={!x.enabled && x.repeat === 'once' && !x.nextAt ? '이미 지난 한 번짜리 예약이에요 — 수정에서 시각을 다시 정해요' : undefined}
+                      title={!x.enabled && x.repeat === 'once' && !x.nextAt ? '이미 지난 일회성 예약이에요 — 수정에서 시각을 다시 설정해 주세요' : undefined}
                       onClick={() => update.mutate({ id: x.id, enabled: !x.enabled })}
                     >
                       <span className={s.knob} />
@@ -181,10 +181,10 @@ export function ScheduleView({ running }: { running: Run[] }) {
       {err && <div className={s.err}>{err instanceof ApiError ? err.message : String(err)}</div>}
 
       <ul className={s.rules}>
-        <li>예약 시각에 GPU를 다른 학습이 쓰고 있으면 끝날 때까지 기다렸다가 시작하고, 기다리기 시작할 때 알려요.</li>
+        <li>예약 시각에 GPU를 다른 학습이 쓰고 있으면 끝날 때까지 기다렸다가 시작하고, 대기를 시작할 때 알려 줘요.</li>
         <li>"앞 실행이 끝나면 시작" 같은 연쇄 예약은 없어요. 예약은 시각으로만 걸어요.</li>
         <li>에이전트 예약은 그 시각에 세션을 열고 알리기만 해요. 승인이 필요하면 거기서 멈춰요.</li>
-        <li>lab.remote 서버가 시간을 재서 실행해요. cron이나 systemd 타이머를 만들지 않고, 서버가 꺼져 있는 동안 지나간 예약은 나중에 몰아서 돌리지 않아요.</li>
+        <li>lab.remote 서버가 시각을 확인해 실행해요. cron이나 systemd 타이머를 만들지 않고, 서버가 꺼져 있는 동안 지나간 예약은 나중에 한꺼번에 실행하지 않아요.</li>
       </ul>
 
       <ScheduleDialog key={dialog.edit?.id ?? (dialog.open ? 'new' : 'closed')} open={dialog.open} edit={dialog.edit} onClose={() => setDialog({ open: false })} />
@@ -197,7 +197,7 @@ export function ScheduleView({ running }: { running: Run[] }) {
         onClose={() => setDeleting(null)}
         onConfirm={() => deleting && remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })}
       >
-        <span>{deleting?.name} — 이미 시작한 실행이나 세션은 그대로 둬요.</span>
+        <span>{deleting?.name} — 이미 시작된 실행이나 세션에는 영향을 주지 않아요.</span>
       </Dialog>
     </section>
   )

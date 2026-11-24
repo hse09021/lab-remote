@@ -34,7 +34,7 @@ def fake_conda(tmp_path, monkeypatch):
 def test_우리_환경을_거부한다(fake_conda):
     got = C.check("labremote")
     assert got["ok"] is False
-    assert "lab.remote가 도는 환경" in got["reason"]
+    assert "lab.remote가 실행되는 환경" in got["reason"]
     assert got["prefix"] == fake_conda["ours"]
 
 
@@ -110,7 +110,7 @@ def test_설치기가_우리_환경을_거부한다(fake_conda):
     parsed = PS.parse({"packages": [{"name": "peft"}]})
     with pytest.raises(PI.InstallError) as err:
         PI.build_argv(parsed, "labremote")
-    assert "lab.remote가 도는 환경" in str(err.value)
+    assert "lab.remote가 실행되는 환경" in str(err.value)
 
     # install()은 던지지 않고 사유를 돌려준다
     got = PI.install(parsed, "labremote", runner=lambda *a, **k: None)

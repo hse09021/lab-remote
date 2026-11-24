@@ -85,7 +85,7 @@ def _ci(checks) -> str:
 
 def prs() -> dict:
     if not shutil.which("gh"):
-        return {"available": False, "reason": "gh(GitHub CLI)가 없어요 — 깔고 gh auth login 하면 보여요", "items": []}
+        return {"available": False, "reason": "gh(GitHub CLI)가 없어요 — 설치하고 gh auth login으로 로그인하면 보여요", "items": []}
     items = []
     for root, name in sorted(registry.load().items(), key=lambda kv: kv[1]):
         got = _gh(root)

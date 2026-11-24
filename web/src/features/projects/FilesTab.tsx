@@ -61,7 +61,7 @@ export function FilesTab({ project, trees }: { project: ProjectDetail; trees?: W
     <>
       <div className={s.toolbar}>
         <span className={s.toolLabel}>worktree</span>
-        <div role="group" aria-label="worktree 고르기" className={s.treeChips}>
+        <div role="group" aria-label="worktree 선택" className={s.treeChips}>
           {chips.map((c) => (
             <button key={c.rel || '.'} type="button" aria-pressed={c.rel === tree} onClick={() => go({ tree: c.rel, path: '' })} className={s.treeChip}>
               {c.label}
@@ -86,7 +86,7 @@ export function FilesTab({ project, trees }: { project: ProjectDetail; trees?: W
           새 파일
         </button>
         <button type="button" className={s.toolBtn} onClick={() => uploadRef.current?.click()} disabled={upload.isPending}>
-          {upload.isPending ? '올리는 중…' : '업로드'}
+          {upload.isPending ? '업로드 중…' : '업로드'}
         </button>
         <input
           ref={uploadRef}
@@ -102,7 +102,7 @@ export function FilesTab({ project, trees }: { project: ProjectDetail; trees?: W
       </div>
       {upload.isError && (
         <div role="alert" className={s.notice}>
-          올리지 못했어요: {errText(upload.error)}
+          업로드하지 못했어요: {errText(upload.error)}
         </div>
       )}
 
@@ -222,7 +222,7 @@ function FileRow({
               열기
             </Link>
             <a href={apiUrl(downloadHref(project.name, tree, e.path))} className={s.actBtn} download>
-              내려받기
+              다운로드
             </a>
           </>
         )}
@@ -320,7 +320,7 @@ function FileDialogs({ project, tree, dir, ask, onClose }: { project: string; tr
           새 경로 (이 worktree 기준 상대 경로)
           <input className={ds.input} value={value} onChange={(e) => setValue(e.target.value)} autoFocus required />
         </label>
-        <span>같은 이름이 이미 있으면 덮어쓰지 않고 멈춰요.</span>
+        <span>같은 이름이 이미 있으면 덮어쓰지 않고 취소해요.</span>
       </Dialog>
 
       <Dialog
@@ -340,7 +340,7 @@ function FileDialogs({ project, tree, dir, ask, onClose }: { project: string; tr
           <span>
             <b className={s.mono}>{ask.entry.path}</b>
             {ask.entry.kind === 'dir' && !ask.entry.link ? ' 폴더와 그 안의 모든 파일을' : ask.entry.link ? ' 링크를' : ' 파일을'} 지워요. 되돌릴 수 없어요.
-            {ask.entry.link && ' 링크만 지우고 링크가 가리키는 곳은 그대로 둬요.'}
+            {ask.entry.link && ' 링크만 삭제하고 링크 대상은 그대로 유지해요.'}
           </span>
         )}
       </Dialog>

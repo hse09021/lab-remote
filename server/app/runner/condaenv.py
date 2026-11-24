@@ -171,7 +171,7 @@ def check(name: str) -> dict:
         out["reason"] = "conda 환경 이름이 비어 있어요"
         return out
     if text.startswith("["):
-        out["reason"] = f"환경 이름이 아직 자리표시예요: {text}"
+        out["reason"] = f"환경 이름이 아직 자리 표시자예요: {text}"
         return out
     if not NAME_RE.match(text):
         out["reason"] = (
@@ -181,7 +181,7 @@ def check(name: str) -> dict:
         return out
     if text.lower() in BASE_NAMES:
         out["reason"] = (
-            "base 환경은 보호돼요 — conda 명령이 그 환경의 파이썬으로 돌아요"
+            "base 환경은 보호돼요 — conda 명령이 이 환경의 파이썬으로 실행돼요"
         )
         return out
 
@@ -201,7 +201,7 @@ def check(name: str) -> dict:
             if hit:
                 out["prefix"] = path
                 out["reason"] = (
-                    f"{text}는 lab.remote가 도는 환경이라 보호돼요 ({path}). "
+                    f"{text}는 lab.remote가 실행되는 환경이라 보호돼요 ({path}). "
                     "실험용 환경을 따로 만들어 주세요: "
                     f"conda create -n {text}-exp python=3.11"
                 )

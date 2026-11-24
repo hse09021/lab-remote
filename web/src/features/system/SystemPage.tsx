@@ -23,19 +23,19 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : e ? String(
 
 function tunnelCard(d: SystemOverview): Card {
   const t = d.tunnel
-  if (t.state === 'absent') return { label: 'code tunnel', value: '없음', sub: ['VS Code CLI를 못 찾았어요', '밖에서 쓸 때만 필요해요'], tone: 'off' }
-  if (t.state === 'unknown') return { label: 'code tunnel', value: '모름', sub: [t.detail || '상태를 못 읽었어요'], tone: 'warn' }
+  if (t.state === 'absent') return { label: 'code tunnel', value: '없음', sub: ['VS Code CLI를 못 찾았어요', '외부에서 접속할 때만 필요해요'], tone: 'off' }
+  if (t.state === 'unknown') return { label: 'code tunnel', value: '모름', sub: [t.detail || '상태를 확인하지 못했어요'], tone: 'warn' }
   if (t.state === 'off')
     return {
       label: 'code tunnel',
       value: '꺼짐',
-      sub: [t.loggedIn === false ? '로그인 안 함' : t.loggedIn ? '로그인함' : '로그인 상태 모름', t.service ? '서비스는 설치됨' : '서비스 없음'],
+      sub: [t.loggedIn === false ? '로그인 안 됨' : t.loggedIn ? '로그인됨' : '로그인 상태 모름', t.service ? '서비스는 설치됨' : '서비스 없음'],
       tone: 'off',
     }
   return {
     label: 'code tunnel',
     value: '연결됨',
-    sub: [t.url ? t.url.replace(/^https:\/\//, '') : '주소를 못 읽었어요', t.service ? '서비스로 켜져 있어요' : '직접 띄움 · 재부팅하면 꺼져요'],
+    sub: [t.url ? t.url.replace(/^https:\/\//, '') : '주소를 확인하지 못했어요', t.service ? '서비스로 실행 중이에요' : '직접 실행 · 재부팅하면 꺼져요'],
     tone: t.service ? 'ok' : 'warn',
   }
 }
@@ -49,7 +49,7 @@ function cards(d: SystemOverview): Card[] {
     {
       label: 'lab.remote 서버',
       value: '실행 중',
-      sub: [`127.0.0.1:${d.server.port ?? '?'} · nice ${d.server.nice ?? '?'}`, `켜진 지 ${duration(d.server.uptimeSec)} · pid ${d.server.pid}`],
+      sub: [`127.0.0.1:${d.server.port ?? '?'} · nice ${d.server.nice ?? '?'}`, `가동 시간 ${duration(d.server.uptimeSec)} · pid ${d.server.pid}`],
       tone: 'ok',
     },
     tunnelCard(d),
@@ -67,7 +67,7 @@ function cards(d: SystemOverview): Card[] {
       value: g.available ? (dev?.name ?? 'GPU') : '조회 불가',
       sub: g.available
         ? [`드라이버 ${g.driver.userland ?? dev?.driver ?? '?'}`, g.driver.mismatch ? '커널·유저랜드 다름 — 재부팅 필요' : '커널·유저랜드 같음']
-        : [g.reason || 'nvidia-smi를 못 읽었어요'],
+        : [g.reason || 'nvidia-smi 결과를 읽지 못했어요'],
       tone: !g.available || g.driver.mismatch ? 'warn' : 'ok',
     },
   ]
@@ -82,14 +82,14 @@ function tree(d: SystemOverview, live: { live: number; open: number } | null) {
     : '예약 없음'
   const head = a.installed
     ? `부팅 → labremote-session.service   ${a.active === 'active' ? '●' : '○'} ${a.active || '?'}${a.restarts ? ` (재시작 ${a.restarts}회)` : ''}`
-    : '부팅 → (자동 시작 꺼짐 — 지금은 직접 띄운 서버)'
-  const tunnelLine = t.state === 'up' ? `● 연결됨${t.service ? ' · VS Code 서비스' : ' · 직접 띄움'}` : t.state === 'off' ? '○ 꺼짐' : t.state === 'absent' ? '○ 없음' : '? 모름'
+    : '부팅 → (자동 시작 꺼짐 — 지금은 직접 실행한 서버)'
+  const tunnelLine = t.state === 'up' ? `● 연결됨${t.service ? ' · VS Code 서비스' : ' · 직접 실행'}` : t.state === 'off' ? '○ 꺼짐' : t.state === 'absent' ? '○ 없음' : '? 모름'
   return `${head}
   └ tmux "labremote"
       └ labremote serve    ● 127.0.0.1:${d.server.port ?? '?'} · nice ${d.server.nice ?? '?'}
-          ├ 예약 시계      ${clock?.running ? '●' : '○'} ${next}${clock?.waiting.length ? ` · GPU 기다리는 중 ${clock.waiting.length}` : ''}
+          ├ 예약 스케줄러  ${clock?.running ? '●' : '○'} ${next}${clock?.waiting.length ? ` · GPU 대기 중 ${clock.waiting.length}` : ''}
           └ 에이전트 세션  Agent SDK · ${live ? `연결 ${live.live} / 4 · 열린 세션 ${live.open}` : '동시 4개까지'}
-code tunnel (VS Code가 따로 띄워요)   ${tunnelLine}`
+code tunnel (VS Code가 따로 실행해요)   ${tunnelLine}`
 }
 
 export default function SystemPage() {
@@ -112,7 +112,7 @@ export default function SystemPage() {
     <main className={s.page}>
       <div>
         <h1 className={s.title}>시스템</h1>
-        <p className={s.text}>lab.remote가 이 데스크톱에서 어떻게 돌고 있는지, 무엇을 바꿨는지 보여 줘요. 여기 없는 시스템 설정은 건드리지 않아요.</p>
+        <p className={s.text}>lab.remote가 이 데스크톱에서 어떻게 실행되고 있는지, 무엇을 변경했는지 보여 줘요. 여기 없는 시스템 설정은 건드리지 않아요.</p>
       </div>
 
       <div className={s.cards}>
@@ -134,7 +134,7 @@ export default function SystemPage() {
 
       <section className={s.section} aria-labelledby="sys-changes">
         <h2 id="sys-changes" className={s.h2}>
-          lab.remote가 바꾼 것
+          lab.remote가 변경한 항목
         </h2>
         <p className={s.text}>
           이게 전부예요. 나머지 상태는 lab.remote 데이터 폴더(<span className={s.mono}>{d.server.dataDir}</span>)와, 등록한 프로젝트마다 하나씩
@@ -144,9 +144,9 @@ export default function SystemPage() {
           <table className={s.table}>
             <thead>
               <tr>
-                <th>무엇</th>
-                <th>어디</th>
-                <th>생긴 때</th>
+                <th>항목</th>
+                <th>위치</th>
+                <th>생성 시각</th>
                 <th>되돌리기</th>
               </tr>
             </thead>
@@ -177,9 +177,9 @@ export default function SystemPage() {
           <pre className={s.pre}>{tree(d, agents.data ? { live: agents.data.live, open: agents.data.sessions.length } : null)}</pre>
           {a.installed ? (
             <p className={s.text}>
-              재부팅해도 로그인 없이 바로 떠요. 학습은 이 서비스와 분리돼 있어서 세션을 다시 켜도 계속 돌아요. 예약은 이 서버가 시간을 재기 때문에
-              서버가 꺼져 있으면 돌지 않아요. 서버 출력은 <span className={s.mono}>{a.tmux}</span>로 봐요.
-              {!a.inside && ' 지금 보고 있는 서버는 자동 시작과 상관없이 따로 띄운 거예요.'}
+              재부팅하면 로그인하지 않아도 바로 실행돼요. 학습은 이 서비스와 분리돼 있어서 세션을 다시 시작해도 계속 실행돼요. 예약은 이 서버가 시각을 확인하므로
+              서버가 꺼져 있으면 실행되지 않아요. 서버 출력은 <span className={s.mono}>{a.tmux}</span>로 봐요.
+              {!a.inside && ' 지금 보고 있는 서버는 자동 시작과 별개로 직접 실행한 서버예요.'}
             </p>
           ) : (
             <p className={s.text}>
@@ -195,14 +195,14 @@ export default function SystemPage() {
                 disabled={restart.isPending || restart.isSuccess}
                 onClick={() => restart.mutate()}
               >
-                {restart.isSuccess ? '다시 켜는 중…' : '세션 다시 켜기'}
+                {restart.isSuccess ? '다시 시작하는 중…' : '세션 다시 시작'}
               </button>
               <button type="button" className={s.dangerBtn} onClick={() => setAsking(true)}>
                 자동 시작 끄기…
               </button>
             </div>
           )}
-          {restart.isSuccess && a.inside && <p className={s.note}>이 서버도 다시 떠요. 잠깐 끊겼다가 저절로 다시 연결돼요.</p>}
+          {restart.isSuccess && a.inside && <p className={s.note}>이 서버도 다시 시작돼요. 잠깐 끊겼다가 자동으로 다시 연결돼요.</p>}
           {restart.isError && <p className={s.err}>{errText(restart.error)}</p>}
         </section>
 
@@ -216,14 +216,14 @@ export default function SystemPage() {
               <span>{notify.data ? (notify.data.webhook.set ? `설정됨 · ${notify.data.webhook.masked}` : '없음') : '…'}</span>
             </div>
             <div className={s.row}>
-              <span>보내는 것</span>
+              <span>보낼 알림</span>
               <span>
-                {rules.length}개 중 {rules.filter((r) => r.on).length}개 켬 · <Link to="/inbox">Inbox에서 바꾸기</Link>
+                {rules.length}개 중 {rules.filter((r) => r.on).length}개 활성화 · <Link to="/inbox">Inbox에서 변경</Link>
               </span>
             </div>
             <div className={s.row}>
               <span>승인 요청</span>
-              <span>{d.tunnel.publicUrl ? 'Inbox · Discord (답하기 링크 붙음)' : 'Inbox · Discord (바깥 주소를 적으면 답하기 링크가 붙어요)'}</span>
+              <span>{d.tunnel.publicUrl ? 'Inbox · Discord (답하기 링크 포함)' : 'Inbox · Discord (외부 주소를 입력하면 답하기 링크가 포함돼요)'}</span>
             </div>
           </div>
           <div className={s.actions}>
@@ -242,8 +242,8 @@ export default function SystemPage() {
           보안
         </h2>
         <p className={s.text}>
-          터널이 열려 있으면 그 GitHub 계정만으로 이 데스크톱의 터미널과 파일에 들어올 수 있어요. GitHub 2단계 인증을 켜 두세요. 서버는
-          127.0.0.1에서만 열려 있어서 터널을 거치지 않으면 접속할 수 없고, 적어 둔 바깥 주소가 아닌 곳에서 온 요청은 거절해요.
+          터널이 열려 있으면 그 GitHub 계정만으로 이 데스크톱의 터미널과 파일에 접근할 수 있어요. GitHub 2단계 인증을 꼭 활성화해 주세요. 서버는
+          127.0.0.1에서만 열려 있어서 터널을 거치지 않으면 접속할 수 없고, 등록한 외부 주소가 아닌 곳에서 온 요청은 거부해요.
         </p>
       </section>
 
@@ -271,11 +271,11 @@ export default function SystemPage() {
           labremote-session 서비스를 멈추고 유닛 파일을 지워요.{' '}
           {a.lingerBefore === false
             ? d.tunnel.service
-              ? 'linger는 code tunnel 서비스도 쓰고 있어서 그대로 둬요.'
-              : 'linger는 원래대로(no) 돌려요.'
-            : 'linger는 lab.remote가 켠 게 아니어서 그대로 둬요.'}
+              ? 'linger는 code tunnel 서비스도 사용하고 있어서 그대로 유지해요.'
+              : 'linger는 원래대로(no) 되돌려요.'
+            : 'linger는 lab.remote가 켠 게 아니어서 그대로 유지해요.'}
         </span>
-        <span>학습 실행은 따로 돌기 때문에 멈추지 않아요. {a.inside && '지금 보고 있는 이 서버도 꺼져서 화면이 끊겨요.'} 다시 켜려면 터미널에서 labremote autostart install을 실행해요.</span>
+        <span>학습 실행은 별도로 실행되므로 멈추지 않아요. {a.inside && '지금 보고 있는 이 서버도 꺼져서 화면이 끊겨요.'} 다시 켜려면 터미널에서 labremote autostart install을 실행해요.</span>
       </Dialog>
     </main>
   )
@@ -290,15 +290,15 @@ function RemoteSection({ d }: { d: SystemOverview }) {
   return (
     <section className={s.section} aria-labelledby="sys-remote">
       <h2 id="sys-remote" className={s.h2}>
-        밖에서 접속
+        원격 접속
       </h2>
       <p className={s.text}>
-        터널은 VS Code가 띄워요 — lab.remote는 상태만 읽어요. 한 번만 하면 돼요{t.state === 'up' ? ' (터널은 이미 켜져 있어요)' : ''}.
+        터널은 VS Code가 실행해요 — lab.remote는 상태만 확인해요. 한 번만 설정하면 돼요{t.state === 'up' ? ' (터널은 이미 켜져 있어요)' : ''}.
       </p>
       <pre className={s.pre}>{`code tunnel user login --provider github
 code tunnel service install --accept-server-license-terms
 # 휴대폰이나 다른 PC에서 ${t.url || 'https://vscode.dev/tunnel/<이름>'} 주소를 열고
-# Ports 보기에서 ${d.server.port ?? 8000} 포트를 전달(Forward a Port) → Forwarded Address를 아래에 적어요`}</pre>
+# Ports 보기에서 ${d.server.port ?? 8000} 포트를 전달(Forward a Port) → Forwarded Address를 아래에 입력해요`}</pre>
       <form
         className={s.remoteForm}
         onSubmit={(e) => {
@@ -307,7 +307,7 @@ code tunnel service install --accept-server-license-terms
         }}
       >
         <label htmlFor="sys-remote-url" className={s.label}>
-          바깥 주소
+          외부 주소
         </label>
         <input
           id="sys-remote-url"
@@ -321,7 +321,7 @@ code tunnel service install --accept-server-license-terms
         </button>
       </form>
       <p className={s.note}>
-        적으면 이 주소로 오는 요청을 받고, Discord 알림에 &lsquo;답하기&rsquo; 링크가 붙어요.
+        입력하면 이 주소로 오는 요청을 허용하고, Discord 알림에 &lsquo;답하기&rsquo; 링크가 포함돼요.
         {via && ` 지금 보고 있는 주소: ${window.location.hostname}`}
         {d.tunnel.envHosts.length > 0 && ` 환경 변수로 허용한 주소: ${d.tunnel.envHosts.join(', ')}`}
       </p>

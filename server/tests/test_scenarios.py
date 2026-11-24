@@ -68,7 +68,7 @@ def test_그리고_저장하고_바뀜을_알아챈다(proj):
 
 
 def test_모양이_틀리면_저장하지_않는다(proj):
-    with pytest.raises(scenarios.ScenarioError, match="모양"):
+    with pytest.raises(scenarios.ScenarioError, match="형식"):
         asyncio.run(scenarios.draw("demo", query_fn=fake_answer(proj, "그냥 글")))
     assert scenarios.load("demo")["scenario"] is None
     assert scenarios.status("demo")["state"] == "error"

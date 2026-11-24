@@ -34,7 +34,7 @@ export function gitLine(git: GitSummary, { long = false } = {}): string {
   if (git.state === 'none') return 'git 저장소 아님'
   if (git.state === 'missing') return '폴더가 없어요'
   if (git.state === 'refused') return 'git을 실행하지 않았어요 (.git 설정 때문)'
-  return 'git을 못 읽었어요'
+  return 'git 상태를 읽지 못했어요'
 }
 
 const toneOf = (p: ProjectRow) => (p.agents.ask > 0 ? 'ask' : p.runs.running.length > 0 || p.agents.working > 0 ? 'work' : 'idle')
@@ -134,8 +134,8 @@ export default function ProjectsPage() {
           )}
         </div>
         <div className={s.asideFoot}>
-          등록한 폴더만 읽어요. lab.remote가 쓰는 건 각 프로젝트의 <span className={s.mono}>.labremote/</span>{' '}
-          하나뿐이에요.
+          등록한 폴더만 읽어요. lab.remote가 만드는 건 각 프로젝트의 <span className={s.mono}>.labremote/</span>{' '}
+          폴더뿐이에요.
         </div>
       </aside>
 
@@ -203,7 +203,7 @@ function RegisterDialog({ open, onClose, startNew = false }: { open: boolean; on
   const qc = useQueryClient()
   const [path, setPath] = useState('')
   const [name, setName] = useState('')
-  // 찾아보기 — 홈 폴더 안을 걸어 들어가며 고르기
+  // 찾아보기 — 홈 폴더 안을 걸어 들어가며 선택
   const [browsing, setBrowsing] = useState(startNew)
   const [at, setAt] = useState('~')
   const [hidden, setHidden] = useState(false)
@@ -303,13 +303,13 @@ function RegisterDialog({ open, onClose, startNew = false }: { open: boolean; on
             {dirs.data?.dirs.length === 0 && <span className={s.muted}>하위 폴더가 없어요.</span>}
             {dirs.data?.dirs.map((d) => (
               <div key={d.path} className={s.browserRow}>
-                <button type="button" className={s.browserName} onClick={() => setAt(d.path)} title="들어가기">
+                <button type="button" className={s.browserName} onClick={() => setAt(d.path)} title="열기">
                   📁 {d.name}
                   {d.git && <span className={s.browserTag}>git</span>}
                   {d.registered && <span className={s.browserTag}>등록됨</span>}
                 </button>
                 <button type="button" className={s.browserPick} onClick={() => pick(d.path)}>
-                  고르기
+                  선택
                 </button>
               </div>
             ))}
@@ -349,18 +349,18 @@ function RegisterDialog({ open, onClose, startNew = false }: { open: boolean; on
             </button>
             {dirs.data && (
               <button type="button" className={s.browserPick} onClick={() => pick(dirs.data.path)}>
-                {dirs.data.path} 고르기
+                {dirs.data.path} 선택
               </button>
             )}
           </div>
         </div>
       )}
       <label className={ds.field}>
-        이름 (비우면 폴더 이름으로)
+        이름 (비워 두면 폴더 이름 사용)
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="lora-rank-ablation" />
       </label>
       <span>
-        폴더 안에 <span className={s.mono}>.labremote/</span>를 만들어요. 이 폴더는 자체 .gitignore로 git에서 빠지고, 프로젝트의{' '}
+        폴더 안에 <span className={s.mono}>.labremote/</span>를 만들어요. 이 폴더는 자체 .gitignore로 git에서 제외되고, 프로젝트의{' '}
         <span className={s.mono}>.gitignore</span>는 건드리지 않아요.
       </span>
     </Dialog>

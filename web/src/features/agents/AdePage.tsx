@@ -118,10 +118,10 @@ export default function AdePage() {
         {sideOpen && <Resizer handle={sidePane.resizerProps} label="사이드바 너비 조절" />}
 
         <main className={s.center}>
-          {/* 휴대폰 — 옆 목록 대신 위에서 세션 고르기 */}
+          {/* 휴대폰 — 옆 목록 대신 위에서 세션 선택 */}
           <div className={s.mobileSessions}>
             <select
-              aria-label="세션 고르기"
+              aria-label="세션 선택"
               value={current?.id ?? ''}
               onChange={(e) => {
                 const x = sessions.find((y) => y.id === e.target.value)
@@ -308,7 +308,7 @@ function SessionList({
         {showClosed && closed.data?.length === 0 && <div className={s.muted}>닫은 세션이 없어요.</div>}
       </div>
       <div className={s.panelFoot}>
-        동시 세션 <b>{live}</b> / 4 · 브라우저를 닫아도 데스크톱에서 계속 돌아요.
+        동시 세션 <b>{live}</b> / 4 · 브라우저를 닫아도 데스크톱에서 계속 실행돼요.
       </div>
     </div>
   )
@@ -347,7 +347,7 @@ export function NewSession({
       </div>
       <div className={s.newForm}>
         <label className={s.field}>
-          어디서 할까요
+          작업 위치
           <select className={s.reason} value={where} onChange={(e) => setWhere(e.target.value)}>
             {options.length === 0 && <option value=".">프로젝트 루트</option>}
             {options.map((w) => (
@@ -365,7 +365,7 @@ export function NewSession({
           </label>
         )}
         <p className={s.muted}>
-          작업마다 worktree 하나씩 두면 세션끼리 파일이 섞이지 않아요. Mode · Model · Effort는 이 세션에만 적용되고 ~/.claude를 바꾸지
+          작업마다 worktree를 따로 쓰면 세션끼리 파일이 섞이지 않아요. Mode · Model · Effort는 이 세션에만 적용되고 ~/.claude를 변경하지
           않아요.
         </p>
       </div>
@@ -379,7 +379,7 @@ export function NewSession({
         settings={settings}
         onSettings={(next) => setSettings((old) => ({ ...old, ...next }))}
         busy={create.isPending}
-        placeholder="첫 요청을 적으면 세션이 시작돼요"
+        placeholder="첫 요청을 입력하면 세션이 시작돼요"
         initialText={draft}
         onSend={(text) =>
           create.mutate(
@@ -436,7 +436,7 @@ function Explorer({ project, tree, branch, onOpen }: { project: string; tree: st
         ))}
       </ul>
       <div className={s.muted}>
-        바뀐 파일을 누르면 오른쪽 변경 탭에 diff가 열려요. 직접 고치려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열어요</Link>.
+        바뀐 파일을 누르면 오른쪽 변경 탭에 diff가 열려요. 직접 수정하려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열어요</Link>.
       </div>
     </div>
   )

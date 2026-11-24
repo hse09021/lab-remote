@@ -65,7 +65,7 @@ def announce(conn, record: dict, *, poster=None) -> dict | None:
                            body=f"종료 코드 {record.get('exitCode')} · {record.get('command')}", **common)
     if state == "cut":
         return alerts.post(conn, "run", "fail", f"{title} 중간에 끊김", act=True,
-                           body=f"{record.get('reason')}. 자동으로 다시 돌리지 않아요.", **common)
+                           body=f"{record.get('reason')}. 자동으로 다시 실행하지 않아요.", **common)
     if state == "stopped":
         # 사람이 직접 멈춘 것 — 기록만, 보내지 않는다
         return alerts.post(conn, "run", None, f"{title} 중지함", body=record.get("command") or "", read=True, **common)
@@ -119,8 +119,8 @@ def check_resources(conn, *, probe=None, poster=None) -> None:
     raw = (probe or gpu_mod.probe)()
     driver = raw.get("driver") or {}
     if driver.get("mismatch"):
-        _sys_once(conn, "driver", "GPU 드라이버가 맞지 않아요", "커널 · 유저랜드",
-                  "재부팅이 필요해요. 이대로면 새 학습이 실패해요.", poster=poster)
+        _sys_once(conn, "driver", "GPU 드라이버 버전이 맞지 않아요", "커널 · 유저랜드",
+                  "재부팅이 필요해요. 이대로 두면 새 학습이 실패해요.", poster=poster)
     for d in raw.get("devices") or []:
         used, total = d.get("memUsedMb"), d.get("memTotalMb")
         if isinstance(used, (int, float)) and isinstance(total, (int, float)) and total:
@@ -128,7 +128,7 @@ def check_resources(conn, *, probe=None, poster=None) -> None:
             if pct >= VRAM_WARN_PCT:
                 _sys_once(conn, f"vram:{d.get('index', 0)}", "VRAM이 거의 찼어요",
                           f"{d.get('name', 'GPU')} · {used / 1024:.1f}/{total / 1024:.0f}G",
-                          "새 실행은 메모리가 모자랄 수 있어요.", poster=poster)
+                          "새 실행은 메모리가 부족할 수 있어요.", poster=poster)
     seen = set()
     for root in registry.load():
         try:
@@ -142,7 +142,7 @@ def check_resources(conn, *, probe=None, poster=None) -> None:
         free_gb = usage.free / 1024**3
         if free_gb < DISK_WARN_GB:
             _sys_once(conn, f"disk:{dev}", "디스크 여유가 적어요", f"{projects.display_path(root)} · {free_gb:.1f}G 여유",
-                      "체크포인트를 못 남길 수 있어요.", poster=poster)
+                      "체크포인트를 저장하지 못할 수 있어요.", poster=poster)
 
 
 def _pr_seen_path() -> str:

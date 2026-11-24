@@ -212,7 +212,7 @@ def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True)
             env=safe_env(),
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        raise GitError(f"git을 띄우지 못했어요: {exc}") from None
+        raise GitError(f"git을 실행하지 못했어요: {exc}") from None
     if check and done.returncode != 0:
         raise GitError(
             f"git {' '.join(args[:2])}가 실패했어요 (종료 코드 {done.returncode}): "

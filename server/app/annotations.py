@@ -50,16 +50,16 @@ def _clean(pid: str, raw: dict) -> dict:
         raise AnnotationError("하이라이트나 주석만 저장해요.")
     text = str(raw.get("text") or "")
     if not text.strip() or len(text) > MAX_TEXT:
-        raise AnnotationError("글이 비었거나 너무 길어요.")
+        raise AnnotationError("내용이 비어 있거나 너무 길어요.")
     boxes = raw.get("boxes")
     if boxes is not None:
         if not isinstance(boxes, list) or len(boxes) > MAX_BOXES:
-            raise AnnotationError("자리 정보가 올바르지 않아요.")
+            raise AnnotationError("위치 정보가 올바르지 않아요.")
         boxes = [[float(v) for v in b] for b in boxes if isinstance(b, list) and len(b) == 4]
     anchor = raw.get("anchor")
     if anchor is not None:
         if not isinstance(anchor, dict):
-            raise AnnotationError("자리 정보가 올바르지 않아요.")
+            raise AnnotationError("위치 정보가 올바르지 않아요.")
         anchor = {"blockId": str(anchor.get("blockId") or "")[:200], "start": int(anchor.get("start") or 0), "end": int(anchor.get("end") or 0)}
     return {
         "paperId": pid,
@@ -89,7 +89,7 @@ def add(pid: str, raw: dict) -> dict:
 
 def update(pid: str, aid: str, text: str) -> dict:
     if not str(text or "").strip() or len(text) > MAX_TEXT:
-        raise AnnotationError("글이 비었거나 너무 길어요.")
+        raise AnnotationError("내용이 비어 있거나 너무 길어요.")
     with _lock:
         data = _load()
         for r in data.get(pid) or []:

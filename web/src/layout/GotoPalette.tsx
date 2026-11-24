@@ -98,8 +98,8 @@ export function GotoPalette({ open, onClose }: { open: boolean; onClose: () => v
           className={s.input}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="화면 · 프로젝트 · 논문 · 세션 찾기"
-          aria-label="찾기"
+          placeholder="화면 · 프로젝트 · 논문 · 세션 검색"
+          aria-label="검색"
           onKeyDown={(e) => {
             if (e.key === 'Escape') onClose()
             else if (e.key === 'ArrowDown') {
@@ -131,7 +131,7 @@ export function GotoPalette({ open, onClose }: { open: boolean; onClose: () => v
           ))}
           {shown.length === 0 && <li className={s.empty}>맞는 결과가 없어요.</li>}
         </ul>
-        <div className={s.foot}>↑↓ 고르기 · Enter 가기 · Esc 닫기</div>
+        <div className={s.foot}>↑↓ 선택 · Enter 이동 · Esc 닫기</div>
       </div>
     </div>
   )

@@ -154,7 +154,7 @@ def driver_state() -> dict:
     reason = ""
     if broken:
         reason = next(
-            (line.strip() for line in stderr.splitlines() if line.strip()), "드라이버가 깨졌어요"
+            (line.strip() for line in stderr.splitlines() if line.strip()), "드라이버에 문제가 있어요"
         )
     elif mismatch:
         reason = f"커널 모듈 {kernel} vs 유저랜드 {userland}"

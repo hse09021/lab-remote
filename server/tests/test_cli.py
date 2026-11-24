@@ -152,7 +152,7 @@ def test_autostart_install_은_묻고_아니면_안_바꾼다(user_config, monke
     monkeypatch.setattr("builtins.input", lambda q: "n")
     assert run(["autostart", "install"]) == 1
     out = capsys.readouterr().out
-    assert "linger 켜기" in out and "아무것도 바꾸지 않았어요" in out
+    assert "linger 활성화" in out and "아무것도 바꾸지 않았어요" in out
     assert not os.path.exists(user_config.unit_path())
 
 
@@ -236,7 +236,7 @@ def test_remote_set_show_clear(monkeypatch, capsys):
     assert run(["remote", "set", "https://abc-8000.example.ms/"]) == 0
     assert run(["remote"]) == 0
     out = capsys.readouterr().out
-    assert "https://abc-8000.example.ms" in out and "로그인 안 함" in out
+    assert "https://abc-8000.example.ms" in out and "로그인 안 됨" in out
     assert run(["remote", "clear"]) == 0
 
 

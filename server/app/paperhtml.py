@@ -97,7 +97,7 @@ def _get(url: str, *, limit: int, timeout: int = 60) -> tuple[bytes, str]:
             return b"", url
         raise papers.PapersError(f"arXiv가 거절했어요 ({exc.code}).") from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise papers.PapersError(f"arXiv에 닿지 못했어요: {getattr(exc, 'reason', exc)}") from None
+        raise papers.PapersError(f"arXiv에 연결하지 못했어요: {getattr(exc, 'reason', exc)}") from None
     if len(data) > limit:
         raise papers.PapersError("파일이 너무 커요.")
     return data, final

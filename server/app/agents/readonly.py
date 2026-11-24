@@ -70,5 +70,5 @@ async def ask(cwd: str, prompt: str, schema: dict, *, model: str = "", max_turns
         except json.JSONDecodeError:
             data = None
     if not isinstance(data, dict):
-        raise ReadOnlyError("정해진 모양(JSON)으로 답을 받지 못했어요.")
+        raise ReadOnlyError("지정한 형식(JSON)으로 답을 받지 못했어요.")
     return data, used

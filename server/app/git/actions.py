@@ -83,7 +83,7 @@ def create_pr(base: str, title: str, body: str = "", *, runner=None) -> dict:
         raise ActionError("PR 제목을 적어 주세요.")
     gh = shutil.which("gh")
     if not gh and runner is None:
-        raise ActionError("gh(GitHub CLI)가 없어요 — 깔고 gh auth login 하면 PR을 열 수 있어요.")
+        raise ActionError("gh(GitHub CLI)가 없어요 — 설치하고 gh auth login으로 로그인하면 PR을 열 수 있어요.")
     info = view.status(base)
     if info.get("state") != "ok":
         raise ActionError(info.get("reason") or "git 저장소가 아니에요.")
@@ -101,7 +101,7 @@ def create_pr(base: str, title: str, body: str = "", *, runner=None) -> dict:
     try:
         done = run(cmd)
     except (OSError, subprocess.SubprocessError) as exc:
-        raise ActionError(f"gh를 부르지 못했어요: {exc}") from None
+        raise ActionError(f"gh를 실행하지 못했어요: {exc}") from None
     if done.returncode != 0:
         msg = (done.stderr or done.stdout or "").strip().splitlines()
         raise ActionError(f"PR을 열지 못했어요: {(msg[-1] if msg else '알 수 없는 오류')[:300]}")

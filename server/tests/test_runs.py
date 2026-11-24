@@ -77,7 +77,7 @@ def test_재부팅이면_그렇게_적는다(proj, project, monkeypatch):
     subprocess.run([runs.tmux_bin(), "-L", sock, "kill-server"], capture_output=True)
     monkeypatch.setattr(runs, "boot_id", lambda: "다른-부팅")
     got = wait_state(proj, "EXP-001", {"cut"})
-    assert "다시 켜지면서" in got["reason"]
+    assert "재부팅되면서" in got["reason"]
 
 
 def test_거절(proj, project):

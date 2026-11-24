@@ -134,7 +134,7 @@ def check_webhook(url: str) -> str:
         or parts.password
         or any(c.isspace() for c in url)
     ):
-        raise ValueError("Discord 웹훅 주소가 아니에요 (https://discord.com/api/webhooks/… 꼴)")
+        raise ValueError("Discord 웹훅 주소가 아니에요 (https://discord.com/api/webhooks/… 형식)")
     return url
 
 

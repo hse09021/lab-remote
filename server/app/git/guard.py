@@ -174,7 +174,7 @@ def noted_config(entries: dict) -> list[str]:
     out = []
     for key, value in sorted(entries.items()):
         if key in NOTED_KEYS or any(p.match(key) for p in NOTED_PATTERNS):
-            out.append(f".git/config · {key} — lab.remote의 git에서는 꺼져요")
+            out.append(f".git/config · {key} — lab.remote가 실행하는 git에서는 비활성화돼요")
     return out
 
 
@@ -195,7 +195,7 @@ def bad_hooks(root: str) -> list[str]:
         except OSError:
             continue
         if stat.S_ISREG(mode) and mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH):
-            out.append(f".git/hooks/{name} — lab.remote의 git에서는 안 돌아요")
+            out.append(f".git/hooks/{name} — lab.remote가 실행하는 git에서는 실행되지 않아요")
     return out
 
 
@@ -250,7 +250,7 @@ def check(root: str, *, git: str = "git", config_args=(), env=None) -> dict:
 def describe(report: dict) -> str:
     if report.get("ok"):
         return ".git이 깨끗해요."
-    lines = [".git에 코드를 실행하게 하는 설정이 들어 있어요 — git을 돌리지 않았어요:"]
+    lines = [".git에 코드를 실행하게 하는 설정이 들어 있어요 — git을 실행하지 않았어요:"]
     lines += [f"  · {p}" for p in report.get("problems") or []]
-    lines.append("에이전트 세션이 쓴 코드가 심었을 수 있어요. 무엇이 들어갔는지 먼저 확인해 주세요.")
+    lines.append("에이전트 세션이 작성한 코드가 넣었을 수 있어요. 무엇이 들어갔는지 먼저 확인해 주세요.")
     return "\n".join(lines)

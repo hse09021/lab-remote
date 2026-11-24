@@ -75,5 +75,5 @@ def search(base: str, q: str, *, case: bool = False) -> dict:
     hits = _git(base, q, case)
     via = "git grep"
     if hits is None:
-        hits, via = _walk(base, q, case), "파일 걷기"
+        hits, via = _walk(base, q, case), "파일 직접 탐색"
     return {"results": hits, "truncated": len(hits) >= MAX_RESULTS, "via": via}

@@ -151,17 +151,17 @@ export function SectionSparkles({
 
   return (
     <>
-      {titleSpot && spark('title', '논문 전체 설명받기', titleSpot.x, titleSpot.y)}
+      {titleSpot && spark('title', '논문 전체 설명 보기', titleSpot.x, titleSpot.y)}
       {sections.map((sec) =>
         spark(
           sec.id,
-          `${sec.n ? sec.n + ' ' : ''}${sec.title} 설명받기`,
+          `${sec.n ? sec.n + ' ' : ''}${sec.title} 설명 보기`,
           sec.xEnd + 8,
           sec.y + 6,
         ),
       )}
       {spots.map((sp) =>
-        spark(sp.key, `${sp.label} 설명받기`, sp.x, sp.y, sp.kind === 'eq' ? '수식 설명' : sp.kind === 'table' ? '표 설명' : '그림 설명'),
+        spark(sp.key, `${sp.label} 설명 보기`, sp.x, sp.y, sp.kind === 'eq' ? '수식 설명' : sp.kind === 'table' ? '표 설명' : '그림 설명'),
       )}
     </>
   )
@@ -199,8 +199,8 @@ export function ExplainZones({
               className={s.zoneBtn}
             >
               {z.kind === 'fig'
-                ? '이 그림(figure) 풀어서 설명받기'
-                : '이 수식 풀어서 설명받기'}
+                ? '이 그림(figure) 자세히 설명 보기'
+                : '이 수식 자세히 설명 보기'}
             </button>
             <button
               type="button"

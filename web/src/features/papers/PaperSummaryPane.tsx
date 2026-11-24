@@ -94,7 +94,7 @@ export function PaperSummaryPane({
           />
           <div className={s.saveRow}>
             <span data-dirty={dirty} className={s.mdStatus}>
-              {dirty ? '수정됨 · 아직 저장하지 않았어요' : 'vault 파일과 같아요'}
+              {dirty ? '수정됨 · 아직 저장하지 않았어요' : 'vault 파일과 동일해요'}
             </span>
             <Button variant="primary" size="sm" disabled={!dirty} onClick={onSave}>
               저장

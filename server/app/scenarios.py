@@ -188,7 +188,7 @@ async def _ask_agent(root: str, model: str, *, query_fn=None) -> tuple[dict, lis
         except json.JSONDecodeError:
             data = None
     if not isinstance(data, dict) or not isinstance(data.get("steps"), list):
-        raise ScenarioError("정해진 모양(JSON)으로 답을 받지 못했어요.")
+        raise ScenarioError("지정한 형식(JSON)으로 답을 받지 못했어요.")
     return data, read, used_model
 
 

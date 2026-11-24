@@ -40,7 +40,7 @@ export function ChatPanel({ session, actions, via = 'ADE' }: { session: AgentSes
         <span className={s.chatAgent}>Claude Code</span>
         <span className={s.conn} data-on={session.connected}>
           <span aria-hidden="true" className={s.connDot} />
-          {session.connected ? '연결됨' : '쉬는 중 · 보내면 이어 가요'}
+          {session.connected ? '연결됨' : '대기 중 · 메시지를 보내면 다시 연결돼요'}
         </span>
         <span className={s.spacer} />
         {session.busy || session.state === 'ask' ? (
@@ -54,7 +54,7 @@ export function ChatPanel({ session, actions, via = 'ADE' }: { session: AgentSes
           className={s.chatIconBtn}
           aria-label="세션 닫기"
           disabled={close.isPending || session.busy}
-          title={session.busy ? '작업 중에는 닫을 수 없어요 — 먼저 멈춰 주세요' : '세션 닫기 — 목록에서 빼요 (기록은 남고, 메시지를 보내면 다시 열려요)'}
+          title={session.busy ? '작업 중에는 닫을 수 없어요 — 먼저 중지해 주세요' : '세션 닫기 — 목록에서 숨겨요 (기록은 남고, 메시지를 보내면 다시 열려요)'}
           onClick={() => close.mutate({ sid: session.id, closed: true })}
         >
           <CloseIcon />
@@ -127,7 +127,7 @@ export function ChatPanel({ session, actions, via = 'ADE' }: { session: AgentSes
         onSettings={(next) => configure.mutate({ sid: session.id, ...next })}
         onSend={(text) => sendMsg.mutate({ sid: session.id, text })}
         busy={session.busy || sendMsg.isPending}
-        placeholder={session.state === 'ask' ? '먼저 승인 요청에 답해 주세요. 답하면 이어서 해요' : undefined}
+        placeholder={session.state === 'ask' ? '먼저 승인 요청에 답해 주세요. 답하면 이어서 진행해요' : undefined}
         onAttachFile={(file) =>
           upload<{ path: string; rel: string }>(
             `/agents/attachments?project=${encodeURIComponent(session.project)}&name=${encodeURIComponent(file.name)}`,
@@ -203,7 +203,7 @@ export function EventList({ events }: { events: AgentEvent[] }) {
           case 'result':
             return (
               <div key={i} className={s.resultLine} data-ok={e.ok}>
-                {e.ok ? '끝났어요' : '오류로 끝났어요'} · {(e.durationMs / 1000).toFixed(1)}초 · {e.turns}턴
+                {e.ok ? '완료했어요' : '오류로 종료됐어요'} · {(e.durationMs / 1000).toFixed(1)}초 · {e.turns}턴
                 {e.usage ? ` · 토큰 입력 ${tokens(e.usage)} · 출력 ${e.usage.output_tokens ?? 0}` : ''}
                 {e.error ? ` · ${e.error}` : ''}
               </div>

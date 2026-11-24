@@ -72,7 +72,7 @@ export default function InboxPage() {
           <span className={s.box} data-on={unread}>
             {unread ? '✓' : ''}
           </span>
-          안 읽은 것만
+          읽지 않은 알림만
         </button>
         <button type="button" className={s.readAll} disabled={markRead.isPending} onClick={() => markRead.mutate(null)}>
           모두 읽음 표시
@@ -146,7 +146,7 @@ function Item({ it, pending, onRead }: { it: InboxItem; pending?: PendingApprova
         {it.body && <p className={s.text}>{it.body}</p>}
         <div className={s.itemActions}>
           {a.primary &&
-            // GitHub 같은 바깥 주소는 새 탭으로
+            // GitHub 같은 외부 주소는 새 탭으로
             (/^https?:\/\//.test(a.primary[0]) ? (
               <a href={a.primary[0]} target="_blank" rel="noreferrer" className={s.primary} data-strong={a.primary[2]} onClick={onRead}>
                 {a.primary[1]}
@@ -198,8 +198,8 @@ function DiscordPanel() {
           {w.set ? w.masked : '아직 연결하지 않았어요'}
         </div>
         <p className={s.note}>
-          웹훅 주소는 lab.remote 데이터 폴더에만 저장해요 (나만 읽기{w.private === false ? ' — ⚠ 지금 권한이 넓어요' : ''}). repo에는
-          올라가지 않아요.
+          웹훅 주소는 lab.remote 데이터 폴더에만 저장해요 (소유자만 읽기 가능{w.private === false ? ' — ⚠ 지금은 권한이 너무 넓어요' : ''}). repo에는
+          포함되지 않아요.
           {w.last && ` 마지막 전송 · ${whenShort(new Date(w.last.at).getTime() / 1000)} ${w.last.state === 'sent' ? '성공' : '실패'}`}
         </p>
         <div className={s.row}>
@@ -207,7 +207,7 @@ function DiscordPanel() {
             {test.isPending ? '보내는 중…' : '테스트 보내기'}
           </button>
           <button type="button" className={s.btn} onClick={() => setEditing(true)}>
-            {w.set ? '주소 바꾸기' : '주소 넣기'}
+            {w.set ? '주소 변경' : '주소 입력'}
           </button>
           {w.set && (
             <button type="button" className={s.btnDanger} onClick={() => setConfirmClear(true)}>
@@ -249,10 +249,10 @@ function DiscordPanel() {
           <b>{d.quiet.on ? `${d.quiet.start} – ${d.quiet.end}` : '꺼짐'}</b>
           {d.quiet.on && ' · 이때는 답 필요와 실패만 보내요.'}{' '}
           <button type="button" className={s.link} onClick={() => setQuietOpen(true)}>
-            바꾸기
+            변경
           </button>
         </div>
-        <p className={s.note}>PR 리뷰 알림은 gh(GitHub CLI)가 있을 때 10분마다 GitHub에서 읽어 와요. 머지 알림은 lab.remote에서 main에 합칠 때 와요.</p>
+        <p className={s.note}>PR 리뷰 알림은 gh(GitHub CLI)가 있을 때 10분마다 GitHub에서 가져와요. 머지 알림은 lab.remote에서 main에 머지할 때 와요.</p>
       </section>
 
       <WebhookDialog open={editing} onClose={() => setEditing(false)} />
@@ -308,7 +308,7 @@ function WebhookDialog({ open, onClose }: { open: boolean; onClose: () => void }
           required
         />
       </label>
-      <span>저장하면 데이터 폴더의 discord.json에 권한 600으로 저장해요. 화면과 로그에는 가린 주소만 보여요.</span>
+      <span>저장하면 데이터 폴더의 discord.json에 권한 600으로 저장해요. 화면과 로그에는 일부를 가린 주소만 표시돼요.</span>
     </Dialog>
   )
 }

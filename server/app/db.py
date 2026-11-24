@@ -150,7 +150,7 @@ def version(conn: sqlite3.Connection) -> int:
     try:
         return int(row["value"])
     except (TypeError, ValueError):
-        raise DbError(f"스키마 판을 읽을 수 없어요: {row['value']!r}") from None
+        raise DbError(f"스키마 버전을 읽을 수 없어요: {row['value']!r}") from None
 
 
 def migrate(conn: sqlite3.Connection) -> dict:
@@ -162,15 +162,15 @@ def migrate(conn: sqlite3.Connection) -> dict:
     before = version(conn)
     if before > SCHEMA_VERSION:
         raise DbError(
-            f"DB가 이 코드보다 새로워요 (DB 판 {before}, 코드 판 {SCHEMA_VERSION}). "
-            "코드를 올리거나 데이터를 백업하고 지워 주세요: " + path()
+            f"DB가 이 코드보다 새로워요 (DB 버전 {before}, 코드 버전 {SCHEMA_VERSION}). "
+            "코드를 업데이트하거나 데이터를 백업한 뒤 지워 주세요: " + path()
         )
     if before == SCHEMA_VERSION:
         return {"from": before, "to": before, "changed": False}
     if 0 < before < V3_BASE:
         raise DbError(
-            f"v1의 DB예요 (판 {before}). v3는 v1 표를 옮기지 않아요 — "
-            "필요하면 백업해 두고 이 파일을 치운 뒤 다시 띄워 주세요: " + path()
+            f"v1의 DB예요 (버전 {before}). v3는 v1 테이블을 옮기지 않아요 — "
+            "필요하면 백업한 뒤 이 파일을 다른 곳으로 옮기고 서버를 다시 실행해 주세요: " + path()
         )
 
     if before == 0:
@@ -181,7 +181,7 @@ def migrate(conn: sqlite3.Connection) -> dict:
         while after < SCHEMA_VERSION:
             step = MIGRATIONS.get(after)
             if step is None:  # pragma: no cover - 판을 올릴 때 같이 넣는다
-                raise DbError(f"판 {after} -> {after + 1} 이행 SQL이 없어요")
+                raise DbError(f"버전 {after} -> {after + 1} 마이그레이션 SQL이 없어요")
             conn.executescript(step)
             after += 1
 

@@ -276,7 +276,7 @@ export function PdfView({
     // 그림 — 화면에 그려진 쪽(canvas)에서 그 영역만 잘라 이미지로
     const canvas = pageEls.current.get(z.page)?.querySelector('canvas')
     if (!canvas || !canvas.width) {
-      onToast('아직 화면에 그리지 않은 쪽이에요 — 해당 쪽까지 스크롤한 뒤 다시 눌러 주세요')
+      onToast('아직 불러오지 않은 쪽이에요 — 해당 쪽까지 스크롤한 뒤 다시 눌러 주세요')
       return
     }
     const k = canvas.width / reader.pageSize.width
@@ -300,7 +300,7 @@ export function PdfView({
       a.download = `${reader.title.slice(0, 40)} p${z.page}.png`
       a.click()
       setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-      onToast('클립보드 대신 PNG 파일로 내려받았어요')
+      onToast('클립보드 대신 PNG 파일로 다운로드했어요')
     }
   }
 
@@ -432,11 +432,11 @@ export function PdfView({
             <span aria-hidden="true">+</span>
           </IconButton>
           <button type="button" onClick={fitWidth} className={s.fit}>
-            폭 맞춤
+            너비 맞춤
           </button>
           <span className={s.hint}>
             {reader.pdfUrl.endsWith('.pdf') ? decodeURIComponent(reader.pdfUrl.split('/').pop() ?? '') : `${reader.title}.pdf`} ·{' '}
-            {reader.highlights.length > 0 ? '하이라이트를 누르면 메모가 보여요' : `${reader.pageCount}쪽 · 글자를 고르면 메뉴가 떠요`}
+            {reader.highlights.length > 0 ? '하이라이트를 누르면 메모가 보여요' : `${reader.pageCount}쪽 · 텍스트를 선택하면 메뉴가 나타나요`}
           </span>
         </div>
 

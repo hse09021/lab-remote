@@ -140,7 +140,7 @@ export function SearchPanel({ project, tree, onOpen }: { project: string; tree: 
       </form>
       <div className={s.muted}>파일 내용을 검색해요 · {got.data?.via ?? 'git grep'} · 두 글자부터</div>
       {got.isFetching && <div className={s.muted}>찾는 중이에요…</div>}
-      {got.data && got.data.results.length === 0 && <div className={s.muted}>찾은 게 없어요.</div>}
+      {got.data && got.data.results.length === 0 && <div className={s.muted}>검색 결과가 없어요.</div>}
       {[...groups.entries()].map(([path, hits]) => (
         <div key={path} className={s.hitGroup}>
           <button type="button" className={s.hitFile} onClick={() => onOpen(path)}>
@@ -216,13 +216,13 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         )}
         {!isMain && (
           <button type="button" className={s.ghostBtn} onClick={() => setAsking(true)}>
-            main에 합치기…
+            main에 머지…
           </button>
         )}
       </div>
       {commit.isError && <div className={s.errText}>{errText(commit.error)}</div>}
       {commit.data && <div className={s.okText}>커밋했어요 · {commit.data.sha}</div>}
-      {merge.data && <div className={s.okText}>{merge.data.main}에 합쳤어요 · {merge.data.sha}</div>}
+      {merge.data && <div className={s.okText}>{merge.data.main}에 머지했어요 · {merge.data.sha}</div>}
       {pr.data && (
         <div className={s.okText}>
           PR을 열었어요 ·{' '}
@@ -267,8 +267,8 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
       </Dialog>
       <Dialog
         open={asking}
-        title={`${st.branch} 브랜치를 main에 합칠까요?`}
-        confirmLabel="합치기"
+        title={`${st.branch} 브랜치를 main에 머지할까요?`}
+        confirmLabel="머지"
         busy={merge.isPending}
         error={errText(merge.error) || undefined}
         onClose={() => {
@@ -278,7 +278,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         onConfirm={() => merge.mutate(st.branch, { onSuccess: () => setAsking(false) })}
       >
         <span>
-          main worktree에서 <code>git merge --no-ff {st.branch}</code> 명령을 실행해요. main 쪽에 커밋 안 한 변경이 있으면 합치지 않고, 충돌이 나면 바로
+          main worktree에서 <code>git merge --no-ff {st.branch}</code> 명령을 실행해요. main 쪽에 커밋 안 한 변경이 있으면 머지하지 않고, 충돌이 나면 바로
           되돌려요. push는 하지 않아요.
         </span>
       </Dialog>
@@ -320,7 +320,7 @@ export function RunPanel({
       <div className={s.panelHead}>
         <span className={s.panelTitle}>실행</span>
       </div>
-      <div className={s.muted}>명령 한 줄로 돌려요 · 브라우저를 닫아도 계속 돌아요</div>
+      <div className={s.muted}>명령 한 줄을 실행해요 · 브라우저를 닫아도 계속 실행돼요</div>
       <label className={s.field}>
         명령
         <input className={s.input} list="ide-commands" value={command} onChange={(e) => setCommand(e.target.value)} placeholder="python src/train.py" />
@@ -341,7 +341,7 @@ export function RunPanel({
       <details className={s.details}>
         <summary>실제 실행 명령 보기</summary>
         <pre className={s.code}>{shown}</pre>
-        <span className={s.muted}>tmux 안에서 돌고 로그와 종료 코드는 .labremote/runs/에 남아요. 지표 파일은 설정에 적은 규칙으로 찾아요.</span>
+        <span className={s.muted}>tmux 안에서 실행되고 로그와 종료 코드는 .labremote/runs/에 남아요. 지표 파일은 설정에 적은 규칙으로 찾아요.</span>
       </details>
       <div className={s.row}>
         <button
@@ -353,7 +353,7 @@ export function RunPanel({
           지금 실행
         </button>
         <button type="button" className={s.ghostBtn} disabled={!command.trim()} onClick={() => setScheduling(true)}>
-          시간 정해서 실행…
+          예약 실행…
         </button>
       </div>
       {start.isError && <div className={s.errText}>{errText(start.error)}</div>}
@@ -371,7 +371,7 @@ export function RunPanel({
           <span className={s.muted}>{duration(r.durationSec)}</span>
           <span className={s.spacer} />
           <button type="button" className={s.linkBtn} onClick={() => onAttach(r.id)}>
-            터미널에 붙기
+            터미널에서 열기
           </button>
           <button type="button" className={s.linkBtn} disabled={stop.isPending} onClick={() => stop.mutate({ project, id: r.id, force: false })}>
             중지

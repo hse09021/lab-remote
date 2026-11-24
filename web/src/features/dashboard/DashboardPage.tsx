@@ -103,7 +103,7 @@ function Overview({ view, onView }: { view: 'overview' | 'agents' | 'schedule'; 
                   <span aria-hidden="true" className={s.laneDot} data-tone="run" />
                   <h2 className={s.h2}>학습 실행</h2>
                   <span className={s.count}>{dash.data.runs.running.length}</span>
-                  <span className={s.laneHint}>실행 중 · 오늘 끝난 것</span>
+                  <span className={s.laneHint}>실행 중 · 오늘 종료</span>
                 </div>
                 {dash.data.runs.running.length + dash.data.runs.finishedToday.length === 0 && (
                   <div className={s.empty}>오늘은 실행이 없어요. Projects › 세션 · 실행에서 시작해요.</div>
@@ -180,7 +180,7 @@ function CutBanner({ runs }: { runs: Run[] }) {
     <div role="status" className={s.banner}>
       <span className={s.bannerTitle}>중간에 끊긴 실행 {runs.length}</span>
       <span className={s.bannerText}>
-        {r.project} · {r.name || r.id} — {at} {r.reason}. 자동으로 다시 돌리지 않아요.
+        {r.project} · {r.name || r.id} — {at} {r.reason}. 자동으로 다시 실행하지 않아요.
       </span>
       <Link to={runHref(r, `&rerun=${encodeURIComponent(r.id)}`)} className={s.bannerBtn}>
         이어서 실행…
@@ -216,7 +216,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
     {
       label: '답이 필요해요',
       value: String(lanes.ask.length),
-      sub: oldest ? `가장 오래된 것 ${whenShort(oldest.createdAt)}` : '기다리는 승인이 없어요',
+      sub: oldest ? `가장 오래된 요청 ${whenShort(oldest.createdAt)}` : '기다리는 승인이 없어요',
       tone: lanes.ask.length ? 'attention' : 'default',
     },
     run
@@ -240,7 +240,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
           sub: summarizePrs(git.prs.items),
           tone: 'default',
         }
-      : { label: '열린 PR', value: '—', sub: git ? 'gh가 없어서 못 읽어요' : '…', tone: 'muted' },
+      : { label: '열린 PR', value: '—', sub: git ? 'gh가 없어 불러올 수 없어요' : '…', tone: 'muted' },
     git
       ? {
           label: '이번 주 머지',
@@ -341,7 +341,7 @@ function Resources({ self }: { self: DashboardPayload['self'] }) {
         </>
       )}
       {vramPct !== null && vramPct >= 80 && (
-        <div className={s.warn}>VRAM이 거의 찼어요 — 새 실행은 메모리가 모자랄 수 있어요</div>
+        <div className={s.warn}>VRAM이 거의 찼어요 — 새 실행은 메모리가 부족할 수 있어요</div>
       )}
       <div className={s.selfLine}>
         lab.remote 서버 자체: CPU {self.cpuPct ?? '…'}% · RAM {self.rssMb ?? '?'}MB · GPU 0
@@ -370,7 +370,7 @@ function GitCards({ feed, failed }: { feed?: GitFeed; failed?: boolean }) {
             </a>
           )}
         </h2>
-        {!feed && <div className={s.muted}>{failed ? 'git 기록을 못 읽었어요.' : '불러오는 중이에요…'}</div>}
+        {!feed && <div className={s.muted}>{failed ? 'git 기록을 불러오지 못했어요.' : '불러오는 중이에요…'}</div>}
         {feed && !feed.prs.available && <div className={s.muted}>{feed.prs.reason}</div>}
         {feed?.prs.available && feed.prs.items.length === 0 && <div className={s.muted}>열린 PR이 없어요.</div>}
         {feed?.prs.items.map((pr) => (
@@ -393,7 +393,7 @@ function GitCards({ feed, failed }: { feed?: GitFeed; failed?: boolean }) {
         <h2 className={s.h2}>
           최근 머지 {feed && <span className={s.muted}>이번 주 {feed.merges.week} · 오늘 {feed.merges.today}</span>}
         </h2>
-        {feed && feed.merges.items.length === 0 && <div className={s.muted}>이번 주에 main에 합친 게 없어요.</div>}
+        {feed && feed.merges.items.length === 0 && <div className={s.muted}>이번 주에는 main에 머지한 내역이 없어요.</div>}
         {feed?.merges.items.map((m) => (
           <div key={`${m.project}${m.at}${m.title}`} className={s.gitRow}>
             <span className={s.gitTitle}>{m.branch || m.title}</span>

@@ -184,7 +184,7 @@ export default function PaperGraph() {
     ...(categories.length === 3
       ? [{ label: `논문 · ${categories[2]}`, color: PAPER_COLORS[2] }]
       : categories.length > 3
-        ? [{ label: `논문 · 그 밖 ${categories.length - 2}개 분류`, color: PAPER_COLORS[2] }]
+        ? [{ label: `논문 · 기타 ${categories.length - 2}개 분류`, color: PAPER_COLORS[2] }]
         : []),
   ]
 
@@ -224,7 +224,7 @@ export default function PaperGraph() {
                   </button>
                 </li>
               ))}
-              {matches.length === 0 && <li className={s.findNone}>맞는 노드가 없어요</li>}
+              {matches.length === 0 && <li className={s.findNone}>일치하는 노드가 없어요</li>}
             </ul>
           )}
         </div>
@@ -268,7 +268,7 @@ export default function PaperGraph() {
           </span>
         </div>
 
-        <p className={s.hint}>인용은 참고문헌에서 읽고, 메모 연결은 vault의 [[링크]]를 따라가요. 노드가 클수록 연결이 많아요.</p>
+        <p className={s.hint}>인용은 참고문헌에서, 메모 연결은 vault의 [[링크]]에서 가져와요. 노드가 클수록 연결이 많아요.</p>
         <button type="button" className={s.vault} onClick={() => setVaultOpen(true)} title={vault}>
           vault · <span className={s.mono}>{vault}</span>
         </button>
@@ -294,13 +294,13 @@ export default function PaperGraph() {
         <section aria-label="그래프" className={s.canvasWrap} ref={wrap}>
           {nodes.length === 0 ? (
             <div className={s.empty}>
-              <b>그래프에 나올 게 아직 없어요</b>
+              <b>그래프에 표시할 항목이 아직 없어요</b>
               <span>
-                vault의 Papers/ 폴더에 논문 노트(MD)를 두면 여기에 나와요. frontmatter의 cites가 인용, 메모의 [[링크]]가 메모
+                vault의 Papers/ 폴더에 논문 노트(MD)를 넣으면 여기에 표시돼요. frontmatter의 cites가 인용, 메모의 [[링크]]가 메모
                 연결이에요.
               </span>
               <Button variant="primary" size="md" onClick={() => setVaultOpen(true)}>
-                vault 위치 정하기
+                vault 위치 설정
               </Button>
             </div>
           ) : (
@@ -408,7 +408,7 @@ export default function PaperGraph() {
             <div className={s.ask}>
               <span className={s.askTitle}>연결된 논문 사이의 관계 묻기</span>
               <span className={s.askText}>
-                ADE 새 세션에 질문을 채워 둬요. 보내기를 누를 때만 Claude에게 가요.
+                ADE 새 세션에 질문을 미리 입력해요. 보내기를 누를 때만 Claude에게 전송돼요.
                 {askProject && (
                   <>
                     {' '}
@@ -424,11 +424,11 @@ export default function PaperGraph() {
               >
                 Claude에게 묻기
               </button>
-              {!askProject && <span className={s.askText}>등록한 프로젝트가 있어야 물을 수 있어요 (ADE는 프로젝트 안에서 돌아요).</span>}
+              {!askProject && <span className={s.askText}>등록한 프로젝트가 있어야 물을 수 있어요 (ADE는 프로젝트 안에서 실행돼요).</span>}
             </div>
           </>
         ) : (
-          <p className={s.selMeta}>노드를 고르면 연결이 여기에 나와요.</p>
+          <p className={s.selMeta}>노드를 선택하면 연결이 여기에 표시돼요.</p>
         )}
       </aside>
 

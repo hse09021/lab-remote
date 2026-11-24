@@ -227,7 +227,7 @@ def remove_worktree(name: str, body: WorktreeBody):
     root = projects.require(name)
     rel = (body.rel or "").strip().strip("/")
     if any(x.get("tree") == rel and (x.get("busy") or x.get("connected")) for x in manager.list(name)):
-        return _bad(worktree.WorktreeError("이 worktree에서 에이전트 세션이 돌고 있어요. 세션을 멈춘 뒤에 정리해 주세요."), 409)
+        return _bad(worktree.WorktreeError("이 worktree에서 에이전트 세션이 실행 중이에요. 세션을 중지한 뒤에 정리해 주세요."), 409)
     try:
         return worktree.remove(root, rel)
     except worktree.WorktreeError as exc:

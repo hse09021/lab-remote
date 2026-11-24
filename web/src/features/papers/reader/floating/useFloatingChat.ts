@@ -121,7 +121,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
         context,
         liveTopic: needLive
           ? kind
-            ? { title: sec ? `${sec.n ? `§${sec.n} ` : ''}${sec.title}` : el ? el[2]! : '고른 글', blocks: [{ p: 'Claude가 논문을 읽는 중이에요…' }], qs: [] }
+            ? { title: sec ? `${sec.n ? `§${sec.n} ` : ''}${sec.title}` : el ? el[2]! : '선택한 텍스트', blocks: [{ p: 'Claude가 논문을 읽는 중이에요…' }], qs: [] }
             : { title: '이 논문에 묻기', blocks: [{ p: '아래에 질문을 적으면 Claude가 이 논문을 읽고 답해요.' }], qs: [] }
           : null,
       })
@@ -203,7 +203,7 @@ export function useFloatingChat(topics: Record<string, Topic>, sections: PaperSe
             ? { kind: 'answer', text: canned.a, go: canned.go, src: canned.src }
             : {
                 kind: 'answer',
-                text: '서버 없이 화면만 보는 모드(VITE_USE_MOCK=all)라 미리 써 둔 답만 있어요.',
+                text: '서버 없이 화면만 보는 모드(VITE_USE_MOCK=all)라 미리 준비된 답변만 볼 수 있어요.',
               }
           return fillAnswer(p.log, answer)
         }
@@ -248,9 +248,9 @@ export function topicKeyFor(key: string, topics: Record<string, Topic>): string 
 function fallbackTopic(topicKey: string, sections: PaperSection[]): Topic {
   const sec = sections.find((x) => x.id === topicKey)
   return {
-    title: sec ? `${sec.n ? `§${sec.n} ` : ""}${sec.title} 풀어보기` : '설명',
+    title: sec ? `${sec.n ? `§${sec.n} ` : ""}${sec.title} 설명` : '설명',
     blocks: [
-      { p: '서버 없이 화면만 보는 모드라 이 섹션 설명은 미리 써 두지 않았어요. 서버에 연결되면 Claude가 이 섹션 본문을 읽고 풀어 써요.' },
+      { p: '서버 없이 화면만 보는 모드라 이 섹션 설명은 준비되어 있지 않아요. 서버에 연결되면 Claude가 이 섹션 본문을 읽고 설명해요.' },
     ],
     qs: [],
   }

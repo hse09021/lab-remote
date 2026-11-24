@@ -6,7 +6,7 @@ import { Dialog } from '@/components'
 import s from './Scenario.module.css'
 
 /**
- * Scenario — 보기 전용 (IDE 왼쪽 · ADE 오른쪽이 같은 컴포넌트).
+ * Scenario — 읽기 전용 (IDE 왼쪽 · ADE 오른쪽이 같은 컴포넌트).
  * 사람이 "그리기"를 눌렀을 때만 에이전트가 읽기만 해서 그려요. 파일이 바뀌어도 저절로
  * 다시 그리지 않고 알려만 줘요. "실행 탭에 채우기"는 명령만 채우고 실행은 직접 눌러요.
  */
@@ -23,23 +23,23 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
     <div className={s.wrap}>
       <div className={s.head}>
         <span className={s.title}>Scenario · {project}</span>
-        <span className={s.badge}>보기 전용</span>
+        <span className={s.badge}>읽기 전용</span>
       </div>
       {q.isPending && <span className={s.muted}>불러오는 중이에요…</span>}
       {sc && (
         <span className={s.muted}>
-          Claude가 {new Date(sc.createdAt * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}에 그림 · 파일{' '}
+          Claude가 {new Date(sc.createdAt * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}에 생성 · 파일{' '}
           {Object.keys(sc.hashes).length}개 분석 · <span className={s.mono}>{data?.path}</span>
         </span>
       )}
       {sc?.summary && <p className={s.summary}>{sc.summary}</p>}
 
-      {running && <div className={s.notice}>그리는 중이에요. 코드는 읽기만 해요. 끝나면 여기에 떠요.</div>}
+      {running && <div className={s.notice}>그리는 중이에요. 코드는 읽기만 해요. 끝나면 여기에 표시돼요.</div>}
       {data?.job.state === 'error' && <div className={s.warn}>그리지 못했어요: {data.job.error}</div>}
       {sc && changed.length > 0 && (
         <div className={s.warn}>
-          그린 뒤로 바뀐 파일이 있어요: <span className={s.mono}>{changed.slice(0, 3).join(', ')}</span>
-          {changed.length > 3 ? ` 외 ${changed.length - 3}개` : ''}. 저절로 다시 그리지는 않아요.
+          그린 뒤에 변경된 파일이 있어요: <span className={s.mono}>{changed.slice(0, 3).join(', ')}</span>
+          {changed.length > 3 ? ` 외 ${changed.length - 3}개` : ''}. 자동으로 다시 그리지는 않아요.
         </div>
       )}
       <button type="button" className={s.drawBtn} disabled={running || draw.isPending} onClick={() => setAsking(true)}>
@@ -58,18 +58,18 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
               <div className={s.stepHead}>
                 <span className={s.num}>{i + 1}</span>
                 <span className={s.stepName}>{st.name}</span>
-                {(st.changed ?? []).length > 0 && <span className={s.changedTag}>코드 바뀜</span>}
+                {(st.changed ?? []).length > 0 && <span className={s.changedTag}>코드 변경됨</span>}
               </div>
               {st.command ? <code className={s.command}>{st.command}</code> : <span className={s.muted}>명령을 찾지 못했어요</span>}
               {st.inputs.length > 0 && (
                 <div className={s.io}>
-                  <span className={s.ioLabel}>받는 것</span>
+                  <span className={s.ioLabel}>입력</span>
                   <span className={s.mono}>{st.inputs.join(' · ')}</span>
                 </div>
               )}
               {st.outputs.length > 0 && (
                 <div className={s.io}>
-                  <span className={s.ioLabel}>내는 것</span>
+                  <span className={s.ioLabel}>출력</span>
                   <span className={s.mono}>{st.outputs.join(' · ')}</span>
                 </div>
               )}
@@ -90,7 +90,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
         </ol>
       )}
       <p className={s.footer}>
-        순서만 보여 줘요. 단계를 이어서 자동으로 돌리지 않아요. "실행 탭에 채우기"는 명령만 채우고, 실행은 직접 눌러요.
+        순서만 보여 줘요. 단계를 자동으로 연달아 실행하지 않아요. "실행 탭에 채우기"는 명령만 채우고, 실행은 직접 해요.
       </p>
 
       <Dialog
@@ -102,8 +102,8 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
         onConfirm={() => draw.mutate('', { onSuccess: () => setAsking(false) })}
       >
         <span>
-          에이전트를 계획 모드로 열어 <b>읽기만</b> 해요(Read · Glob · Grep). 명령을 돌리거나 파일을 고치지 않아요. 프로젝트 크기에 따라 몇 분 걸리고
-          사용량을 조금 써요. 결과는 <code>.labremote/scenarios/main.json</code>에 저장돼요.
+          에이전트를 계획 모드로 열어 <b>읽기만</b> 해요(Read · Glob · Grep). 명령을 실행하거나 파일을 수정하지 않아요. 프로젝트 크기에 따라 몇 분 걸리고
+          사용량이 조금 들어요. 결과는 <code>.labremote/scenarios/main.json</code>에 저장돼요.
         </span>
       </Dialog>
     </div>

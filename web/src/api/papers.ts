@@ -353,7 +353,7 @@ export async function runReaderAi<T>(paperId: string, body: ReaderAiBody): Promi
     if (j.state === 'done') return j.result
     if (j.state === 'failed') throw new Error(j.error || '답하지 못했어요')
   }
-  throw new Error('너무 오래 걸려서 그만 기다렸어요')
+  throw new Error('응답 시간이 초과됐어요')
 }
 
 export interface PaperAnalysis {

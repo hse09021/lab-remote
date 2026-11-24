@@ -19,7 +19,7 @@ export function agoShort(epochSec: number | null | undefined, now = Date.now() /
   if (d < 7 * DAY) return `${Math.floor(d / DAY)}일`
   if (d < 14 * DAY) return '지난주'
   if (d < 30 * DAY) return `${Math.floor(d / (7 * DAY))}주`
-  if (d < 365 * DAY) return `${Math.max(1, Math.floor(d / (30 * DAY)))}달`
+  if (d < 365 * DAY) return `${Math.max(1, Math.floor(d / (30 * DAY)))}개월`
   return `${Math.floor(d / (365 * DAY))}년`
 }
 

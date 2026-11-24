@@ -53,7 +53,7 @@ export function Lanes({ sessions }: { sessions: AgentSession[] }) {
   const rows: [keyof typeof lanes, string, string][] = [
     ['ask', '답이 필요해요', '카드에서 펼쳐 보고 허용하거나 ADE에서 답해요'],
     ['work', '작업 중', '마지막 출력 기준'],
-    ['done', '끝남', '오늘 끝난 차례 · 검토하고 이어 가요'],
+    ['done', '끝남', '오늘 끝난 작업 · 검토하고 이어서 진행해요'],
   ]
   return (
     <>
@@ -138,7 +138,7 @@ function SessionCard({ x, kind, git }: { x: AgentSession; kind: 'ask' | 'work' |
             type="button"
             className={s.secondary}
             disabled={close.isPending}
-            title="목록에서 빼요 · 기록은 남고 메시지를 보내면 다시 열려요"
+            title="목록에서 숨겨요 · 기록은 남고, 메시지를 보내면 다시 열려요"
             onClick={() => close.mutate({ sid: x.id, closed: true })}
           >
             보관
@@ -173,7 +173,7 @@ export function QuickAllow({ p, via = 'Dashboard' }: { p: PendingApproval; via?:
         <button type="button" className={s.secondary} onClick={() => setOpen(false)}>
           접기
         </button>
-        <span className={s.muted}>거부하거나 이유를 적으려면 ADE로 가요.</span>
+        <span className={s.muted}>거부하거나 이유를 남기려면 ADE에서 해요.</span>
       </div>
       {answer.error ? (
         <div role="alert" className={s.err}>

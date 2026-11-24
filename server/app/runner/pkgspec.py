@@ -90,8 +90,8 @@ def _clean(label: str, value: str, *, allow_empty: bool = False) -> str:
         raise SpecError(f"{label} 앞뒤에 공백이 있어요: {value!r}")
     if any(bad in text for bad in BAD_SUBSTRINGS):
         raise SpecError(
-            f"{label}에 쓸 수 없는 글자가 있어요: {text!r} · "
-            "이름과 버전만 받아요 (URL·경로·옵션은 안 돼요)"
+            f"{label}에 사용할 수 없는 문자가 있어요: {text!r} · "
+            "이름과 버전만 지정할 수 있어요 (URL·경로·옵션은 쓸 수 없어요)"
         )
     return text
 
@@ -101,7 +101,7 @@ def _one(item, index: int) -> dict:
         raise SpecError(f"{index + 1}번째 항목이 객체가 아니에요: {item!r}")
     unknown = sorted(set(item) - {"name", "spec", "extras"})
     if unknown:
-        raise SpecError(f"{index + 1}번째 항목에 모르는 칸이 있어요: {', '.join(unknown)}")
+        raise SpecError(f"{index + 1}번째 항목에 알 수 없는 필드가 있어요: {', '.join(unknown)}")
 
     name = _clean(f"{index + 1}번째 이름", item.get("name"))
     if not NAME_RE.match(name):
@@ -137,11 +137,11 @@ def parse(data) -> dict:
         raise SpecError("요청이 JSON 객체가 아니에요")
     unknown = sorted(set(data) - {"version", "packages", "reason", "allowSource"})
     if unknown:
-        raise SpecError(f"모르는 칸이 있어요: {', '.join(unknown)}")
+        raise SpecError(f"알 수 없는 필드가 있어요: {', '.join(unknown)}")
 
     version = data.get("version", 1)
     if version not in (1, "1"):
-        raise SpecError(f"모르는 판이에요: {version!r} (아는 건 1이에요)")
+        raise SpecError(f"지원하지 않는 버전이에요: {version!r} (지원하는 버전은 1이에요)")
 
     items = data.get("packages")
     if not isinstance(items, list) or not items:
@@ -149,7 +149,7 @@ def parse(data) -> dict:
     if len(items) > MAX_PACKAGES:
         raise SpecError(
             f"한 번에 {MAX_PACKAGES}개까지만 받아요 (받은 것 {len(items)}개) · "
-            "사람이 눈으로 볼 수 있는 양이어야 해요"
+            "사람이 직접 확인할 수 있는 양이어야 해요"
         )
 
     seen: dict[str, dict] = {}

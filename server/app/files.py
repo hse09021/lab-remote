@@ -60,7 +60,7 @@ def _clean_rel(rel: str) -> str:
     if rel is None:
         rel = ""
     if not isinstance(rel, str) or "\x00" in rel or "\\" in rel:
-        raise FileRefused("경로에 쓸 수 없는 글자가 있어요.")
+        raise FileRefused("경로에 사용할 수 없는 문자가 있어요.")
     if rel.startswith("/") or rel.startswith("~"):
         raise FileRefused("프로젝트 안 상대 경로만 쓸 수 있어요.")
     parts = [p for p in rel.split("/") if p not in ("", ".")]
@@ -226,7 +226,7 @@ def _atomic_write(target: str, chunks) -> int:
 def write_text(base: str, rel: str, text: str, *, create: bool = False) -> dict:
     """글 파일을 쓴다. `create` 면 새로 만들고, 이미 있으면 거절한다."""
     if not isinstance(text, str):
-        raise FileRefused("내용은 글이어야 해요.")
+        raise FileRefused("내용은 텍스트여야 해요.")
     data = text.encode("utf-8")
     if len(data) > MAX_TEXT_BYTES:
         raise FileRefused("파일이 너무 커요 (편집기로는 2 MB까지).")
@@ -294,7 +294,7 @@ def rel_of(base: str, target: str) -> str:
 def _guard_mutation(root: str, base: str, target: str) -> None:
     base_real = paths.real(base)
     if target == base_real:
-        raise FileRefused("기준 폴더 자신은 옮기거나 지울 수 없어요.")
+        raise FileRefused("기준 폴더 자체는 옮기거나 지울 수 없어요.")
     rel = _rel_of(base, target)
     top = rel.split("/", 1)[0]
     if top in PROTECTED_TOP:

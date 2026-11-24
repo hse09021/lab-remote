@@ -154,7 +154,7 @@ function RunDetail({ project, run, onClose }: { project: string; run: Run; onClo
             title={run.attach}
             onClick={() => copyText(run.attach).then(setCopied)}
           >
-            {copied ? '복사했어요' : '터미널에서 붙기 · 복사'}
+            {copied ? '복사했어요' : '터미널 접속 명령 복사'}
           </button>
         )}
         <button type="button" className={s.actBtnPlain} onClick={onClose}>
@@ -208,7 +208,7 @@ function NewRunDialog({
   const [env, setEnv] = useState(from?.env ?? project.settings.condaEnv)
   const [cwd, setCwd] = useState(from?.cwd && from.cwd !== '.' ? from.cwd : '')
   const [name, setName] = useState(from?.name ?? '')
-  // "시간 정해서 실행" — 같은 값으로 예약 창을 열어요
+  // "예약 실행" — 같은 값으로 예약 창을 열어요
   const [scheduling, setScheduling] = useState(false)
 
   const places = [
@@ -290,16 +290,16 @@ function NewRunDialog({
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="sweep-lr" />
       </label>
       <span className={s.muted}>
-        실제로 도는 명령: <span className={s.mono}>{shown}</span> — tmux 안에서 돌고 로그는{' '}
-        <span className={s.mono}>.labremote/runs/</span>에 남아요. 접속이 끊겨도 계속 돌아요.
+        실제로 실행되는 명령: <span className={s.mono}>{shown}</span> — tmux 안에서 실행되고 로그는{' '}
+        <span className={s.mono}>.labremote/runs/</span>에 남아요. 접속이 끊겨도 계속 실행돼요.
       </span>
       {from && from.state === 'cut' && (
         <span className={s.muted}>
-          체크포인트에서 이어 가려면 명령에 직접 재개 옵션을 붙여 주세요. lab.remote는 명령을 바꾸지 않아요.
+          체크포인트에서 이어 가려면 명령에 직접 재개 옵션을 추가해 주세요. lab.remote는 명령을 변경하지 않아요.
         </span>
       )}
       <button type="button" className={s.linkBtn} disabled={!command.trim()} onClick={() => setScheduling(true)}>
-        시간 정해서 실행…
+        예약 실행…
       </button>
     </Dialog>
   )
@@ -334,10 +334,10 @@ function StopDialog({ project, run, onClose }: { project: string; run: Run | nul
         )
       }
     >
-      <span>Ctrl+C를 보내요. 프로그램이 체크포인트를 저장하고 스스로 끝날 시간을 줘요.</span>
+      <span>Ctrl+C를 보내요. 프로그램이 체크포인트를 저장하고 정상 종료할 시간을 줘요.</span>
       <label className={ds.check}>
         <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
-        <span>강제 중지 — 바로 끝내요. 체크포인트를 못 남길 수 있어요.</span>
+        <span>강제 중지 — 즉시 종료해요. 체크포인트가 저장되지 않을 수 있어요.</span>
       </label>
     </Dialog>
   )

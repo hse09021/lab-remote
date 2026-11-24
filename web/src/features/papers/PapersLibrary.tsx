@@ -101,7 +101,7 @@ function PapersList() {
   const onAdded = (r: AddedPaper) => {
     setAdded({
       text: r.created
-        ? `추가했어요 · ${r.path}${r.pdf === false ? ' (PDF는 받지 못했어요)' : ''}`
+        ? `추가했어요 · ${r.path}${r.pdf === false ? ' (PDF는 다운로드하지 못했어요)' : ''}`
         : `이미 있는 논문이에요 · ${r.path}`,
       tone: 'ok',
     })
@@ -307,7 +307,7 @@ function PapersList() {
               label="보기 방식"
               variant="icon"
             />
-            <IconButton label={filterCount ? `필터 ${filterCount}개 켜짐` : '필터'} size={42} aria-expanded={filterOpen} onClick={() => setFilterOpen((v) => !v)}>
+            <IconButton label={filterCount ? `필터 ${filterCount}개 적용됨` : '필터'} size={42} aria-expanded={filterOpen} onClick={() => setFilterOpen((v) => !v)}>
               <FilterIcon />
             </IconButton>
             <input
@@ -319,7 +319,7 @@ function PapersList() {
                 const file = e.target.files?.[0]
                 e.target.value = ''
                 if (!file) return
-                setAdded({ text: `${file.name} 올리는 중이에요…`, tone: 'ok' })
+                setAdded({ text: `${file.name} 업로드하는 중이에요…`, tone: 'ok' })
                 uploadPdf.mutate(file, { onSuccess: onAdded, onError: onFail })
               }}
             />
@@ -333,7 +333,7 @@ function PapersList() {
                 <UrlUploadRow
                   busy={addArxiv.isPending}
                   onAdd={(url) => {
-                    setAdded({ text: 'arXiv에서 받는 중이에요…', tone: 'ok' })
+                    setAdded({ text: 'arXiv에서 가져오는 중이에요…', tone: 'ok' })
                     addArxiv.mutate(url, { onSuccess: onAdded, onError: onFail })
                   }}
                 />
@@ -376,7 +376,7 @@ function PapersList() {
             </label>
             {filterCount > 0 && (
               <button type="button" className={s.filterReset} onClick={() => setFilters({ source: 'all', hasPdf: false, hasSummary: false })}>
-                필터 끄기
+                필터 해제
               </button>
             )}
           </div>
@@ -409,7 +409,7 @@ function PapersList() {
             minWidth={820}
             emptyMessage={
               papers.data.length === 0
-                ? `vault에 논문 노트가 없어요 — ${vault.data?.path ?? 'vault'}/Papers/에 MD를 두거나, 사이드바의 'vault 위치'에서 폴더를 정해 주세요.`
+                ? `vault에 논문 노트가 없어요 — ${vault.data?.path ?? 'vault'}/Papers/에 MD 파일을 넣거나, 사이드바의 'vault 위치'에서 폴더를 지정해 주세요.`
                 : '조건에 맞는 논문이 없어요.'
             }
           />
@@ -468,7 +468,7 @@ function PapersList() {
                 className={s.onDark}
                 onClick={() => {
                   act.trash.mutate({ ids: selectedIds, on: true })
-                  setAdded({ text: `${selectedCount}편을 휴지통에 넣었어요 · vault 파일은 그대로예요`, tone: 'ok' })
+                  setAdded({ text: `${selectedCount}편을 휴지통으로 옮겼어요 · vault 파일은 그대로 있어요`, tone: 'ok' })
                   setSelected({})
                 }}
               >
@@ -514,7 +514,7 @@ function PapersList() {
             모음 이름
             <input className={ds.input} value={colName} onChange={(e) => setColName(e.target.value)} placeholder="LoRA 계열" autoFocus />
           </label>
-          <span>모음은 lab.remote에만 저장돼요. vault 파일은 옮기지 않아요. 논문을 고른 뒤 아래 막대에서 넣어요.</span>
+          <span>모음은 lab.remote에만 저장돼요. vault 파일은 옮기지 않아요. 논문을 선택한 뒤 아래 선택 바에서 넣을 수 있어요.</span>
         </Dialog>
         <Dialog
           open={typeof colDialog === 'object'}
@@ -581,7 +581,7 @@ function PapersList() {
                 )}
               </div>
               <pre className={s.noteBody}>{noteBody}</pre>
-              <span className={s.paperMeta}>vault 노트를 읽기만 해요. 고치려면 Obsidian에서 고쳐 주세요.</span>
+              <span className={s.paperMeta}>vault 노트는 읽기 전용이에요. 수정은 Obsidian에서 해 주세요.</span>
               {live && openNote.summaryState !== 'running' && (
                 <Button
                   variant="outline"
@@ -682,10 +682,10 @@ function UrlUploadRow({ busy, onAdd }: { busy: boolean; onAdd: (url: string) => 
           placeholder="arXiv 링크 (https://arxiv.org/abs/…)"
         />
         <Button variant="accent" disabled={busy || !url.trim()} onClick={submit}>
-          {busy ? '받는 중…' : '추가'}
+          {busy ? '추가하는 중…' : '추가'}
         </Button>
       </div>
-      <span>제목 · 저자 · 초록을 받아 vault의 Papers/에 노트를 만들고 PDF도 받아 둬요</span>
+      <span>제목 · 저자 · 초록을 가져와 vault의 Papers/에 노트를 만들고 PDF도 다운로드해요</span>
     </>
   )
 }

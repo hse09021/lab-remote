@@ -26,7 +26,7 @@ function tokenColors() {
 
 /**
  * 터미널 하나 — WebSocket ↔ tmux. 탭을 닫거나 브라우저를 닫아도 tmux 세션(셸·학습)은
- * 데스크톱에 남아요. 다시 열면 그대로 붙어요.
+ * 데스크톱에 남아요. 다시 열면 그대로 다시 연결돼요.
  */
 export function TerminalView({ project, name, run, write = false }: { project: string; name?: string; run?: string; write?: boolean }) {
   const host = useRef<HTMLDivElement>(null)
@@ -64,7 +64,7 @@ export function TerminalView({ project, name, run, write = false }: { project: s
       if (typeof e.data === 'string') {
         try {
           const msg = JSON.parse(e.data) as { type: string; message?: string }
-          if (msg.type === 'error') setError(msg.message ?? '터미널에 붙지 못했어요.')
+          if (msg.type === 'error') setError(msg.message ?? '터미널에 연결하지 못했어요.')
         } catch {
           term.write(e.data)
         }
@@ -97,10 +97,10 @@ export function TerminalView({ project, name, run, write = false }: { project: s
     <div className={s.termWrap}>
       {(status !== 'open' || error) && (
         <div className={s.termStatus} data-tone={error || status === 'closed' ? 'warn' : undefined}>
-          {error || (status === 'connecting' ? '붙는 중이에요…' : '연결이 끊겼어요. 탭을 다시 열면 그대로 붙어요 (셸은 데스크톱에서 계속 돌아요).')}
+          {error || (status === 'connecting' ? '연결 중이에요…' : '연결이 끊겼어요. 탭을 다시 열면 이어서 연결돼요 (셸은 데스크톱에서 계속 실행돼요).')}
         </div>
       )}
-      {run && !write && <div className={s.termNote}>학습 실행은 보기만 할 수 있어요 · Ctrl+C를 잘못 눌러 멈추지 않도록 입력을 막아 뒀어요</div>}
+      {run && !write && <div className={s.termNote}>학습 실행은 읽기 전용이에요 · 실수로 Ctrl+C를 눌러 중단되지 않도록 입력을 막았어요</div>}
       <div ref={host} className={s.term} />
     </div>
   )

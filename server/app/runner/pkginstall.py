@@ -72,7 +72,7 @@ def build_argv(parsed: dict, env_name: str, *, allow_source: bool = False) -> li
     name = str(env_name or "").strip()
     if not name or not pkgspec.NAME_RE.match(name):
         raise InstallError(
-            f"conda 환경 이름이 이상해요: {env_name!r}"
+            f"conda 환경 이름이 올바르지 않아요: {env_name!r}"
         )
     # 🔑 lab.remote가 도는 환경(`labremote`)과 `base`에는 깔지 않는다.
     # `.pth`는 인터프리터가 뜰 때 실행된다 — 서버·conda가 뜰 때 돌게 된다.
@@ -154,12 +154,12 @@ def install(
             "argv": argv,
             "exitCode": None,
             "output": "",
-            "reason": f"{timeout_sec}초 안에 못 끝냈어요",
+            "reason": f"{timeout_sec}초 안에 끝나지 않았어요",
         }
     except (OSError, subprocess.SubprocessError) as exc:
         return {
             "ok": False, "argv": argv, "exitCode": None, "output": "",
-            "reason": f"설치를 띄우지 못했어요: {exc}",
+            "reason": f"설치를 시작하지 못했어요: {exc}",
         }
 
     text = ((done.stdout or "") + (done.stderr or "")).strip()

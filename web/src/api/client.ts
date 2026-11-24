@@ -30,7 +30,7 @@ const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers\/[^/]+\/summary$/, ['GET', 'POST']],
   [/^\/papers\/[^/]+\/summary-md$/, ['PUT']],
   [/^\/papers\/[^/]+$/, ['PATCH']],
-  // 논문 추가 (vault에 새 노트 · PDF) · PDF 내려받기
+  // 논문 추가 (vault에 새 노트 · PDF) · PDF 다운로드
   [/^\/papers\/arxiv$/, ['POST']],
   // 휴지통 · 모음 · BibTeX · 참고문헌 보관 (lab.remote에만 기록)
   [/^\/papers\/collections$/, ['GET', 'POST']],
@@ -146,7 +146,7 @@ export async function upload<T>(path: string, file: Blob): Promise<T> {
   return (await res.json()) as T
 }
 
-/** 내려받기·링크용 주소 */
+/** 다운로드·링크용 주소 */
 export const apiUrl = (path: string) => BASE + path
 
 export const isMockMode = () => MOCK_MODE === 'all'

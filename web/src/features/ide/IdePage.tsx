@@ -144,7 +144,7 @@ export default function IdePage() {
   }
   const closeTerm = (t: Term) => {
     if (t.kind === 'shell') {
-      if (!window.confirm(`${t.name} 터미널을 닫을까요? 그 안에서 돌던 것도 같이 끝나요.`)) return
+      if (!window.confirm(`${t.name} 터미널을 닫을까요? 그 안에서 실행 중인 프로세스도 함께 종료돼요.`)) return
       termActions.kill.mutate(t.name)
     }
     setOpenTerms((old) => old.filter((x) => termKey(x) !== termKey(t)))
@@ -164,9 +164,9 @@ export default function IdePage() {
   if (mobile) {
     return (
       <main style={{ padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h1 style={{ margin: 0, fontSize: 20 }}>IDE는 넓은 화면에서 써요</h1>
+        <h1 style={{ margin: 0, fontSize: 20 }}>IDE는 넓은 화면에서 사용해요</h1>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--text-soft)' }}>
-          편집기와 터미널은 휴대폰 화면에 맞지 않아요. 에이전트에게 일을 시키고 답하는 건 ADE에서 할 수 있어요.
+          편집기와 터미널은 휴대폰 화면에 맞지 않아요. 에이전트에게 작업을 맡기고 답하는 건 ADE에서 할 수 있어요.
         </p>
         <Link to={`/projects/${encodeURIComponent(project)}/ade${tree ? `?tree=${encodeURIComponent(tree)}` : ''}`} style={{ fontSize: 14 }}>
           ADE로 가기
@@ -251,7 +251,7 @@ export default function IdePage() {
               {tabs.map((t) => (
                 <div key={tabKey(t)} className={s.tab} data-active={tabKey(t) === active}>
                   <button type="button" role="tab" aria-selected={tabKey(t) === active} className={s.tabBtn} onClick={() => setActive(tabKey(t))}>
-                    {dirty[tabKey(t)] && <span className={s.dirty} aria-label="저장 안 함">●</span>}
+                    {dirty[tabKey(t)] && <span className={s.dirty} aria-label="저장되지 않음">●</span>}
                     {t.kind === 'diff' ? '변경 · ' : ''}
                     {t.path.split('/').pop()}
                   </button>
@@ -278,7 +278,7 @@ export default function IdePage() {
               )
             ) : (
               <div className={s.empty}>
-                탐색기에서 파일을 누르면 여기서 열려요. <kbd>Ctrl</kbd>+<kbd>S</kbd>로 저장해요.
+                탐색기에서 파일을 선택하면 여기에 열려요. <kbd>Ctrl</kbd>+<kbd>S</kbd>로 저장해요.
               </div>
             )}
           </section>
@@ -305,7 +305,7 @@ export default function IdePage() {
             </div>
             {bottomOpen && (
               <div className={s.termBody}>
-                {openTerms.length === 0 && <div className={s.empty}>+를 누르면 bash가 열려요. 브라우저를 닫아도 데스크톱에서 계속 돌아요.</div>}
+                {openTerms.length === 0 && <div className={s.empty}>+를 누르면 bash가 열려요. 브라우저를 닫아도 데스크톱에서 계속 실행돼요.</div>}
                 {openTerms.map((t) => (
                   <div key={termKey(t)} hidden={termKey(t) !== termActive} className={s.termPane}>
                     {t.kind === 'shell' ? <TerminalView project={project} name={t.name} /> : <TerminalView project={project} run={t.run} />}
@@ -346,7 +346,7 @@ export default function IdePage() {
         <span className={s.spacer} />
         {activeTab?.kind === 'file' && cursor && (
           <span>
-            줄 {cursor.line}, 칸 {cursor.column}
+            줄 {cursor.line}, 열 {cursor.column}
           </span>
         )}
         {activeTab?.kind === 'file' && <span>{languageLabel(languageOf(activeTab.path))}</span>}
@@ -407,7 +407,7 @@ function FileEditor({
   if (file.isPending) return <div className={s.empty}>불러오는 중이에요…</div>
   if (file.isError) return <div className={s.empty}>{file.error instanceof ApiError ? file.error.message : String(file.error)}</div>
   if (file.data.text === null) {
-    return <div className={s.empty}>{file.data.reason === 'too-large' ? '파일이 커서(2 MB 초과) 편집기로 열지 않아요. 내려받아서 봐 주세요.' : '텍스트 파일이 아니라서 열 수 없어요.'}</div>
+    return <div className={s.empty}>{file.data.reason === 'too-large' ? '파일이 너무 커서(2 MB 초과) 편집기에서 열 수 없어요. 다운로드해서 확인해 주세요.' : '텍스트 파일이 아니라서 열 수 없어요.'}</div>
   }
 
   const doSave = () => {
@@ -432,7 +432,7 @@ function FileEditor({
         {origin.data?.origin && (
           <>
             <span className={s.muted}>
-              Claude가 {change?.label === 'U' || origin.data.origin.tool === 'Write' ? '만듦' : '고침'} · {whenShort(origin.data.origin.at)} · 세션 · {origin.data.origin.title}
+              Claude가 {change?.label === 'U' || origin.data.origin.tool === 'Write' ? '생성' : '수정'} · {whenShort(origin.data.origin.at)} · 세션 · {origin.data.origin.title}
             </span>
             <Link className={s.linkBtn} to={`/projects/${encodeURIComponent(project)}/ade?session=${encodeURIComponent(origin.data.origin.session)}`}>
               세션 보기

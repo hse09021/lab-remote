@@ -30,7 +30,7 @@ def add(
     read: bool = False,
 ) -> int:
     if kind not in KINDS:
-        raise ValueError(f"모르는 알림 종류예요: {kind!r}")
+        raise ValueError(f"알 수 없는 알림 종류예요: {kind!r}")
     now = db.now()
     cur = conn.execute(
         "INSERT INTO inbox(at, kind, title, where_text, body, project, ref, act, read_at) "

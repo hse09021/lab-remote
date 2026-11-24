@@ -119,7 +119,7 @@ def _clean_list(value, *, limit: int, field: str) -> list[str]:
     out: list[str] = []
     for item in value:
         if not isinstance(item, str):
-            raise ProjectError(f"{field}에 글자가 아닌 값이 있어요.")
+            raise ProjectError(f"{field}에 문자열이 아닌 값이 있어요.")
         text = item.strip()
         if not text:
             continue

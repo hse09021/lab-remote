@@ -204,7 +204,7 @@ def _script(*, cwd: str, folder: str, command: str, conda: str, prefix: str, run
     else:
         inner = f"bash -c {q(command)}"
     return f"""#!/usr/bin/env bash
-# lab.remote 실행 {run_id} — lab.remote가 만든 파일이에요. 고쳐도 이미 시작한 실행에는 안 먹어요.
+# lab.remote 실행 {run_id} — lab.remote가 만든 파일이에요. 수정해도 이미 시작한 실행에는 적용되지 않아요.
 # 중지(Ctrl+C)는 프로그램에만 가게 한다 — 이 셸은 끝까지 남아 종료 코드를 적고,
 # tee는 SIGINT를 무시해 프로그램이 정리하며 찍는 출력도 받는다(안 그러면 SIGPIPE로 죽는다).
 trap 'true' INT
@@ -230,7 +230,7 @@ def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str
     if not command:
         raise RunError("실행할 명령을 적어 주세요.")
     if len(command) > MAX_COMMAND or "\x00" in command:
-        raise RunError("명령이 너무 길거나 쓸 수 없는 글자가 있어요.")
+        raise RunError("명령이 너무 길거나 사용할 수 없는 문자가 있어요.")
     name = (name or "").strip()
     if name and not NAME_RE.match(name):
         raise RunError("실행 이름이 올바르지 않아요 (64자까지, /는 쓸 수 없어요).")
@@ -304,14 +304,14 @@ def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str
     try:
         done = subprocess.run(argv, capture_output=True, text=True, timeout=30, env=run_env, cwd=workdir)
     except (OSError, subprocess.SubprocessError) as exc:
-        record.update(state="failed", endedAt=time.time(), reason=f"띄우지 못했어요: {type(exc).__name__}")
+        record.update(state="failed", endedAt=time.time(), reason=f"실행을 시작하지 못했어요: {type(exc).__name__}")
         _save(root, record)
         raise RunError(record["reason"]) from None
     if done.returncode != 0:
         record.update(
             state="failed",
             endedAt=time.time(),
-            reason="띄우지 못했어요: " + (done.stderr or done.stdout or "").strip()[:300],
+            reason="실행을 시작하지 못했어요: " + (done.stderr or done.stdout or "").strip()[:300],
         )
         _save(root, record)
         raise RunError(record["reason"])
@@ -382,7 +382,7 @@ def refresh(root: str, record: dict) -> tuple[dict, bool]:
         else:
             record.update(
                 state="cut",
-                reason="데스크톱이 다시 켜지면서 끝났어요" if rebooted else "프로세스가 종료 코드 없이 사라졌어요",
+                reason="데스크톱이 재부팅되면서 종료됐어요" if rebooted else "프로세스가 종료 코드 없이 사라졌어요",
             )
         try:
             ended = os.path.getmtime(os.path.join(folder, LOG_NAME))

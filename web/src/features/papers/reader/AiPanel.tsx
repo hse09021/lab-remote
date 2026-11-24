@@ -123,10 +123,10 @@ export function AiPanel({
         <div className={s.analyzeBar}>
           <span>
             {analyzing
-              ? 'Claude가 PDF를 읽고 하이라이트와 참고문헌을 뽑는 중이에요… (1~3분)'
+              ? 'Claude가 PDF를 읽고 하이라이트와 참고문헌을 추출하는 중이에요… (1~3분)'
               : analyzed
-                ? 'AI 하이라이트와 참고문헌이 붙어 있어요'
-                : 'AI 하이라이트와 인용 탭은 AI 분석을 하면 채워져요'}
+                ? 'AI 하이라이트와 참고문헌을 추가했어요'
+                : 'AI 분석을 실행하면 AI 하이라이트와 인용 탭이 채워져요'}
           </span>
           {!analyzing && (
             <button type="button" className={s.analyzeBtn} onClick={onAnalyze}>
@@ -161,7 +161,7 @@ export function AiPanel({
                   요약 만들기
                 </button>
               )}
-              {onMakeSummary && <p className={s.todo}>vault에 &lsquo;이름 요약.md&rsquo;를 새로 만들어요. 원래 노트는 고치지 않아요.</p>}
+              {onMakeSummary && <p className={s.todo}>vault에 &lsquo;이름 요약.md&rsquo;를 새로 만들어요. 원본 노트는 수정하지 않아요.</p>}
             </div>
           ))}
 
@@ -172,8 +172,8 @@ export function AiPanel({
             <div className={s.pad}>
               {chatContext && <span className={s.contextChip}>{chatContext}</span>}
               <p className={s.todo}>
-                섹션 설명은 본문의 AI 버튼을 누르면 떠 있는 대화창으로 열려요.
-                <br />이 탭의 대화는 서버에 연결되면 이어져요.
+                섹션 설명은 본문의 AI 버튼을 누르면 별도 대화창으로 열려요.
+                <br />이 탭의 대화는 서버에 연결되면 사용할 수 있어요.
               </p>
             </div>
           ))}
@@ -375,7 +375,7 @@ function NotesTab({
         />
       ))}
       {rows.length === 0 && userNotes.length === 0 && (
-        <p className={s.todo}>켜 둔 종류의 하이라이트가 없어요.</p>
+        <p className={s.todo}>활성화된 하이라이트가 없어요.</p>
       )}
       {rows.map((h) => {
         const sec = sectionOf(h.section)
@@ -445,7 +445,7 @@ function MyNoteRow({
         </span>
         <textarea
           autoFocus
-          aria-label="주석 고치기"
+          aria-label="주석 수정"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
@@ -454,7 +454,7 @@ function MyNoteRow({
           className={s.noteEdit}
         />
         <div className={s.noteFoot}>
-          <span className={s.noteWhereStatic}>고치는 중</span>
+          <span className={s.noteWhereStatic}>수정 중</span>
           <div className={s.noteToolsOpen}>
             <button
               type="button"
@@ -491,7 +491,7 @@ function MyNoteRow({
           {isNote && (
             <button
               type="button"
-              aria-label="주석 고치기"
+              aria-label="주석 수정"
               onClick={() => {
                 setDraft(annotation.text)
                 setEditing(true)

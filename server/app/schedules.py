@@ -96,10 +96,10 @@ def _clean(data: dict, *, partial: bool = False) -> dict:
             out[key] = data[key]
     if not partial or "kind" in out:
         if out.get("kind") not in KINDS:
-            raise ScheduleError("예약 종류는 명령이나 에이전트예요.")
+            raise ScheduleError("예약 종류는 명령이나 에이전트 중 하나여야 해요.")
     if not partial or "repeat" in out:
         if out.get("repeat", "once") not in REPEATS:
-            raise ScheduleError("반복은 한 번 · 매일 · 매주 중 하나예요.")
+            raise ScheduleError("반복은 한 번 · 매일 · 매주 중 하나여야 해요.")
     if not partial or "project" in out:
         projects.require(out.get("project", ""))
     if "name" in out:
@@ -167,7 +167,7 @@ def update(conn: sqlite3.Connection, sid: int, data: dict, *, now: float | None 
     _check_ready(merged)
     nxt = next_after(merged["at"], merged["repeat"], now)
     if clean.get("enabled") and nxt is None:
-        raise ScheduleError("이미 지난 한 번짜리 예약이에요. 시각을 다시 정해 주세요.")
+        raise ScheduleError("한 번 실행하는 예약인데 시각이 이미 지났어요. 시각을 다시 정해 주세요.")
     sets = ", ".join(f"{k} = ?" for k in clean)
     conn.execute(
         f"UPDATE schedules SET {sets + ', ' if sets else ''}next_at = ?, waiting_since = NULL WHERE id = ?",
@@ -249,7 +249,7 @@ async def tick(conn: sqlite3.Connection, *, now: float | None = None, busy=None,
         if late > MISS_GRACE_SEC and not job["waitingSince"]:
             _finish(conn, job, "놓쳤어요 — 그 시각에 서버가 꺼져 있었어요", None, now)
             await _post("sched", "plan", f"예약 · {job['name']} 놓침", where=_where(job),
-                        body="그 시각에 lab.remote 서버가 꺼져 있었어요. 늦게 돌리지 않아요.", project=job["project"],
+                        body="그 시각에 lab.remote 서버가 꺼져 있었어요. 놓친 예약은 나중에 실행하지 않아요.", project=job["project"],
                         ref={"schedule": job["id"]}, subject=f"sched:{job['id']}:{job['nextAt']}:miss")
             done.append({"id": job["id"], "did": "missed"})
             continue
@@ -258,7 +258,7 @@ async def tick(conn: sqlite3.Connection, *, now: float | None = None, busy=None,
                 if not job["waitingSince"]:
                     conn.execute("UPDATE schedules SET waiting_since = ? WHERE id = ?", (now, job["id"]))
                     await _post("sched", "plan", f"예약 · {job['name']} 기다리는 중", where=_where(job),
-                                body="GPU를 다른 학습이 쓰고 있어요. 끝나면 바로 시작하고 알려 줘요.", project=job["project"],
+                                body="다른 학습이 GPU를 사용 중이에요. 끝나면 바로 시작하고 알려 줘요.", project=job["project"],
                                 ref={"schedule": job["id"]}, subject=f"sched:{job['id']}:{job['nextAt']}:wait")
                 done.append({"id": job["id"], "did": "waiting"})
                 continue
@@ -266,7 +266,7 @@ async def tick(conn: sqlite3.Connection, *, now: float | None = None, busy=None,
                 run = await asyncio.to_thread(start_run, job)
             except Exception as exc:
                 _finish(conn, job, f"시작하지 못했어요: {exc}", None, now)
-                await _post("sched", "fail", f"예약 · {job['name']} 시작 못 함", where=_where(job), body=str(exc)[:300],
+                await _post("sched", "fail", f"예약 · {job['name']} 시작하지 못함", where=_where(job), body=str(exc)[:300],
                             project=job["project"], act=True, ref={"schedule": job["id"]}, subject=f"sched:{job['id']}:{job['nextAt']}:err")
                 done.append({"id": job["id"], "did": "error"})
                 continue
@@ -284,13 +284,13 @@ async def tick(conn: sqlite3.Connection, *, now: float | None = None, busy=None,
                                                 mode=job["mode"] or "manual", model=job["model"], effort=job["effort"])
             except Exception as exc:
                 _finish(conn, job, f"세션을 열지 못했어요: {exc}", None, now)
-                await _post("sched", "fail", f"예약 · {job['name']} 세션 못 엶", where=_where(job), body=str(exc)[:300],
+                await _post("sched", "fail", f"예약 · {job['name']} 세션을 열지 못함", where=_where(job), body=str(exc)[:300],
                             project=job["project"], act=True, ref={"schedule": job["id"]}, subject=f"sched:{job['id']}:{job['nextAt']}:err")
                 done.append({"id": job["id"], "did": "error"})
                 continue
             _finish(conn, job, "세션을 열었어요", {"project": job["project"], "session": made["id"]}, now)
             await _post("sched", "plan", f"예약 · {job['name']} 세션 열림", where=_where(job),
-                        body="요청을 보냈어요. 승인이 필요하면 거기서 멈춰요.", project=job["project"],
+                        body="요청을 보냈어요. 승인이 필요하면 그 단계에서 멈추고 기다려요.", project=job["project"],
                         ref={"project": job["project"], "session": made["id"], "schedule": job["id"]},
                         subject=f"sched:{job['id']}:{job['nextAt']}:session")
             done.append({"id": job["id"], "did": "session", "session": made["id"]})

@@ -59,7 +59,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
         <span className={s.settingsRow}>
           {envs.isSuccess ? (
             <select id="pj-env" className={s.input} value={env} onChange={(e) => setEnv(e.target.value)}>
-              <option value="">정하지 않음</option>
+              <option value="">선택 안 함</option>
               {envOptions.map((n) => (
                 <option key={n} value={n}>
                   {n}
@@ -98,7 +98,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
           placeholder="runs/*/metrics.csv"
         />
         <label htmlFor="pj-papers" className={s.settingsLabel}>
-          쓰는 논문
+          사용하는 논문
         </label>
         <div className={s.paperPick}>
           <input
@@ -108,10 +108,10 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
             onChange={(e) => setPaperFind(e.target.value)}
             placeholder={`vault 논문 ${papers.data?.length ?? 0}편에서 찾기`}
           />
-          <div className={s.paperList} role="group" aria-label="쓰는 논문 고르기">
+          <div className={s.paperList} role="group" aria-label="사용하는 논문 선택">
             {papers.isSuccess && papers.data.length === 0 && (
               <span className={s.muted}>
-                vault에 논문 노트가 없어요. vault 위치는 <Link to="/papers">Papers</Link>에서 정해요.
+                vault에 논문 노트가 없어요. vault 위치는 <Link to="/papers">Papers</Link>에서 설정해요.
               </span>
             )}
             {paperRows.map((p) => (
@@ -130,7 +130,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
             ))}
           </div>
           <span className={s.muted}>
-            고른 논문은 Papers › Graph에 "프로젝트에서 사용"으로 이어져요. 지금 {used.length}편 골랐어요.
+            선택한 논문은 Papers › Graph에서 "프로젝트에서 사용"으로 연결돼요. 지금 {used.length}편 선택했어요.
           </span>
         </div>
         <span />
@@ -138,7 +138,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
           <button type="submit" className={s.primaryBtn} disabled={!dirty || save.isPending}>
             {save.isPending ? '저장하는 중…' : '저장'}
           </button>
-          <span className={s.muted}>명령과 지표 규칙은 한 줄에 하나씩 적어요.</span>
+          <span className={s.muted}>명령과 지표 규칙은 한 줄에 하나씩 입력해요.</span>
           {save.isError && (
             <span role="alert" className={s.errText}>
               {save.error instanceof ApiError ? save.error.message : String(save.error)}
@@ -165,9 +165,9 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
         }
       >
         <span className={s.switchText}>
-          <span className={s.switchTitle}>repo에 같이 올리기</span>
+          <span className={s.switchTitle}>repo에 포함하기</span>
           <span className={s.muted}>
-            켜면 settings.json과 scenarios/만 git에 올라가요. worktree와 실행 기록은 계속 빠져요.
+            켜면 settings.json과 scenarios/만 git에 포함돼요. worktree와 실행 기록은 계속 제외돼요.
           </span>
         </span>
         <span aria-hidden="true" className={s.track} data-on={st.share}>
@@ -177,8 +177,8 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
 
       <div className={s.dangerRow}>
         <span className={s.muted}>
-          <b className={s.strong}>등록 해제</b> · lab.remote 목록에서만 빠지고 폴더와 파일은 그대로 남아요.{' '}
-          <span className={s.mono}>.labremote</span> 폴더도 지울지는 한 번 더 물어봐요.
+          <b className={s.strong}>등록 해제</b> · lab.remote 목록에서만 제거되고 폴더와 파일은 그대로 남아요.{' '}
+          <span className={s.mono}>.labremote</span> 폴더도 삭제할지는 한 번 더 확인해요.
         </span>
         <button type="button" className={s.dangerBtn} onClick={() => setAsking(true)}>
           등록 해제…
@@ -215,7 +215,7 @@ function UnregisterDialog({ name, open, onClose }: { name: string; open: boolean
         )
       }
     >
-      <span>lab.remote 목록에서 빠져요. 프로젝트 폴더와 파일은 그대로 남아요.</span>
+      <span>lab.remote 목록에서 제거돼요. 프로젝트 폴더와 파일은 그대로 남아요.</span>
       <label className={ds.check}>
         <input type="checkbox" checked={removeLabremote} onChange={(e) => setRemove(e.target.checked)} />
         <span>

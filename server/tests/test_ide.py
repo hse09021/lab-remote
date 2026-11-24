@@ -47,7 +47,7 @@ def test_git_이_아니면_걸어서_찾는다(project):
     with open(os.path.join(project, "node_modules", "x.txt"), "w") as fh:
         fh.write("hello\n")
     got = search.search(project, "hello")
-    assert got["via"] == "파일 걷기" and [r["path"] for r in got["results"]] == ["src/a.txt"]
+    assert got["via"] == "파일 직접 탐색" and [r["path"] for r in got["results"]] == ["src/a.txt"]
 
 
 def test_커밋과_main_에_합치기(repo):

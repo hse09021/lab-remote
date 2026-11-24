@@ -193,7 +193,7 @@ async def _work(jid: str, kind: str, pid: str, req: dict, model: str, query_fn) 
 
 def start(pid: str, kind: str, req: dict | None = None, *, model: str = "", query_fn=None) -> dict:
     if kind not in KINDS:
-        raise ReaderAiError("모르는 요청이에요.")
+        raise ReaderAiError("알 수 없는 요청이에요.")
     _paper(pid)
     req = req or {}
     if kind in ("selection", "translate") and not str(req.get("text") or "").strip():  # element는 글자 없이도 돼요(쪽 + 이름)
@@ -216,7 +216,7 @@ def start(pid: str, kind: str, req: dict | None = None, *, model: str = "", quer
 def job(jid: str) -> dict:
     found = _jobs.get(jid)
     if not found:
-        raise ReaderAiError("없는 요청이에요 (서버를 다시 켰으면 사라져요).")
+        raise ReaderAiError("없는 요청이에요 (서버를 다시 시작하면 사라져요).")
     return dict(found)
 
 

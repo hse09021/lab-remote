@@ -82,7 +82,7 @@ def unit_dir() -> str:
 
 def unit_path(name: str = NAME) -> str:
     if name not in UNITS:
-        raise ValueError(f"모르는 유닛이에요: {name!r} · 아는 것: {', '.join(UNITS)}")
+        raise ValueError(f"알 수 없는 유닛이에요: {name!r} · 사용할 수 있는 유닛: {', '.join(UNITS)}")
     return os.path.join(unit_dir(), f"{name}.service")
 
 
@@ -126,7 +126,7 @@ def render(*, python: str = "", port: int = DEFAULT_PORT) -> str:
     tmux = _plain(_tmux() or "/usr/bin/tmux", "tmux")
     port = int(port)
     if not 1024 <= port <= 65535:
-        raise ValueError("포트는 1024~65535 사이로 정해 주세요.")
+        raise ValueError("포트는 1024~65535 사이로 지정해 주세요.")
     # tmux에는 셸 명령 한 줄로 넘긴다 (systemd는 큰따옴표 하나를 인자 하나로 본다)
     command = '"' + shlex.join(["exec", py, "-m", "app.cli", "serve", "--port", str(port)]) + '"'
     return _TEMPLATE.format(

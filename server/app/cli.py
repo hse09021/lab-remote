@@ -37,7 +37,7 @@ def cmd_notify(args) -> int:
     from . import notifier, notify
 
     if not notify.webhook_url():
-        print("✘ 웹훅 주소가 없어요 — Inbox 화면에서 넣어 주세요", file=sys.stderr)
+        print("✘ 웹훅 주소가 없어요 — Inbox 화면에서 입력해 주세요", file=sys.stderr)
         return 2
     with db_mod.open_db() as conn:
         got = notifier.send(
@@ -45,9 +45,9 @@ def cmd_notify(args) -> int:
             "test",
             project=args.name or "",
             subject=f"test-{int(time.time())}",
-            title="알림이 닿았어요",
-            body="`labremote notify test`로 보낸 시험 알림이에요.",
-            fields=[("보낸 쪽", notify.USER_AGENT)],
+            title="알림이 도착했어요",
+            body="`labremote notify test`로 보낸 테스트 알림이에요.",
+            fields=[("보낸 곳", notify.USER_AGENT)],
         )
     # `notifier.send`는 `sent`·`status`를 돌려준다 (`ok`가 아니다).
     if got.get("suppressed"):
@@ -67,7 +67,7 @@ def _confirm(question: str, yes: bool) -> bool:
     if yes:
         return True
     if not sys.stdin.isatty():
-        print("✘ 확인할 수 없어요 — 터미널에서 돌리거나 --yes를 붙여 주세요.", file=sys.stderr)
+        print("✘ 확인할 수 없어요 — 터미널에서 실행하거나 --yes를 붙여 주세요.", file=sys.stderr)
         return False
     try:
         return input(f"{question} [y/N] ").strip().lower() in ("y", "yes", "네", "ㅇ")
@@ -94,8 +94,8 @@ def cmd_autostart(args) -> int:
         linger = got["linger"]
         print("linger    " + ("켜져 있어요" if linger else "꺼져 있어요" if linger is False else "못 읽었어요"))
         tmux = units._tmux() or "tmux"
-        print(f"서버 출력  {tmux} -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}   (터미널 창에서 · 나올 때 Ctrl+b d)")
-        print(f"          {tmux} -L {units.TMUX_SOCKET} capture-pane -p -t {units.TMUX_SOCKET}   (터미널 없이 지금 화면만)")
+        print(f"서버 출력  {tmux} -L {units.TMUX_SOCKET} attach -t {units.TMUX_SOCKET}   (터미널 창에서 · 빠져나올 때 Ctrl+b d)")
+        print(f"          {tmux} -L {units.TMUX_SOCKET} capture-pane -p -t {units.TMUX_SOCKET}   (터미널 없이 현재 화면만)")
         return 0
 
     try:
@@ -104,23 +104,23 @@ def cmd_autostart(args) -> int:
                 print(f"--- {units.unit_path()} ---")
                 print(units.render(port=args.port))
                 return 0
-            print("자동 시작을 켜면 이것들이 바뀌어요 (sudo는 필요 없어요):")
+            print("자동 시작을 켜면 다음 항목이 바뀌어요 (sudo는 필요 없어요):")
             for st in autostart.plan(port=args.port):
                 print(f"  · {st['what']}\n      {st['detail']}")
             print("code tunnel은 여기서 켜지 않아요 — 따로 `code tunnel service install`로 켜 주세요 (docs/SETUP.md).")
             if not _confirm("켤까요?", args.yes):
-                print("그만뒀어요. 아무것도 바꾸지 않았어요.")
+                print("취소했어요. 아무것도 바꾸지 않았어요.")
                 return 1
             steps = autostart.install(port=args.port)
         else:
             if not os.path.exists(units.unit_path()) and not autostart.record():
                 print("자동 시작이 이미 꺼져 있어요.")
                 return 0
-            print("자동 시작을 끄면 서비스를 멈추고 유닛 파일을 지워요. linger는 lab.remote가 켰을 때만 원래대로 돌려요"
-                  " (code tunnel 서비스가 있으면 그것도 linger를 써서 그대로 둬요).")
-            print("학습 실행은 서비스와 따로 돌아서 멈추지 않아요.")
+            print("자동 시작을 끄면 서비스를 중지하고 유닛 파일을 지워요. linger는 lab.remote가 켰을 때만 원래대로 되돌려요"
+                  " (code tunnel 서비스가 있으면 그 서비스도 linger를 사용하므로 그대로 둬요).")
+            print("학습 실행은 서비스와 별도로 실행되므로 중지되지 않아요.")
             if not _confirm("끌까요?", args.yes):
-                print("그만뒀어요. 아무것도 바꾸지 않았어요.")
+                print("취소했어요. 아무것도 바꾸지 않았어요.")
                 return 1
             steps = autostart.uninstall()
     except autostart.AutostartError as exc:
@@ -143,12 +143,12 @@ def cmd_remote(args) -> int:
                 print("✘ 주소를 적어 주세요: labremote remote set https://…", file=sys.stderr)
                 return 2
             got = remote.set_url(args.url)
-            print(f"✔ 바깥 주소를 적었어요: {got['publicUrl']}")
-            print("  서버가 이 주소로 오는 요청을 받아요. Discord 알림에 '답하기' 링크가 붙어요.")
+            print(f"✔ 외부 주소를 등록했어요: {got['publicUrl']}")
+            print("  이제 서버가 이 주소로 들어오는 요청을 받아요. Discord 알림에 '답하기' 링크가 추가돼요.")
             return 0
         if args.action == "clear":
             remote.clear()
-            print("✔ 바깥 주소를 지웠어요.")
+            print("✔ 외부 주소를 지웠어요.")
             return 0
     except remote.RemoteError as exc:
         print(f"✘ {exc}", file=sys.stderr)
@@ -161,8 +161,8 @@ def cmd_remote(args) -> int:
     state = {"up": "켜져 있어요", "off": "꺼져 있어요", "absent": "VS Code CLI가 없어요", "unknown": "못 읽었어요"}[t["state"]]
     print(f"code tunnel  {state}" + (f" · {t['url']}" if t["url"] else "")
           + (" · 서비스로 설치됨" if t["service"] else "")
-          + ("" if t["loggedIn"] is None else " · 로그인함" if t["loggedIn"] else " · 로그인 안 함"))
-    print(f"바깥 주소     {info['publicUrl'] or '없음 (labremote remote set https://…)'}")
+          + ("" if t["loggedIn"] is None else " · 로그인됨" if t["loggedIn"] else " · 로그인 안 됨"))
+    print(f"외부 주소     {info['publicUrl'] or '없음 (labremote remote set https://…)'}")
     if info["envHosts"]:
         print(f"LAB_ALLOWED_HOSTS  {', '.join(info['envHosts'])}")
     return 0
@@ -259,7 +259,7 @@ def _project_here(name: str | None) -> tuple[str, str, str]:
         return name, root, ""
     hit = registry.lookup(os.getcwd())
     if not hit:
-        raise RuntimeError("등록한 프로젝트 폴더 안에서 돌리거나 -p <이름>을 붙여 주세요.")
+        raise RuntimeError("등록한 프로젝트 폴더 안에서 실행하거나 -p <이름>을 붙여 주세요.")
     root, found = hit
     rel = paths.rel_or_none(root, paths.real(os.getcwd())) or ""
     return found, root, "" if rel == "." else rel
@@ -288,7 +288,7 @@ def cmd_run(args) -> int:
     else:
         print(f"▶ {name} · {run['id']}를 시작했어요 ({'conda ' + env if env else 'conda 없이'})")
         print(f"  로그     {run['log']}")
-        print(f"  붙기     {run['attach']}")
+        print(f"  접속     {run['attach']}")
     return 0
 
 
@@ -330,31 +330,31 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--json", action="store_true", help="JSON으로 출력해요")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("serve", help="서버를 띄워요 (127.0.0.1만)")
+    p = sub.add_parser("serve", help="서버를 실행해요 (127.0.0.1에서만)")
     p.add_argument("--port", type=int, default=8000)
     p.set_defaults(func=cmd_serve)
 
-    p = sub.add_parser("run", help="명령을 실행해요 (접속이 끊겨도 계속)")
-    p.add_argument("-p", "--project", help="프로젝트 이름 (안 주면 지금 폴더)")
-    p.add_argument("--env", help="conda 환경 (안 주면 프로젝트 설정의 기본 환경)")
-    p.add_argument("--no-env", action="store_true", help="conda 없이 돌려요")
-    p.add_argument("--cwd", help="프로젝트 안 실행 위치 (안 주면 지금 폴더)")
-    p.add_argument("--name", help="실행 이름 (안 주면 EXP 번호만)")
-    p.add_argument("command", nargs=argparse.REMAINDER, help="-- 뒤에 명령")
+    p = sub.add_parser("run", help="명령을 실행해요 (접속이 끊겨도 계속 실행)")
+    p.add_argument("-p", "--project", help="프로젝트 이름 (생략하면 현재 폴더)")
+    p.add_argument("--env", help="conda 환경 (생략하면 프로젝트 설정의 기본 환경)")
+    p.add_argument("--no-env", action="store_true", help="conda 없이 실행해요")
+    p.add_argument("--cwd", help="프로젝트 안의 실행 위치 (생략하면 현재 폴더)")
+    p.add_argument("--name", help="실행 이름 (생략하면 EXP 번호만)")
+    p.add_argument("command", nargs=argparse.REMAINDER, help="-- 뒤에 실행할 명령")
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("runs", help="실행 기록 보기 · 중지 · 로그")
     p.add_argument("action", choices=["list", "stop", "log"], nargs="?", default="list")
     p.add_argument("id", nargs="?", help="EXP-…")
     p.add_argument("-p", "--project")
-    p.add_argument("--force", action="store_true", help="stop: tmux를 통째로 꺼요")
+    p.add_argument("--force", action="store_true", help="stop: tmux 세션을 통째로 종료해요")
     p.add_argument("--lines", type=int, default=200)
     p.set_defaults(func=cmd_runs)
 
     p = sub.add_parser("doctor", help="설치와 환경 점검")
     p.set_defaults(func=cmd_doctor)
 
-    p = sub.add_parser("notify", help="알림 시험 (주소는 안 찍어요)")
+    p = sub.add_parser("notify", help="테스트 알림 보내기 (주소는 출력하지 않아요)")
     p.add_argument("action", choices=["test"])
     p.add_argument("name", nargs="?", help="프로젝트 이름 (선택)")
     p.set_defaults(func=cmd_notify)
@@ -366,12 +366,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dry-run", action="store_true", help="install: 유닛 내용만 보여 줘요")
     p.set_defaults(func=cmd_autostart)
 
-    p = sub.add_parser("remote", help="바깥 주소(터널로 전달한 주소) · 터널 상태")
+    p = sub.add_parser("remote", help="외부 주소(터널로 전달한 주소) · 터널 상태")
     p.add_argument("action", choices=["show", "set", "clear"], nargs="?", default="show")
     p.add_argument("url", nargs="?")
     p.set_defaults(func=cmd_remote)
 
-    p = sub.add_parser("monitor", help="GPU·호스트를 한 번 읽어요")
+    p = sub.add_parser("monitor", help="GPU · 호스트 상태를 한 번 읽어요")
     p.add_argument("action", choices=["once"])
     p.set_defaults(func=cmd_monitor)
     return parser

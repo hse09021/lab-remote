@@ -275,7 +275,7 @@ function DesktopReader() {
           </div>
           <p className={s.noteHint}>
             PDF가 없어서 vault 노트({paper.path})만 보여요.
-            {paper.arxiv ? ' arXiv에서 PDF를 받으면 리더로 열려요. PDF는 데이터 폴더에 받아 두고, 노트는 고치지 않아요.' : ' 라이브러리에서 PDF를 올리면 리더로 열려요.'}
+            {paper.arxiv ? ' arXiv에서 PDF를 받으면 리더로 열려요. PDF는 데이터 폴더에 저장하고, 노트는 수정하지 않아요.' : ' 라이브러리에서 PDF를 올리면 리더로 열려요.'}
           </p>
           {paper.arxiv && (
             <div className={s.noteActions}>
@@ -374,7 +374,7 @@ function DesktopReader() {
             anchor: sel.place.anchor,
             boxes: sel.place.boxes,
           })
-          toast.show('하이라이트했어요 · 노트 탭에서 볼 수 있어요')
+          toast.show('하이라이트를 추가했어요 · 노트 탭에서 볼 수 있어요')
         }
         break
       }
@@ -649,7 +649,7 @@ function DesktopReader() {
                     </Button>
                   </>
                 ) : (
-                  <p>arXiv HTML 본문과 그림을 받는 중이에요… 한 번만 받아 두면 다음부터 바로 열려요.</p>
+                  <p>arXiv HTML 본문과 그림을 받는 중이에요… 처음 한 번만 받으면 다음부터 바로 열려요.</p>
                 )}
                 <Button variant="outline" size="md" onClick={() => setSource('pdf')}>
                   PDF로 보기
@@ -728,7 +728,7 @@ function DesktopReader() {
             sectionLabel={sectionLabel}
             onEditNote={(a, text) => {
               updateAnn.mutate({ id: a.id, text })
-              toast.show('주석을 고쳤어요')
+              toast.show('주석을 수정했어요')
             }}
             onDeleteNote={deleteAnnotation}
             currentLabel={hereId ? sectionLabel(hereId) : ''}
