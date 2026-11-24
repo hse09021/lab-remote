@@ -11,7 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx"]   # httpx: FastAPI TestClient
-api = ["fastapi", "uvicorn[standard]", "claude-agent-sdk"]   # 서버(1단계) + 에이전트 세션(3단계)
+api = ["fastapi", "uvicorn[standard]", "claude-agent-sdk", "pypdf>=6,<7"]
 
 [project.scripts]
 labremote = "app.cli:main"

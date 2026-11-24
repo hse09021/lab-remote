@@ -11,7 +11,7 @@ vault (Obsidian 폴더):
 - 논문 추가(2026-11-24 결정)만 vault에 **새 파일을 쓴다** — `Papers/<이름>.md`와
   `Papers/pdf/<이름>.pdf`. 같은 이름이 있으면 뒤에 번호를 붙이고, 덮어쓰지 않는다.
   - arXiv 링크: arXiv API(export.arxiv.org)에서 제목 · 저자 · 연도 · 분야 · 초록을 받고 PDF도 받는다
-  - PDF 올리기: 파일을 두고 파일 이름으로 노트를 만든다(메타는 사람이 채운다)
+  - PDF 올리기: PDF 메타데이터나 첫 페이지에서 제목을 읽어 노트를 만든다
 - "프로젝트에서 사용"은 프로젝트 설정의 `papers` 목록(사람이 고름)에서 온다.
 - 리더 본문은 화면이 PDF(pdf.js) · arXiv HTML로 그린다. AI 요약 · 분석 · 설명은 누를 때만 (summaries · reader_ai).
 """
@@ -23,7 +23,7 @@ import os
 import re
 import time
 
-from . import paths, projects, registry
+from . import paths, pdfmetadata, projects, registry
 
 __all__ = ["PapersError", "settings", "set_vault", "vault_path", "scan", "list_papers", "graph", "set_status", "body_of",
            "arxiv_id", "add_arxiv", "add_pdf", "pdf_of"]
@@ -469,17 +469,17 @@ def add_arxiv(link: str, *, fetch=_get) -> dict:
 
 
 def add_pdf(filename: str, data: bytes) -> dict:
-    """올린 PDF를 vault에 두고 파일 이름으로 노트를 만든다."""
+    """올린 PDF의 제목으로 노트를 만든다. 추출할 수 없으면 파일 이름을 쓴다."""
     if not data.startswith(b"%PDF-"):
         raise PapersError("PDF 파일이 아니에요.")
     if len(data) > MAX_PDF:
         raise PapersError("PDF가 너무 커요 (100MB까지).")
-    base = os.path.splitext(os.path.basename(filename or ""))[0]
-    name = _safe_name(base) if base else "paper"
+    title = pdfmetadata.title_from_pdf(data, os.path.splitext(os.path.basename(filename or ""))[0] or "paper")
+    name = _safe_name(title)
     folder = _papers_dir()
     made = _create(os.path.join(folder, "pdf", f"{name}.pdf"), data)
     pdf_rel = os.path.relpath(made, vault_path()).replace(os.sep, "/")
-    meta = {"title": base or name, "authors": [], "year": "", "venue": "", "category": "", "pdf": pdf_rel, "cites": []}
+    meta = {"title": title, "authors": [], "year": "", "venue": "", "category": "", "pdf": pdf_rel, "cites": []}
     note = _create(os.path.join(folder, f"{name}.md"), _note(meta, ""))
     stem = os.path.splitext(os.path.basename(note))[0]
     return {"id": stem, "created": True, "path": "vault/" + os.path.relpath(note, vault_path()).replace(os.sep, "/"), "pdf": True}
