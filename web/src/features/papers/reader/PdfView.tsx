@@ -33,6 +33,8 @@ const TITLE_SPOT = { x: 406, y: 157.4 }
 
 export interface JumpTarget {
   sectionId?: string
+  /** AI 하이라이트로 바로 (HTML 보기는 그 구절을, PDF는 page · y를 써요) */
+  highlightId?: string
   page?: number
   /** pt 단위 쪽 안 세로 위치 */
   y?: number

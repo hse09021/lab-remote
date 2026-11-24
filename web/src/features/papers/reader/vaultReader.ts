@@ -279,8 +279,11 @@ async function fromAnalysis(
   for (const [i, h] of analysis.highlights.entries()) {
     const found = await locateNear(doc, h.page, h.quote, base.pageSize.height, base.pageCount)
     if (!found) continue
-    const section = [...base.sections].reverse().find((x) => x.page <= found.page)?.id ?? ''
-    highlights.push({ id: `ai-${i}`, category: h.category, section, page: found.page, boxes: found.boxes, note: h.note, htmlBlock: null })
+    // 하이라이트 첫 줄보다 위에서 시작한 마지막 섹션 (같은 쪽이면 세로 위치까지 봐요)
+    const top = found.boxes[0]?.[1] ?? 0
+    const section =
+      [...base.sections].reverse().find((x) => x.page < found.page || (x.page === found.page && x.y <= top + 4))?.id ?? ''
+    highlights.push({ id: `ai-${i}`, category: h.category, section, page: found.page, boxes: found.boxes, note: h.note, htmlBlock: null, quote: h.quote })
   }
   const references: Reference[] = analysis.references.map((r) => {
     const first = (r.authors.split(/,| and /)[0] ?? '').trim().split(/\s+/).pop() ?? ''
@@ -326,13 +329,16 @@ async function locate(doc: PDFDocumentProxy, page: number, quote: string, pageHe
     // 글자 조각을 이어 붙이고 각 글자가 어느 조각에서 왔는지 기억해요 (공백은 하나로)
     let text = ''
     const owner: number[] = []
+    // 그 글자가 조각 안 몇 번째 글자인지 (뒤에 붙인 공백은 조각 끝)
+    const offset: number[] = []
     items.forEach((it, idx) => {
-      for (const ch of `${it.str} `) {
+      ;[...`${it.str} `].forEach((ch, pos) => {
         const c = /\s/.test(ch) ? ' ' : /[\u2010-\u2015]/.test(ch) ? '-' : ch
-        if (c === ' ' && text.endsWith(' ')) continue
+        if (c === ' ' && text.endsWith(' ')) return
         text += c.toLowerCase()
         owner.push(idx)
-      }
+        offset.push(Math.min(pos, it.str.length))
+      })
     })
     const q = norm(quote).trim()
     let at = text.indexOf(q)
@@ -342,12 +348,23 @@ async function locate(doc: PDFDocumentProxy, page: number, quote: string, pageHe
       len = 60
     }
     if (at < 0) return []
-    const used = [...new Set(owner.slice(at, at + len))]
-    return used.map((idx) => {
+    // 조각마다 구절이 걸친 글자만큼만 칠해요 (조각 하나가 한 줄 전체일 때가 많아요).
+    // 글자 폭은 알 수 없어서 조각 폭을 글자 수로 나눠 어림해요
+    const span = new Map<number, [number, number]>()
+    for (let k = at; k < at + len; k++) {
+      const idx = owner[k]!
+      const pos = offset[k]!
+      const cur = span.get(idx)
+      span.set(idx, cur ? [Math.min(cur[0], pos), Math.max(cur[1], pos + 1)] : [pos, pos + 1])
+    }
+    return [...span.entries()].filter(([idx, [a]]) => a < Math.max(1, items[idx]!.str.length)).map(([idx, [a, b]]) => {
       const it = items[idx]
       const [, , , d, e, f] = it.transform
       const h = it.height || Math.abs(d) || 10
-      return [e, pageHeight - f - h, e + it.width, pageHeight - f + h * 0.2] as PtRect
+      const n = Math.max(1, it.str.length)
+      const x0 = e + (it.width * Math.min(a, n)) / n
+      const x1 = e + (it.width * Math.min(b, n)) / n
+      return [x0, pageHeight - f - h, Math.max(x1, x0 + 2), pageHeight - f + h * 0.2] as PtRect
     })
   } catch {
     return []

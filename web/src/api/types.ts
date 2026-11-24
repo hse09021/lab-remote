@@ -186,6 +186,8 @@ export interface Highlight {
    * 바꿀 수 있지만 지금은 블록 단위만 써요.
    */
   htmlBlock: string | null
+  /** 본문 구절 그대로 (vault 논문의 AI 분석) — HTML 보기에서 이 글자를 찾아 칠해요 */
+  quote?: string
 }
 
 export interface Reference {

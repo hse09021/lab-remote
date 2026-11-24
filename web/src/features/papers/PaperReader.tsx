@@ -663,8 +663,8 @@ function DesktopReader() {
                 toggles={toggles}
                 // 이동 요청의 대상을 그대로 넘겨요 (없으면 보던 섹션)
                 jump={
-                  jump?.target.sectionId
-                    ? { sectionId: jump.target.sectionId, nonce: jump.nonce }
+                  jump?.target.sectionId || jump?.target.highlightId
+                    ? { sectionId: jump.target.sectionId ?? '', highlightId: jump.target.highlightId, nonce: jump.nonce }
                     : activeId
                       ? { sectionId: activeId, nonce: 0 }
                       : null
@@ -765,6 +765,12 @@ function DesktopReader() {
             onJumpSection={(sectionId) => {
               setActiveId(sectionId)
               requestJump({ sectionId })
+            }}
+            onJumpHighlight={(h) => {
+              if (h.section) setActiveId(h.section)
+              // PDF는 그 줄 조금 위로, HTML은 그 구절로
+              const top = h.boxes[0]?.[1]
+              requestJump({ sectionId: h.section || undefined, page: h.page, y: top !== undefined ? Math.max(0, top - 60) : undefined, highlightId: h.id })
             }}
           />
           {ai.closed && (

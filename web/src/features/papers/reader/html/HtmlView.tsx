@@ -19,6 +19,8 @@ import '@/styles/paper.css'
 
 export interface HtmlJump {
   sectionId: string
+  /** AI 하이라이트 구절로 (찾으면 섹션보다 먼저) */
+  highlightId?: string
   nonce: number
 }
 
@@ -173,13 +175,19 @@ export function HtmlView({
   useEffect(() => {
     const root = bodyRef.current
     if (!root || !html) return
-    // 먼저 전부 지워요
+    // 먼저 전부 지워요 (블록 표시 · 글자 단위 mark)
+    unmarkQuotes(root)
     root.querySelectorAll('[data-hl]').forEach((el) => el.removeAttribute('data-hl'))
     for (const h of reader.highlights) {
-      if (!toggles[h.category] || !h.htmlBlock) continue
-      const el = root.querySelector(`#${CSS.escape(h.htmlBlock)}`)
-      // 샘플 골격은 블록 단위예요. 글자 단위는 실제 arXiv HTML 일 때만 써요
-      if (el) el.setAttribute('data-hl', h.category)
+      if (!toggles[h.category]) continue
+      if (h.htmlBlock) {
+        // 샘플 골격 — 블록 단위
+        const el = root.querySelector(`#${CSS.escape(h.htmlBlock)}`)
+        if (el) el.setAttribute('data-hl', h.category)
+      } else if (h.quote) {
+        // vault 논문의 AI 분석 — 같은 구절을 본문 글자에서 찾아 그 글자만 칠해요
+        markQuote(root, h.quote, h.category, h.id)
+      }
     }
   }, [html, toggles, reader.highlights, isReal])
 
@@ -360,7 +368,18 @@ export function HtmlView({
     if (appliedJump.current === jump.nonce) return
     appliedJump.current = jump.nonce
     // 주입 직후에는 레이아웃이 아직이라 한 프레임 뒤에 옮겨요
-    requestAnimationFrame(() => scrollToSection(jump.sectionId, false))
+    requestAnimationFrame(() => {
+      const root = scrollRef.current
+      const mark = jump.highlightId ? bodyRef.current?.querySelector<HTMLElement>(`[data-hl-id="${CSS.escape(jump.highlightId)}"]`) : null
+      if (root && mark) {
+        const top = mark.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop - 120
+        suppressUntil.current = Date.now() + 300
+        root.scrollTo({ top: Math.max(0, top), behavior: 'auto' })
+        mark.animate?.([{ outline: '2px solid var(--accent)' }, { outline: '2px solid transparent' }], { duration: 1400 })
+        return
+      }
+      if (jump.sectionId) scrollToSection(jump.sectionId, false)
+    })
   }, [html, jump, scrollToSection, mapped.html])
 
   if (failed) {
@@ -485,4 +504,70 @@ export function HtmlView({
 export async function copyLatex(latex: string, onToast: (m: string) => void) {
   await copyText(latex)
   onToast('LaTeX를 복사했어요')
+}
+
+/* ── AI 하이라이트 구절을 HTML 글자에서 찾기 ─────────────────── */
+
+/**
+ * PDF에서 옮긴 구절과 arXiv HTML 글자는 공백 · 하이픈 · 합자(ﬁ) · 수식 표기가 달라요.
+ * 그래서 글자와 숫자만 남겨(소문자) 비교하고, 찾은 자리의 원래 글자를 감싸요.
+ */
+const keyOf = (t: string) => t.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+
+function unmarkQuotes(root: HTMLElement) {
+  root.querySelectorAll('mark[data-hl-id]').forEach((m) => {
+    const parent = m.parentNode
+    if (!parent) return
+    while (m.firstChild) parent.insertBefore(m.firstChild, m)
+    parent.removeChild(m)
+    parent.normalize()
+  })
+}
+
+function markQuote(root: HTMLElement, quote: string, category: string, id: string) {
+  const want = keyOf(quote)
+  if (want.length < 12) return
+  // 본문 글자 — 각주 본문 · 수식 원문(annotation) · 끼워 넣은 버튼은 빼요
+  const nodes: Text[] = []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) =>
+      (n.parentElement?.closest('.ltx_note_outer, annotation, annotation-xml, button, script, style') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  })
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text)
+  let key = ''
+  const at: Array<[number, number]> = [] // key 글자마다 (노드 번호, 노드 안 위치)
+  nodes.forEach((n, ni) => {
+    const t = n.data
+    for (let i = 0; i < t.length; i++) {
+      const k = keyOf(t[i]!)
+      for (const ch of k) {
+        key += ch
+        at.push([ni, i])
+      }
+    }
+  })
+  let start = key.indexOf(want)
+  let len = want.length
+  if (start < 0 && want.length > 40) {
+    // 끝쪽 표기가 달라도 앞부분으로 찾아요
+    start = key.indexOf(want.slice(0, 40))
+    len = Math.min(want.length, key.length - start)
+  }
+  if (start < 0) return
+  const [n0, o0] = at[start]!
+  const [n1, o1] = at[start + len - 1]!
+  for (let ni = n1; ni >= n0; ni--) {
+    const node = nodes[ni]!
+    const a = ni === n0 ? o0 : 0
+    const b = ni === n1 ? o1 + 1 : node.data.length
+    if (b <= a || !node.data.slice(a, b).trim()) continue
+    // [a, b)만 떼어 mark로 감싸요 (뒤에서부터 해야 앞 위치가 안 바뀌어요)
+    const mid = a > 0 ? node.splitText(a) : node
+    mid.splitText(b - a)
+    const mark = document.createElement('mark')
+    mark.dataset.hl = category
+    mark.dataset.hlId = id
+    mid.parentNode?.insertBefore(mark, mid)
+    mark.appendChild(mid)
+  }
 }

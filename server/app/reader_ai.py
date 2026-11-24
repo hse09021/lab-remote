@@ -53,7 +53,7 @@ ANALYZE = {
                     "category": {"type": "string", "enum": ["core", "method", "result", "check"]},
                     "quote": {"type": "string", "description": "PDF 본문 그대로 (한 문장 이하, 원문 언어)"},
                     "page": {"type": "integer"},
-                    "note": {"type": "string", "description": "왜 중요한지 (한국어, 한 줄)"},
+                    "note": {"type": "string", "description": "왜 중요한지 (한국어, 한 줄 명사구나 해요체)"},
                 },
                 "required": ["category", "quote", "page", "note"],
             },
@@ -81,8 +81,8 @@ ANALYZE = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "title": {"type": "string", "description": "무엇이 다른지 짧게 (한국어)"},
-                    "text": {"type": "string", "description": "어디는 얼마, 어디는 얼마로 적혀 있는지 (한국어, 한두 문장)"},
+                    "title": {"type": "string", "description": "무엇이 다른지 짧게 (한국어 명사구)"},
+                    "text": {"type": "string", "description": "어디는 얼마, 어디는 얼마로 적혀 있는지 (한국어 해요체, 한두 문장 — 예: …로 적혀 있어요)"},
                     "page": {"type": "integer"},
                     "options": {
                         "type": "array",
@@ -198,6 +198,7 @@ def _prompt(kind: str, p: dict, req: dict) -> tuple[str, dict]:
         "2. 참고문헌 목록을 번호 순으로 적고, 본문이 왜 인용했는지 한 줄씩.",
         "3. 같은 수치를 본문과 표 · 그림이 서로 다르게 적은 곳이 있으면 discrepancies에 적고, 고를 수 있는 값을 options로 (출처와 함께). 없으면 빈 배열.",
         "구절은 PDF에 있는 글자 그대로여야 해요 (화면이 그 글자를 찾아 칠해요).",
+        "한국어로 쓰는 설명은 모두 해요체로 (…해요, …예요). 합니다체는 쓰지 마세요.",
     ]
     return "\n".join(base), ANALYZE
 

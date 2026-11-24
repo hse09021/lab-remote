@@ -55,6 +55,8 @@ interface Props {
   /** 하이라이트 켜고 끈 상태 — 노트 탭도 같이 걸러져요 */
   toggles: HighlightToggles
   onJumpSection: (sectionId: string) => void
+  /** 노트 탭에서 AI 하이라이트 위치로 (없으면 섹션으로) */
+  onJumpHighlight?: (h: Highlight) => void
   /** 채팅 탭 위에 붙는 맥락 칩 */
   chatContext: string | null
   /** 사용자가 직접 친 하이라이트·주석 */
@@ -95,6 +97,7 @@ export function AiPanel({
   onMdSave,
   toggles,
   onJumpSection,
+  onJumpHighlight,
   chatContext,
   userNotes,
   sectionLabel,
@@ -189,6 +192,7 @@ export function AiPanel({
             sections={reader.sections}
             toggles={toggles}
             onJump={onJumpSection}
+            onJumpHighlight={onJumpHighlight}
             userNotes={userNotes}
             label={sectionLabel}
             onEdit={onEditNote}
@@ -285,6 +289,7 @@ function NotesTab({
   sections,
   toggles,
   onJump,
+  onJumpHighlight,
   userNotes,
   label: locationLabel,
   onEdit,
@@ -304,6 +309,7 @@ function NotesTab({
   sections: PaperReaderPayload['sections']
   toggles: HighlightToggles
   onJump: (id: string) => void
+  onJumpHighlight?: (h: Highlight) => void
   userNotes: UserAnnotation[]
   /** 위치 표기 — 번호 없는 섹션은 § 없이 */
   label: (sectionId: string) => string
@@ -386,8 +392,8 @@ function NotesTab({
             </span>
             <span className={s.noteText}>{h.note}</span>
             <div className={s.noteFoot}>
-              <button type="button" onClick={() => onJump(h.section)} className={s.noteWhere}>
-                {sec?.n ? `§${sec.n}` : (sec?.title ?? h.section)} · p.{h.page}
+              <button type="button" onClick={() => (onJumpHighlight ? onJumpHighlight(h) : onJump(h.section))} className={s.noteWhere}>
+                {sec ? `${sec.n ? `§${sec.n}` : sec.title} · p.${h.page}` : `p.${h.page}`}
               </button>
             </div>
           </div>
