@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { analysisQuery, paperPdfHref } from '@/api/papers'
 import type { PaperAnalysis } from '@/api/papers'
 import type { ExplainSpot, Highlight, Paper, PaperReaderPayload, PaperSection, PtRect, Reference } from '@/api/types'
+import { prefixRatio } from '@/lib/textMeasure'
 import { loadPdf } from './pdf/pdfjs'
 import type { PDFDocumentProxy } from './pdf/pdfjs'
 
@@ -309,7 +310,7 @@ async function fromAnalysis(
     highlights,
     references,
     referenceTotal: references.length,
-    citationsCaption: `AI 분석으로 뽑은 참고문헌 ${references.length}개 · 본문에서 많이 인용된 순서예요`,
+    citationsCaption: `AI 분석으로 추출한 참고문헌 ${references.length}개 · 본문에서 많이 인용된 순으로 정렬했어요`,
     citeSpots: citeSpots.map(({ n, page, box }) => ({ n, page, box })),
   }
 }
@@ -325,10 +326,12 @@ async function findCiteSpots(doc: PDFDocumentProxy, base: PaperReaderPayload, kn
   const h = base.pageSize.height
   const BRACKET = /\[(\d{1,3}(?:\s*[,;\u2013-]\s*\d{1,3})*)\]/g
   for (let p = 1; p <= doc.numPages && out.length < 2000; p++) {
-    let items: Array<{ str: string; transform: number[]; width: number; height: number }>
+    let items: Array<{ str: string; transform: number[]; width: number; height: number; fontName: string }>
+    let styles: Record<string, { fontFamily?: string }> = {}
     try {
       const tc = await (await doc.getPage(p)).getTextContent()
-      items = tc.items.filter((it): it is typeof it & { str: string; transform: number[]; width: number; height: number } => 'str' in it)
+      items = tc.items.filter((it): it is typeof it & { str: string; transform: number[]; width: number; height: number; fontName: string } => 'str' in it)
+      styles = tc.styles as Record<string, { fontFamily?: string }>
     } catch {
       continue
     }
@@ -336,19 +339,19 @@ async function findCiteSpots(doc: PDFDocumentProxy, base: PaperReaderPayload, kn
       if (!it.str.includes('[')) continue
       const [, , , d, e, f] = it.transform
       const ih = it.height || Math.abs(d!) || 10
-      const len = Math.max(1, it.str.length)
+      const family = styles[it.fontName]?.fontFamily
       const top = h - f! - ih
       const inBib = !!bib && (p > bib.page || (p === bib.page && top >= bib.y))
       for (const m of it.str.matchAll(BRACKET)) {
-        // 괄호 안 번호 하나하나의 글자 자리 (폭은 조각 폭을 글자 수로 나눠 어림해요)
+        // 괄호 안 번호 하나하나의 글자 자리 — 앞 글자들의 실제 폭 비율로 (textMeasure)
         const start = (m.index ?? 0) + 1
         for (const num of m[1]!.matchAll(/\d{1,3}/g)) {
           const n = Number(num[0])
           if (!known.has(n)) continue
           const a = start + (num.index ?? 0)
           const b = a + num[0].length
-          const x0 = e! + (it.width * a) / len
-          const x1 = e! + (it.width * b) / len
+          const x0 = e! + it.width * prefixRatio(it.str, a, family)
+          const x1 = e! + it.width * prefixRatio(it.str, b, family)
           out.push({ n, page: p, box: [x0 - 1, top, Math.max(x1 + 1, x0 + 5), h - f! + ih * 0.2], inBib })
         }
       }
@@ -374,7 +377,8 @@ async function locate(doc: PDFDocumentProxy, page: number, quote: string, pageHe
   try {
     const pg = await doc.getPage(page)
     const tc = await pg.getTextContent()
-    const items = tc.items.filter((it): it is typeof it & { str: string; transform: number[]; width: number; height: number } => 'str' in it)
+    const items = tc.items.filter((it): it is typeof it & { str: string; transform: number[]; width: number; height: number; fontName: string } => 'str' in it)
+    const styles = tc.styles as Record<string, { fontFamily?: string }>
     // 글자 조각을 이어 붙이고 각 글자가 어느 조각에서 왔는지 기억해요 (공백은 하나로)
     let text = ''
     const owner: number[] = []
@@ -398,7 +402,7 @@ async function locate(doc: PDFDocumentProxy, page: number, quote: string, pageHe
     }
     if (at < 0) return []
     // 조각마다 구절이 걸친 글자만큼만 칠해요 (조각 하나가 한 줄 전체일 때가 많아요).
-    // 글자 폭은 알 수 없어서 조각 폭을 글자 수로 나눠 어림해요
+    // 앞 글자들의 실제 폭 비율로 자리를 구해요 — 글자 수로 나누면 W · i 폭 차이만큼 어긋나요
     const span = new Map<number, [number, number]>()
     for (let k = at; k < at + len; k++) {
       const idx = owner[k]!
@@ -410,9 +414,9 @@ async function locate(doc: PDFDocumentProxy, page: number, quote: string, pageHe
       const it = items[idx]
       const [, , , d, e, f] = it.transform
       const h = it.height || Math.abs(d) || 10
-      const n = Math.max(1, it.str.length)
-      const x0 = e + (it.width * Math.min(a, n)) / n
-      const x1 = e + (it.width * Math.min(b, n)) / n
+      const family = styles[it.fontName]?.fontFamily
+      const x0 = e + it.width * prefixRatio(it.str, a, family)
+      const x1 = e + it.width * prefixRatio(it.str, b, family)
       return [x0, pageHeight - f - h, Math.max(x1, x0 + 2), pageHeight - f + h * 0.2] as PtRect
     })
   } catch {
