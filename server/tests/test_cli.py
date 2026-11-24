@@ -48,7 +48,7 @@ def test_notify_test_가_실패를_실패로_본다(monkeypatch, capsys):
     )
     assert run(["notify", "test"]) == 2
     captured = capsys.readouterr()
-    assert "못 보냈어요" in captured.err and "403" in captured.err
+    assert "보내지 못했어요" in captured.err and "403" in captured.err
     # 주소는 어디에도 안 찍는다
     assert "webhooks/a/b" not in captured.out + captured.err
 
@@ -211,7 +211,7 @@ def test_실패하면_거기서_멈춘다(user_config, monkeypatch):
 def test_꺼져_있으면_다시_켜기를_거절(user_config):
     from app.service import autostart
 
-    with pytest.raises(autostart.AutostartError, match="꺼져"):
+    with pytest.raises(autostart.AutostartError, match="비활성화"):
         autostart.restart(run=lambda argv: (0, ""))
 
 

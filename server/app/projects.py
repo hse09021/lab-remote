@@ -42,10 +42,10 @@ __all__ = [
 LABREMOTE_DIR = ".labremote"
 
 #: `.labremote/.gitignore` — 기본은 폴더 전체를 git에서 뺀다
-GITIGNORE_PRIVATE = "# lab.remote가 만든 폴더예요. 통째로 git에서 빠져요.\n*\n"
+GITIGNORE_PRIVATE = "# lab.remote가 만든 폴더예요. 폴더 전체를 git에서 제외해요.\n*\n"
 #: "repo에 같이 올리기" — `settings.json`과 `scenarios/*.json`만 추적
 GITIGNORE_SHARED = (
-    "# lab.remote가 만든 폴더예요. 설정과 Scenario만 같이 올려요.\n"
+    "# lab.remote가 만든 폴더예요. 설정과 Scenario만 git에 포함해요.\n"
     "*\n"
     "!.gitignore\n"
     "!settings.json\n"
@@ -137,7 +137,7 @@ def _normalize(raw: dict) -> dict:
         raise ProjectError("설정은 JSON 객체여야 해요.")
     env = raw.get("condaEnv") or ""
     if not isinstance(env, str) or (env and not ENV_RE.match(env)):
-        raise ProjectError(f"conda 환경 이름이 규칙에 안 맞아요: {env!r}")
+        raise ProjectError(f"conda 환경 이름이 규칙에 맞지 않아요: {env!r}")
     globs = _clean_list(raw.get("metricGlobs"), limit=MAX_GLOBS, field="지표 파일 규칙")
     for g in globs:
         if g.startswith("/") or ".." in g.split("/"):
@@ -198,15 +198,15 @@ def register(path: str, name: str = "", *, create: bool = False, git_init: bool 
     이미 등록된 프로젝트와 겹치는(안에 있거나 품는) 폴더.
     """
     if not isinstance(path, str) or not path.strip() or "\x00" in path:
-        raise ProjectError("폴더 경로를 적어 주세요.")
+        raise ProjectError("폴더 경로를 입력해 주세요.")
     root = paths.real(path.strip())
     made_dir = False
     if create:
         parent = os.path.dirname(root)
         if os.path.exists(root):
-            raise ProjectError(f"이미 있는 폴더예요 — '기존 폴더'로 등록해 주세요: {root}")
+            raise ProjectError(f"이미 있는 폴더예요. '기존 폴더 등록'을 사용해 주세요: {root}")
         if not os.path.isdir(parent):
-            raise ProjectError(f"위 폴더가 없어요: {parent}")
+            raise ProjectError(f"상위 폴더가 없어요: {parent}")
         name_part = os.path.basename(root)
         if not name_part or name_part.startswith(".") or len(name_part) > 100:
             raise ProjectError("새 폴더 이름이 올바르지 않아요.")
@@ -219,16 +219,16 @@ def register(path: str, name: str = "", *, create: bool = False, git_init: bool 
         raise ProjectError("lab.remote 데이터 폴더 안은 등록할 수 없어요.")
     for other_root, other_name in registry.load().items():
         if other_root == root:
-            raise ProjectError(f"이미 {other_name!r}로 등록돼 있어요.")
+            raise ProjectError(f"이미 다른 이름으로 등록돼 있어요: {other_name!r}")
         if paths.is_inside(other_root, root) or paths.is_inside(root, other_root):
-            raise ProjectError(f"등록된 프로젝트 {other_name!r}와 겹쳐요 ({other_root}).")
+            raise ProjectError(f"등록된 프로젝트와 경로가 겹쳐요: {other_name!r} ({other_root})")
     name = (name or "").strip() or slug(os.path.basename(root))
     try:
         registry.valid_name(name)
     except registry.InvalidName as exc:
         raise ProjectError(str(exc)) from None
     if name in registry.load().values():
-        raise ProjectError(f"이미 쓰는 이름이에요: {name}")
+        raise ProjectError(f"이미 사용 중인 이름이에요: {name}")
     if create:
         os.mkdir(root, 0o755)
         made_dir = True

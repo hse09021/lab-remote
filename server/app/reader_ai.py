@@ -199,10 +199,10 @@ def start(pid: str, kind: str, req: dict | None = None, *, model: str = "", quer
     if kind in ("selection", "translate") and not str(req.get("text") or "").strip():  # element는 글자 없이도 돼요(쪽 + 이름)
         raise ReaderAiError("선택한 텍스트가 없어요.")
     if kind == "ask" and not str(req.get("question") or "").strip():
-        raise ReaderAiError("질문을 적어 주세요.")
+        raise ReaderAiError("질문을 입력해 주세요.")
     running = [j for j in _jobs.values() if j["state"] == "running"]
     if len(running) >= 3:
-        raise ReaderAiError("앞 요청에 답하는 중이에요. 끝나면 다시 해 주세요.")
+        raise ReaderAiError("이전 요청에 답하는 중이에요. 끝나면 다시 시도해 주세요.")
     if kind == "analyze" and any(j["kind"] == "analyze" and j["paper"] == pid for j in running):
         raise ReaderAiError("이미 분석하는 중이에요.")
     jid = uuid.uuid4().hex[:10]

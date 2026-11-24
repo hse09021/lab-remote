@@ -82,7 +82,7 @@ def build_argv(parsed: dict, env_name: str, *, allow_source: bool = False) -> li
         raise InstallError(str(exc)) from None
     items = pkgspec.requirements(parsed)
     if not items:
-        raise InstallError("설치할 게 없어요")
+        raise InstallError("설치할 패키지가 없어요")
 
     argv = [
         "conda", "run", "-n", name, "--no-capture-output",

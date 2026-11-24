@@ -186,7 +186,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
             if rest.startswith("assets/"):
                 # 새로 빌드돼 없어진 조각 — index.html을 주면 브라우저가 "모듈을 못 불러와요"로 터져요.
                 # 404로 답하고 화면이 스스로 한 번 새로 고쳐요 (web/src/lib/lazyReload.ts)
-                return JSONResponse({"detail": "없는 파일이에요 (새로 빌드됐어요 — 새로 고침해 주세요)"}, status_code=404)
+                return JSONResponse({"detail": "파일이 없어요. 웹이 새로 빌드됐으니 새로 고침해 주세요."}, status_code=404)
         # SPA — 화면 경로는 전부 index.html. 늘 새로 받게 (새 빌드의 조각 이름을 알도록)
         return FileResponse(index, headers={"Cache-Control": "no-cache"})
 

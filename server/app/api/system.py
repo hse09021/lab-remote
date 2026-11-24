@@ -100,7 +100,7 @@ def uninstall_autostart(body: UninstallBody):
     from ..service import autostart
 
     if body.confirm != "끄기":
-        return _bad(ValueError("확인 문구가 달라요."))
+        return _bad(ValueError("확인 문구가 일치하지 않아요."))
     from ..service import units
 
     inside = units.inside()

@@ -149,7 +149,7 @@ def test_재부팅_대기만_있으면_곧_깨질_상태(fake_run, monkeypatch):
     state = G.driver_state()
     assert state["mismatch"] is False
     assert state["ok"] is False  # 실험을 시작하면 안 되는 상태
-    assert "재부팅을 안 했어요" in state["reason"]
+    assert "재부팅하지 않았어요" in state["reason"]
 
 
 def test_NVRM_판을_못_읽어도_안_터진다(monkeypatch):

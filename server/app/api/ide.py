@@ -69,7 +69,7 @@ def merge(name: str, body: MergeBody):
         return _bad(exc, 409)
     # Inbox "PR · 머지" — Discord는 "머지" 알림을 켰을 때만
     with db.open_db() as conn:
-        alerts.post(conn, "pr", "merge", f"{got['branch']} → {got['main']} 합침", where=name,
+        alerts.post(conn, "pr", "merge", f"{got['branch']} → {got['main']} 머지", where=name,
                     body=f"merge --no-ff · {got['sha']}", project=name, ref={"project": name}, subject=f"merge:{name}:{got['sha']}")
     return got
 

@@ -75,7 +75,7 @@ def test_설치_도구_자신은_거부한다(name):
     """바꿔치기하면 **다음 설치가 임의 코드**가 된다."""
     with pytest.raises(PS.SpecError) as err:
         PS.parse({"packages": [{"name": name}]})
-    assert "설치하지 않아요" in str(err.value)
+    assert "설치할 수 없는 패키지" in str(err.value)
 
 
 def test_개수_상한이_있다():

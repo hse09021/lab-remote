@@ -175,8 +175,8 @@ def check(name: str) -> dict:
         return out
     if not NAME_RE.match(text):
         out["reason"] = (
-            f"환경 이름 규칙에 안 맞아요: {text!r} · 영문·숫자로 시작하고 "
-            "`.`·`_`·`-`만 쓸 수 있어요. 경로는 받지 않아요."
+            f"환경 이름이 규칙에 맞지 않아요: {text!r} · 영문이나 숫자로 시작하고 "
+            "`.` `_` `-`만 쓸 수 있어요. 경로는 사용할 수 없어요."
         )
         return out
     if text.lower() in BASE_NAMES:
@@ -201,7 +201,7 @@ def check(name: str) -> dict:
             if hit:
                 out["prefix"] = path
                 out["reason"] = (
-                    f"{text}는 lab.remote가 실행되는 환경이라 보호돼요 ({path}). "
+                    f"lab.remote가 실행되는 환경이라 보호돼요: {text} ({path}). "
                     "실험용 환경을 따로 만들어 주세요: "
                     f"conda create -n {text}-exp python=3.11"
                 )
@@ -223,7 +223,7 @@ def require_made(name: str) -> str:
         raise EnvRefused(got["reason"])
     if not got["prefix"]:
         raise EnvRefused(
-            f"conda 환경 {name}이 없어요: conda create -n {name} python=3.11 -y"
+            f"conda 환경이 없어요: {name} (만들려면 conda create -n {name} python=3.11 -y)"
         )
     return got["prefix"]
 

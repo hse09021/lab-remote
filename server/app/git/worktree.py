@@ -73,5 +73,5 @@ def remove(root: str, rel: str) -> dict:
     try:
         ops.run(root, ["worktree", "remove", "--", target])
     except ops.GitError as exc:
-        raise WorktreeError(f"정리하지 못했어요 — 커밋 안 한 변경이 있으면 먼저 커밋하거나 되돌려 주세요. ({str(exc)[:200]})") from None
+        raise WorktreeError(f"정리하지 못했어요. 커밋하지 않은 변경이 있다면 먼저 커밋하거나 되돌려 주세요. ({str(exc)[:200]})") from None
     return {"removed": paths.rel_or_none(paths.real(root), target)}

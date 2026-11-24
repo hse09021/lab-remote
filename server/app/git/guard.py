@@ -165,7 +165,7 @@ def bad_config(entries: dict) -> list[str]:
     for key, value in sorted(entries.items()):
         if key in FORBIDDEN_KEYS or any(p.match(key) for p in FORBIDDEN_PATTERNS):
             shown = (value or "")[:80]
-            out.append(f".git/config · {key} = {shown!r} — git이 이걸 실행해요")
+            out.append(f".git/config · {key} = {shown!r} — git이 이 값을 실행해요")
     return out
 
 
@@ -250,7 +250,7 @@ def check(root: str, *, git: str = "git", config_args=(), env=None) -> dict:
 def describe(report: dict) -> str:
     if report.get("ok"):
         return ".git이 깨끗해요."
-    lines = [".git에 코드를 실행하게 하는 설정이 들어 있어요 — git을 실행하지 않았어요:"]
+    lines = [".git에 코드를 실행할 수 있는 설정이 있어서 git을 실행하지 않았어요:"]
     lines += [f"  · {p}" for p in report.get("problems") or []]
     lines.append("에이전트 세션이 작성한 코드가 넣었을 수 있어요. 무엇이 들어갔는지 먼저 확인해 주세요.")
     return "\n".join(lines)

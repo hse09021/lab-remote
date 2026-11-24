@@ -148,7 +148,7 @@ def _lock_reason(name: str) -> str:
         return protected
     busy = _busy_envs().get(name)
     if busy:
-        return f"실행 중인 학습이 쓰고 있어서 잠겨 있어요 ({', '.join(busy[:3])}). 끝나면 바꿀 수 있어요."
+        return f"실행 중인 학습이 사용 중이라 잠겨 있어요 ({', '.join(busy[:3])}). 학습이 끝나면 변경할 수 있어요."
     return ""
 
 
@@ -179,7 +179,7 @@ def _specs(packages) -> tuple[list[str], list[str]]:
         raise CondaError(str(exc)) from None
     items = pkgspec.requirements(parsed)
     if not items:
-        raise CondaError("패키지를 골라 주세요.")
+        raise CondaError("패키지를 선택해 주세요.")
     return items, [p["name"] for p in parsed["packages"]]
 
 
@@ -224,7 +224,7 @@ def _changes_from(tool: str, action: str, names: list[str], out: str, env: str) 
         old = {x.get("name"): x.get("version") for x in acts.get("UNLINK") or []}
         new = {x.get("name"): x.get("version") for x in acts.get("LINK") or []}
         for n in sorted(set(old) | set(new)):
-            kind = "추가" if n not in old else "제거" if n not in new else "바뀜"
+            kind = "추가" if n not in old else "제거" if n not in new else "변경"
             changes.append({"name": n, "from": old.get(n) or "", "to": new.get(n) or "", "action": kind})
         if not changes and data.get("message"):
             changes.append({"name": "", "from": "", "to": "", "action": str(data["message"])})
@@ -234,7 +234,7 @@ def _changes_from(tool: str, action: str, names: list[str], out: str, env: str) 
             meta = item.get("metadata") or {}
             n = str(meta.get("name") or "")
             prev = installed.get(n.lower(), "")
-            changes.append({"name": n, "from": prev, "to": str(meta.get("version") or ""), "action": "바뀜" if prev else "추가"})
+            changes.append({"name": n, "from": prev, "to": str(meta.get("version") or ""), "action": "변경" if prev else "추가"})
     elif tool == "pip" and action == "remove":
         installed = {p["name"].lower(): p["version"] for p in env_detail(env)["packages"] if p.get("name")}
         for n in names:
@@ -246,12 +246,12 @@ def start_job(kind: str, env: str, *, tool: str = "", action: str = "", packages
               confirm: str = "", python: str = "", clone: str = "") -> dict:
     """작업을 백그라운드로 시작하고 바로 돌아온다. 화면은 `job(id)`로 읽는다."""
     if not condaenv.NAME_RE.match(env or ""):
-        raise CondaError(f"환경 이름 규칙에 안 맞아요: {env!r}")
+        raise CondaError(f"환경 이름이 규칙에 맞지 않아요: {env!r}")
     specs: list[str] = []
     names: list[str] = []
     if kind == "change":
         if tool not in TOOLS or action not in ACTIONS:
-            raise CondaError("도구는 conda나 pip, 작업은 설치 · 업데이트 · 제거 중에서 골라 주세요.")
+            raise CondaError("도구는 conda나 pip, 작업은 설치 · 업데이트 · 제거 중에서 선택해 주세요.")
         specs, names = _specs(packages or [])
         if not dry:
             reason = _lock_reason(env)
@@ -266,10 +266,10 @@ def start_job(kind: str, env: str, *, tool: str = "", action: str = "", packages
         if clone and not any(e["name"] == clone for e in list_envs()):
             raise CondaError(f"복제할 환경이 없어요: {clone}")
         if python and not python.replace(".", "").isdigit():
-            raise CondaError("파이썬 버전은 3.11처럼 숫자로 적어 주세요.")
+            raise CondaError("파이썬 버전은 3.11처럼 숫자로 입력해 주세요.")
     elif kind == "delete":
         if confirm != env:
-            raise CondaError("지우려면 환경 이름을 똑같이 적어 주세요.")
+            raise CondaError("삭제하려면 환경 이름을 똑같이 입력해 주세요.")
         reason = _lock_reason(env)
         if reason:
             raise CondaError(reason)

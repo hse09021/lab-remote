@@ -153,7 +153,7 @@ def test_새_폴더를_만들어_등록(tmp_path):
         projects.register(str(target), "x", create=True)
     with _pytest.raises(projects.ProjectError, match="위 폴더가 없어요"):
         projects.register(str(tmp_path / "nope" / "a"), "", create=True)
-    with _pytest.raises(projects.ProjectError, match="이미 쓰는 이름"):
+    with _pytest.raises(projects.ProjectError, match="이미 사용 중인 이름"):
         projects.register(str(tmp_path / "projects" / "other"), "new-exp", create=True)
     assert not (tmp_path / "projects" / "other").exists()
 

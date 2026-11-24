@@ -211,7 +211,7 @@ def status() -> dict:
             done = subprocess.run([out["systemctl"], "--user", flag, f"{NAME}.service"], capture_output=True, text=True, timeout=10)
             row[key] = (done.stdout or done.stderr or "").strip()
         except (OSError, subprocess.SubprocessError) as exc:
-            row[key] = f"못 읽었어요: {exc}"
+            row[key] = f"읽지 못했어요: {exc}"
     try:
         done = subprocess.run(
             [out["systemctl"], "--user", "show", f"{NAME}.service", "--property=NRestarts", "--value"],

@@ -35,9 +35,9 @@ RULES = (
     ("ask", "답이 필요할 때", "승인 요청 · 질문"),
     ("done", "실행이 끝났을 때", "종료 코드 0"),
     ("fail", "실행 실패 · 끊김", "종료 코드가 0이 아니거나 재부팅으로 끊김"),
-    ("plan", "예약 실행이 시작되거나 기다릴 때", "예약 시각에 시작했거나, GPU가 바빠 기다리기 시작했을 때"),
-    ("pr", "PR 리뷰 · 변경 요청", "GitHub에서 읽어 와요"),
-    ("merge", "머지", "main에 합쳐졌을 때"),
+    ("plan", "예약 실행이 시작되거나 대기할 때", "예약 시각에 시작했거나 GPU가 사용 중이라 대기를 시작했을 때"),
+    ("pr", "PR 리뷰 · 변경 요청", "GitHub에서 가져와요"),
+    ("merge", "머지", "main에 머지됐을 때"),
     ("sys", "시스템 경고", "VRAM · 디스크 · GPU 드라이버"),
 )
 RULE_LABELS = {k: name for k, name, _ in RULES}
@@ -104,7 +104,7 @@ def save_rules(changes: dict) -> dict:
 def save_quiet(on: bool, start: str, end: str) -> dict:
     for value in (start, end):
         if not isinstance(value, str) or not TIME_RE.match(value):
-            raise ValueError(f"시각은 HH:MM으로 적어 주세요: {value!r}")
+            raise ValueError(f"시각은 HH:MM 형식으로 입력해 주세요: {value!r}")
     data = load()
     data["quiet"] = {"on": bool(on), "start": start, "end": end}
     return _write(data)
@@ -202,7 +202,7 @@ def post(
             if result.get("sent"):
                 sent = "Discord 보냄"
             elif result.get("suppressed"):
-                sent = "보내지 않음 · 방금 같은 알림"
+                sent = "보내지 않음 · 중복 알림"
             else:
                 # 사유에 주소가 섞이지 않게 상태 코드만 남긴다
                 status = result.get("status")

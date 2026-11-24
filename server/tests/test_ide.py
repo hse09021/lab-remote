@@ -63,7 +63,7 @@ def test_커밋과_main_에_합치기(repo):
     # main 쪽에 커밋 안 한 변경이 있으면 거절
     with open(os.path.join(repo, "notes.md"), "w") as fh:
         fh.write("x\n")
-    with pytest.raises(actions.ActionError, match="커밋 안 한 변경"):
+    with pytest.raises(actions.ActionError, match="커밋하지 않은 변경"):
         actions.merge_to_main(repo, "exp/lr")
     os.remove(os.path.join(repo, "notes.md"))
     out = actions.merge_to_main(repo, "exp/lr")
@@ -223,7 +223,7 @@ def test_PR_열기는_push_된_브랜치만(repo, tmp_path):
     with open(os.path.join(made["path"], "src", "train.py"), "a") as fh:
         fh.write("x = 1\n")
     actions.commit(made["path"], "더")
-    with pytest.raises(actions.ActionError, match="1개 앞서요"):
+    with pytest.raises(actions.ActionError, match="1개 앞서 있어요"):
         actions.create_pr(made["path"], "lr 낮추기", runner=fake)
     # main에서는 열지 않아요
     with pytest.raises(actions.ActionError, match="main이 아닌"):
@@ -242,7 +242,7 @@ def test_합치면_Inbox에_남아요(repo, tmp_path):
     assert r.status_code == 200
     with db.open_db() as conn:
         got = inbox.items(conn, kind="pr")
-    assert any("exp/m" in x["title"] and "합침" in x["title"] for x in got)
+    assert any("exp/m" in x["title"] and "머지" in x["title"] for x in got)
 
 
 def test_세션_카드_git_상태(repo, monkeypatch):

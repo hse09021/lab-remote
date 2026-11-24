@@ -84,14 +84,14 @@ def _clean(label: str, value: str, *, allow_empty: bool = False) -> str:
     if not text:
         if allow_empty:
             return ""
-        raise SpecError(f"{label}이 비어 있어요")
+        raise SpecError(f"값이 비어 있어요: {label}")
     if text != str(value):
         # 앞뒤 공백을 말없이 지우지 않는다 — 요청과 승인 내용이 달라진다.
         raise SpecError(f"{label} 앞뒤에 공백이 있어요: {value!r}")
     if any(bad in text for bad in BAD_SUBSTRINGS):
         raise SpecError(
             f"{label}에 사용할 수 없는 문자가 있어요: {text!r} · "
-            "이름과 버전만 지정할 수 있어요 (URL·경로·옵션은 쓸 수 없어요)"
+            "이름과 버전만 지정할 수 있어요 (URL · 경로 · 옵션은 쓸 수 없어요)"
         )
     return text
 
@@ -106,24 +106,24 @@ def _one(item, index: int) -> dict:
     name = _clean(f"{index + 1}번째 이름", item.get("name"))
     if not NAME_RE.match(name):
         raise SpecError(
-            f"패키지 이름 규칙에 안 맞아요: {name!r} · 영문으로 시작하고 "
-            "영문·숫자·`.`·`_`·`-`만 쓸 수 있어요"
+            f"패키지 이름이 규칙에 맞지 않아요: {name!r} · 영문으로 시작하고 "
+            "영문 · 숫자 · `.` `_` `-`만 쓸 수 있어요"
         )
     if name.lower() in FORBIDDEN_NAMES:
         raise SpecError(
-            f"{name}은 설치하지 않아요 — 설치 도구나 환경 자체를 바꿔요"
+            f"설치할 수 없는 패키지예요: {name} · 설치 도구나 환경 자체를 바꿔요"
         )
 
     spec = _clean(f"{index + 1}번째 버전", item.get("spec"), allow_empty=True)
     if spec and not SPEC_RE.match(spec):
         raise SpecError(
-            f"버전 지정 규칙에 안 맞아요: {spec!r} · `==1.2.3`처럼 비교 연산자와 "
+            f"버전 지정이 규칙에 맞지 않아요: {spec!r} · `==1.2.3`처럼 비교 연산자와 "
             "숫자로 시작해야 해요"
         )
 
     extras = _clean(f"{index + 1}번째 extras", item.get("extras"), allow_empty=True)
     if extras and not EXTRAS_RE.match(extras):
-        raise SpecError(f"extras 규칙에 안 맞아요: {extras!r}")
+        raise SpecError(f"extras가 규칙에 맞지 않아요: {extras!r}")
 
     return {"name": name, "spec": spec, "extras": extras}
 
@@ -158,7 +158,7 @@ def parse(data) -> dict:
         key = got["name"].lower().replace("_", "-")
         if key in seen and seen[key] != got:
             raise SpecError(
-                f"같은 패키지를 다르게 두 번 적었어요: {got['name']} · "
+                f"같은 패키지가 서로 다르게 두 번 지정됐어요: {got['name']} · "
                 f"{seen[key]['spec']!r} vs {got['spec']!r}"
             )
         seen[key] = got

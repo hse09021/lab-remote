@@ -62,10 +62,10 @@ def _clean_rel(rel: str) -> str:
     if not isinstance(rel, str) or "\x00" in rel or "\\" in rel:
         raise FileRefused("경로에 사용할 수 없는 문자가 있어요.")
     if rel.startswith("/") or rel.startswith("~"):
-        raise FileRefused("프로젝트 안 상대 경로만 쓸 수 있어요.")
+        raise FileRefused("프로젝트 안의 상대 경로만 사용할 수 있어요.")
     parts = [p for p in rel.split("/") if p not in ("", ".")]
     if any(p == ".." for p in parts):
-        raise FileRefused("`..`는 쓸 수 없어요.")
+        raise FileRefused("`..`는 사용할 수 없어요.")
     return "/".join(parts)
 
 
@@ -96,9 +96,9 @@ def resolve(base: str, rel: str, *, follow: bool = True, must_exist: bool = True
         parent = os.path.realpath(os.path.dirname(joined))
         target = os.path.join(parent, os.path.basename(joined))
         if not paths.is_inside(base_real, parent):
-            raise FileRefused("프로젝트 폴더 밖이에요.")
+            raise FileRefused("프로젝트 폴더 외부 경로예요.")
     if not paths.is_inside(base_real, target):
-        raise FileRefused("프로젝트 폴더 밖을 가리켜요.")
+        raise FileRefused("프로젝트 폴더 외부를 가리켜요.")
     if must_exist and not os.path.lexists(target):
         raise NotFound(f"없는 경로예요: {clean or '.'}")
     return target
@@ -188,7 +188,7 @@ def read_text(base: str, rel: str) -> dict:
 def download_path(base: str, rel: str) -> str:
     target = resolve(base, rel)
     if not os.path.isfile(target):
-        raise FileRefused("파일만 내려받을 수 있어요.")
+        raise FileRefused("파일만 다운로드할 수 있어요.")
     return target
 
 
@@ -229,7 +229,7 @@ def write_text(base: str, rel: str, text: str, *, create: bool = False) -> dict:
         raise FileRefused("내용은 텍스트여야 해요.")
     data = text.encode("utf-8")
     if len(data) > MAX_TEXT_BYTES:
-        raise FileRefused("파일이 너무 커요 (편집기로는 2 MB까지).")
+        raise FileRefused("파일이 너무 커요 (편집기에서는 2MB까지).")
     if create:
         target = _new_target(base, rel)
     else:
@@ -243,12 +243,12 @@ def write_text(base: str, rel: str, text: str, *, create: bool = False) -> dict:
 def _new_target(base: str, rel: str) -> str:
     clean = _clean_rel(rel)
     if not clean:
-        raise FileRefused("이름을 적어 주세요.")
+        raise FileRefused("이름을 입력해 주세요.")
     parent_rel, name = posixpath.split(clean)
     _check_name(name)
     parent = resolve(base, parent_rel)
     if not os.path.isdir(parent):
-        raise FileRefused("들어갈 폴더가 없어요.")
+        raise FileRefused("대상 폴더가 없어요.")
     target = os.path.join(parent, name)
     if os.path.lexists(target):
         raise FileRefused(f"이미 있어요: {name}")
@@ -298,7 +298,7 @@ def _guard_mutation(root: str, base: str, target: str) -> None:
     rel = _rel_of(base, target)
     top = rel.split("/", 1)[0]
     if top in PROTECTED_TOP:
-        raise FileRefused(f"{top}은 옮기거나 지울 수 없어요.")
+        raise FileRefused(f"옮기거나 지울 수 없는 경로예요: {top}")
     # 실행 위치 **자신이나 그걸 품은 폴더**를 막는다. 그 안의 파일 하나를
     # 지우는 건 막지 않는다 — 실행 위치가 프로젝트 루트면 학습 내내 아무것도
     # 못 지우게 된다.
@@ -313,7 +313,7 @@ def move(root: str, base: str, src: str, dst: str) -> dict:
     _guard_mutation(root, base, source)
     target = _new_target(base, dst)
     if os.path.isdir(source) and not os.path.islink(source) and paths.is_inside(source, target):
-        raise FileRefused("폴더를 자기 안으로 옮길 수 없어요.")
+        raise FileRefused("폴더를 자기 자신 안으로 옮길 수 없어요.")
     os.rename(source, target)
     return {"from": _rel_of(base, source), "to": _rel_of(base, target)}
 
@@ -327,7 +327,7 @@ def delete(root: str, base: str, rel: str, *, confirm: str) -> dict:
     _guard_mutation(root, base, target)
     name = os.path.basename(target)
     if confirm != name:
-        raise FileRefused("확인 이름이 맞지 않아요.")
+        raise FileRefused("확인용 이름이 일치하지 않아요.")
     if os.path.isdir(target) and not os.path.islink(target):
         shutil.rmtree(target)
         kind = "dir"

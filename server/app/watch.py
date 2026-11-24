@@ -141,7 +141,7 @@ def check_resources(conn, *, probe=None, poster=None) -> None:
         seen.add(dev)
         free_gb = usage.free / 1024**3
         if free_gb < DISK_WARN_GB:
-            _sys_once(conn, f"disk:{dev}", "디스크 여유가 적어요", f"{projects.display_path(root)} · {free_gb:.1f}G 여유",
+            _sys_once(conn, f"disk:{dev}", "디스크 여유 공간이 부족해요", f"{projects.display_path(root)} · {free_gb:.1f}G 여유",
                       "체크포인트를 저장하지 못할 수 있어요.", poster=poster)
 
 

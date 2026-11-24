@@ -114,10 +114,10 @@ def install_warning(project: str, req: ApprovalRequest) -> str:
             if named and r.get("env") != named.group(1):
                 continue
             env = r.get("env")
-            busy.append(f"{r.get('name') or r['id']}이 {env}로" if env else f"{r.get('name') or r['id']}이 conda 없이")
+            busy.append(f"{r.get('name') or r['id']}({env})" if env else f"{r.get('name') or r['id']}(conda 없이)")
     if not busy:
         return ""
-    return f"{', '.join(busy[:3])} 학습 중이에요. 지금 패키지를 바꾸면 학습에 문제가 생길 수 있어요."
+    return f"학습이 실행 중이에요: {', '.join(busy[:3])}. 지금 패키지를 바꾸면 학습에 문제가 생길 수 있어요."
 
 
 def _allow_key(req: ApprovalRequest) -> tuple:
@@ -323,7 +323,7 @@ class Manager:
         root = projects.require(project)
         text = (text or "").strip()
         if not text:
-            raise AgentError("첫 메시지를 적어 주세요.")
+            raise AgentError("첫 메시지를 입력해 주세요.")
         if mode not in MODES:
             raise AgentError(f"알 수 없는 Mode예요: {mode}")
         if effort not in EFFORTS:
@@ -406,10 +406,10 @@ class Manager:
         root, rec = self._find(sid)
         text = (text or "").strip()
         if not text:
-            raise AgentError("메시지를 적어 주세요.")
+            raise AgentError("메시지를 입력해 주세요.")
         live = await self._ensure_live(sid, root, rec)
         if live.backend.busy:
-            raise AgentError("아직 앞 응답이 끝나지 않았어요. 멈추거나 끝날 때까지 기다려 주세요.")
+            raise AgentError("아직 이전 응답이 끝나지 않았어요. 중지하거나 끝날 때까지 기다려 주세요.")
         live.last_used = time.time()
         self._append(root, sid, {"type": "user", "text": text})
         rec["state"] = "working"
@@ -529,14 +529,14 @@ class Manager:
         """`choice`: allow · allowSession · deny · answer(질문에 답). 먼저 온 답만 먹는다."""
         p = self.pending.get(aid)
         if not p or p.future.done():
-            raise AgentError("이미 답했거나 사라진 승인 요청이에요.")
+            raise AgentError("이미 응답했거나 만료된 승인 요청이에요.")
         if choice not in ("allow", "allowSession", "deny", "answer"):
             raise AgentError(f"알 수 없는 답이에요: {choice}")
         if choice == "answer":
             return self._answer_questions(p, answers or {}, response, via)
         root, rec = self._find(p.session)
         if choice == "allowSession" and p.request.tool == "AskUserQuestion":
-            raise AgentError("질문에는 '계속 허용'이 없어요. 답을 골라 주세요.")
+            raise AgentError("질문에는 '계속 허용'이 없어요. 답을 선택해 주세요.")
         if choice == "allowSession":
             key = _allow_key(p.request)
             live = self.live.get(p.session)
@@ -546,7 +546,7 @@ class Manager:
         decision = (
             Decision(allow=True)
             if choice != "deny"
-            else Decision(allow=False, message=(f"사람이 거부했어요: {reason}" if reason else "사람이 거부했어요."))
+            else Decision(allow=False, message=(f"사용자가 거부했어요: {reason}" if reason else "사용자가 거부했어요."))
         )
         p.future.set_result(decision)
         state = {"allow": "allowed", "allowSession": "allowed", "deny": "denied"}[choice]
@@ -585,7 +585,7 @@ class Manager:
                 clean[key] = str(value).strip()
         response = (response or "").strip()
         if not clean and not response:
-            raise AgentError("답을 고르거나 적어 주세요.")
+            raise AgentError("답을 선택하거나 입력해 주세요.")
         updated = {"questions": questions, "answers": clean}
         if response:
             updated["response"] = response
@@ -616,9 +616,9 @@ class Manager:
         if live:
             for p in [p for p in self.pending.values() if p.session == sid]:
                 if not p.future.done():
-                    p.future.set_result(Decision(allow=False, message="사람이 멈췄어요.", interrupt=True))
+                    p.future.set_result(Decision(allow=False, message="사용자가 중지했어요.", interrupt=True))
             await live.backend.interrupt()
-            self._append(root, sid, {"type": "system", "text": "멈췄어요."})
+            self._append(root, sid, {"type": "system", "text": "중지했어요."})
         return self._view(rec)
 
     async def configure(
@@ -661,7 +661,7 @@ class Manager:
     def rename(self, sid: str, title: str) -> dict:
         title = " ".join((title or "").split())
         if not title or len(title) > 120:
-            raise AgentError("세션 이름은 1~120자로 적어 주세요.")
+            raise AgentError("세션 이름은 1~120자로 입력해 주세요.")
         root, rec = self._find(sid)
         rec["title"] = title
         self._save(root, rec)

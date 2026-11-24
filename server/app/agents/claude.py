@@ -264,7 +264,7 @@ class ClaudeBackend(AgentBackend):
         decision = await self.ask(request)
         if decision.allow:
             return PermissionResultAllow(updated_input=decision.updated_input)
-        return PermissionResultDeny(message=decision.message or "사람이 거부했어요.", interrupt=decision.interrupt)
+        return PermissionResultDeny(message=decision.message or "사용자가 거부했어요.", interrupt=decision.interrupt)
 
     # --- 할 일 ------------------------------------------------------------
 

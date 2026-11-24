@@ -90,7 +90,7 @@ def test_이동과_이름_바꾸기(base):
     files.make(base, "dst", "dir")
     with pytest.raises(files.FileRefused, match="이미 있어요"):
         files.move(base, base, "src", "dst")
-    with pytest.raises(files.FileRefused, match="자기 안"):
+    with pytest.raises(files.FileRefused, match="자기 자신 안"):
         files.move(base, base, "src", "src/inner")
 
 

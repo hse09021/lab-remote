@@ -33,13 +33,13 @@ for c in "$HOME/miniconda3/bin/conda" "$HOME/anaconda3/bin/conda" "$HOME/minifor
   [ -x "$c" ] && CONDA="$c"
 done
 if [ -z "$CONDA" ]; then
-  echo "✘ conda를 못 찾았어요. Miniconda를 먼저 설치해 주세요." >&2
+  echo "✘ conda를 찾지 못했어요. Miniconda를 먼저 설치해 주세요." >&2
   exit 1
 fi
 
 say "1/4 conda 환경 labremote"
 if "$CONDA" env list | awk '{print $1}' | grep -qx labremote; then
-  echo "  이미 있어요 — 그대로 써요"
+  echo "  이미 있어서 그대로 사용해요"
 else
   run "$CONDA" create -y -n labremote python=3.11
 fi
@@ -59,7 +59,7 @@ fi
 if command -v npm >/dev/null 2>&1; then
   run bash -c "cd '$ROOT/web' && npm ci && npm run build"
 elif [ -f "$ROOT/web/dist/index.html" ]; then
-  echo "  npm이 없어서 이미 있는 web/dist를 그대로 써요"
+  echo "  npm이 없어서 기존 web/dist를 그대로 사용해요"
 else
   echo "  ⚠ npm(Node.js 20 이상)이 없어서 웹 화면을 빌드하지 못했어요. Node를 설치한 뒤 다시 실행해 주세요."
 fi
@@ -77,5 +77,5 @@ cat <<EOF
   $ENV_PREFIX/bin/labremote serve            # http://127.0.0.1:8000
 재부팅 후에도 자동으로 실행하려면:
   $ENV_PREFIX/bin/labremote autostart install
-원격으로 접속하려면 docs/SETUP.md의 "원격 접속"을 봐 주세요.
+원격으로 접속하려면 docs/SETUP.md의 "원격 접속"을 참고해 주세요.
 EOF

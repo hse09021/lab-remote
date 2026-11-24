@@ -45,7 +45,7 @@ def _clean(url: str) -> str:
     url = (url or "").strip()
     parts = urlsplit(url)
     if parts.scheme != "https" or not parts.hostname:
-        raise RemoteError("https://로 시작하는 전체 주소를 적어 주세요 (VS Code Ports 보기의 Forwarded Address).")
+        raise RemoteError("https://로 시작하는 전체 주소를 입력해 주세요 (VS Code Ports 보기의 Forwarded Address).")
     if parts.username or parts.password or parts.query or parts.fragment:
         raise RemoteError("주소에는 계정 정보 · ? · #을 넣을 수 없어요.")
     if parts.hostname in ("127.0.0.1", "localhost", "::1"):

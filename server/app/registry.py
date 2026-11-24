@@ -47,8 +47,8 @@ def valid_name(name: str) -> str:
     """
     if not isinstance(name, str) or not NAME_RE.match(name):
         raise InvalidName(
-            f"프로젝트 이름이 규칙에 안 맞아요: {name!r} · "
-            "영소문자·숫자로 시작하고 끝나야 하고, 중간에는 `.`·`_`·`-`도 쓸 수 있어요 (최대 64자)"
+            f"프로젝트 이름이 규칙에 맞지 않아요: {name!r} · "
+            "영소문자나 숫자로 시작하고 끝나야 하며, 중간에는 `.` `_` `-`도 쓸 수 있어요 (최대 64자)"
         )
     return name
 
@@ -107,8 +107,8 @@ def register(root: str, name: str) -> str:
             for other_root, other_name in projects.items():
                 if other_name == name and other_root != root_real:
                     raise InvalidName(
-                        f"이름 {name!r}은 이미 {other_root}에 쓰고 있어요. "
-                        "다른 이름을 쓰거나 먼저 등록을 지워 주세요."
+                        f"이미 사용 중인 이름이에요: {name!r} ({other_root}). "
+                        "다른 이름을 쓰거나 먼저 기존 등록을 해제해 주세요."
                     )
             projects[root_real] = name
             _save(projects)

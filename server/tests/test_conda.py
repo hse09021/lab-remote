@@ -70,7 +70,7 @@ def test_환경_목록과_보호(fake):
 def test_conda_미리_보기(fake):
     got = wait(conda.start_job("change", "lora-env", tool="conda", action="install", packages=[{"name": "tqdm"}], dry=True))
     assert got["state"] == "done"
-    assert {(c["name"], c["action"]) for c in got["changes"]} == {("tqdm", "추가"), ("openssl", "바뀜")}
+    assert {(c["name"], c["action"]) for c in got["changes"]} == {("tqdm", "추가"), ("openssl", "변경")}
     assert "--dry-run" in fake[-1] and fake[-1][-1] == "tqdm"
 
 

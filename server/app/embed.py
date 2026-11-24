@@ -35,7 +35,7 @@ TRUNC_FIELD = "⚠ 여기서 잘렸어요"
 
 def _trunc_note(dropped: int) -> str:
     return (
-        f"내용이 길어서 필드 {dropped}개를 넣지 못했어요. **전문을 확인하고 승인해 주세요**:\n"
+        f"내용이 길어서 필드 {dropped}개를 생략했어요. **전문을 확인하고 승인해 주세요**:\n"
         "`labremote approvals show <프로젝트> <요청ID>`"
     )
 

@@ -62,7 +62,7 @@ async def ask(cwd: str, prompt: str, schema: dict, *, model: str = "", max_turns
         elif isinstance(msg, ResultMessage):
             result = msg
     if result is None or result.is_error:
-        raise ReadOnlyError("답을 끝내지 못했어요: " + "; ".join((result.errors or []) if result else [])[:300])
+        raise ReadOnlyError("응답을 완료하지 못했어요: " + "; ".join((result.errors or []) if result else [])[:300])
     data = result.structured_output
     if isinstance(data, str):
         try:

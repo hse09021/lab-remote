@@ -29,7 +29,7 @@ def test_앞으로_간_DB_는_거절한다(conn):
     conn.execute("UPDATE schema_meta SET value='99' WHERE key='version'")
     with pytest.raises(db.DbError) as exc:
         db.migrate(conn)
-    assert "DB가 이 코드보다 새로워요" in str(exc.value)
+    assert "DB 버전이 코드보다 최신이에요" in str(exc.value)
 
 
 def test_판을_못_읽으면_거절한다(conn):
@@ -66,7 +66,7 @@ def test_v1_DB_는_옮기지_않고_거절한다(conn):
         conn.execute("UPDATE schema_meta SET value=? WHERE key='version'", (str(old),))
         with pytest.raises(db.DbError) as exc:
             db.migrate(conn)
-        assert "v1의 DB" in str(exc.value)
+        assert "v1 DB예요" in str(exc.value)
 
 
 def test_DB_경로는_데이터_폴더_안이다(isolated_data):

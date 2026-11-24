@@ -66,7 +66,7 @@ def send_payload(payload: dict, *, kind: str = "", url: str = "") -> dict:
     if not target:
         return {"sent": False, "reason": "웹훅 주소가 비어 있어요"}
     if os.environ.get("LAB_NOTIFY_DISABLED") == "1":
-        return {"sent": False, "reason": "알림이 꺼져 있어요"}
+        return {"sent": False, "reason": "알림이 비활성화돼 있어요"}
 
     try:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

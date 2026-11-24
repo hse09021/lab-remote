@@ -159,7 +159,7 @@ def driver_state() -> dict:
     elif mismatch:
         reason = f"커널 모듈 {kernel} vs 유저랜드 {userland}"
     elif boot["nvidia"]:
-        reason = "nvidia 패키지가 업데이트됐는데 아직 재부팅을 안 했어요: " + ", ".join(boot["nvidia"])
+        reason = "nvidia 패키지가 업데이트된 뒤 아직 재부팅하지 않았어요: " + ", ".join(boot["nvidia"])
 
     return {
         "ok": not mismatch and not boot["nvidia"],

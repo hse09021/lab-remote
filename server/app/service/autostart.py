@@ -71,7 +71,7 @@ def plan(*, port: int = units.DEFAULT_PORT) -> list[dict]:
     if linger is not True:
         steps.insert(1, {
             "what": "linger 활성화 (로그아웃 · 재부팅 뒤에도 서비스 유지)",
-            "detail": f"loginctl enable-linger {user} · 현재 {'꺼짐' if linger is False else '알 수 없음'} — 자동 시작을 끌 때 원래대로 되돌려요",
+            "detail": f"loginctl enable-linger {user} · 현재 {'비활성' if linger is False else '알 수 없음'} — 자동 시작을 끄면 원래대로 되돌려요",
         })
     return steps
 
@@ -85,7 +85,7 @@ def install(*, port: int = units.DEFAULT_PORT, python: str = "", run: Runner = _
         code, out = run(argv)
         done.append({"what": what, "ok": code == 0, "detail": out[-300:]})
         if code != 0:
-            raise AutostartError(f"{what} 단계에서 멈췄어요: {out[-300:] or f'종료 코드 {code}'}")
+            raise AutostartError(f"{what} 단계에서 중단됐어요: {out[-300:] or f'종료 코드 {code}'}")
 
     try:
         written = units.write(python=python, port=port)
@@ -120,7 +120,7 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
         code, out = run(argv)
         done.append({"what": what, "ok": code == 0, "detail": out[-300:]})
         if code != 0 and must:
-            raise AutostartError(f"{what} 단계에서 멈췄어요: {out[-300:] or f'종료 코드 {code}'}")
+            raise AutostartError(f"{what} 단계에서 중단됐어요: {out[-300:] or f'종료 코드 {code}'}")
 
     unit_file = units.unit_path()
     step("서비스 비활성화 (다음 부팅부터)", [systemctl, "--user", "disable", f"{units.NAME}.service"], must=False)
@@ -132,14 +132,14 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
     rec = record()
     if rec.get("lingerBefore") is False and units.linger() is True and _tunnel_service():
         # code tunnel 서비스도 linger에 기대요 — 끄면 로그아웃할 때 터널도 내려가요
-        done.append({"what": "linger", "ok": True, "detail": "code tunnel 서비스가 사용 중이라 그대로 둬요 (끄려면 loginctl disable-linger)"})
+        done.append({"what": "linger", "ok": True, "detail": "code tunnel 서비스가 사용 중이라 유지해요 (비활성화하려면 loginctl disable-linger)"})
     elif rec.get("lingerBefore") is False and units.linger() is True:
         user = units._user()
         step("linger 원래대로 되돌리기 (비활성화)", ["loginctl", "disable-linger", user], must=False)
     elif "lingerBefore" not in rec:
-        done.append({"what": "linger", "ok": True, "detail": "lab.remote가 켠 기록이 없어 그대로 둬요"})
+        done.append({"what": "linger", "ok": True, "detail": "lab.remote가 활성화한 기록이 없어서 변경하지 않아요"})
     else:
-        done.append({"what": "linger", "ok": True, "detail": "원래 켜져 있어서 그대로 둬요"})
+        done.append({"what": "linger", "ok": True, "detail": "원래 활성화돼 있어서 유지해요"})
     try:
         os.remove(_record_path())
     except FileNotFoundError:
@@ -175,7 +175,7 @@ def restart(*, run: Runner = _run, now: bool = True) -> dict:
     """"세션 다시 켜기" — 자동 시작이 켜져 있을 때만. 답을 먼저 돌려주고 다시 뜬다."""
     systemctl = _systemctl()
     if not os.path.exists(units.unit_path()):
-        raise AutostartError("자동 시작이 꺼져 있어요 — labremote autostart install로 켤 수 있어요.")
+        raise AutostartError("자동 시작이 비활성화돼 있어요. labremote autostart install로 활성화할 수 있어요.")
     if not now:
         later(["restart", "--no-block"])
         return {"ok": True}

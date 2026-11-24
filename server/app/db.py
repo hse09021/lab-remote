@@ -162,14 +162,14 @@ def migrate(conn: sqlite3.Connection) -> dict:
     before = version(conn)
     if before > SCHEMA_VERSION:
         raise DbError(
-            f"DB가 이 코드보다 새로워요 (DB 버전 {before}, 코드 버전 {SCHEMA_VERSION}). "
+            f"DB 버전이 코드보다 최신이에요 (DB 버전 {before}, 코드 버전 {SCHEMA_VERSION}). "
             "코드를 업데이트하거나 데이터를 백업한 뒤 지워 주세요: " + path()
         )
     if before == SCHEMA_VERSION:
         return {"from": before, "to": before, "changed": False}
     if 0 < before < V3_BASE:
         raise DbError(
-            f"v1의 DB예요 (버전 {before}). v3는 v1 테이블을 옮기지 않아요 — "
+            f"v1 DB예요 (버전 {before}). v3는 v1 테이블을 마이그레이션하지 않아요. "
             "필요하면 백업한 뒤 이 파일을 다른 곳으로 옮기고 서버를 다시 실행해 주세요: " + path()
         )
 

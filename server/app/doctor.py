@@ -108,7 +108,7 @@ def claude_check() -> Check:
     if not got.get("loggedIn"):
         return Check(False, "Claude Code", f"{head} · 로그인돼 있지 않아요",
                      hint="터미널에서 claude를 실행하고 /login으로 로그인해 주세요 (lab.remote는 로그인을 대신하지 않아요).")
-    return Check(True, "Claude Code", f"{head} · 로그인됨 · {got.get('plan') or '구독 종류 모름'}")
+    return Check(True, "Claude Code", f"{head} · 로그인됨 · {got.get('plan') or '구독 종류 알 수 없음'}")
 
 
 def tmux_check() -> Check:
@@ -151,19 +151,19 @@ def linger_check() -> Check:
     active = str(unit.get("active") or "")
     linger = got["linger"]
     if not unit.get("file"):
-        return Check(True, "자동 시작", "꺼져 있어요 (켜려면 labremote autostart install)")
+        return Check(True, "자동 시작", "비활성화돼 있어요 (활성화하려면 labremote autostart install)")
     if linger is False:
         return warn(
             "자동 시작",
-            f"유닛 {enabled or '?'} · linger 꺼짐 — 로그아웃하면 서버가 종료돼요",
+            f"유닛 {enabled or '?'} · linger 비활성 — 로그아웃하면 서버가 종료돼요",
             hint="loginctl enable-linger $USER  (또는 labremote autostart install을 다시 실행)",
         )
     if active and active != "active":
-        return warn("자동 시작", f"유닛 {enabled or '?'} · {active} — 서버가 실행 중이지 않아요",
+        return warn("자동 시작", f"유닛 {enabled or '?'} · {active} — 서버가 실행 중이 아니에요",
                     hint="journalctl --user -u labremote-session -n 50 · labremote autostart status")
     restarts = unit.get("restarts")
     extra = f" · 재시작 {restarts}회" if isinstance(restarts, int) and restarts else ""
-    return Check(True, "자동 시작", f"유닛 {enabled or '?'} · {active or '?'} · linger {'켜짐' if linger else '못 읽음'}{extra}")
+    return Check(True, "자동 시작", f"유닛 {enabled or '?'} · {active or '?'} · linger {'활성' if linger else '확인 못 함'}{extra}")
 
 
 def tunnel_check() -> Check:
@@ -178,15 +178,15 @@ def tunnel_check() -> Check:
         return warn("code tunnel", "VS Code CLI가 없어요 — 외부(휴대폰 · 다른 PC)에서 접속할 수 없어요",
                     hint="원격 접속이 필요할 때만: VS Code를 설치하고 docs/SETUP.md의 '원격 접속'을 따라 주세요.")
     if t["state"] == "unknown":
-        return warn("code tunnel", f"상태를 못 읽었어요: {t['detail']}")
+        return warn("code tunnel", f"상태를 확인하지 못했어요: {t['detail']}")
     if t["loggedIn"] is False:
-        return warn("code tunnel", "로그인 안 됨 · 꺼져 있어요",
+        return warn("code tunnel", "로그인 안 됨 · 실행 중이 아니에요",
                     hint="code tunnel user login --provider github  →  code tunnel service install")
     if t["state"] == "off":
-        return warn("code tunnel", "꺼져 있어요" + (" (서비스는 설치됨)" if t["service"] else ""),
+        return warn("code tunnel", "실행 중이 아니에요" + (" (서비스는 설치됨)" if t["service"] else ""),
                     hint="code tunnel service install  (재부팅 후에도 계속 실행되도록)")
-    how = "서비스" if t["service"] else "수동 실행 — 재부팅하면 꺼져요"
-    return Check(True, "code tunnel", f"켜져 있어요 · {how}" + (f" · {t['url']}" if t["url"] else ""))
+    how = "서비스" if t["service"] else "수동 실행 · 재부팅하면 중지돼요"
+    return Check(True, "code tunnel", f"실행 중 · {how}" + (f" · {t['url']}" if t["url"] else ""))
 
 
 def web_build_check() -> Check:
@@ -231,7 +231,7 @@ def webhook_check() -> Check:
         if has_env:
             return Check(True, "Discord 웹훅", "환경 변수로 설정돼 있어요 (파일 없음)")
         return warn("Discord 웹훅", "아직 설정하지 않았어요 · 알림이 전송되지 않아요",
-                    hint="Inbox 화면에서 웹훅 주소를 넣어 주세요.")
+                    hint="Inbox 화면에서 웹훅 주소를 입력해 주세요.")
     if not config.is_private(path):
         return Check(
             False, "Discord 웹훅",
@@ -253,7 +253,7 @@ def schema_check() -> Check:
     except db_mod.DbError as exc:
         return Check(False, "DB 스키마", str(exc)[:200])
     except Exception as exc:  # pragma: no cover - DB를 못 여는 환경
-        return warn("DB 스키마", f"못 읽었어요: {exc}")
+        return warn("DB 스키마", f"읽지 못했어요: {exc}")
     if got == db_mod.SCHEMA_VERSION:
         return Check(True, "DB 스키마", f"버전 {got} · {db_mod.path()}")
     return Check(False, "DB 스키마", f"버전 {got} · 코드와 맞지 않아요 (코드 버전 {db_mod.SCHEMA_VERSION})")
@@ -314,12 +314,12 @@ def nvidia_hold_note() -> str | None:
         return None
     why = []
     if missing:
-        why.append(f"Unattended-Upgrade::Package-Blacklist에 {', '.join(missing[:4])}{' 등' if len(missing) > 4 else ''}이 없어요")
+        why.append(f"Unattended-Upgrade::Package-Blacklist에 없는 항목: {', '.join(missing[:4])}{' 등' if len(missing) > 4 else ''}")
     if auto_reboot_on:
-        why.append("Automatic-Reboot가 켜져 있어요")
+        why.append("Automatic-Reboot가 활성화돼 있어요")
     return (
-        "참고 · 드라이버 자동 업데이트를 막고 싶으면 직접 설정해 주세요 (" + " · ".join(why) + "). "
-        "lab.remote는 이 설정을 바꾸지 않아요 — 방법은 docs/operations.md의 \"GPU 드라이버 자동 업데이트 막기\"를 봐 주세요."
+        "참고 · 드라이버 자동 업데이트를 막으려면 직접 설정해 주세요 (" + " · ".join(why) + "). "
+        "lab.remote는 이 설정을 바꾸지 않아요. 방법은 docs/operations.md의 \"GPU 드라이버 자동 업데이트 막기\"를 참고해 주세요."
     )
 
 
@@ -357,13 +357,13 @@ def gpu_driver_check() -> Check:
     if pending.get("nvidia"):
         return warn(
             "GPU 드라이버",
-            f"{kernel} · 재부팅 대기에 nvidia가 있어요: " + ", ".join(pending["nvidia"])[:80],
+            f"{kernel} · 재부팅 대기 중인 nvidia 패키지: " + ", ".join(pending["nvidia"])[:80],
             hint="다음 재부팅 전까지 nvidia-smi가 동작하지 않을 수 있어요.",
         )
     if not state.get("ok"):
         return warn("GPU 드라이버", "버전을 확인하지 못했어요: " + str(state.get("reason") or "")[:120],
                     hint="nvidia 드라이버가 없는 컴퓨터라면 정상이에요.")
-    detail = f"{kernel} (커널·유저랜드 버전이 같아요)"
+    detail = f"{kernel} (커널과 유저랜드 버전이 같아요)"
     if pending.get("pending"):
         detail += " · 재부팅 대기 있음 (nvidia는 아님)"
     return Check(True, "GPU 드라이버", detail)

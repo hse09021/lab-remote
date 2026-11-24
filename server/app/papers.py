@@ -95,7 +95,7 @@ def info() -> dict:
 
 def set_status(pid: str, status: str) -> dict:
     if status not in STATUSES:
-        raise PapersError(f"읽음 상태는 {', '.join(STATUSES)} 중 하나예요.")
+        raise PapersError(f"읽음 상태는 {', '.join(STATUSES)} 중 하나여야 해요.")
     data = settings()
     data.setdefault("status", {})[pid] = status
     _save(data)
@@ -394,7 +394,7 @@ def _get(url: str, *, limit: int, timeout: int = 30) -> bytes:
         with urllib.request.urlopen(req, timeout=timeout) as res:
             data = res.read(limit + 1)
     except urllib.error.HTTPError as exc:
-        raise PapersError(f"arXiv가 거절했어요 ({exc.code}). 잠시 뒤 다시 해 주세요.") from None
+        raise PapersError(f"arXiv가 요청을 거절했어요 ({exc.code}). 잠시 후 다시 시도해 주세요.") from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise PapersError(f"arXiv에 연결하지 못했어요: {getattr(exc, 'reason', exc)}") from None
     if len(data) > limit:
@@ -507,13 +507,13 @@ def fetch_pdf(pid: str, *, fetch=None) -> dict:
     fetch = fetch or _get
     p = next((x for x in scan()["papers"] if x["id"] == pid), None)
     if p is None:
-        raise PapersError("그런 논문이 없어요.")
+        raise PapersError("논문을 찾을 수 없어요.")
     aid = arxiv_id_or_none(p.get("arxiv") or "")
     if not aid:
-        raise PapersError("arXiv 번호가 없는 논문이에요. PDF를 직접 올려 주세요.")
+        raise PapersError("arXiv 번호가 없는 논문이에요. PDF를 직접 업로드해 주세요.")
     data = fetch(ARXIV_PDF.format(id=aid), limit=MAX_PDF, timeout=120)
     if not data.startswith(b"%PDF-"):
-        raise PapersError("arXiv가 PDF가 아닌 응답을 보냈어요. 잠시 뒤 다시 시도해 주세요.")
+        raise PapersError("arXiv가 PDF가 아닌 응답을 보냈어요. 잠시 후 다시 시도해 주세요.")
     target = cached_pdf_path(pid)
     os.makedirs(os.path.dirname(target), exist_ok=True)
     tmp = target + ".tmp"
@@ -576,7 +576,7 @@ def collections() -> list[dict]:
 def add_collection(name: str) -> list[dict]:
     name = (name or "").strip()
     if not COLLECTION_RE.match(name):
-        raise PapersError("모음 이름은 1~40자, / 없이 적어 주세요.")
+        raise PapersError("모음 이름은 / 없이 1~40자로 입력해 주세요.")
     data = settings()
     cols = data.setdefault("collections", {})
     if name in cols:

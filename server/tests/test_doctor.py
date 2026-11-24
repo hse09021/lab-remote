@@ -174,7 +174,7 @@ def test_앞서_간_DB_는_거부한다():
         )
         conn.commit()
     got = doctor.schema_check()
-    assert got["level"] == "bad" and "새로워요" in got["detail"]
+    assert got["level"] == "bad" and "최신이에요" in got["detail"]
 
 
 # --- nvidia 자동 업데이트 제외 (apt 적용값으로) -------------------------------

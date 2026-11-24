@@ -215,7 +215,7 @@ def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True)
         raise GitError(f"git을 실행하지 못했어요: {exc}") from None
     if check and done.returncode != 0:
         raise GitError(
-            f"git {' '.join(args[:2])}가 실패했어요 (종료 코드 {done.returncode}): "
+            f"git 명령이 실패했어요 (git {' '.join(args[:2])} · 종료 코드 {done.returncode}): "
             + (done.stderr or done.stdout or "").strip()[:400]
         )
     return done.stdout
@@ -284,7 +284,7 @@ def commit(root: str, message: str, paths_list: list[str]) -> dict:
     바뀐 게 없으면 커밋하지 않고 `{"committed": False}`를 돌려준다.
     """
     if not paths_list:
-        raise GitError("커밋할 경로를 지정해 주세요 (경로 없이 통째로 add하지 않아요).")
+        raise GitError("커밋할 경로를 지정해 주세요 (경로 없이 전체를 add하지 않아요).")
     existing = [p for p in paths_list if os.path.exists(os.path.join(paths.real(root), p))]
     if not existing:
         return {"committed": False, "reason": "그 경로가 아직 없어요", "paths": []}
@@ -295,7 +295,7 @@ def commit(root: str, message: str, paths_list: list[str]) -> dict:
         if line.strip()
     ]
     if not staged:
-        return {"committed": False, "reason": "바뀐 게 없어요", "paths": []}
+        return {"committed": False, "reason": "변경 사항이 없어요", "paths": []}
     # **담긴 파일만** 넘긴다. 빈 폴더를 pathspec으로 주면 git이 거절한다.
     run(root, ["commit", "-m", message, "--", *staged])
     return {"committed": True, "sha": head_sha(root), "paths": staged}

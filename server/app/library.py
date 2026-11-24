@@ -127,13 +127,13 @@ def start(question: str, history: list | None = None, *, model: str = "", query_
     """질문을 받아 작업을 시작한다. 이미 답하는 중이면 거절."""
     question = (question or "").strip()
     if not question:
-        raise AskError("질문을 적어 주세요.")
+        raise AskError("질문을 입력해 주세요.")
     if len(question) > MAX_QUESTION:
         raise AskError("질문이 너무 길어요.")
     if not os.path.isdir(papers.vault_path()):
-        raise AskError("vault 폴더가 없어요 — 사이드바의 'vault 위치'에서 정해 주세요.")
+        raise AskError("vault 폴더가 없어요. 사이드바의 'vault 위치'에서 지정해 주세요.")
     if any(j["state"] == "running" for j in _jobs.values()):
-        raise AskError("앞 질문에 답하는 중이에요. 끝나면 다시 보내 주세요.")
+        raise AskError("이전 질문에 답하는 중이에요. 끝나면 다시 보내 주세요.")
     clean = [
         {"role": "user" if h.get("role") == "user" else "assistant", "text": str(h.get("text") or "")}
         for h in (history or [])

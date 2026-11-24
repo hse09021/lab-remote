@@ -135,7 +135,7 @@ def test_승인은_먼저_온_답만_먹는다(fake, project, conn):
         assert m.get(s["id"])["state"] == "ask"
         assert inbox.badge(conn) == 1  # 답 필요는 처리할 것
         assert m.answer(p.id, "allow", via="dashboard")["state"] == "allowed"
-        with pytest.raises(AgentError, match="이미 답했"):
+        with pytest.raises(AgentError, match="이미 응답했"):
             m.answer(p.id, "deny", via="inbox")
         await settle(m, s["id"])
         assert fake.instances[0].decisions[0].allow is True
@@ -321,7 +321,7 @@ def test_질문에_답하면_answers_로_돌려준다(fake, project, conn):
             m.answer(p.id, "allowSession")
         with pytest.raises(AgentError, match="없는 질문"):
             m.answer(p.id, "answer", answers={"엉뚱한 질문": "CSV"})
-        with pytest.raises(AgentError, match="고르거나"):
+        with pytest.raises(AgentError, match="선택하거나"):
             m.answer(p.id, "answer", answers={})
         m.answer(p.id, "answer", answers={"어느 형식으로 쓸까요?": "CSV", "무엇을 넣을까요?": ["loss", "acc"]}, via="ADE")
         await settle(m, s["id"])
@@ -369,7 +369,7 @@ def test_학습이_쓰는_환경에_설치하려_하면_경고만(project, monke
     running = [{"id": "EXP-007", "name": "", "state": "running", "env": "lora-env"}]
     monkeypatch.setattr(runs, "list_runs", lambda name, refresh_running=True: running)
     w = mgr_mod.install_warning("demo", req("pip install peft"))
-    assert "EXP-007이 lora-env로 학습 중" in w
+    assert "EXP-007(lora-env)" in w and "학습이 실행 중" in w
     assert mgr_mod.install_warning("demo", req("conda run -n lora-env python -m pip install -U timm"))
     assert mgr_mod.install_warning("demo", req("conda install -n other-env tqdm")) == ""  # 다른 환경
     assert mgr_mod.install_warning("demo", req("python train.py")) == ""  # 설치가 아님

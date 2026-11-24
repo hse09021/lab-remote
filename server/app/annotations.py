@@ -47,7 +47,7 @@ def list_for(pid: str) -> list[dict]:
 def _clean(pid: str, raw: dict) -> dict:
     kind = raw.get("kind")
     if kind not in KINDS:
-        raise AnnotationError("하이라이트나 주석만 저장해요.")
+        raise AnnotationError("하이라이트와 주석만 저장할 수 있어요.")
     text = str(raw.get("text") or "")
     if not text.strip() or len(text) > MAX_TEXT:
         raise AnnotationError("내용이 비어 있거나 너무 길어요.")

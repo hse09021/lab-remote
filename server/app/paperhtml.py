@@ -55,7 +55,7 @@ def arxiv_of(pid: str) -> str:
     for p in papers.scan()["papers"]:
         if p["id"] == pid:
             return papers.arxiv_id_or_none(p.get("arxiv") or "") or ""
-    raise papers.PapersError("그런 논문이 없어요.")
+    raise papers.PapersError("논문을 찾을 수 없어요.")
 
 
 def state(pid: str) -> str:
@@ -95,7 +95,7 @@ def _get(url: str, *, limit: int, timeout: int = 60) -> tuple[bytes, str]:
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return b"", url
-        raise papers.PapersError(f"arXiv가 거절했어요 ({exc.code}).") from None
+        raise papers.PapersError(f"arXiv가 요청을 거절했어요 ({exc.code}).") from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise papers.PapersError(f"arXiv에 연결하지 못했어요: {getattr(exc, 'reason', exc)}") from None
     if len(data) > limit:
@@ -212,7 +212,7 @@ def start(pid: str, *, get=None) -> str:
 
 def html_of(pid: str) -> str:
     if state(pid) != "done":
-        raise papers.PapersError("arXiv HTML을 아직 받지 않았어요.")
+        raise papers.PapersError("arXiv HTML을 아직 다운로드하지 않았어요.")
     with open(os.path.join(_dir(pid), "index.html"), encoding="utf-8") as f:
         return f.read()
 

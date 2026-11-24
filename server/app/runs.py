@@ -228,7 +228,7 @@ def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str
     root = projects.require(project)
     command = (command or "").strip()
     if not command:
-        raise RunError("실행할 명령을 적어 주세요.")
+        raise RunError("실행할 명령을 입력해 주세요.")
     if len(command) > MAX_COMMAND or "\x00" in command:
         raise RunError("명령이 너무 길거나 사용할 수 없는 문자가 있어요.")
     name = (name or "").strip()
