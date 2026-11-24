@@ -210,7 +210,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
     {
       label: '에이전트',
       value: String(lanes.ask.length + lanes.work.length + lanes.done.length),
-      sub: `작업 중 ${lanes.work.length} · 답 필요 ${lanes.ask.length} · 끝남 ${lanes.done.length}`,
+      sub: `작업 중 ${lanes.work.length} · 답 필요 ${lanes.ask.length} · 완료 ${lanes.done.length}`,
       tone: 'default',
     },
     {
@@ -230,7 +230,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
       : {
           label: '학습',
           value: '0',
-          sub: `오늘 끝남 ${d.runs.finishedToday.length - d.runs.failedToday} · 실패 ${d.runs.failedToday}`,
+          sub: `오늘 완료 ${d.runs.finishedToday.length - d.runs.failedToday} · 실패 ${d.runs.failedToday}`,
           tone: 'default',
         },
     git?.prs.available

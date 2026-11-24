@@ -85,7 +85,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
 
         if os.environ.get("LAB_NO_WATCH") != "1":
             scheduler.start()
-        # 실행 감시 — 끝남·실패·끊김을 알아채 Inbox·Discord로 알린다 (watch.py)
+        # 실행 감시 — 완료·실패·끊김을 알아채 Inbox·Discord로 알린다 (watch.py)
         watcher = None
         if os.environ.get("LAB_NO_WATCH") != "1":
             watcher = watch.Watcher()

@@ -64,7 +64,7 @@ export function AgentsGraph({ sessions, runs, finished }: { sessions: AgentSessi
         x: left + BOX_PAD,
         y: 70 + row * ROW,
         title: x.title,
-        state: k === 'ask' ? `답 필요 · ${x.pending[0]?.tool ?? ''}` : k === 'work' ? (x.todos?.current ? `작업 중 · ${x.todos.current}` : '작업 중') : '끝남',
+        state: k === 'ask' ? `답 필요 · ${x.pending[0]?.tool ?? ''}` : k === 'work' ? (x.todos?.current ? `작업 중 · ${x.todos.current}` : '작업 중') : '완료',
         kind: k,
         href: `/projects/${encodeURIComponent(x.project)}/ade?session=${x.id}`,
         isRun: false,

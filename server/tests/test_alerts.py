@@ -28,12 +28,12 @@ def test_규칙대로_보낸다(conn):
     config.set_webhook(URL)
     noon = datetime(2026, 1, 1, 12, 0)
     night = datetime(2026, 1, 1, 3, 0)
-    assert alerts.post(conn, "run", "done", "a 끝남", poster=ok_poster, now=noon)["sent"] == "Discord 보냄"
+    assert alerts.post(conn, "run", "done", "a 완료", poster=ok_poster, now=noon)["sent"] == "Discord 보냄"
     # 조용한 시간에는 실패만
-    assert alerts.post(conn, "run", "done", "b 끝남", poster=ok_poster, now=night)["sent"] == "보내지 않음 · 조용한 시간"
+    assert alerts.post(conn, "run", "done", "b 완료", poster=ok_poster, now=night)["sent"] == "보내지 않음 · 조용한 시간"
     assert alerts.post(conn, "run", "fail", "c 실패", act=True, poster=ok_poster, now=night)["sent"] == "Discord 보냄"
     alerts.save_rules({"done": False})
-    assert alerts.post(conn, "run", "done", "d 끝남", poster=ok_poster, now=noon)["sent"] == "보내지 않음 · 비활성화된 알림"
+    assert alerts.post(conn, "run", "done", "d 완료", poster=ok_poster, now=noon)["sent"] == "보내지 않음 · 비활성화된 알림"
     # 규칙이 없으면 Inbox에만
     assert alerts.post(conn, "run", None, "e 중지함", poster=ok_poster)["sent"] == ""
     assert inbox.badge(conn) == 1

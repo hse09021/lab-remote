@@ -123,7 +123,7 @@ def test_긴_형식_지표(proj, project):
     assert got["last"] == {"train/loss": 0.8, "val/acc": 0.5, "step": 2}
 
 
-def test_감시가_끝남과_실패를_Inbox_에_넣는다(proj, conn):
+def test_감시가_완료와_실패를_Inbox_에_넣는다(proj, conn):
     runs.start(proj, "true")
     runs.start(proj, "exit 1")
     time.sleep(1.5)
@@ -131,7 +131,7 @@ def test_감시가_끝남과_실패를_Inbox_에_넣는다(proj, conn):
     assert {r["state"] for r in changed} == {"done", "failed"}
     items = inbox.items(conn)
     titles = sorted(i["title"] for i in items)
-    assert titles == ["EXP-001 끝남", "EXP-002 실패"]
+    assert titles == ["EXP-001 완료", "EXP-002 실패"]
     assert inbox.badge(conn) == 1  # 실패만 "처리할 것"
     assert watch.tick(conn) == []  # 두 번 알리지 않는다
 

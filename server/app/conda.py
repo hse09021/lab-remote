@@ -321,7 +321,7 @@ def _work(record: dict, argv: list[str]) -> None:
         final = "failed"
         record["error"] = f"{type(exc).__name__}: {exc}"[:500]
     finally:
-        # 기록을 다 남긴 뒤에 끝난 것으로 보이게 — 화면 · 시험이 "끝남"을 보고 기록을 읽어도 있게
+        # 기록을 다 남긴 뒤에 끝난 것으로 보이게 — 화면 · 시험이 "완료"를 보고 기록을 읽어도 있게
         record["endedAt"] = time.time()
         _forget(record["env"])
         if not record["dry"]:

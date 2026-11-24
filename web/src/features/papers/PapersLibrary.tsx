@@ -262,7 +262,7 @@ function PapersList() {
     },
     {
       key: 'access',
-      label: '마지막 접근',
+      label: '최근 수정',
       width: 135,
       render: (p) => <span className={s.access}>{p.access}</span>,
     },

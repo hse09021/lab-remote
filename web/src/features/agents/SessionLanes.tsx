@@ -10,7 +10,7 @@ import { agoShort, whenShort } from '@/lib/time'
 import { DiffView } from './ApprovalCard'
 import s from './Lanes.module.css'
 
-/* Dashboard의 에이전트 부분 — 왼쪽 목록 · 숫자 · 답 필요/작업 중/끝남 레인. */
+/* Dashboard의 에이전트 부분 — 왼쪽 목록 · 숫자 · 답 필요/작업 중/완료 레인. */
 
 export const adeHref = (x: { project: string; id: string }) =>
   `/projects/${encodeURIComponent(x.project)}/ade?session=${encodeURIComponent(x.id)}`
@@ -53,7 +53,7 @@ export function Lanes({ sessions }: { sessions: AgentSession[] }) {
   const rows: [keyof typeof lanes, string, string][] = [
     ['ask', '답이 필요해요', '카드에서 펼쳐 보고 허용하거나 ADE에서 답해요'],
     ['work', '작업 중', '마지막 출력 기준'],
-    ['done', '끝남', '오늘 끝난 작업 · 검토하고 이어서 진행해요'],
+    ['done', '완료', '오늘 끝난 작업 · 검토하고 이어서 진행해요'],
   ]
   return (
     <>
@@ -141,7 +141,7 @@ function SessionCard({ x, kind, git }: { x: AgentSession; kind: 'ask' | 'work' |
             title="목록에서 숨기고 기록은 유지해요. 메시지를 보내면 다시 열려요"
             onClick={() => close.mutate({ sid: x.id, closed: true })}
           >
-            보관
+            세션 닫기
           </button>
         )}
       </div>

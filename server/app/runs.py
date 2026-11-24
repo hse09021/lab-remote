@@ -14,7 +14,7 @@
 - **AI 자동화 없음**(PLAN 1.4): 끝난 실행을 다시 돌리거나 이어서 돌리지 않는다.
   재부팅으로 끊긴 실행은 "끊김"으로 **표시만** 한다.
 
-상태: `running` 실행 중 · `done` 끝남 · `failed` 실패 · `stopped` 중지됨 ·
+상태: `running` 실행 중 · `done` 완료 · `failed` 실패 · `stopped` 중지됨 ·
 `cut` 끊김(재부팅·프로세스가 사라짐).
 """
 
@@ -57,7 +57,7 @@ __all__ = [
 STATES = ("running", "done", "failed", "stopped", "cut")
 STATE_LABELS = {
     "running": "실행 중",
-    "done": "끝남",
+    "done": "완료",
     "failed": "실패",
     "stopped": "중지됨",
     "cut": "끊김",

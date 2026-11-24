@@ -32,7 +32,7 @@ __all__ = ["AgentError", "Manager", "manager", "MAX_LIVE", "STATE_LABELS"]
 
 MAX_LIVE = 4
 ID_RE = re.compile(r"\As-[0-9a-f]{10}\Z")
-STATE_LABELS = {"ask": "답 필요", "working": "작업 중", "idle": "끝남", "error": "오류"}
+STATE_LABELS = {"ask": "답 필요", "working": "작업 중", "idle": "완료", "error": "오류"}
 EFFORTS = ("", "low", "medium", "high", "xhigh", "max")
 #: 파일을 다루는 도구 — "이 세션에서 이 파일은 계속 허용"의 열쇠가 파일 경로다
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")

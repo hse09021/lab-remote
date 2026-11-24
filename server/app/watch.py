@@ -59,7 +59,7 @@ def announce(conn, record: dict, *, poster=None) -> dict | None:
                   subject=f"run:{record.get('project')}:{record['id']}:{state}")
     mins = round(max(0, (record.get("endedAt") or 0) - (record.get("startedAt") or 0)) / 60)
     if state == "done":
-        return alerts.post(conn, "run", "done", f"{title} 끝남", body=f"{mins}분 걸렸어요 · {record.get('command')}", **common)
+        return alerts.post(conn, "run", "done", f"{title} 완료", body=f"{mins}분 걸렸어요 · {record.get('command')}", **common)
     if state == "failed":
         return alerts.post(conn, "run", "fail", f"{title} 실패", act=True,
                            body=f"종료 코드 {record.get('exitCode')} · {record.get('command')}", **common)
