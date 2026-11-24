@@ -212,7 +212,7 @@ def test_PR_열기는_push_된_브랜치만(repo, tmp_path):
 
     with pytest.raises(actions.ActionError, match="제목"):
         actions.create_pr(made["path"], " ", runner=fake)
-    # 아직 원격에 없어요 — lab.remote는 push하지 않아요
+    # 아직 원격에 없어요 — 화면이 먼저 브랜치를 게시해요
     with pytest.raises(actions.ActionError, match="원격에 없어요"):
         actions.create_pr(made["path"], "lr 낮추기", runner=fake)
     _git(made["path"], "push", "-q", "-u", "origin", "exp/pr")

@@ -1,10 +1,11 @@
-"""git 쓰기 — 커밋 · main에 합치기 (IDE · ADE의 소스 제어).
+"""git 쓰기 — 커밋 · main에 머지 · PR (IDE · ADE의 소스 제어).
 
 모든 호출이 `ops.run()`을 지난다(안전 옵션 + `.git` 검사, 훅 안 돎).
-**push · force · reset은 만들지 않는다.** 합치기는 main worktree가 깨끗할 때만,
-충돌이 나면 바로 되돌린다(`merge --abort`) — 반쯤 합쳐진 채로 두지 않는다.
-PR은 `gh`가 있을 때만(없으면 화면에서 버튼을 숨긴다). lab.remote는 push하지 않으므로
-**브랜치가 이미 원격에 올라가 있고 앞선 커밋이 없을 때만** `gh pr create`를 부른다.
+**force · reset은 만들지 않는다.** push · pull · 브랜치 · 원격 연결은 `git/remote.py`에
+있고 사람이 누를 때만 돈다. 머지는 main worktree가 깨끗할 때만, 충돌이 나면 바로
+되돌린다(`merge --abort`) — 반쯤 머지된 채로 두지 않는다.
+PR은 `gh`가 있을 때만(없으면 화면에서 버튼을 숨긴다). **브랜치가 이미 원격에 있고
+앞선 커밋이 없을 때만** `gh pr create`를 부른다 — 화면은 그 전에 push를 먼저 해요.
 """
 
 from __future__ import annotations
@@ -38,9 +39,11 @@ def commit(base: str, message: str, paths_list: list[str] | None = None) -> dict
     if not info["changes"]:
         raise ActionError("커밋할 변경이 없어요.")
     try:
+        # VS Code처럼: 스테이징한 것이 있으면 그것만, 없으면 바뀐 것 전부를 커밋해요
+        already = [l for l in ops.run(base, ["diff", "--cached", "--name-only"]).splitlines() if l.strip()]
         if paths_list:
             ops.run(base, ["add", "-A", "--", *paths_list])
-        else:
+        elif not already:
             ops.run(base, ["add", "-A", "--", "."])
         staged = [l for l in ops.run(base, ["diff", "--cached", "--name-only"]).splitlines() if l.strip()]
         if not staged:
@@ -77,7 +80,7 @@ def merge_to_main(root: str, branch: str) -> dict:
 
 
 def create_pr(base: str, title: str, body: str = "", *, runner=None) -> dict:
-    """이 worktree의 브랜치로 PR을 연다 (`gh pr create`). push는 하지 않는다."""
+    """이 worktree의 브랜치로 PR을 연다 (`gh pr create`). push는 화면이 먼저 한다."""
     title = (title or "").strip()
     if not title:
         raise ActionError("PR 제목을 입력해 주세요.")
@@ -92,10 +95,10 @@ def create_pr(base: str, title: str, body: str = "", *, runner=None) -> dict:
         raise ActionError("main이 아닌 브랜치에서 열어 주세요.")
     upstream = ops.run(base, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], check=False).strip()
     if not upstream or "fatal" in upstream or upstream.startswith("@"):
-        raise ActionError(f"{branch} 브랜치가 아직 원격에 없어요. 터미널에서 git push -u origin {branch} 명령을 실행한 뒤 다시 눌러 주세요 (lab.remote는 push하지 않아요).")
+        raise ActionError(f"{branch} 브랜치가 아직 원격에 없어요. 소스 제어에서 브랜치를 게시한 뒤 다시 시도해 주세요.")
     ahead = ops.run(base, ["rev-list", "--count", "@{u}..HEAD"], check=False).strip()
     if ahead.isdigit() and int(ahead) > 0:
-        raise ActionError(f"원격보다 커밋이 {ahead}개 앞서 있어요. 터미널에서 git push를 실행한 뒤 다시 눌러 주세요 (lab.remote는 push하지 않아요).")
+        raise ActionError(f"원격보다 커밋이 {ahead}개 앞서 있어요. 먼저 push한 뒤 다시 시도해 주세요.")
     cmd = [gh or "gh", "pr", "create", "--head", branch, "--title", title[:200], "--body", (body or "")[:20000]]
     run = runner or (lambda c: subprocess.run(c, cwd=base, capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL))
     try:

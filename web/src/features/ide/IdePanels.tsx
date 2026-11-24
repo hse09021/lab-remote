@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { dirQuery, gitStatusQuery, useMakeEntry } from '@/api/projects'
+import { dirQuery, useMakeEntry } from '@/api/projects'
 import type { ProjectDetail } from '@/api/projects'
-import { gitCapsQuery, searchQuery, useGitAction } from '@/api/ide'
+import { searchQuery } from '@/api/ide'
 import { runsQuery, useStartRun, useStopRun } from '@/api/runs'
 import { ApiError } from '@/api/client'
-import { Dialog } from '@/components'
 import { CollapseAllIcon, NewFileIcon, NewFolderIcon, RefreshIcon } from '@/components/icons'
 import { RunStatePill } from '../projects/RunsTab'
 import { ScheduleDialog } from '../schedule/ScheduleDialog'
@@ -160,132 +159,9 @@ export function SearchPanel({ project, tree, onOpen }: { project: string; tree: 
   )
 }
 
-/* ── 소스 제어 ──────────────────────────────────────────────── */
+/* ── 소스 제어 — SourceControl.tsx (VS Code와 같은 구조) ── */
 
-export function GitPanel({ project, tree, onDiff }: { project: string; tree: string; onDiff: (path: string) => void }) {
-  const status = useQuery(gitStatusQuery(project, tree))
-  const caps = useQuery(gitCapsQuery(project))
-  const { commit, merge, pr } = useGitAction(project)
-  const [message, setMessage] = useState('')
-  const [asking, setAsking] = useState(false)
-  const [prOpen, setPrOpen] = useState(false)
-  const [prTitle, setPrTitle] = useState('')
-  const [prBody, setPrBody] = useState('')
-  const st = status.data
-  if (!st) return <div className={s.panel}><span className={s.muted}>불러오는 중이에요…</span></div>
-  if (st.state !== 'ok') return <div className={s.panel}><span className={s.muted}>{st.state === 'none' ? 'git 저장소가 아니에요.' : st.reason}</span></div>
-  const doCommit = () => commit.mutate({ tree, message }, { onSuccess: () => setMessage('') })
-  const isMain = st.branch === 'main' || st.branch === 'master'
-
-  return (
-    <div className={s.panel}>
-      <div className={s.panelHead}>
-        <span className={s.panelTitle}>소스 제어</span>
-      </div>
-      <div className={s.muted}>
-        {st.branch || '(분리된 HEAD)'} · 커밋하지 않은 변경 {st.changed}
-      </div>
-      <textarea
-        className={s.textarea}
-        rows={2}
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) doCommit()
-        }}
-        placeholder={`메시지 (Ctrl+Enter로 ${st.branch} 브랜치에 커밋)`}
-        aria-label="커밋 메시지"
-      />
-      <div className={s.row}>
-        <button type="button" className={s.primaryBtn} disabled={!message.trim() || !st.changed || commit.isPending} onClick={doCommit}>
-          ✓ 커밋
-        </button>
-        {caps.data?.pr && !isMain && (
-          <button
-            type="button"
-            className={s.ghostBtn}
-            title="gh로 PR을 만들어요. 브랜치를 먼저 원격 저장소에 push해야 해요"
-            onClick={() => {
-              setPrTitle(st.branch.replace(/^[^/]*\//, '').replace(/[-_]/g, ' '))
-              setPrBody('')
-              pr.reset()
-              setPrOpen(true)
-            }}
-          >
-            PR 만들기
-          </button>
-        )}
-        {!isMain && (
-          <button type="button" className={s.ghostBtn} onClick={() => setAsking(true)}>
-            main에 머지…
-          </button>
-        )}
-      </div>
-      {commit.isError && <div className={s.errText}>{errText(commit.error)}</div>}
-      {commit.data && <div className={s.okText}>커밋했어요 · {commit.data.sha}</div>}
-      {merge.data && <div className={s.okText}>{merge.data.main} 브랜치에 머지했어요 · {merge.data.sha}</div>}
-      {pr.data && (
-        <div className={s.okText}>
-          PR을 만들었어요 ·{' '}
-          <a href={pr.data.url} target="_blank" rel="noreferrer">
-            {pr.data.number ? `#${pr.data.number}` : pr.data.url}
-          </a>
-        </div>
-      )}
-      <span className={s.groupLabel}>변경 내용 · {st.changed}</span>
-      {st.changes.map((c) => (
-        <button key={c.path} type="button" className={s.fileRow} onClick={() => onDiff(c.path)}>
-          <span className={s.mono}>{c.path}</span>
-          <span className={s.treeMark} data-git={c.label}>
-            {c.label}
-          </span>
-        </button>
-      ))}
-      <Dialog
-        open={prOpen}
-        title={`${st.branch} 브랜치로 PR 만들기`}
-        confirmLabel="PR 만들기"
-        busy={pr.isPending}
-        error={errText(pr.error) || undefined}
-        onClose={() => {
-          pr.reset()
-          setPrOpen(false)
-        }}
-        onConfirm={() => pr.mutate({ tree, title: prTitle, body: prBody }, { onSuccess: () => setPrOpen(false) })}
-      >
-        <label className={s.dialogField}>
-          제목
-          <input className={s.input} value={prTitle} onChange={(e) => setPrTitle(e.target.value)} autoFocus />
-        </label>
-        <label className={s.dialogField}>
-          설명 (선택)
-          <textarea className={s.textarea} rows={4} value={prBody} onChange={(e) => setPrBody(e.target.value)} />
-        </label>
-        <span>
-          <code>gh pr create</code>로 만들어요. lab.remote는 push하지 않으니 브랜치를 먼저 원격 저장소에 push해 주세요 (
-          <code>git push -u origin {st.branch}</code>).
-        </span>
-      </Dialog>
-      <Dialog
-        open={asking}
-        title={`${st.branch} 브랜치를 main에 머지할까요?`}
-        confirmLabel="머지"
-        busy={merge.isPending}
-        error={errText(merge.error) || undefined}
-        onClose={() => {
-          merge.reset()
-          setAsking(false)
-        }}
-        onConfirm={() => merge.mutate(st.branch, { onSuccess: () => setAsking(false) })}
-      >
-        <span>
-          main worktree에서 <code>git merge --no-ff {st.branch}</code> 명령을 실행해요. main 쪽에 커밋하지 않은 변경이 있으면 머지하지 않고, 충돌이 나면
-          머지를 바로 취소해요. push는 하지 않아요.
-        </span>
-      </Dialog>
-    </div>
-  )
-}
+export { GitPanel } from './SourceControl'
 
 /* ── 실행 ──────────────────────────────────────────────────── */
 

@@ -1,4 +1,4 @@
-"""IDE — 검색 · 커밋 · main에 합치기 · 터미널(WebSocket ↔ tmux)."""
+"""IDE — 검색 · 소스 제어(커밋 · 브랜치 · 원격 · 동기화 · 머지 · PR) · 터미널(WebSocket ↔ tmux)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from .. import alerts, db, files, projects, search, terminals
-from ..git import actions
+from ..git import actions, remote
 
 router = APIRouter()
 
@@ -100,7 +100,7 @@ def file_origin(name: str, path: str, tree: str = ""):
 
 @router.post("/projects/{name}/git/pr")
 def open_pr(name: str, body: PrBody):
-    """PR 열기 (gh) — 브랜치가 원격에 올라가 있을 때만. lab.remote는 push하지 않는다."""
+    """PR 열기 (gh) — 브랜치가 원격에 있고 앞선 커밋이 없을 때만 (화면이 먼저 push해요)."""
     base = files.base_of(projects.require(name), body.tree)
     try:
         got = actions.create_pr(base, body.title, body.body)
@@ -111,6 +111,105 @@ def open_pr(name: str, body: PrBody):
         alerts.post(conn, "pr", None, f"PR {('#' + got['number']) if got['number'] else ''} 열었어요 · {body.title[:80]}".replace("  ", " "),
                     where=f"{name} · {got['branch']}", body=got["url"], project=name, ref={"project": name, "pr": got["url"]}, read=True)
     return got
+
+
+class TreeBody(BaseModel):
+    tree: str = ""
+
+
+class BranchBody(BaseModel):
+    tree: str = ""
+    name: str
+    start: str = ""
+
+
+class RemoteBody(BaseModel):
+    tree: str = ""
+    url: str
+    name: str = "origin"
+
+
+class PublishBody(BaseModel):
+    tree: str = ""
+    name: str
+    private: bool = True
+
+
+class PathsBody(BaseModel):
+    tree: str = ""
+    paths: list[str]
+
+
+def _repo_call(name: str, tree: str, fn, *args, status: int = 409):
+    base = files.base_of(projects.require(name), tree)
+    try:
+        return fn(base, *args)
+    except actions.ActionError as exc:
+        return _bad(exc, status)
+
+
+@router.get("/projects/{name}/git/repo")
+def repo_info(name: str, tree: str = ""):
+    """소스 제어의 리포지토리 줄 — 브랜치 · 원격 · 앞섬/뒤처짐 · 브랜치 목록"""
+    return _repo_call(name, tree, remote.info)
+
+
+@router.post("/projects/{name}/git/fetch")
+def repo_fetch(name: str, body: TreeBody):
+    return _repo_call(name, body.tree, remote.fetch)
+
+
+@router.post("/projects/{name}/git/pull")
+def repo_pull(name: str, body: TreeBody):
+    return _repo_call(name, body.tree, remote.pull)
+
+
+@router.post("/projects/{name}/git/push")
+def repo_push(name: str, body: TreeBody):
+    """현재 브랜치를 push (force 없음). 원격 브랜치가 없으면 게시해요. 화면에서 확인을 받은 뒤"""
+    return _repo_call(name, body.tree, remote.push)
+
+
+@router.post("/projects/{name}/git/sync")
+def repo_sync(name: str, body: TreeBody):
+    """pull 뒤 push. 화면에서 확인을 받은 뒤"""
+    return _repo_call(name, body.tree, remote.sync)
+
+
+@router.post("/projects/{name}/git/checkout")
+def repo_checkout(name: str, body: BranchBody):
+    return _repo_call(name, body.tree, remote.checkout, body.name)
+
+
+@router.post("/projects/{name}/git/branch")
+def repo_branch(name: str, body: BranchBody):
+    return _repo_call(name, body.tree, remote.create_branch, body.name, body.start, status=400)
+
+
+@router.post("/projects/{name}/git/remote")
+def repo_remote(name: str, body: RemoteBody):
+    return _repo_call(name, body.tree, remote.set_remote, body.url, body.name, status=400)
+
+
+@router.post("/projects/{name}/git/init")
+def repo_init(name: str, body: TreeBody):
+    return _repo_call(name, body.tree, remote.init)
+
+
+@router.post("/projects/{name}/git/publish")
+def repo_publish(name: str, body: PublishBody):
+    """gh로 GitHub에 저장소를 만들고 연결한 뒤 push. 화면에서 확인을 받은 뒤"""
+    return _repo_call(name, body.tree, remote.publish_github, body.name, body.private)
+
+
+@router.post("/projects/{name}/git/stage")
+def repo_stage(name: str, body: PathsBody):
+    return _repo_call(name, body.tree, remote.stage, body.paths, status=400)
+
+
+@router.post("/projects/{name}/git/unstage")
+def repo_unstage(name: str, body: PathsBody):
+    return _repo_call(name, body.tree, remote.unstage, body.paths, status=400)
 
 
 @router.get("/projects/{name}/terminals")

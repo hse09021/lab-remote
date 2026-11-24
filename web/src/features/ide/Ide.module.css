@@ -730,3 +730,389 @@ kbd {
   font-size: 13px;
   color: var(--text-soft);
 }
+
+/* ── 소스 제어 (VS Code와 같은 구조) ───────────────────────── */
+
+.iconBtnSm {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.iconBtnSm:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.iconBtnSm:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.menuWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 190px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  box-shadow: var(--shadow-pop);
+}
+
+.menuItem {
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menuItem:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.menuItem:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.menuSep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
+.scSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scHead {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 26px;
+}
+
+.scToggle {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.scCount {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.scActions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.repoRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.repoIcon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.repoName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.branchBtn,
+.syncBtn {
+  max-width: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.branchBtn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.syncBtn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.branchBtn:hover,
+.syncBtn:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.commitSplit {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.commitMain {
+  flex: 1;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-right: 1px solid var(--accent-soft);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+}
+
+.commitMain:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.commitSplit .iconBtnSm {
+  height: 100%;
+  min-height: 32px;
+  color: inherit;
+}
+
+.commitSplit .iconBtnSm:hover {
+  background: var(--accent-hover);
+  color: inherit;
+}
+
+.scRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 18px;
+  border-radius: var(--radius-sm);
+}
+
+.scRow:hover,
+.scRow:focus-within {
+  background: var(--hover);
+}
+
+.scFile {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scName {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.scName[data-deleted] {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.scDir {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.scRowActions {
+  display: none;
+}
+
+.scRow:hover .scRowActions,
+.scRow:focus-within .scRowActions {
+  display: inline-flex;
+}
+
+@media (hover: none) {
+  .scRowActions {
+    display: inline-flex;
+  }
+}
+
+.scLetter {
+  width: 18px;
+  flex: none;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--attention-text);
+}
+
+.scLetter[data-l='U'],
+.scLetter[data-l='A'] {
+  color: var(--accent-dark);
+}
+
+.scLetter[data-l='D'] {
+  color: var(--diff-del-text);
+}
+
+.scHint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.scWide {
+  min-height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bg);
+  cursor: pointer;
+}
+
+.scWide:disabled {
+  opacity: 0.55;
+}
+
+.scUrl {
+  display: block;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.radioRow {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.radioRow label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.branchList {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.branchGroup {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.branchItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.branchItem:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.branchItem[data-current] {
+  background: var(--accent-tint);
+  cursor: default;
+}
+
+.branchItemName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

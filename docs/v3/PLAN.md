@@ -69,7 +69,7 @@
 - 모듈(새로 만들거나 고칠 것):
   - **projects**: 등록·해제, `.labremote/` 만들기, 프로젝트 설정 읽기·쓰기
   - **files**: 등록한 프로젝트 폴더 안에서만 목록·읽기·쓰기·업로드·다운로드·이름 바꾸기·삭제. 경로 탈출(`..`, 심볼릭 링크) 막기. 실행 중인 학습이 쓰는 폴더는 삭제 막기
-  - **git / worktree**: 상태, diff, 커밋, `main` 에 합치기, PR(설치돼 있으면 `gh` 사용, 없으면 버튼 숨김). worktree 는 `.labremote/worktrees/<이름>` 에 만들고, `main` 에 합쳐진 것은 "정리" 대상으로 표시만 해요(지우기는 사람이 눌렀을 때만)
+  - **git / worktree**: 상태, diff, 커밋, `main` 에 합치기, PR(설치돼 있으면 `gh` 사용, 없으면 버튼 숨김). worktree 는 `.labremote/worktrees/<이름>` 에 만들고, `main` 에 합쳐진 것은 "정리" 대상으로 표시만 해요(지우기는 사람이 눌렀을 때만). 소스 제어는 VS Code 와 같은 구조로 브랜치 전환·만들기, 스테이징, 원격 저장소 연결, GitHub 게시(`gh`), 저장소 초기화, fetch·pull·push 를 지원해요 — 원격 전송은 사람이 누를 때만, push 는 확인 후 force 없이(2026-11-24 결정)
   - **agents** (연결 부품):
     - `agents/base.py`: 에이전트 공통 규칙 — 세션 시작, 메시지 보내기, 이벤트 스트림(텍스트, 도구 사용, 할 일, 하위 에이전트, 결과·사용량), 승인 요청과 답, 이어 가기(세션 ID), 중지, 설정(mode, model, effort)
     - `agents/claude.py`: Python `claude-agent-sdk` 구현. 승인은 SDK 의 권한 콜백(`can_use_tool` 등, 실제 이름은 확인)으로 받아서 "대기 중 승인" 저장소에 넣고, 어느 화면(채팅, Dashboard, Inbox, 모바일)이나 Discord 링크에서 답해도 먼저 온 답을 적용해요

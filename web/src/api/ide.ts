@@ -97,7 +97,7 @@ export function useGitAction(project: string) {
         qc.invalidateQueries({ queryKey: ['projects', project, 'origin', v.tree, v.path] })
       },
     }),
-    /** PR 열기 (gh) — 브랜치가 원격에 올라가 있을 때만. lab.remote는 push하지 않아요 */
+    /** PR 열기 (gh) — 브랜치가 원격에 있고 앞선 커밋이 없을 때만 (화면이 먼저 push해요) */
     pr: useMutation({
       mutationFn: (v: { tree: string; title: string; body: string }) =>
         send<{ url: string; number: string; branch: string }>('POST', `/projects/${enc(project)}/git/pr`, v),
@@ -106,6 +106,62 @@ export function useGitAction(project: string) {
         qc.invalidateQueries({ queryKey: ['dashboard'] })
       },
     }),
+  }
+}
+
+/* ── 소스 제어의 리포지토리 줄 — server/app/git/remote.py와 짝 ── */
+
+export interface RepoBranch {
+  name: string
+  upstream: string
+  at: number
+  sha: string
+}
+
+export type RepoInfo =
+  | {
+      state: 'ok'
+      repo: string
+      branch: string
+      head: string
+      hasCommit: boolean
+      upstream: string
+      ahead: number
+      behind: number
+      remotes: { name: string; url: string }[]
+      local: RepoBranch[]
+      remote: RepoBranch[]
+      gh: boolean
+    }
+  | { state: 'none'; reason?: string; gh: boolean; repo: string }
+  | { state: 'missing' | 'refused' | 'error'; reason?: string; gh?: boolean }
+
+export const repoInfoQuery = (project: string, tree: string) =>
+  queryOptions({
+    queryKey: ['projects', project, 'git', 'repo', tree],
+    queryFn: () => get<RepoInfo>(`/projects/${enc(project)}/git/repo${q({ tree })}`),
+    refetchInterval: 10_000,
+  })
+
+/** 브랜치 · 원격 · 동기화 · 스테이징. 원격 전송(fetch · pull · push)은 누를 때만 */
+export function useRepoAction(project: string, tree: string) {
+  const qc = useQueryClient()
+  const done = () => qc.invalidateQueries({ queryKey: ['projects', project] })
+  const post = <T,>(path: string) => (v: object = {}) => send<T>('POST', `/projects/${enc(project)}/git/${path}`, { tree, ...v })
+  const m = <V extends object | void>(path: string) =>
+    useMutation({ mutationFn: (v: V) => post<RepoInfo>(path)((v ?? {}) as object), onSuccess: done })
+  return {
+    fetch: m<void>('fetch'),
+    pull: m<void>('pull'),
+    push: m<void>('push'),
+    sync: m<void>('sync'),
+    checkout: m<{ name: string }>('checkout'),
+    branch: m<{ name: string; start?: string }>('branch'),
+    remote: m<{ url: string; name?: string }>('remote'),
+    init: m<void>('init'),
+    publish: m<{ name: string; private: boolean }>('publish'),
+    stage: m<{ paths: string[] }>('stage'),
+    unstage: m<{ paths: string[] }>('unstage'),
   }
 }
 

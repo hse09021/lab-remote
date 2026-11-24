@@ -1,7 +1,8 @@
-"""git 저수준 — **로컬 브랜치만.**
+"""git 저수준 — 모든 git 호출이 `run()`을 지난다.
 
-`push`·`merge`·PR은 ②에서 만들지 않는다(결정: 로컬 브랜치만). `worktree`도
-일부러 안 만든다 — 작업 트리 루트가 바뀌면 `registry.lookup`이 깨져 훅이 안 뜬다.
+기본은 **원격 전송 없음**(`protocol.allow=never`). fetch · pull · push는 사람이
+소스 제어에서 누를 때만 `run(..., net=True)`로 부르고, 그때만 https · ssh와
+사용자의 전역 자격 증명 도우미를 연다(`net_config()`, 2026-11-24 결정).
 
 > ⚠ **git 명령은 오케스트레이터가 직접 실행하므로 훅을 거치지 않는다.**
 > 그래서 `commit`의 대상 경로를 코드가 화이트리스트로 지정한다 — 자유
@@ -11,6 +12,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 
 from .. import paths, registry
@@ -27,6 +29,8 @@ __all__ = [
     "commit_config",
     "identity",
     "safe_env",
+    "net_config",
+    "user_credential_config",
     "run",
     "inside_worktree",
     "current_branch",
@@ -78,7 +82,15 @@ FALLBACK_IDENTITY = ("lab.remote", "labremote@localhost")
 
 
 #: 커밋 신원이 필요한 하위명령
-NEEDS_IDENTITY = frozenset({"commit", "merge", "revert", "cherry-pick", "tag", "am"})
+NEEDS_IDENTITY = frozenset({"commit", "merge", "revert", "cherry-pick", "tag", "am", "pull"})
+
+#: 원격 전송(`net=True`)에서만 여는 프로토콜. 시험은 여기에 "file"을 더한다.
+NET_PROTOCOLS = ("https", "ssh")
+
+#: 원격 전송에서만 더 물려주는 환경 — ssh-agent 소켓
+ENV_NET_KEEP = ("SSH_AUTH_SOCK",)
+
+NET_TIMEOUT_SEC = 180
 
 
 def nohooks_dir() -> str:
@@ -154,7 +166,7 @@ def safe_config() -> list[str]:
         # 외부 diff 프로그램
         "-c", "diff.external=",
         "-c", "gpg.program=false",
-        # ②는 로컬 브랜치만 쓴다 — 원격 전송이 필요 없다
+        # 기본은 원격 전송 없음 — 사람이 누른 fetch · pull · push만 net_config()가 연다
         "-c", "protocol.allow=never",
     ]
 
@@ -165,12 +177,66 @@ def commit_config() -> list[str]:
     return [*safe_config(), "-c", f"user.name={name}", "-c", f"user.email={mail}"]
 
 
-def safe_env(base: dict | None = None) -> dict[str, str]:
+def safe_env(base: dict | None = None, *, net: bool = False) -> dict[str, str]:
     """git이 받을 환경. 화이트리스트 + 고정값."""
     source = os.environ if base is None else base
-    out = {k: source[k] for k in ENV_KEEP if k in source}
+    keep = ENV_KEEP + (ENV_NET_KEEP if net else ())
+    out = {k: source[k] for k in keep if k in source}
     out.update(SAFE_ENV)
     return out
+
+
+def user_credential_config(base: dict | None = None) -> list[str]:
+    """사용자 **전역** 설정의 자격 증명 도우미를 `-c` 인자로.
+
+    `SAFE_ENV`가 전역 설정을 끊으므로 `gh auth setup-git`이 넣은 도우미도
+    사라진다. 그래서 신원(`identity()`)처럼 **도우미 줄만** 따로 읽는다.
+    저장소 설정의 도우미는 `guard`가 막거나 `credential.helper=`로 비운다 —
+    여기서는 사용자가 직접 설정한 전역 값만 쓴다. 전역에 하나도 없고 `gh`가
+    있으면 github.com에 한해 `gh auth git-credential`을 쓴다.
+    """
+    source = os.environ if base is None else base
+    env = {k: source[k] for k in ENV_KEEP if k in source}
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    out: list[str] = []
+    try:
+        done = subprocess.run(
+            ["git", "config", "--global", "--get-regexp", r"^credential\..*"],
+            capture_output=True, text=True, timeout=10, env=env,
+        )
+        lines = done.stdout.splitlines() if done.returncode == 0 else []
+    except (OSError, subprocess.SubprocessError):
+        lines = []
+    has_helper = False
+    for line in lines:
+        key, _, value = line.partition(" ")
+        low = key.lower()
+        if low.endswith(".helper") or low.endswith(".username") or low.endswith(".usehttppath"):
+            out += ["-c", f"{key}={value}"]
+            has_helper = has_helper or (low.endswith(".helper") and bool(value.strip()))
+    if not has_helper:
+        gh = shutil.which("gh", path=source.get("PATH"))
+        if gh:
+            out += [
+                "-c", "credential.https://github.com.helper=",
+                "-c", f"credential.https://github.com.helper=!'{gh}' auth git-credential",
+            ]
+    return out
+
+
+def net_config(config: list[str]) -> list[str]:
+    """원격 전송용 — `safe_config()`에서 프로토콜 · ssh · 자격 증명만 연다.
+
+    훅 · 필터 · 편집기를 끄는 나머지 값은 그대로다. ssh는 `BatchMode`라
+    암호나 호스트 확인을 묻지 않고 실패한다(서버에는 터미널이 없다).
+    """
+    out = list(config)
+    for i, value in enumerate(out):
+        if value == "core.sshCommand=":
+            out[i] = "core.sshCommand=ssh -o BatchMode=yes"
+    for proto in NET_PROTOCOLS:
+        out += ["-c", f"protocol.{proto}.allow=always"]
+    return out + user_credential_config()
 
 
 class GitError(RuntimeError):
@@ -192,24 +258,28 @@ def guard(root: str) -> dict:
     return report
 
 
-def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True) -> str:
+def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True, net: bool = False) -> str:
     """`git -C <root> <args>`. 실패하면 `GitError`.
 
     `guarded=False`는 `guard()` 자신이 쓰는 내부 경로용이다 — 밖에서는 쓰지
-    않는다. 모든 호출이 `.git` 검사를 지나간다.
+    않는다. 모든 호출이 `.git` 검사를 지나간다. `net=True`는 사람이 누른
+    fetch · pull · push에만 쓴다.
     """
     if guarded:
         guard(root)
     # 커밋하는 명령에는 신원을 붙인다 — `SAFE_ENV`가 전역 설정을 끊어서
     # 그대로면 "who are you"로 실패한다.
     config = commit_config() if args and args[0] in NEEDS_IDENTITY else safe_config()
+    if net:
+        config = net_config(config)
     try:
         done = subprocess.run(
             ["git", "--no-pager", *config, "-C", paths.real(root), *args],
             capture_output=True,
             text=True,
-            timeout=TIMEOUT_SEC,
-            env=safe_env(),
+            timeout=NET_TIMEOUT_SEC if net else TIMEOUT_SEC,
+            env=safe_env(net=net),
+            stdin=subprocess.DEVNULL,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise GitError(f"git을 실행하지 못했어요: {exc}") from None
