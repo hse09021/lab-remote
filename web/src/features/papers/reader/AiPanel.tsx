@@ -71,6 +71,8 @@ interface Props {
   currentLabel?: string
   /** 인용 카드로 보관한 참고문헌인지 — 라이브러리 캐시에서 봐요 */
   isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
+  /** 인용 탭의 제목 — 본문 인용 위치로 가서 인용 카드를 열어요 */
+  onCiteJump?: (n: number) => void
 }
 
 export function AiPanel({
@@ -103,6 +105,7 @@ export function AiPanel({
   onAddNote,
   currentLabel = '',
   isRefSaved,
+  onCiteJump,
 }: Props) {
   return (
     <aside aria-label="AI 패널" style={style} className={s.panel}>
@@ -179,7 +182,7 @@ export function AiPanel({
             </div>
           ))}
 
-        {tab === 'cite' && <CitationsTab reader={reader} isRefSaved={isRefSaved} />}
+        {tab === 'cite' && <CitationsTab reader={reader} isRefSaved={isRefSaved} onCiteJump={onCiteJump} />}
 
         {tab === 'notes' && (
           <NotesTab
@@ -230,9 +233,11 @@ function ObsidianLine({ path }: { path: string }) {
 function CitationsTab({
   reader,
   isRefSaved,
+  onCiteJump,
 }: {
   reader: PaperReaderPayload
   isRefSaved: (r: { n: number; arxiv: string | null }) => boolean
+  onCiteJump?: (n: number) => void
 }) {
   // 본문에서 많이 인용된 순서, 같으면 번호 순
   const ranked = [...reader.references].sort(
@@ -243,13 +248,13 @@ function CitationsTab({
     <div className={s.pad}>
       <span className={s.caption}>{reader.citationsCaption}</span>
       {ranked.map((r) => (
-        <RefRow key={r.n} r={r} added={isRefSaved(r)} />
+        <RefRow key={r.n} r={r} added={isRefSaved(r)} onJump={onCiteJump ? () => onCiteJump(r.n) : undefined} />
       ))}
     </div>
   )
 }
 
-function RefRow({ r, added }: { r: Reference; added: boolean }) {
+function RefRow({ r, added, onJump }: { r: Reference; added: boolean; onJump?: () => void }) {
   const links = referenceLinks(r)
   // 바로 열 수 있는 곳이 없으면 배지 없이 찾기 링크만 보여요
   const badge: { kind: 'in' | 'none'; label: string } | null = added
@@ -266,10 +271,22 @@ function RefRow({ r, added }: { r: Reference; added: boolean }) {
     <div className={s.refRow}>
       <span className={s.refNum}>[{r.n}]</span>
       <div className={s.refBody}>
-        {/* 제목을 누르면 인용된 자료를 새 탭으로 (arXiv · DOI · URL, 없으면 찾기) */}
-        <a href={links.primary.href} target="_blank" rel="noopener noreferrer" className={s.refTitle} title={links.primary.label}>
-          {r.title}
-        </a>
+        {/* 제목을 누르면 본문에서 인용한 위치로 가서 인용 카드를 열어요 (다시 누르면 다음 위치) */}
+        {onJump ? (
+          <button
+            type="button"
+            onClick={onJump}
+            className={s.refTitle}
+            aria-label={`${r.title} · 본문에서 인용 위치 보기`}
+            title={r.citedCount > 1 ? '본문에서 인용 위치 보기 · 다시 누르면 다음 위치로 이동해요' : '본문에서 인용 위치 보기'}
+          >
+            {r.title}
+          </button>
+        ) : (
+          <a href={links.primary.href} target="_blank" rel="noopener noreferrer" className={s.refTitle} title={links.primary.label}>
+            {r.title}
+          </a>
+        )}
         <span className={s.refMeta}>
           {r.short}
           {r.citedCount > 0 && ` · 본문 ${r.citedCount}회`}

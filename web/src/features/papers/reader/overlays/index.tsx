@@ -237,6 +237,9 @@ export function CiteHotspots({
           type="button"
           aria-label={`참고문헌 ${spot.n}번`}
           title={`참고문헌 ${spot.n}번`}
+          // 인용 탭에서 이 자리를 찾을 때 써요 (쪽 안 순서)
+          data-cite-page={ctx.page}
+          data-cite-idx={i}
           onClick={(e) => onPick(spot.n, e.currentTarget)}
           style={ctx.rectToStyle(spot.box)}
           className={s.cite}

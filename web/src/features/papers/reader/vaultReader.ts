@@ -311,7 +311,7 @@ async function fromAnalysis(
     references,
     referenceTotal: references.length,
     citationsCaption: `AI 분석으로 추출한 참고문헌 ${references.length}개 · 본문에서 많이 인용된 순으로 정렬했어요`,
-    citeSpots: citeSpots.map(({ n, page, box }) => ({ n, page, box })),
+    citeSpots: citeSpots.map(({ n, page, box, inBib }) => ({ n, page, box, inBib })),
   }
 }
 

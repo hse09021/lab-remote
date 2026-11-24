@@ -11,6 +11,7 @@ import type { SelectionAnchor as Anchor } from '../floating/SelectionMenu'
 import { MyHighlightLayer } from '../MyHighlightLayer'
 import { placeFromRange } from '../selectionPlace'
 import type { SelectionPlace } from '../selectionPlace'
+import type { CiteJump } from '../PdfView'
 import { loadPaperHtml } from './loadPaperHtml'
 import { ConfigCard, MemoCard } from './blocks'
 import { Sparkle } from './Sparkle'
@@ -34,6 +35,8 @@ interface Props {
   onExplain: (key: string, anchor: Anchor, context?: string | null) => void
   /** 본문 인용 칩 */
   onCite: (n: number, anchor: Anchor) => void
+  /** 인용 탭에서 고른 참고문헌 — 본문 인용 위치로 가서 인용 카드를 열어요 */
+  citeJump?: CiteJump | null
   /** 실제 드래그 선택 — 다시 그릴 자리(블록 id + 오프셋)까지 넘겨요 */
   onSelect: (anchor: Anchor, text: string, sectionId: string, place: SelectionPlace) => void
   /** 내가 칠한 하이라이트 (저장소에 있어요) */
@@ -54,6 +57,7 @@ export function HtmlView({
   onProgress,
   onExplain,
   onCite,
+  citeJump = null,
   onSelect,
   myHighlights,
   onMyHighlight,
@@ -392,6 +396,35 @@ export function HtmlView({
       if (jump.sectionId) scrollToSection(jump.sectionId, false)
     })
   }, [html, jump, scrollToSection, mapped.html])
+
+  /* ── 인용 탭에서 제목을 누르면: 본문 인용 링크로 가서 인용 카드를 열어요 ── */
+  // 보기를 바꿔 새로 열렸을 때 지난 요청을 다시 하지 않게, 처음 값은 이미 한 것으로 봐요
+  const appliedCite = useRef<number | null>(citeJump?.nonce ?? null)
+  useEffect(() => {
+    const root = scrollRef.current
+    const body = bodyRef.current
+    if (!html || !citeJump || !root || !body || appliedCite.current === citeJump.nonce) return
+    appliedCite.current = citeJump.nonce
+    const n = citeJump.n
+    const links = Array.from(body.querySelectorAll<HTMLElement>('a[href^="#bib"], [data-cite]')).filter((el) => {
+      if (el.closest('.ltx_bibliography')) return false
+      const got = el.dataset.cite ?? el.getAttribute('href')?.match(/bib(\d+)$/)?.[1]
+      return Number(got) === n
+    })
+    // 본문 인용이 없으면 참고문헌 목록의 그 항목으로
+    const target = links.length ? links[citeJump.k % links.length] : body.querySelector<HTMLElement>(`#${CSS.escape(`bib.bib${n}`)}`)
+    if (!target) {
+      onCite(n, { x: 40, y: root.scrollTop + 40, width: 0 })
+      return
+    }
+    // 바로 옮겨요 — 부드럽게 옮기면 그사이 그림이 로드되며 자리가 밀려 중간에 멈춰요
+    const top = target.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop - root.clientHeight / 4
+    suppressUntil.current = Date.now() + 400
+    root.scrollTo({ top: Math.max(0, top), behavior: 'auto' })
+    target.animate?.([{ background: 'var(--accent-tint)' }, { background: 'transparent' }], { duration: 1600 })
+    // 옮긴 뒤 자리가 정해지면 카드를 열어요
+    requestAnimationFrame(() => onCite(n, anchorFrom(target, root)))
+  }, [citeJump?.nonce, html]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (failed) {
     return (

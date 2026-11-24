@@ -224,6 +224,8 @@ export interface CiteSpot {
   n: number
   page: number
   box: PtRect
+  /** 참고문헌 목록 안의 번호 (본문 인용 횟수에서 빼요) */
+  inBib?: boolean
 }
 
 /** AI가 본문에서 뽑은 학습 설정 */

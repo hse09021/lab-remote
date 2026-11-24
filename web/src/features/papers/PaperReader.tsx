@@ -55,7 +55,7 @@ import { useFloatingChat, topicKeyFor } from './reader/floating/useFloatingChat'
 import { useReaderOverlays } from './reader/floating/useReaderOverlays'
 import { OutlinePanel } from './reader/OutlinePanel'
 import { PdfView } from './reader/PdfView'
-import type { JumpTarget } from './reader/PdfView'
+import type { CiteJump, JumpTarget } from './reader/PdfView'
 import { HtmlView } from './reader/html/HtmlView'
 import type { SummaryView } from './PaperSummaryPane'
 import s from './PaperReader.module.css'
@@ -103,6 +103,8 @@ function DesktopReader() {
   const [toggles, setToggles] = useState<HighlightToggles>(ALL_HIGHLIGHTS_ON)
   const [progress, setProgress] = useState(0)
   const [jump, setJump] = useState<{ target: JumpTarget; nonce: number } | null>(null)
+  /** 인용 탭에서 제목을 누른 참고문헌 — 같은 제목을 다시 누르면 다음 인용 위치로 */
+  const [citeJump, setCiteJump] = useState<CiteJump | null>(null)
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
   /** 채팅 탭에 붙는 맥락 칩 */
   const [chatContext, setChatContext] = useState<string | null>(null)
@@ -115,6 +117,10 @@ function DesktopReader() {
   const toast = useToast()
   const navigate = useNavigate()
   const overlays = useReaderOverlays()
+  // 보기(PDF ↔ arXiv HTML)를 바꾸면 떠 있던 카드는 자리가 맞지 않으니 닫아요
+  useEffect(() => {
+    overlays.closeAll()
+  }, [source]) // eslint-disable-line react-hooks/exhaustive-deps
   /** 마우스가 올라간 설명 대상 — E 키로 열어요 */
   const hovered = useRef<{ key: string; anchor: SelectionAnchor } | null>(null)
   /** 대화창 본체는 스크롤과 무관하게 가운데 열 모서리에 붙어요 */
@@ -617,6 +623,7 @@ function DesktopReader() {
                 }}
                 onExplain={openChat}
                 onCite={openCite}
+                citeJump={citeJump}
                 onSelect={(anchor, text, sectionId, place) =>
                   overlays.openSelection(anchor, text, sectionId, place)
                 }
@@ -671,6 +678,7 @@ function DesktopReader() {
                 onProgress={setProgress}
                 onExplain={openChat}
                 onCite={openCite}
+                citeJump={citeJump}
                 onSelect={(anchor, text, sectionId, place) =>
                   overlays.openSelection(anchor, text, sectionId, place)
                 }
@@ -700,6 +708,9 @@ function DesktopReader() {
             tab={tab}
             onTabChange={setTab}
             isRefSaved={isRefSaved}
+            onCiteJump={(n) =>
+              setCiteJump((prev) => ({ n, k: prev?.n === n ? prev.k + 1 : 0, nonce: (prev?.nonce ?? 0) + 1 }))
+            }
             reader={data}
             summary={summary}
             onMakeSummary={

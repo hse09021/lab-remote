@@ -31,6 +31,13 @@ import s from './PdfView.module.css'
 /** 1쪽 제목 옆 설명 버튼 자리 (목업 좌표) */
 const TITLE_SPOT = { x: 406, y: 157.4 }
 
+/** 인용 탭에서 제목을 누를 때 — `k`번째 본문 인용 위치로 (누를 때마다 다음 위치) */
+export interface CiteJump {
+  n: number
+  k: number
+  nonce: number
+}
+
 export interface JumpTarget {
   sectionId?: string
   /** AI 하이라이트로 바로 (HTML 보기는 그 구절을, PDF는 page · y를 써요) */
@@ -57,6 +64,8 @@ interface Props {
   onExplain: (key: string, anchor: Anchor) => void
   /** 인용 번호 핫스팟 */
   onCite: (n: number, anchor: Anchor) => void
+  /** 인용 탭에서 고른 참고문헌 — 본문 인용 위치로 가서 인용 카드를 열어요 */
+  citeJump?: CiteJump | null
   /** 본문 선택 (지금은 2쪽 핫스팟으로 흉내) */
   onSelect: (anchor: Anchor, text: string, sectionId: string, place: SelectionPlace) => void
   /** 내가 칠한 하이라이트 (pt 좌표로 다시 그려요) */
@@ -84,6 +93,7 @@ export function PdfView({
   onOpenHtml,
   onExplain,
   onCite,
+  citeJump = null,
   onSelect,
   myHighlights,
   myNotes,
@@ -312,6 +322,41 @@ export function PdfView({
     const a = anchorAt(el)
     if (a) onExplain(key, a)
   }
+
+  /* ── 인용 탭에서 제목을 누르면: 본문 인용 위치로 가서 인용 카드를 열어요 ── */
+  // 보기를 바꿔 새로 열렸을 때 지난 요청을 다시 하지 않게, 처음 값은 이미 한 것으로 봐요
+  const appliedCite = useRef<number | null>(citeJump?.nonce ?? null)
+  useEffect(() => {
+    const root = scrollRef.current
+    if (!citeJump || !root || appliedCite.current === citeJump.nonce) return
+    appliedCite.current = citeJump.nonce
+    const all = reader.citeSpots.filter((c) => c.n === citeJump.n)
+    // 본문 인용이 없으면 참고문헌 목록의 번호로
+    const pool = all.some((c) => !c.inBib) ? all.filter((c) => !c.inBib) : all
+    const spot = pool[citeJump.k % Math.max(pool.length, 1)]
+    if (!spot) {
+      // 찾은 자리가 없으면 지금 보는 곳 위쪽에 카드만 열어요
+      onCite(citeJump.n, { x: 40, y: root.scrollTop + 40, width: 0 })
+      return
+    }
+    const idx = reader.citeSpots.filter((c) => c.page === spot.page).indexOf(spot)
+    // 인용 번호가 화면 위쪽 1/4쯤 오게
+    scrollTo({ page: spot.page, y: Math.max(0, spot.box[1] - 180) })
+    // 멀리 있는 쪽은 스크롤한 뒤에 그려지니 핫스팟이 생길 때까지 기다려요
+    let frame = 0
+    const until = Date.now() + 3000
+    const find = () => {
+      const el = root.querySelector<HTMLElement>(`[data-cite-page="${spot.page}"][data-cite-idx="${idx}"]`)
+      if (el) {
+        const a = anchorFrom(el, root)
+        onCite(spot.n, a)
+        return
+      }
+      if (Date.now() < until) frame = requestAnimationFrame(find)
+    }
+    frame = requestAnimationFrame(find)
+    return () => cancelAnimationFrame(frame)
+  }, [citeJump?.nonce]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visible = (h: Highlight) => toggles[h.category]
   const selected = reader.highlights.find((h) => h.id === selectedId) ?? null
