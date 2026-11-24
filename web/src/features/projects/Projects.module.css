@@ -1120,34 +1120,6 @@ button.nameBtn:hover .fileName {
   cursor: pointer;
 }
 
-/* 폴더 등록 — 기존 폴더 / 새 폴더 */
-.modeSwitch {
-  display: inline-flex;
-  align-self: flex-start;
-  gap: 3px;
-  padding: 3px;
-  border-radius: var(--radius-lg);
-  background: var(--surface-sunken);
-}
-
-.modeSwitch button {
-  min-height: 32px;
-  padding: 0 14px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: transparent;
-  font-size: 13px;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.modeSwitch button[aria-pressed='true'] {
-  background: var(--bg);
-  color: var(--text);
-  font-weight: 700;
-  box-shadow: var(--shadow-raised);
-}
-
 /* 휴대폰 — 목록과 상세 중 하나만 */
 @media (max-width: 768px) {
   .page[data-detail='true'] .aside {
@@ -1212,18 +1184,6 @@ button.nameBtn:hover .fileName {
 .linkBtn:disabled {
   color: var(--text-muted);
   cursor: default;
-}
-
-/* 폴더 등록 — 찾아보기 */
-.browseToggle {
-  align-self: flex-start;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 13px;
-  color: var(--accent);
-  cursor: pointer;
 }
 
 .browser {
@@ -1331,4 +1291,67 @@ button.nameBtn:hover .fileName {
   color: var(--accent);
   cursor: pointer;
   white-space: nowrap;
+}
+
+/* 폴더 등록 — 경로 칸 + 오른쪽 찾아보기 버튼 */
+.pathRow {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.pathRow > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.browseBtn {
+  flex: none;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.browseBtn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.browseBtn[aria-expanded='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.browseBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 찾아보기 › 새 폴더 */
+.newDir {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.newDirHead {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+}
+
+.browserFoot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }

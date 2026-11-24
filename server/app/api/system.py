@@ -27,6 +27,23 @@ def dirs(path: str = "", hidden: bool = False):
         return JSONResponse({"detail": str(exc)}, status_code=400)
 
 
+class MakeDirBody(BaseModel):
+    parent: str = "~"
+    name: str
+    gitInit: bool = False
+
+
+@router.post("/system/dirs")
+def make_dir(body: MakeDirBody):
+    """찾아보기 › 새 폴더 — 홈 폴더 안에 빈 폴더 (등록은 따로)"""
+    from .. import projects
+
+    try:
+        return projects.make_dir(body.parent, body.name, git_init=body.gitInit)
+    except projects.ProjectError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
 @router.get("/system/gpu")
 def gpu():
     return system.gpu_summary()

@@ -179,3 +179,22 @@ def test_폴더_찾아보기는_홈_안에서만(tmp_path, monkeypatch):
     assert P.browse("/etc")["path"] == "~" and P.browse("/etc")["parent"] is None
     assert P.browse("~/projects/../../")["path"] == "~"
     assert os.path.isdir(str(home))
+
+
+def test_찾아보기에서_새_폴더(tmp_path, monkeypatch):
+    import os
+
+    from app import projects as P
+
+    home = tmp_path / "home"
+    (home / "projects").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    got = P.make_dir("~/projects", "new-exp", git_init=True)
+    assert got == {"name": "new-exp", "path": "~/projects/new-exp", "git": True}
+    assert os.path.isdir(home / "projects" / "new-exp" / ".git")
+    assert P.make_dir("~/projects", "plain")["git"] is False and not os.path.exists(home / "projects" / "plain" / ".git")
+    for bad in ("new-exp", "", ".hidden", "a/b"):
+        with pytest.raises(P.ProjectError):
+            P.make_dir("~/projects", bad)
+    with pytest.raises(P.ProjectError, match="홈 폴더 안"):
+        P.make_dir("/tmp", "x")

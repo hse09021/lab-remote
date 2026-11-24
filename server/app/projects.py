@@ -392,3 +392,29 @@ def browse(path: str = "", *, hidden: bool = False) -> dict:
             break
     parent = os.path.dirname(want) if want != home else None
     return {"path": display_path(want) if want != home else "~", "parent": display_path(parent) if parent and parent != home else ("~" if parent else None), "dirs": dirs}
+
+
+def make_dir(parent: str, name: str, *, git_init: bool = False) -> dict:
+    """폴더 등록 창의 찾아보기 › "새 폴더" — 홈 폴더 안에 빈 폴더를 만든다(`git init -b main`은 고를 때만).
+
+    등록은 하지 않는다. 사람이 고른 뒤 "등록"을 눌러야 해요.
+    """
+    home = paths.real("~")
+    base = paths.real(os.path.expanduser(parent or "~"))
+    if not (base == home or paths.is_inside(home, base)) or not os.path.isdir(base):
+        raise ProjectError("홈 폴더 안에서만 만들 수 있어요.")
+    name = (name or "").strip()
+    if not name or name.startswith(".") or "/" in name or "\\" in name or "\x00" in name or len(name) > 100:
+        raise ProjectError("폴더 이름이 올바르지 않아요 (/ 없이, 점으로 시작하지 않게).")
+    target = os.path.join(base, name)
+    if os.path.lexists(target):
+        raise ProjectError(f"이미 있어요: {name}")
+    os.mkdir(target, 0o755)
+    if git_init:
+        import subprocess
+
+        done = subprocess.run(["git", "init", "-q", "-b", "main", target], capture_output=True, text=True, timeout=30)
+        if done.returncode != 0:
+            os.rmdir(target) if not os.listdir(target) else None
+            raise ProjectError("git init이 실패했어요: " + (done.stderr or "").strip()[:200])
+    return {"name": name, "path": display_path(target), "git": git_init}

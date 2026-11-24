@@ -161,3 +161,11 @@ export const dirsQuery = (path: string, hidden: boolean, enabled: boolean) =>
     queryFn: () => get<DirList>(`/system/dirs?path=${encodeURIComponent(path)}${hidden ? '&hidden=true' : ''}`),
     enabled,
   })
+
+/** 찾아보기 › 새 폴더 — 홈 폴더 안에 빈 폴더 (등록은 따로) */
+export function useMakeDir() {
+  return useMutation({
+    mutationFn: (v: { parent: string; name: string; gitInit: boolean }) =>
+      send<{ name: string; path: string; git: boolean }>('POST', '/system/dirs', v),
+  })
+}

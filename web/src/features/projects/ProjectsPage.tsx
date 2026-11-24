@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   projectQuery,
   projectsQuery,
@@ -11,7 +11,7 @@ import {
 import type { GitSummary, ProjectRow } from '@/api/projects'
 import { ApiError } from '@/api/client'
 import { sessionsQuery } from '@/api/agents'
-import { dirsQuery } from '@/api/system'
+import { dirsQuery, useMakeDir } from '@/api/system'
 import { Dialog, dialogStyles as ds, ErrorState, LoadingState } from '@/components'
 import { agoShort, whenShort } from '@/lib/time'
 import { FilesTab } from './FilesTab'
@@ -167,7 +167,7 @@ export default function ProjectsPage() {
       <RegisterDialog
         key={String(registering)}
         open={!!registering}
-        initialMode={registering === 'new' ? 'new' : 'existing'}
+        startNew={registering === 'new'}
         onClose={() => setRegistering(false)}
       />
     </div>
@@ -192,39 +192,66 @@ function ProjectItem({ p, current }: { p: ProjectRow; current: boolean }) {
   )
 }
 
-function RegisterDialog({ open, onClose, initialMode = 'existing' }: { open: boolean; onClose: () => void; initialMode?: 'existing' | 'new' }) {
+/**
+ * 폴더 등록 — 경로를 적거나 "찾아보기"로 고르고 등록해요.
+ * 새 폴더는 찾아보기 창에서 지금 보는 폴더 안에 만들어요 (git init은 고를 때만).
+ * `startNew`면 찾아보기와 새 폴더 칸을 연 채로 시작해요 (빈 화면의 "새 폴더 만들기").
+ */
+function RegisterDialog({ open, onClose, startNew = false }: { open: boolean; onClose: () => void; startNew?: boolean }) {
   const navigate = useNavigate()
   const register = useRegisterProject()
-  const [mode, setMode] = useState<'existing' | 'new'>(initialMode)
+  const qc = useQueryClient()
   const [path, setPath] = useState('')
   const [name, setName] = useState('')
-  const [gitInit, setGitInit] = useState(true)
   // 찾아보기 — 홈 폴더 안을 걸어 들어가며 고르기
-  const [browsing, setBrowsing] = useState(false)
+  const [browsing, setBrowsing] = useState(startNew)
   const [at, setAt] = useState('~')
   const [hidden, setHidden] = useState(false)
   const dirs = useQuery(dirsQuery(at, hidden, open && browsing))
+  // 새 폴더 (찾아보기 안)
+  const [making, setMaking] = useState(startNew)
+  const [newName, setNewName] = useState('')
+  const [gitInit, setGitInit] = useState(true)
+  const makeDir = useMakeDir()
 
   const close = () => {
     setBrowsing(false)
+    setMaking(false)
     register.reset()
+    makeDir.reset()
     setPath('')
     setName('')
-    setMode('existing')
+    setNewName('')
     onClose()
   }
+  const pick = (p: string) => {
+    setPath(p)
+    setBrowsing(false)
+    setMaking(false)
+  }
+  const create = () =>
+    makeDir.mutate(
+      { parent: dirs.data?.path ?? at, name: newName.trim(), gitInit },
+      {
+        onSuccess: (made) => {
+          void qc.invalidateQueries({ queryKey: ['system', 'dirs'] })
+          setNewName('')
+          pick(made.path)
+        },
+      },
+    )
 
   return (
     <Dialog
       open={open}
-      title={mode === 'new' ? '새 폴더 만들고 등록' : '폴더 등록'}
-      confirmLabel={mode === 'new' ? '만들고 등록' : '등록'}
+      title="폴더 등록"
+      confirmLabel="등록"
       busy={register.isPending}
       error={register.error instanceof ApiError ? register.error.message : register.error ? String(register.error) : undefined}
       onClose={close}
       onConfirm={() =>
         register.mutate(
-          { path, name, create: mode === 'new', gitInit: mode === 'new' && gitInit },
+          { path, name },
           {
             onSuccess: (made) => {
               close()
@@ -234,38 +261,31 @@ function RegisterDialog({ open, onClose, initialMode = 'existing' }: { open: boo
         )
       }
     >
-      <div role="group" aria-label="등록 방식" className={s.modeSwitch}>
-        <button type="button" aria-pressed={mode === 'existing'} onClick={() => setMode('existing')}>
-          기존 폴더
-        </button>
-        <button type="button" aria-pressed={mode === 'new'} onClick={() => setMode('new')}>
-          새 폴더
-        </button>
-      </div>
       <label className={ds.field}>
-        {mode === 'new' ? '만들 폴더 경로 (위 폴더는 있어야 해요)' : '이 컴퓨터의 폴더 경로'}
-        <input
-          className={ds.input}
-          value={path}
-          onChange={(e) => setPath(e.target.value)}
-          placeholder={mode === 'new' ? '~/projects/new-experiment' : '~/projects/lora-rank-ablation'}
-          autoFocus
-          required
-        />
+        이 컴퓨터의 폴더 경로
+        <span className={s.pathRow}>
+          <input
+            className={ds.input}
+            value={path}
+            onChange={(e) => setPath(e.target.value)}
+            placeholder="~/projects/lora-rank-ablation"
+            autoFocus
+            required
+          />
+          <button
+            type="button"
+            className={s.browseBtn}
+            aria-expanded={browsing}
+            onClick={() => {
+              // 적어 둔 경로가 있으면 거기서 시작해요
+              setAt(path.trim() || '~')
+              setBrowsing((v) => !v)
+            }}
+          >
+            찾아보기
+          </button>
+        </span>
       </label>
-      <button
-        type="button"
-        className={s.browseToggle}
-        aria-expanded={browsing}
-        onClick={() => {
-          // 적어 둔 경로가 있으면 거기서(새 폴더면 위 폴더에서) 시작해요
-          const start = path.trim() ? (mode === 'new' ? path.trim().replace(/\/[^/]*\/?$/, '') || '~' : path.trim()) : '~'
-          setAt(start)
-          setBrowsing((v) => !v)
-        }}
-      >
-        {browsing ? '▾' : '▸'} 폴더 찾아보기
-      </button>
       {browsing && (
         <div className={s.browser}>
           <div className={s.browserHead}>
@@ -288,44 +308,57 @@ function RegisterDialog({ open, onClose, initialMode = 'existing' }: { open: boo
                   {d.git && <span className={s.browserTag}>git</span>}
                   {d.registered && <span className={s.browserTag}>등록됨</span>}
                 </button>
-                <button
-                  type="button"
-                  className={s.browserPick}
-                  onClick={() => {
-                    // 새 폴더면 그 안에 만들 이름을 이어 적게 해요
-                    setPath(mode === 'new' ? `${d.path}/` : d.path)
-                    if (mode !== 'new') setBrowsing(false)
-                  }}
-                >
-                  {mode === 'new' ? '여기 안에' : '고르기'}
+                <button type="button" className={s.browserPick} onClick={() => pick(d.path)}>
+                  고르기
                 </button>
               </div>
             ))}
           </div>
-          {dirs.data && (
-            <button
-              type="button"
-              className={s.browserPick}
-              onClick={() => {
-                setPath(mode === 'new' ? `${dirs.data.path}/` : dirs.data.path)
-                if (mode !== 'new') setBrowsing(false)
-              }}
-            >
-              {mode === 'new' ? `${dirs.data.path} 안에 만들기` : `${dirs.data.path} 고르기`}
+          {making ? (
+            <div className={s.newDir}>
+              <span className={s.newDirHead}>{dirs.data?.path ?? at} 안에 새 폴더</span>
+              <span className={s.pathRow}>
+                <input
+                  className={ds.input}
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newName.trim()) {
+                      e.preventDefault()
+                      create()
+                    }
+                  }}
+                  placeholder="new-experiment"
+                  aria-label="새 폴더 이름"
+                  autoFocus
+                />
+                <button type="button" className={s.browseBtn} disabled={!newName.trim() || makeDir.isPending} onClick={create}>
+                  만들기
+                </button>
+              </span>
+              <label className={ds.check}>
+                <input type="checkbox" checked={gitInit} onChange={(e) => setGitInit(e.target.checked)} />
+                <span>git 저장소로 시작 (git init · main 브랜치)</span>
+              </label>
+              {makeDir.error && <span className={s.errText}>{makeDir.error instanceof ApiError ? makeDir.error.message : String(makeDir.error)}</span>}
+            </div>
+          ) : null}
+          <div className={s.browserFoot}>
+            <button type="button" className={s.browserPick} onClick={() => setMaking((v) => !v)}>
+              {making ? '새 폴더 취소' : '+ 새 폴더'}
             </button>
-          )}
+            {dirs.data && (
+              <button type="button" className={s.browserPick} onClick={() => pick(dirs.data.path)}>
+                {dirs.data.path} 고르기
+              </button>
+            )}
+          </div>
         </div>
       )}
       <label className={ds.field}>
         이름 (비우면 폴더 이름으로)
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="lora-rank-ablation" />
       </label>
-      {mode === 'new' && (
-        <label className={ds.check}>
-          <input type="checkbox" checked={gitInit} onChange={(e) => setGitInit(e.target.checked)} />
-          <span>git 저장소로 시작 (git init · main 브랜치) — worktree · 커밋을 바로 쓸 수 있어요</span>
-        </label>
-      )}
       <span>
         폴더 안에 <span className={s.mono}>.labremote/</span>를 만들어요. 스스로 git에서 빠지고, 프로젝트의{' '}
         <span className={s.mono}>.gitignore</span>는 건드리지 않아요.
