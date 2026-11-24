@@ -6,6 +6,7 @@ import { askIsLive, askJobQuery, useAskLibrary } from '@/api/papers'
 import type { ChatSource, LibraryChat, LibraryChatMessage } from '@/api/types'
 import { Button, VisuallyHidden } from '@/components'
 import s from './AskLibrary.module.css'
+import { inlineBold } from '@/lib/inlineBold'
 
 interface Props {
   chat: LibraryChat | undefined
@@ -96,7 +97,7 @@ export function AskLibrary({ chat, offsetRight = 0 }: Props) {
             )}
             {messages.map((m, i) => (
               <div key={i} className={m.role === 'user' ? s.user : s.assistant}>
-                {m.text}
+                {m.role === 'user' ? m.text : inlineBold(m.text)}
                 {m.sources.map((src, j) => (
                   <Fragment key={src.paperId}>
                     {j === 0 ? ' ' : ' · '}

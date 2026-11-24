@@ -354,6 +354,8 @@
 
 .sheetText {
   margin: 0;
+  /* 답의 문단 · 줄바꿈을 살려요 */
+  white-space: pre-wrap;
   font-size: 14.5px;
   line-height: 1.7;
 }

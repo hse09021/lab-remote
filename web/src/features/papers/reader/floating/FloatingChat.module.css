@@ -84,6 +84,14 @@
 .para {
   font-size: 15.5px;
   line-height: 1.8;
+  white-space: pre-line;
+}
+
+/* 답 하나 — 문단 사이를 띄워요 */
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .listItem {

@@ -75,6 +75,8 @@
 
 .assistant {
   background: var(--surface-muted);
+  /* 답의 문단 · 줄바꿈을 살려요 */
+  white-space: pre-wrap;
   border-radius: 14px 14px 14px 4px;
   padding: 10px 12px;
   font-size: 13px;

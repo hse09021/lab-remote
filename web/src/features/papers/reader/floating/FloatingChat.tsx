@@ -157,17 +157,23 @@ export function FloatingChat({
                 ))}
               </div>
             )
+          // 답은 문단을 빈 줄로 이어 붙여 와요 — 문단마다 나눠 그리고, 한 줄 바꿈도 살려요
+          const paras = e.text.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean)
           return (
-            <div key={i} className={s.para}>
-              <Segments text={e.text} terms={terms} />
-              {e.go && e.src && (
-                <>
-                  {' '}
-                  <button type="button" onClick={() => onJump(e.go!)} className={s.source}>
-                    {e.src}
-                  </button>
-                </>
-              )}
+            <div key={i} className={s.answer}>
+              {paras.map((t, j) => (
+                <div key={j} className={s.para}>
+                  <Segments text={t} terms={terms} />
+                  {j === paras.length - 1 && e.go && e.src && (
+                    <>
+                      {' '}
+                      <button type="button" onClick={() => onJump(e.go!)} className={s.source}>
+                        {e.src}
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
           )
         })}
@@ -262,10 +268,13 @@ function Block({
 
 /** [[용어]]를 점선 밑줄 + 뜻 툴팁으로 바꿔요 */
 function Segments({ text, terms }: { text: string; terms: Record<string, string> }) {
-  const parts = text.split(/(\[\[[^\]]+\]\])/g)
+  // [[용어]]는 풀이 말풍선, **굵게**는 굵은 글씨 (Claude 답에 자주 와요 — 별표를 그대로 보이지 않게)
+  const parts = text.split(/(\[\[[^\]]+\]\]|\*\*[^*\n]+\*\*)/g)
   return (
     <>
       {parts.map((part, i) => {
+        const bold = part.match(/^\*\*([^*\n]+)\*\*$/)
+        if (bold) return <strong key={i}>{bold[1]}</strong>
         const m = part.match(/^\[\[([^\]]+)\]\]$/)
         if (!m) return <span key={i}>{part}</span>
         const word = m[1]!

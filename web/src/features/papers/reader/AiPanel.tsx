@@ -18,6 +18,7 @@ import { PaperSummaryPane } from '../PaperSummaryPane'
 import type { SummaryView } from '../PaperSummaryPane'
 import { HIGHLIGHT_CATEGORIES, type HighlightToggles } from './highlightCategories'
 import s from './AiPanel.module.css'
+import { inlineBold } from '@/lib/inlineBold'
 
 export type AiTab = 'summary' | 'chat' | 'cite' | 'notes'
 
@@ -565,7 +566,7 @@ function PaperChat({ paperId, context }: { paperId: string; context: string | nu
         {log.length === 0 && <p className={s.todo}>이 논문에 대해 물어보세요. 보내기를 누를 때만 Claude가 노트와 PDF를 읽고 답해요.</p>}
         {log.map((m, i) => (
           <div key={i} className={m.role === 'user' ? s.chatUser : s.chatAnswer}>
-            {m.text}
+            {m.role === 'user' ? m.text : inlineBold(m.text)}
           </div>
         ))}
         {busy && <div className={s.chatAnswer}>논문을 읽는 중이에요…</div>}

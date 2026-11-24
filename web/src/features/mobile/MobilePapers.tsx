@@ -12,6 +12,7 @@ import { ErrorState, LoadingState, Sheet, StatusPill, Toast } from '@/components
 import { useToast } from '@/lib/useToast'
 import { LIVE_HEAD, useLibraryAsk } from '../papers/AskLibrary'
 import s from './Mobile.module.css'
+import { inlineBold } from '@/lib/inlineBold'
 
 const FILTERS: Array<{ id: 'recent' | ReadStatus; label: string }> = [
   { id: 'recent', label: '최근' },
@@ -155,7 +156,7 @@ export function MobilePapers() {
         )}
         {(ask.live ? ask.log : (chat.data?.messages ?? [])).map((m, i) => (
           <p key={i} className={m.role === 'user' ? s.askUser : s.sheetText}>
-            {m.text}
+            {m.role === 'user' ? m.text : inlineBold(m.text)}
             {m.sources.map((src, j) => (
               <Fragment key={src.paperId}>
                 {j === 0 ? ' ' : ' · '}
