@@ -50,7 +50,10 @@ export function AppHeader() {
     <header className={s.header}>
       <div className={s.inner}>
         <Link to="/dashboard" className={s.wordmark}>
-          lab<span className={s.dot}>.</span>remote
+          <img src="/logo.svg" alt="" width={24} height={24} className={s.logo} />
+          <span>
+            lab<span className={s.dot}>.</span>remote
+          </span>
         </Link>
 
         <nav aria-label="주 메뉴" className={s.nav}>
