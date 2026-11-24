@@ -175,6 +175,14 @@ function PdfPage({
       // 투명 글자 층 — 드래그 선택이 여기서 일어나요
       layer.replaceChildren()
       layer.style.setProperty('--scale-factor', String(viewport.scale))
+      // pdfjs 6은 글자 크기 · 층 크기를 --total-scale-factor로 계산하는데, 그 값은
+      // `.pdfViewer .page` 안에서만 정의돼요. 이 리더는 그 틀을 안 써서 직접 넣어요 —
+      // 빠지면 투명 글자가 기본 글자 크기로 깔려 드래그 선택이 그려진 글자와 어긋나요.
+      const userUnit = (viewport as { userUnit?: number }).userUnit ?? 1
+      layer.style.setProperty('--user-unit', String(userUnit))
+      layer.style.setProperty('--total-scale-factor', String(viewport.scale * userUnit))
+      layer.style.setProperty('--scale-round-x', '1px')
+      layer.style.setProperty('--scale-round-y', '1px')
       const pdfjs = await import('pdfjs-dist')
       const textLayer = new pdfjs.TextLayer({
         textContentSource: await pdfPage.getTextContent(),
