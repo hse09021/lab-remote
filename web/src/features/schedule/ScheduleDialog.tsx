@@ -9,6 +9,7 @@ import { MODE_INFO } from '../agents/Composer'
 import { ApiError } from '@/api/client'
 import { Dialog, dialogStyles as ds } from '@/components'
 import s from './Schedule.module.css'
+import { CondaEnvSelect } from '../conda/CondaEnvSelect'
 
 /** epoch 초 ↔ <input type="datetime-local"> 값 (현지 시각) */
 const toLocal = (sec: number) => {
@@ -152,8 +153,8 @@ export function ScheduleDialog({
             <input className={ds.input} value={command} onChange={(e) => setCommand(e.target.value)} placeholder="python src/train.py --config configs/r32.yaml" />
           </label>
           <label className={ds.field}>
-            conda 환경 (비워 두면 conda 없이 실행)
-            <input className={ds.input} value={env} onChange={(e) => setEnv(e.target.value)} placeholder="lora-env" />
+            conda 환경
+            <CondaEnvSelect className={ds.input} value={env} onChange={setEnv} />
           </label>
         </>
       ) : (

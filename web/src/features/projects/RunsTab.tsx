@@ -11,6 +11,7 @@ import { copyText } from '@/lib/clipboard'
 import { duration, whenShort } from '@/lib/time'
 import { ScheduleDialog } from '../schedule/ScheduleDialog'
 import s from './Projects.module.css'
+import { CondaEnvSelect } from '../conda/CondaEnvSelect'
 
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : e ? String(e) : undefined)
 
@@ -272,8 +273,8 @@ function NewRunDialog({
         </datalist>
       </label>
       <label className={ds.field}>
-        conda 환경 (비워 두면 conda 없이 실행)
-        <input className={ds.input} value={env} onChange={(e) => setEnv(e.target.value)} placeholder="lora-env" />
+        conda 환경
+        <CondaEnvSelect className={ds.input} value={env} onChange={setEnv} />
       </label>
       <label className={ds.field}>
         위치

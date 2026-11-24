@@ -11,6 +11,7 @@ import { RunStatePill } from '../projects/RunsTab'
 import { ScheduleDialog } from '../schedule/ScheduleDialog'
 import { duration, whenShort } from '@/lib/time'
 import s from './Ide.module.css'
+import { CondaEnvSelect } from '../conda/CondaEnvSelect'
 
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : e ? String(e) : '')
 
@@ -335,8 +336,8 @@ export function RunPanel({
         <span className={s.mono}>{branch || tree || '프로젝트 루트'}</span>
       </div>
       <label className={s.field}>
-        conda 환경 (비워 두면 conda 없이 실행)
-        <input className={s.input} value={env} onChange={(e) => setEnv(e.target.value)} />
+        conda 환경
+        <CondaEnvSelect className={s.input} value={env} onChange={setEnv} />
       </label>
       <details className={s.details}>
         <summary>실제 실행 명령 보기</summary>
