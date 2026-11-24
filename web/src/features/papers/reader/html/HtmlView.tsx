@@ -12,7 +12,7 @@ import { MyHighlightLayer } from '../MyHighlightLayer'
 import { placeFromRange } from '../selectionPlace'
 import type { SelectionPlace } from '../selectionPlace'
 import { loadPaperHtml } from './loadPaperHtml'
-import { CheckNote, ConfigCard, MemoCard } from './blocks'
+import { ConfigCard, MemoCard } from './blocks'
 import { Sparkle } from './Sparkle'
 import s from './HtmlView.module.css'
 import '@/styles/paper.css'
@@ -43,9 +43,6 @@ interface Props {
   onHover: (key: string | null, anchor: Anchor | null) => void
   floating: ReactNode
   onToast: (msg: string) => void
-  /** 수치 불일치에서 고른 재현 기준 */
-  target: string | null
-  onTargetChange: (value: string) => void
   nudge: { show: boolean; onMarkDone: () => void; onDismiss: () => void }
 }
 
@@ -63,8 +60,6 @@ export function HtmlView({
   onHover,
   floating,
   onToast: _onToast,
-  target,
-  onTargetChange,
   nudge,
 }: Props) {
   const [html, setHtml] = useState<string | null>(null)
@@ -76,9 +71,8 @@ export function HtmlView({
     /** 그림 · 표 · 수식 */
     elements: Array<{ key: string; el: HTMLElement; label: string; tip: string; context: string }>
     config: HTMLElement | null
-    check: HTMLElement | null
     memo: HTMLElement | null
-  }>({ sparkles: [], elements: [], config: null, check: null, memo: null })
+  }>({ sparkles: [], elements: [], config: null, memo: null })
 
   const scrollRef = useRef<HTMLDivElement>(null)
   /* 이동 직후에는 관찰자가 다음 섹션으로 덮어쓰지 않게 잠깐 쉬어요 */
@@ -161,7 +155,6 @@ export function HtmlView({
       sparkles,
       elements,
       config: root.querySelector<HTMLElement>('#config-card'),
-      check: root.querySelector<HTMLElement>('#note-check'),
       memo: root.querySelector<HTMLElement>('#memo-fn4'),
     })
 
@@ -466,15 +459,6 @@ export function HtmlView({
               onJump={(sectionId) => scrollToSection(sectionId)}
             />,
             slots.config,
-          )}
-        {slots.check &&
-          createPortal(
-            <CheckNote
-              data={reader.discrepancy}
-              target={target}
-              onPick={onTargetChange}
-            />,
-            slots.check,
           )}
         {slots.memo &&
           createPortal(

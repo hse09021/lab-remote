@@ -99,7 +99,6 @@ async function build(doc: PDFDocumentProxy, url: string, paper: Paper): Promise<
     explainSpots: await elementSpots(doc, pageSize),
     citeSpots: [],
     extractedConfig: { title: '', caption: '', rows: [] },
-    discrepancy: { title: '', text: '', options: [], chosen: null },
     inlineMemo: { title: '', meta: '', text: '' },
     topics: {},
     terms: {},

@@ -232,14 +232,6 @@ export interface ExtractedConfig {
 }
 
 /** 본문과 표의 수치가 어긋날 때 */
-export interface DiscrepancyNote {
-  title: string
-  text: string
-  options: Array<{ value: string; label: string }>
-  /** 내가 고른 재현 목표. 아직 안 골랐으면 null */
-  chosen: string | null
-}
-
 export interface InlineMemo {
   title: string
   meta: string
@@ -291,7 +283,6 @@ export interface PaperReaderPayload {
   explainSpots?: ExplainSpot[]
   citeSpots: CiteSpot[]
   extractedConfig: ExtractedConfig
-  discrepancy: DiscrepancyNote
   inlineMemo: InlineMemo
   /** 섹션·그림·수식별 미리 써 둔 설명 */
   topics: Record<string, Topic>

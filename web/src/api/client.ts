@@ -51,8 +51,6 @@ const LIVE_PATTERNS: Array<[RegExp, readonly string[]]> = [
   [/^\/papers\/ask\/[^/]+$/, ['GET']],
   [/^\/papers\/[^/]+\/pdf$/, ['GET']],
   [/^\/papers\/[^/]+\/pdf\/fetch$/, ['POST']],
-  // 재현 목표 고르기 (AI 분석이 찾은 수치 불일치)
-  [/^\/papers\/[^/]+\/discrepancy$/, ['PUT']],
   // arXiv HTML 본문 · 받기 · 상태
   [/^\/papers\/[^/]+\/html$/, ['GET', 'POST']],
   [/^\/papers\/[^/]+\/html\/state$/, ['GET']],

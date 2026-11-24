@@ -17,7 +17,6 @@ import {
   usePaperHtmlState,
   refPaperId,
   summaryDraftsQuery,
-  useChooseDiscrepancy,
   useSaveReference,
   useSaveSummaryMd,
   useSetReadStatus,
@@ -151,7 +150,6 @@ function DesktopReader() {
   const makeSummary = useMakeSummary()
   const saveRef = useSaveReference()
   const saveMd = useSaveSummaryMd()
-  const chooseTarget = useChooseDiscrepancy(id)
   const addAnn = useAddAnnotation(id)
   const updateAnn = useUpdateAnnotation(id)
   const removeAnn = useRemoveAnnotation(id)
@@ -683,11 +681,6 @@ function DesktopReader() {
                 onHover={onHover}
                 floating={floating}
                 onToast={toast.show}
-                target={data.discrepancy.chosen}
-                onTargetChange={(v) => {
-                  chooseTarget.mutate({ target: v })
-                  toast.show(`재현 목표를 ${v} 값으로 정했어요 · 요약 MD에도 남겼어요`)
-                }}
                 nudge={{
                   show: showNudge,
                   onMarkDone: () => {
@@ -718,16 +711,6 @@ function DesktopReader() {
             onAnalyze={aiLive ? () => startAnalysis.mutate(undefined, { onError: (e) => toast.show(e instanceof Error ? e.message : String(e)) }) : undefined}
             analyzing={vault.analyzing || startAnalysis.isPending}
             analyzed={!!vault.analysis}
-            checks={vault.analysis?.discrepancies ?? []}
-            onPickTarget={(index, value) =>
-              chooseTarget.mutate(
-                { target: value, index },
-                {
-                  onSuccess: (r) => toast.show(`재현 목표를 ${value} 값으로 정했어요${r.summary ? ' · 요약 MD에도 남겼어요' : ''}`),
-                  onError: (e) => toast.show(e instanceof Error ? e.message : String(e)),
-                },
-              )
-            }
             chatPaperId={aiLive ? id : undefined}
             summaryView={summaryView}
             onSummaryViewChange={setSummaryView}

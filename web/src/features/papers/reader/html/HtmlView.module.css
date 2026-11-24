@@ -126,53 +126,12 @@
 }
 
 /* 수치 불일치 */
-.check {
-  background: var(--attention-tint);
-  border-color: var(--attention-border);
-}
 
-.checkTitle {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--attention-text);
-}
 
-.checkText {
-  font-size: 13.5px;
-  line-height: 1.7;
-  color: var(--attention-deep);
-}
 
-.checkOptions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
 
-.checkBtn {
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--attention-border-strong);
-  background: var(--bg);
-  color: var(--attention-deep);
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
 
-.checkBtn[aria-pressed='true'] {
-  border: none;
-  background: var(--primary-btn);
-  color: var(--bg);
-  font-weight: 700;
-}
 
-.checkNote {
-  font-size: 12px;
-  color: var(--attention-text);
-}
 
 /* 내 메모 */
 .memo {

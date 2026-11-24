@@ -38,8 +38,6 @@ export interface MockState {
   annotations: Record<string, UserAnnotation[]>
   /** 논문별 요약 MD 수정본 */
   summaryMd: Record<string, string>
-  /** 수치 불일치에서 고른 재현 목표 */
-  discrepancy: Record<string, string>
 }
 
 const VERSION = 1
@@ -51,7 +49,6 @@ const empty = (): MockState => ({
   savedPapers: [],
   annotations: {},
   summaryMd: {},
-  discrepancy: {},
 })
 
 /* ── localStorage ─────────────────────────────────────────── */
@@ -114,8 +111,6 @@ export function overlaySummaryMd(paperId: string, markdown: string): string {
 export const readAnnotations = (paperId: string): UserAnnotation[] =>
   state.annotations[paperId] ?? []
 
-
-export const readDiscrepancy = (paperId: string) => state.discrepancy[paperId] ?? null
 
 
 /* ── 쓰기 ─────────────────────────────────────────────────── */
@@ -200,9 +195,5 @@ export function setSummaryMd(paperId: string, markdown: string | null) {
     else next[paperId] = markdown
     return { ...prev, summaryMd: next }
   })
-}
-
-export function setDiscrepancy(paperId: string, target: string) {
-  update((prev) => ({ ...prev, discrepancy: { ...prev.discrepancy, [paperId]: target } }))
 }
 

@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { annotationsQuery, useRestoreAnnotation, useUpdateAnnotation } from '@/api/annotations'
 import clsx from 'clsx'
 import type {
-  DiscrepancyNote,
   ExtractedConfig,
   InlineMemo,
 } from '@/api/types'
@@ -56,44 +55,6 @@ function Row({
   )
 }
 
-/** 본문과 표의 수치가 다를 때 */
-export function CheckNote({
-  data,
-  target,
-  onPick,
-  savedNote,
-}: {
-  data: DiscrepancyNote
-  target: string | null
-  onPick: (value: string) => void
-  /** 고른 뒤 붙는 글 (기본은 목업 문구) */
-  savedNote?: string
-}) {
-  return (
-    <div className={clsx(s.card, s.check)}>
-      <span className={s.checkTitle}>{data.title}</span>
-      <span className={s.checkText}>{data.text}</span>
-      <div className={s.checkOptions}>
-        {data.options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            aria-pressed={target === o.value}
-            onClick={() => onPick(o.value)}
-            className={s.checkBtn}
-          >
-            {o.label}
-          </button>
-        ))}
-        {target && (
-          <span className={s.checkNote}>
-            {savedNote ?? `재현 목표를 ${target} 값으로 정했어요 · 요약 MD에도 남겼어요`}
-          </span>
-        )}
-      </div>
-    </div>
-  )
-}
 
 /** 사용자가 남긴 메모 */
 /** 고친 인라인 메모의 주석 id — 논문마다 하나 */

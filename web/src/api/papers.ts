@@ -73,21 +73,6 @@ export const summaryDraftsQuery = () =>
     queryFn: () => get<Record<string, string>>('/papers/summary-md'),
   })
 
-/** 수치 불일치에서 고른 재현 목표 */
-export function useChooseDiscrepancy(paperId: string) {
-  const qc = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ target, index = 0 }: { target: string; index?: number }) =>
-      send<{ summary?: boolean }>('PUT', `/papers/${encodeURIComponent(paperId)}/discrepancy`, { target, index }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['papers', paperId, 'reader'] })
-      qc.invalidateQueries({ queryKey: ['papers', paperId, 'analysis'] })
-      qc.invalidateQueries({ queryKey: ['papers', 'summary-md'] })
-    },
-  })
-}
-
 /** 참고문헌에서 만들 라이브러리 항목의 id — 다시 눌러 취소할 때 같은 값이 나와야 해요 */
 export const refPaperId = (r: Pick<Reference, 'n' | 'arxiv'>) =>
   r.arxiv ? `arxiv-${r.arxiv}` : `ref-${r.n}`
@@ -374,8 +359,6 @@ export async function runReaderAi<T>(paperId: string, body: ReaderAiBody): Promi
 export interface PaperAnalysis {
   highlights: { category: 'core' | 'method' | 'result' | 'check'; quote: string; page: number; note: string }[]
   references: { n: number; title: string; authors: string; year: number; venue: string; arxiv: string; why: string }[]
-  /** 본문과 표 · 그림이 서로 다르게 적은 수치 — 재현 목표를 사람이 골라요 */
-  discrepancies?: { title: string; text: string; page: number; options: { value: string; label: string }[]; chosen: string | null }[]
 }
 
 export const analysisQuery = (paperId: string, enabled: boolean) =>

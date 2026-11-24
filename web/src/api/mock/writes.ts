@@ -4,7 +4,6 @@ import {
   removeAnnotation,
   removeSavedPaper,
   restoreAnnotation,
-  setDiscrepancy,
   setReadStatus,
   setSummaryMd,
   updateAnnotation,
@@ -41,14 +40,6 @@ export function applyMockWrite(method: string, path: string, body: unknown): unk
   if (md && method === 'PUT') {
     const { markdown } = body as { markdown: string | null }
     setSummaryMd(md[1], markdown)
-    return body
-  }
-
-  /* 수치 불일치에서 고른 재현 목표 */
-  const disc = path.match(/^\/papers\/([^/]+)\/discrepancy$/)
-  if (disc && method === 'PUT') {
-    const { target } = body as { target: string }
-    setDiscrepancy(disc[1], target)
     return body
   }
 

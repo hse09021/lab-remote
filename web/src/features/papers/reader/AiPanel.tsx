@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { runReaderAi, vaultQuery } from '@/api/papers'
-import type { PaperAnalysis } from '@/api/papers'
-import { CheckNote } from './html/blocks'
 import { copyText } from '@/lib/clipboard'
 import type { ExplainResult } from '@/api/papers'
 import type { CSSProperties, ReactNode } from 'react'
@@ -65,9 +63,6 @@ interface Props {
   sectionLabel: (sectionId: string) => string
   onEditNote: (annotation: UserAnnotation, text: string) => void
   onDeleteNote: (annotation: UserAnnotation) => void
-  /** AI 분석이 찾은 수치 불일치 — 노트 탭 맨 위에서 재현 목표를 골라요 */
-  checks?: NonNullable<PaperAnalysis['discrepancies']>
-  onPickTarget?: (index: number, value: string) => void
   /** 노트 탭의 "새 메모" — 지금 보는 섹션에 붙여요 */
   onAddNote?: (text: string) => void
   /** 지금 보는 섹션 (새 메모 위치) */
@@ -105,8 +100,6 @@ export function AiPanel({
   onDeleteNote,
   onAddNote,
   currentLabel = '',
-  checks = [],
-  onPickTarget,
   isRefSaved,
 }: Props) {
   return (
@@ -199,8 +192,6 @@ export function AiPanel({
             onDelete={onDeleteNote}
             onAdd={onAddNote}
             currentLabel={currentLabel}
-            checks={checks}
-            onPickTarget={onPickTarget}
             onAsk={chatPaperId ? () => onTabChange('chat') : undefined}
           />
         )}
@@ -297,11 +288,7 @@ function NotesTab({
   onAdd,
   currentLabel,
   onAsk,
-  checks,
-  onPickTarget,
 }: {
-  checks: NonNullable<PaperAnalysis['discrepancies']>
-  onPickTarget?: (index: number, value: string) => void
   onAdd?: (text: string) => void
   currentLabel: string
   onAsk?: () => void
@@ -328,16 +315,6 @@ function NotesTab({
       <span className={s.caption}>
         AI 하이라이트와 내 메모예요. 누르면 해당 위치로 이동해요.
       </span>
-      {/* 확인 필요 · 재현 목표 — AI 분석이 찾은, 본문과 표 · 그림이 다르게 적은 수치 */}
-      {checks.map((c, i) => (
-        <CheckNote
-          key={`${c.title}-${i}`}
-          data={{ title: `확인 필요 · ${c.title}${c.page ? ` · p.${c.page}` : ''}`, text: c.text, options: c.options, chosen: c.chosen }}
-          target={c.chosen}
-          onPick={(v) => onPickTarget?.(i, v)}
-          savedNote={c.chosen ? `재현 목표: ${c.chosen}` : undefined}
-        />
-      ))}
       {onAdd && (
         // 새 메모 — 글자를 고르지 않고 지금 보는 섹션에 바로 남겨요
         <div className={s.newNote}>

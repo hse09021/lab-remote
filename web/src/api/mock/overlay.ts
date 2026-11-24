@@ -1,5 +1,5 @@
 import type { Paper } from '../types'
-import { overlayPapers, readDiscrepancy } from '../mockStore'
+import { overlayPapers } from '../mockStore'
 
 /**
  * mock JSON(처음 상태) 위에 저장소의 내 값을 덮어요.
@@ -11,15 +11,6 @@ export function applyOverlay<T>(path: string, data: T): T {
     return overlayPapers(data as Paper[]) as T
   }
 
-
-  const reader = path.match(/^\/papers\/([^/]+)\/reader$/)
-  if (reader) {
-    const payload = data as { discrepancy: { chosen: string | null } }
-    return {
-      ...payload,
-      discrepancy: { ...payload.discrepancy, chosen: readDiscrepancy(reader[1]) },
-    } as T
-  }
 
   return data
 }

@@ -75,32 +75,8 @@ ANALYZE = {
                 "required": ["n", "title", "authors", "year", "venue", "arxiv", "why"],
             },
         },
-        "discrepancies": {
-            "type": "array",
-            "description": "같은 값을 본문과 표 · 그림이 서로 다르게 적은 곳 (재현 목표를 사람이 골라야 하는 곳). 없으면 빈 배열, 많아야 5개",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string", "description": "무엇이 다른지 짧게 (한국어 명사구)"},
-                    "text": {"type": "string", "description": "어디는 얼마, 어디는 얼마로 적혀 있는지 (한국어 해요체, 한두 문장 — 예: …로 적혀 있어요)"},
-                    "page": {"type": "integer"},
-                    "options": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "value": {"type": "string", "description": "값 그대로 (예: 41.8)"},
-                                "label": {"type": "string", "description": "값과 출처 (예: 41.8 · 표 2)"},
-                            },
-                            "required": ["value", "label"],
-                        },
-                    },
-                },
-                "required": ["title", "text", "page", "options"],
-            },
-        },
     },
-    "required": ["highlights", "references", "discrepancies"],
+    "required": ["highlights", "references"],
 }
 
 KINDS = ("section", "selection", "element", "ask", "translate", "analyze")
@@ -125,33 +101,6 @@ def _where(p: dict) -> str:
 
 def _analysis_path(pid: str) -> str:
     return os.path.join(registry.data_dir(), "analysis", hashlib.sha1(pid.encode()).hexdigest()[:16] + ".json")
-
-
-def choose_target(pid: str, index: int, target: str) -> dict:
-    """재현 목표 고르기 — 분석 기록에 남기고, lab.remote가 만든 요약 MD가 있으면 거기에도 적어요."""
-    from . import summaries
-
-    data = analysis(pid)
-    items = (data or {}).get("discrepancies") or []
-    if not 0 <= index < len(items):
-        raise ReaderAiError("그런 확인 항목이 없어요. AI 분석을 다시 해 주세요.")
-    item = items[index]
-    if target not in [o["value"] for o in item.get("options") or []]:
-        raise ReaderAiError("고를 수 있는 값이 아니에요.")
-    item["chosen"] = target
-    registry.write_json(_analysis_path(pid), data)
-    noted = False
-    md = summaries.markdown_of(pid)
-    if md is not None:
-        head = "## 재현 목표"
-        lines = [f"- {d['title']}: **{d['chosen']}** ({next((o['label'] for o in d['options'] if o['value'] == d['chosen']), d['chosen'])})" for d in items if d.get("chosen")]
-        body = md.split(f"\n{head}\n")[0].rstrip("\n")
-        try:
-            summaries.save_markdown(pid, f"{body}\n\n{head}\n\n" + "\n".join(lines) + "\n")
-            noted = True
-        except summaries.SummaryError:
-            noted = False  # 같은 이름의 다른 파일 — 요약에는 안 적어요
-    return {"index": index, "chosen": target, "summary": noted}
 
 
 def analysis(pid: str) -> dict | None:
@@ -196,7 +145,6 @@ def _prompt(kind: str, p: dict, req: dict) -> tuple[str, dict]:
         "이 논문 PDF를 읽고:",
         "1. 본문에서 핵심 주장(core) · 방법(method) · 결과(result) · 확인이 필요한 곳(check: 숫자가 안 맞거나 근거가 약한 곳) 구절을 그대로 옮겨 적으세요. 쪽 번호도.",
         "2. 참고문헌 목록을 번호 순으로 적고, 본문이 왜 인용했는지 한 줄씩.",
-        "3. 같은 수치를 본문과 표 · 그림이 서로 다르게 적은 곳이 있으면 discrepancies에 적고, 고를 수 있는 값을 options로 (출처와 함께). 없으면 빈 배열.",
         "구절은 PDF에 있는 글자 그대로여야 해요 (화면이 그 글자를 찾아 칠해요).",
         "한국어로 쓰는 설명은 모두 해요체로 (…해요, …예요). 합니다체는 쓰지 마세요.",
     ]
@@ -217,17 +165,7 @@ async def _work(jid: str, kind: str, pid: str, req: dict, model: str, query_fn) 
         if kind == "analyze":
             hl = [h for h in data.get("highlights") or [] if isinstance(h, dict) and h.get("category") in ("core", "method", "result", "check") and str(h.get("quote") or "").strip()]
             refs = [r for r in data.get("references") or [] if isinstance(r, dict) and str(r.get("title") or "").strip()]
-            before = {d.get("title"): d.get("chosen") for d in ((analysis(pid) or {}).get("discrepancies") or [])}
-            disc = []
-            for d in data.get("discrepancies") or []:
-                opts = [o for o in d.get("options") or [] if isinstance(o, dict) and str(o.get("value") or "").strip()] if isinstance(d, dict) else []
-                if len(opts) >= 2:
-                    # 다시 분석해도 같은 항목에서 고른 값은 남겨요
-                    chosen = before.get(d.get("title"))
-                    disc.append({"title": str(d.get("title") or ""), "text": str(d.get("text") or ""), "page": int(d.get("page") or 0),
-                                 "options": [{"value": str(o["value"])[:40], "label": str(o.get("label") or o["value"])[:120]} for o in opts[:4]],
-                                 "chosen": chosen if chosen in [str(o["value"])[:40] for o in opts] else None})
-            out = {"id": pid, "model": used, "createdAt": time.time(), "highlights": hl[:40], "references": refs[:80], "discrepancies": disc[:5]}
+            out = {"id": pid, "model": used, "createdAt": time.time(), "highlights": hl[:40], "references": refs[:80]}
             os.makedirs(os.path.dirname(_analysis_path(pid)), exist_ok=True)
             registry.write_json(_analysis_path(pid), out)
             rec.update(state="done", result={"highlights": len(out["highlights"]), "references": len(out["references"])})
