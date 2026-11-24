@@ -765,7 +765,6 @@ button.nameBtn:hover .fileName {
   font-size: 12.5px;
   line-height: 1.6;
   color: var(--text);
-  resize: vertical;
 }
 
 .settingsNote {

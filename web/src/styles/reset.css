@@ -36,6 +36,11 @@ select {
   font-family: inherit;
 }
 
+/* 입력 칸 크기는 고정 — 손잡이로 늘리지 않아요 */
+textarea {
+  resize: none;
+}
+
 h1,
 h2,
 h3,
