@@ -184,8 +184,13 @@ function PdfPage({
       layer.style.setProperty('--scale-round-x', '1px')
       layer.style.setProperty('--scale-round-y', '1px')
       const pdfjs = await import('pdfjs-dist')
+      const content = await pdfPage.getTextContent()
+      // pdfjs는 글자 폭을 `lang = PDF의 언어 || ""`인 캔버스로 재서 가로 배율을 정해요.
+      // 이 화면은 <html lang="ko">라 그대로 두면 투명 글자가 한국어용 글꼴로 그려져
+      // 폭이 어긋나요(실측 3.5%). 잴 때와 같은 언어를 글자 층에도 줘요
+      layer.setAttribute('lang', (content as { lang?: string | null }).lang || '')
       const textLayer = new pdfjs.TextLayer({
-        textContentSource: await pdfPage.getTextContent(),
+        textContentSource: content,
         container: layer,
         viewport,
       })
