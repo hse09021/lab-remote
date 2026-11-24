@@ -115,7 +115,7 @@ def _clean_list(value, *, limit: int, field: str) -> list[str]:
     if value is None:
         return []
     if not isinstance(value, list):
-        raise ProjectError(f"{field}는 목록이어야 해요.")
+        raise ProjectError(f"{field}은 목록이어야 해요.")
     out: list[str] = []
     for item in value:
         if not isinstance(item, str):
@@ -128,7 +128,7 @@ def _clean_list(value, *, limit: int, field: str) -> list[str]:
         if text not in out:
             out.append(text)
     if len(out) > limit:
-        raise ProjectError(f"{field}는 {limit}개까지 둘 수 있어요.")
+        raise ProjectError(f"{field}은 {limit}개까지 둘 수 있어요.")
     return out
 
 

@@ -13,7 +13,7 @@ function aheadText(w: Worktree, main: string): string {
   if (w.primary || w.branch === main) return '—'
   if (w.merged) return `${main}에 합쳐짐`
   const parts: string[] = []
-  if (w.ahead) parts.push(`${w.ahead} 커밋 앞섬`)
+  if (w.ahead) parts.push(`커밋 ${w.ahead}개 앞섬`)
   if (w.changed) parts.push(`변경 ${w.changed} (커밋 전)`)
   return parts.join(' · ') || '같음'
 }
@@ -41,7 +41,7 @@ export function WorktreesTab({ project, trees }: { project: ProjectDetail; trees
   return (
     <div className={s.treesWrap}>
       <div className={s.treesHead}>
-        <span className={s.muted}>작업마다 worktree 하나씩 · ADE에서 세션을 만들면 함께 생겨요</span>
+        <span className={s.muted}>작업마다 worktree를 하나씩 둬요 · ADE에서 세션을 만들면 함께 생겨요</span>
         <button type="button" className={s.primaryBtn} onClick={() => setAdding(true)}>
           + worktree
         </button>
@@ -119,7 +119,7 @@ function AddDialog({ name, open, onClose }: { name: string; open: boolean; onClo
         <input className={ds.input} value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="exp/early-stop" autoFocus />
       </label>
       <span>
-        <span className={s.mono}>.labremote/worktrees/</span> 에 만들어요. 브랜치가 없으면 지금 위치에서 새로 만들어요.
+        <span className={s.mono}>.labremote/worktrees/</span>에 만들어요. 브랜치가 없으면 지금 위치에서 새로 만들어요.
       </span>
     </Dialog>
   )
@@ -139,10 +139,10 @@ function CleanDialog({ name, tree, onClose }: { name: string; tree: Worktree; on
       onConfirm={() => remove.mutate({ rel: tree.rel ?? '' }, { onSuccess: onClose })}
     >
       <span>
-        <span className={s.mono}>{tree.rel}</span> 폴더를 지워요. 브랜치 <span className={s.mono}>{tree.branch}</span>는 남아서
+        <span className={s.mono}>{tree.rel}</span> 폴더를 지워요. <span className={s.mono}>{tree.branch}</span> 브랜치는 남아서
         다시 만들 수 있어요.
       </span>
-      <span>커밋 안 한 변경이 있거나 이 worktree에서 학습 · 세션이 돌고 있으면 정리하지 않아요.</span>
+      <span>커밋 안 한 변경이 있거나 이 worktree에서 학습이나 세션이 돌고 있으면 정리하지 않아요.</span>
     </Dialog>
   )
 }

@@ -41,7 +41,7 @@ def test_끝까지_돌고_로그와_종료코드를_남긴다(proj, project):
     done = wait_state(proj, "EXP-001", {"done"})
     assert done["exitCode"] == 0
     text = runs.log_tail(proj, "EXP-001")["text"]
-    assert "hi" in text and project in text and "종료코드 0" in text
+    assert "hi" in text and project in text and "종료 코드 0" in text
     assert runs.start(proj, "true")["id"] == "EXP-002"
 
 
@@ -67,7 +67,7 @@ def test_프로세스가_사라지면_끊김(proj):
     sock, _ = runs._session("EXP-001", "demo")
     subprocess.run([runs.tmux_bin(), "-L", sock, "kill-server"], capture_output=True)
     got = wait_state(proj, "EXP-001", {"cut"})
-    assert "종료코드 없이" in got["reason"]
+    assert "종료 코드 없이" in got["reason"]
 
 
 def test_재부팅이면_그렇게_적는다(proj, project, monkeypatch):

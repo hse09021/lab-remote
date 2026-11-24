@@ -54,7 +54,7 @@ export function ChatPanel({ session, actions, via = 'ADE' }: { session: AgentSes
           className={s.chatIconBtn}
           aria-label="세션 닫기"
           disabled={close.isPending || session.busy}
-          title={session.busy ? '일하는 중에는 닫을 수 없어요 — 멈춘 뒤에' : '세션 닫기 · 목록에서 빼요 (기록은 남고 메시지를 보내면 다시 열려요)'}
+          title={session.busy ? '작업 중에는 닫을 수 없어요 — 먼저 멈춰 주세요' : '세션 닫기 — 목록에서 빼요 (기록은 남고, 메시지를 보내면 다시 열려요)'}
           onClick={() => close.mutate({ sid: session.id, closed: true })}
         >
           <CloseIcon />
@@ -127,7 +127,7 @@ export function ChatPanel({ session, actions, via = 'ADE' }: { session: AgentSes
         onSettings={(next) => configure.mutate({ sid: session.id, ...next })}
         onSend={(text) => sendMsg.mutate({ sid: session.id, text })}
         busy={session.busy || sendMsg.isPending}
-        placeholder={session.state === 'ask' ? '승인에 먼저 답해 주세요 · 답하면 이어서 해요' : undefined}
+        placeholder={session.state === 'ask' ? '먼저 승인 요청에 답해 주세요. 답하면 이어서 해요' : undefined}
         onAttachFile={(file) =>
           upload<{ path: string; rel: string }>(
             `/agents/attachments?project=${encodeURIComponent(session.project)}&name=${encodeURIComponent(file.name)}`,

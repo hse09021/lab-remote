@@ -165,7 +165,7 @@ export function QuestionCard({ p, via }: { p: PendingApproval; via: string }) {
         >
           건너뛰기
         </button>
-        <span className={s.muted}>같은 질문이 대시보드 · Inbox에도 떠요. 먼저 답한 곳이 적용돼요.</span>
+        <span className={s.muted}>같은 질문이 대시보드와 Inbox에도 떠요. 먼저 답한 곳의 답이 적용돼요.</span>
       </div>
       {err && (
         <div role="alert" className={s.errText}>
@@ -223,7 +223,7 @@ function PermissionCard({ p, via }: { p: PendingApproval; via: string }) {
         <button type="button" className={s.denyBtn} disabled={answer.isPending} onClick={() => answer.mutate({ id: p.id, choice: 'deny', reason, via })}>
           거부
         </button>
-        <span className={s.muted}>같은 요청이 대시보드 · Inbox · Discord에도 떠요. 먼저 답한 곳이 적용돼요.</span>
+        <span className={s.muted}>같은 요청이 대시보드, Inbox, Discord에도 떠요. 먼저 답한 곳의 답이 적용돼요.</span>
       </div>
       {err && (
         <div role="alert" className={s.errText}>

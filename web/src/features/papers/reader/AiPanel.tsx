@@ -126,10 +126,10 @@ export function AiPanel({
         <div className={s.analyzeBar}>
           <span>
             {analyzing
-              ? 'Claude가 PDF를 읽고 하이라이트 · 참고문헌을 뽑는 중이에요… (1~3분)'
+              ? 'Claude가 PDF를 읽고 하이라이트와 참고문헌을 뽑는 중이에요… (1~3분)'
               : analyzed
-                ? 'AI 하이라이트 · 참고문헌이 붙어 있어요'
-                : 'AI 하이라이트 · 인용 탭은 AI 분석을 하면 채워져요'}
+                ? 'AI 하이라이트와 참고문헌이 붙어 있어요'
+                : 'AI 하이라이트와 인용 탭은 AI 분석을 하면 채워져요'}
           </span>
           {!analyzing && (
             <button type="button" className={s.analyzeBtn} onClick={onAnalyze}>
@@ -164,7 +164,7 @@ export function AiPanel({
                   요약 만들기
                 </button>
               )}
-              {onMakeSummary && <p className={s.todo}>vault에 &lsquo;이름 요약.md&rsquo; 를 새로 만들어요. 원래 노트는 고치지 않아요.</p>}
+              {onMakeSummary && <p className={s.todo}>vault에 &lsquo;이름 요약.md&rsquo;를 새로 만들어요. 원래 노트는 고치지 않아요.</p>}
             </div>
           ))}
 
@@ -176,7 +176,7 @@ export function AiPanel({
               {chatContext && <span className={s.contextChip}>{chatContext}</span>}
               <p className={s.todo}>
                 섹션 설명은 본문의 AI 버튼을 누르면 떠 있는 대화창으로 열려요.
-                <br />이 탭의 대화는 서버가 붙으면 이어져요.
+                <br />이 탭의 대화는 서버에 연결되면 이어져요.
               </p>
             </div>
           ))}

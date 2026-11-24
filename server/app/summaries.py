@@ -220,7 +220,7 @@ def start(pid: str, *, model: str = "", query_fn=None) -> dict:
     if _jobs.get(pid, {}).get("state") == "running":
         raise SummaryError("이 논문은 이미 요약하는 중이에요.")
     if len(running_ids()) >= 2:
-        raise SummaryError("요약을 두 편까지만 같이 만들어요. 끝나면 다시 눌러 주세요.")
+        raise SummaryError("요약은 한 번에 두 편까지만 만들어요. 끝나면 다시 눌러 주세요.")
     _jobs[pid] = {"id": pid, "state": "running", "startedAt": time.time(), "error": ""}
     asyncio.get_running_loop().create_task(_work(pid, model, query_fn), name=f"summary-{pid}")
     return dict(_jobs[pid])

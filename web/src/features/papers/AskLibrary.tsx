@@ -19,7 +19,7 @@ interface Props {
  */
 export const LIVE_HEAD = {
   title: '라이브러리에 묻기',
-  caption: 'vault의 논문 노트를 읽고 답해요 · 읽기만 해요 · 대화는 저장하지 않아요',
+  caption: 'vault의 논문 노트를 읽고 답해요. 노트는 고치지 않고, 대화는 저장하지 않아요.',
 }
 
 /**

@@ -1,7 +1,7 @@
 # lab.remote 설치
 
 데스크톱(GPU)에서 연구를 돌리고, 어디서든 브라우저로 보고 · 실행하고 · 알림 받는 개인용 도구예요.
-설치는 clone 하고 몇 줄이면 끝나요. 끝났는지는 `labremote doctor`로 확인해요 — `✘`가 없으면 돼요.
+설치는 clone하고 명령 몇 줄이면 끝나요. 끝났는지는 `labremote doctor`로 확인해요 — `✘`가 없으면 돼요.
 
 ## lab.remote가 바꾸는 것 (전부)
 
@@ -9,8 +9,8 @@
 |---|---|---|
 | conda 환경 `labremote` | `./install.sh` | `conda env remove -n labremote` |
 | 사용자 서비스 `~/.config/systemd/user/labremote-session.service` | `labremote autostart install` | `labremote autostart uninstall` |
-| linger (`loginctl enable-linger`) — 꺼져 있을 때만 | `labremote autostart install` | uninstall이 원래 값으로 돌려요 (code tunnel 서비스가 있으면 그대로) |
-| 등록한 프로젝트마다 `<프로젝트>/.labremote/` (스스로 git에서 빠져요) | 프로젝트를 등록할 때 | 등록 해제 때 지울지 골라요 |
+| linger (`loginctl enable-linger`) — 꺼져 있을 때만 | `labremote autostart install` | uninstall이 원래 값으로 되돌려요 (code tunnel 서비스가 있으면 그대로) |
+| 등록한 프로젝트마다 `<프로젝트>/.labremote/` (자체 `.gitignore`로 git에서 빠져요) | 프로젝트를 등록할 때 | 등록을 해제할 때 지울지 골라요 |
 
 `~/.bashrc` · `~/.claude/` · `.condarc` · cron · systemd 타이머 · 프로젝트의 `.gitignore`는 고치지 않아요.
 나머지 상태는 전부 lab.remote 데이터 폴더(기본 `server/data/`)에 있어요.
@@ -24,11 +24,11 @@
 | Linux + systemd | 실행 · 자동 시작 | `systemctl --user status` |
 | Miniconda (또는 conda) | 서버 환경 · 실험 환경 | `conda --version` |
 | tmux | 접속이 끊겨도 학습이 계속 돌게 | `tmux -V` (`sudo apt install tmux`) |
-| **Claude Code — 설치하고 로그인까지** | 채팅 · 승인 · 시나리오 | `claude`를 한 번 열어 로그인 |
+| **Claude Code — 설치하고 로그인까지** | 채팅 · 승인 · 시나리오 | `claude`를 한 번 실행해 로그인 |
 | Node.js 20 이상 | 웹 화면 빌드 (한 번) | `npm --version` |
 | (밖에서 쓸 때) VS Code | code tunnel | `code --version` |
 
-lab.remote는 Claude 로그인을 대신하지 않아요. 터미널에서 쓰는 그 Claude Code를 그대로 불러요.
+lab.remote는 Claude 로그인을 대신하지 않아요. 터미널에서 쓰는 그 Claude Code를 그대로 불러 써요.
 `ANTHROPIC_API_KEY`가 환경에 있으면 구독이 아니라 종량제로 과금될 수 있어요 — `doctor`가 알려 줘요.
 
 ## 2. 받고 설치하기
@@ -40,7 +40,7 @@ cd ~/lab-remote
 ```
 
 `install.sh`는 conda 환경 `labremote`를 만들고(있으면 그대로), 서버 패키지를 설치하고, 웹 화면을 빌드하고,
-`labremote doctor`를 돌려요. 셸 설정은 고치지 않으니 명령은 환경 경로로 불러요.
+`labremote doctor`를 돌려요. 셸 설정은 고치지 않으니 명령은 환경 경로로 실행해요.
 
 ```bash
 ~/miniconda3/envs/labremote/bin/labremote doctor
@@ -54,7 +54,7 @@ cd ~/lab-remote
 labremote serve          # http://127.0.0.1:8000 · nice 19 · ionice idle
 ```
 
-이 데스크톱 브라우저에서 `http://127.0.0.1:8000`을 열어요. 서버는 `127.0.0.1`에만 열려요.
+이 데스크톱의 브라우저에서 `http://127.0.0.1:8000`을 열어요. 서버는 `127.0.0.1`에만 열려요.
 
 ## 4. 켜 두기 (자동 시작)
 
@@ -65,8 +65,8 @@ labremote autostart uninstall
 ```
 
 켜면 `labremote-session` 서비스가 tmux `labremote` 안에서 `labremote serve`를 띄워요.
-재부팅하거나 로그아웃해도 떠 있어요. 서버 출력은 `/usr/bin/tmux -L labremote attach -t labremote` (터미널 창에서 · 나올 때 `Ctrl+b d`), 터미널 없이 지금 화면만 보려면 `/usr/bin/tmux -L labremote capture-pane -p -t labremote`.
-학습 실행은 이 서비스와 따로 돌아서 서비스를 다시 켜도 살아요. 끄기와 다시 켜기는 System 화면에서도 돼요.
+재부팅하거나 로그아웃해도 떠 있어요. 서버 출력은 터미널 창에서 `/usr/bin/tmux -L labremote attach -t labremote`로 봐요(나올 때는 `Ctrl+b d`). 터미널 없이 지금 화면만 보려면 `/usr/bin/tmux -L labremote capture-pane -p -t labremote`를 써요.
+학습 실행은 이 서비스와 따로 돌아서 서비스를 다시 켜도 살아요. System 화면에서도 끄고 다시 켤 수 있어요.
 
 ## 5. 밖에서 접속 (code tunnel)
 
@@ -77,18 +77,18 @@ code tunnel user login --provider github
 code tunnel service install --accept-server-license-terms     # 재부팅 뒤에도 켜져 있게
 ```
 
-1. 휴대폰 · 다른 PC에서 `https://vscode.dev/tunnel/<이름>`을 열고 같은 GitHub 계정으로 로그인해요.
-2. Ports 보기에서 **Forward a Port** → `8000`. 기본은 Private 이라 같은 계정으로 로그인해야 열려요 (Public으로 바꾸지 마세요).
-3. 나온 **Forwarded Address** 를 lab.remote에 알려 줘요.
+1. 휴대폰이나 다른 PC에서 `https://vscode.dev/tunnel/<이름>`을 열고 같은 GitHub 계정으로 로그인해요.
+2. Ports 보기에서 **Forward a Port** → `8000`. 기본은 Private이라 같은 계정으로 로그인해야 열려요 (Public으로 바꾸지 마세요).
+3. 나온 **Forwarded Address**를 lab.remote에 알려 줘요.
 
    ```bash
    labremote remote set https://<Forwarded Address>
    ```
 
    (System 화면의 "밖에서 접속" 칸에 적어도 돼요.) 적으면 서버가 그 주소로 오는 요청을 받고,
-   Discord 알림에 "답하기" 링크가 붙어요. 적지 않은 주소로 오면 서버가 거절해요.
+   Discord 알림에 "답하기" 링크가 붙어요. 적지 않은 주소로 들어온 요청은 서버가 거절해요.
 
-> **보안** — 터널이 열려 있으면 그 GitHub 계정만 있으면 이 데스크톱의 터미널과 파일에 들어올 수 있어요.
+> **보안** — 터널이 열려 있을 때는 그 GitHub 계정만으로 이 데스크톱의 터미널과 파일에 들어올 수 있어요.
 > **GitHub 2단계 인증을 켜 두세요.**
 
 > `code tunnel service install`은 사용자 서비스 `~/.config/systemd/user/code-tunnel.service`
@@ -112,7 +112,7 @@ Inbox 화면 › 알림 설정에서 웹훅 주소를 넣어요. 주소는 데�
 labremote doctor
 ```
 
-`✘`는 고쳐야 하는 것, `⚠`는 알려 주기만 하는 것(종료코드를 바꾸지 않아요)이에요.
+`✘`는 고쳐야 하는 것, `⚠`는 알려 주기만 하는 것(종료 코드를 바꾸지 않아요)이에요.
 터널 · 자동 시작은 쓰지 않으면 `⚠`나 "꺼져 있어요"로 나와도 괜찮아요.
 
 ## 8. 지우기

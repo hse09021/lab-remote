@@ -59,7 +59,7 @@ def test_notify_test_가_중복_제거를_실패로_안_본다(monkeypatch, caps
     monkeypatch.setenv("LAB_DISCORD_WEBHOOK", "https://discord.com/api/webhooks/a/b")
     monkeypatch.setattr(notifier, "send", lambda *a, **k: {"sent": False, "suppressed": True})
     assert run(["notify", "test"]) == 0
-    assert "눌렸어요" in capsys.readouterr().out
+    assert "건너뛰었어요" in capsys.readouterr().out
 
 
 def test_notifier_의_반환_칸_이름을_고정한다(monkeypatch):

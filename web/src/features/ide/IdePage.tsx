@@ -13,7 +13,7 @@ import { sessionsQuery } from '@/api/agents'
 import { ApiError } from '@/api/client'
 import { Dialog, ErrorState, LoadingState, Resizer } from '@/components'
 import { usePaneResize } from '@/lib/usePaneResize'
-import { agoShort } from '@/lib/time'
+import { whenShort } from '@/lib/time'
 import { useIsMobile } from '@/lib/useMediaQuery'
 import { FilesIcon, GearIcon, PlusIcon, GitIcon, HistoryIcon, NewSessionIcon, RunIcon, ScenarioIcon, SearchIcon } from '@/components/icons'
 import { ChatPanel } from '../agents/ChatPanel'
@@ -166,7 +166,7 @@ export default function IdePage() {
       <main style={{ padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <h1 style={{ margin: 0, fontSize: 20 }}>IDE는 넓은 화면에서 써요</h1>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--text-soft)' }}>
-          편집기 · 터미널은 휴대폰 화면에 맞지 않아요. 에이전트에게 시키고 답하는 건 ADE에서 돼요.
+          편집기와 터미널은 휴대폰 화면에 맞지 않아요. 에이전트에게 일을 시키고 답하는 건 ADE에서 할 수 있어요.
         </p>
         <Link to={`/projects/${encodeURIComponent(project)}/ade${tree ? `?tree=${encodeURIComponent(tree)}` : ''}`} style={{ fontSize: 14 }}>
           ADE로 가기
@@ -278,7 +278,7 @@ export default function IdePage() {
               )
             ) : (
               <div className={s.empty}>
-                탐색기에서 파일을 누르면 여기서 열려요. <kbd>Ctrl</kbd>+<kbd>S</kbd> 로 저장해요.
+                탐색기에서 파일을 누르면 여기서 열려요. <kbd>Ctrl</kbd>+<kbd>S</kbd>로 저장해요.
               </div>
             )}
           </section>
@@ -407,7 +407,7 @@ function FileEditor({
   if (file.isPending) return <div className={s.empty}>불러오는 중이에요…</div>
   if (file.isError) return <div className={s.empty}>{file.error instanceof ApiError ? file.error.message : String(file.error)}</div>
   if (file.data.text === null) {
-    return <div className={s.empty}>{file.data.reason === 'too-large' ? '파일이 커서(2 MB 넘음) 편집기로 열지 않아요. 내려받아서 봐 주세요.' : '글 파일이 아니라 열 수 없어요.'}</div>
+    return <div className={s.empty}>{file.data.reason === 'too-large' ? '파일이 커서(2 MB 초과) 편집기로 열지 않아요. 내려받아서 봐 주세요.' : '텍스트 파일이 아니라서 열 수 없어요.'}</div>
   }
 
   const doSave = () => {
@@ -432,7 +432,7 @@ function FileEditor({
         {origin.data?.origin && (
           <>
             <span className={s.muted}>
-              Claude가 {agoShort(origin.data.origin.at)} 전에 {change?.label === 'U' || origin.data.origin.tool === 'Write' ? '만듦' : '고침'} · 세션 · {origin.data.origin.title}
+              Claude가 {change?.label === 'U' || origin.data.origin.tool === 'Write' ? '만듦' : '고침'} · {whenShort(origin.data.origin.at)} · 세션 · {origin.data.origin.title}
             </span>
             <Link className={s.linkBtn} to={`/projects/${encodeURIComponent(project)}/ade?session=${encodeURIComponent(origin.data.origin.session)}`}>
               세션 보기
@@ -519,7 +519,7 @@ function DiffTab({ project, tree, path, onOpen }: { project: string; tree: strin
         </button>
       </div>
       <pre className={s.diff}>
-        {(diff.data?.diff || (diff.isPending ? '불러오는 중이에요…' : '바뀐 내용이 없거나 git이 아직 모르는 새 파일이에요.'))
+        {(diff.data?.diff || (diff.isPending ? '불러오는 중이에요…' : '바뀐 내용이 없거나 git이 아직 추적하지 않는 새 파일이에요.'))
           .split('\n')
           .map((line, i) => (
             <span key={i} data-sign={line.startsWith('+') && !line.startsWith('+++') ? '+' : line.startsWith('-') && !line.startsWith('---') ? '-' : line.startsWith('@@') ? '@' : ''}>

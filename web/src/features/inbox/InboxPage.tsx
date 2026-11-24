@@ -63,7 +63,7 @@ export default function InboxPage() {
             <button key={k.id || 'all'} type="button" aria-pressed={kind === k.id} className={s.filter} onClick={() => set('kind', k.id)}>
               <span>{k.label}</span>
               <span className={s.filterCount} data-new={un > 0}>
-                {un ? `${un} 새` : total}
+                {un ? `새 ${un}` : total}
               </span>
             </button>
           )
@@ -75,7 +75,7 @@ export default function InboxPage() {
           안 읽은 것만
         </button>
         <button type="button" className={s.readAll} disabled={markRead.isPending} onClick={() => markRead.mutate(null)}>
-          모두 읽음으로
+          모두 읽음 표시
         </button>
       </nav>
 
@@ -266,7 +266,7 @@ function DiscordPanel() {
         onClose={() => setConfirmClear(false)}
         onConfirm={() => clear.mutate(undefined, { onSuccess: () => setConfirmClear(false) })}
       >
-        <span>저장한 웹훅 주소를 지워요. Inbox 알림은 계속 쌓이고 Discord로만 안 가요.</span>
+        <span>저장한 웹훅 주소를 지워요. Inbox에는 알림이 계속 쌓이고, Discord로는 보내지 않아요.</span>
       </Dialog>
       <QuietDialog key={String(quietOpen)} open={quietOpen} quiet={d.quiet} busy={setQuiet.isPending} error={errText(setQuiet.error)}
         onClose={() => setQuietOpen(false)}
@@ -308,7 +308,7 @@ function WebhookDialog({ open, onClose }: { open: boolean; onClose: () => void }
           required
         />
       </label>
-      <span>저장하면 데이터 폴더의 discord.json에 권한 600으로만 써요. 화면·로그에는 가린 주소만 보여요.</span>
+      <span>저장하면 데이터 폴더의 discord.json에 권한 600으로 저장해요. 화면과 로그에는 가린 주소만 보여요.</span>
     </Dialog>
   )
 }
@@ -335,7 +335,7 @@ function QuietDialog({
     <Dialog open={open} title="조용한 시간" confirmLabel="저장" busy={busy} error={error} onClose={onClose} onConfirm={() => onSave({ on, start, end })}>
       <label className={ds.check}>
         <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
-        <span>조용한 시간 쓰기 — 이때는 답 필요와 실패만 Discord로 보내요.</span>
+        <span>조용한 시간 켜기 — 이때는 답 필요와 실패만 Discord로 보내요.</span>
       </label>
       <label className={ds.field}>
         시작

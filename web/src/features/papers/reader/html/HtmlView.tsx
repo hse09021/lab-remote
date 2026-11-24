@@ -135,7 +135,7 @@ export function HtmlView({
       const tag = isEq
         ? (box.querySelector('.ltx_tag_equation')?.textContent ?? '').trim()
         : (box.querySelector('.ltx_caption .ltx_tag')?.textContent ?? '').replace(/[:.]\s*$/, '').trim()
-      const label = isEq ? (tag ? `식 ${tag}` : `식 ${++eqAuto}번째`) : tag || (isTable ? '표' : '그림')
+      const label = isEq ? (tag ? `식 ${tag}` : `${++eqAuto}번째 식`) : tag || (isTable ? '표' : '그림')
       if (used.has(label)) continue
       used.add(label)
       const tex = Array.from(box.querySelectorAll('math'))

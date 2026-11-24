@@ -482,7 +482,7 @@ function PapersList() {
                 const chosen = (source ?? []).filter((p) => selectedIds.includes(p.id))
                 fetchBibtex(chosen)
                   .then((text) => copyText(text))
-                  .then(() => setAdded({ text: `BibTeX ${chosen.length}편을 복사했어요`, tone: 'ok' }))
+                  .then(() => setAdded({ text: `${chosen.length}편의 BibTeX를 복사했어요`, tone: 'ok' }))
                   .catch(onFail)
               }}
             >
@@ -741,6 +741,20 @@ const CloseIcon = () => (
 /** 만드는 중 — 끝날 때까지 물어보고, 끝나면 목록이 새로 받아요 */
 function SummaryRunning({ id }: { id: string }) {
   const job = useSummaryJob(id, true)
-  if (job.data?.state === 'failed') return <span className={s.summaryNone} title={job.data.error}>실패 · 다시</span>
+  const again = useMakeSummary()
+  if (job.data?.state === 'failed') {
+    // 실패 사유는 마우스를 올리면 보여요 · 누르면 다시 만들어요
+    return (
+      <button
+        type="button"
+        className={s.makeSummary}
+        title={`실패했어요 — ${job.data.error}`}
+        disabled={again.isPending}
+        onClick={() => again.mutate(id)}
+      >
+        실패 · 다시 만들기
+      </button>
+    )
+  }
   return <span className={s.summaryRunning}>요약 중</span>
 }

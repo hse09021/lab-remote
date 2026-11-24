@@ -6,7 +6,7 @@ import { sessionCardsQuery } from '@/api/inbox'
 import type { SessionCardGit } from '@/api/inbox'
 import type { AgentSession, PendingApproval } from '@/api/agents'
 import { ApiError } from '@/api/client'
-import { agoShort } from '@/lib/time'
+import { agoShort, whenShort } from '@/lib/time'
 import { DiffView } from './ApprovalCard'
 import s from './Lanes.module.css'
 
@@ -85,7 +85,7 @@ function SessionCard({ x, kind, git }: { x: AgentSession; kind: 'ask' | 'work' |
       <div className={s.cardTop}>
         <span className={s.project}>{x.project}</span>
         <span className={s.branch}>{x.branch || x.tree}</span>
-        <span className={s.muted}>Claude Code · {agoShort(x.updatedAt)} 전</span>
+        <span className={s.muted}>Claude Code · {whenShort(x.updatedAt)}</span>
       </div>
       <h3 className={s.title}>{x.title}</h3>
       {x.lastText && <p className={s.note}>{x.lastText}</p>}
@@ -173,7 +173,7 @@ export function QuickAllow({ p, via = 'Dashboard' }: { p: PendingApproval; via?:
         <button type="button" className={s.secondary} onClick={() => setOpen(false)}>
           접기
         </button>
-        <span className={s.muted}>거부 · 이유 적기는 ADE에서 해요.</span>
+        <span className={s.muted}>거부하거나 이유를 적으려면 ADE로 가요.</span>
       </div>
       {answer.error ? (
         <div role="alert" className={s.err}>

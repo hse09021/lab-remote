@@ -224,7 +224,7 @@ function Stats({ d, sessions, git }: { d: DashboardPayload; sessions: AgentSessi
           label: `${run.name || run.id} 학습 중`,
           value: prog?.value ?? duration(run.durationSec),
           unit: prog?.unit ?? '',
-          sub: `${run.project} · ${prog ? `${duration(run.durationSec)} 째` : '지표 파일을 아직 못 찾았어요'}${d.runs.running.length > 1 ? ` · 외 ${d.runs.running.length - 1}개` : ''}`,
+          sub: `${run.project} · ${prog ? `${duration(run.durationSec)}째` : '지표 파일을 아직 못 찾았어요'}${d.runs.running.length > 1 ? ` · 외 ${d.runs.running.length - 1}개` : ''}`,
           tone: 'default',
         }
       : {
@@ -282,7 +282,7 @@ function RunCard({ r }: { r: Run }) {
       <p className={s.cardCmd}>{r.command}</p>
       <div className={s.cardFoot}>
         <span>{duration(r.durationSec)}</span>
-        {r.exitCode !== null && <span>종료코드 {r.exitCode}</span>}
+        {r.exitCode !== null && <span>종료 코드 {r.exitCode}</span>}
         {shown.map(([k, v]) => (
           <span key={k} className={s.mono}>
             {k} {v}
@@ -317,7 +317,7 @@ function Resources({ self }: { self: DashboardPayload['self'] }) {
   return (
     <section className={s.sideCard}>
       <h2 className={s.h2}>
-        자원 <span className={s.h2Sub}>· 화면을 볼 때만 5초마다</span>
+        자원 <span className={s.h2Sub}>· 화면을 보는 동안 5초마다 갱신</span>
       </h2>
       {res.isError && <div className={s.muted}>자원을 읽지 못했어요.</div>}
       {g && !g.available && <div className={s.muted}>GPU 조회 불가 · {g.reason}</div>}
@@ -344,7 +344,7 @@ function Resources({ self }: { self: DashboardPayload['self'] }) {
         <div className={s.warn}>VRAM이 거의 찼어요 — 새 실행은 메모리가 모자랄 수 있어요</div>
       )}
       <div className={s.selfLine}>
-        lab.remote 서버 자신: CPU {self.cpuPct ?? '…'}% · RAM {self.rssMb ?? '?'}MB · GPU 0
+        lab.remote 서버 자체: CPU {self.cpuPct ?? '…'}% · RAM {self.rssMb ?? '?'}MB · GPU 0
       </div>
     </section>
   )

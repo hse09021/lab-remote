@@ -108,7 +108,7 @@ def create_app(*, web_dist: str | None = None, port: int | None = None) -> FastA
         if _hostname(request.headers.get("host", "")) not in hosts:
             return _refuse(
                 "이 주소로는 열 수 없어요 (Host가 허용 목록에 없어요). 터널로 전달한 주소라면 데스크톱에서 "
-                "labremote remote set https://<그 주소> 로 알려 주세요."
+                "labremote remote set https://<그 주소>로 알려 주세요."
             )
         origin = request.headers.get("origin")
         if origin and origin != "null" and _hostname(urlsplit(origin).netloc) not in hosts:

@@ -85,7 +85,7 @@ def install(*, port: int = units.DEFAULT_PORT, python: str = "", run: Runner = _
         code, out = run(argv)
         done.append({"what": what, "ok": code == 0, "detail": out[-300:]})
         if code != 0:
-            raise AutostartError(f"{what}에서 멈췄어요: {out[-300:] or f'종료코드 {code}'}")
+            raise AutostartError(f"{what}에서 멈췄어요: {out[-300:] or f'종료 코드 {code}'}")
 
     try:
         written = units.write(python=python, port=port)
@@ -120,7 +120,7 @@ def uninstall(*, run: Runner = _run, stop: bool = True) -> list[dict]:
         code, out = run(argv)
         done.append({"what": what, "ok": code == 0, "detail": out[-300:]})
         if code != 0 and must:
-            raise AutostartError(f"{what}에서 멈췄어요: {out[-300:] or f'종료코드 {code}'}")
+            raise AutostartError(f"{what}에서 멈췄어요: {out[-300:] or f'종료 코드 {code}'}")
 
     unit_file = units.unit_path()
     step("서비스 끄기 (다음 부팅부터)", [systemctl, "--user", "disable", f"{units.NAME}.service"], must=False)
@@ -175,11 +175,11 @@ def restart(*, run: Runner = _run, now: bool = True) -> dict:
     """"세션 다시 켜기" — 자동 시작이 켜져 있을 때만. 답을 먼저 돌려주고 다시 뜬다."""
     systemctl = _systemctl()
     if not os.path.exists(units.unit_path()):
-        raise AutostartError("자동 시작이 꺼져 있어요 — labremote autostart install로 켜요.")
+        raise AutostartError("자동 시작이 꺼져 있어요 — labremote autostart install로 켤 수 있어요.")
     if not now:
         later(["restart", "--no-block"])
         return {"ok": True}
     code, out = run([systemctl, "--user", "restart", "--no-block", f"{units.NAME}.service"])
     if code != 0:
-        raise AutostartError(f"다시 켜지 못했어요: {out[-300:] or f'종료코드 {code}'}")
+        raise AutostartError(f"다시 켜지 못했어요: {out[-300:] or f'종료 코드 {code}'}")
     return {"ok": True}

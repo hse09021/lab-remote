@@ -48,7 +48,7 @@ def valid_name(name: str) -> str:
     if not isinstance(name, str) or not NAME_RE.match(name):
         raise InvalidName(
             f"프로젝트 이름이 규칙에 안 맞아요: {name!r} · "
-            "영소문자·숫자로 시작하고 끝나며 . _ - 만 섞을 수 있어요 (최대 64자)"
+            "영소문자·숫자로 시작하고 끝나야 하고, 중간에는 `.`·`_`·`-`도 쓸 수 있어요 (최대 64자)"
         )
     return name
 

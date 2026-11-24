@@ -2,7 +2,7 @@
 
     systemd-run --user -p Type=forking -p Nice=0 -- tmux -L <소켓> new-session -d -s <세션> bash run.sh
     run.sh:  cd <위치> ; conda run -s -p <환경> bash -c <명령> 2>&1 | tee -a output.log
-             ; echo <종료코드> > exit_code
+             ; echo <종료 코드> > exit_code
 
 - **접속이 끊겨도, 서버가 다시 떠도 학습은 계속된다**(PLAN 1.5). scope가
   서버와 다른 cgroup의 사용자 서비스이고(서버의 nice 19를 물려받지 않음), tmux 서버는 실행마다 **따로**(`-L`) 띄운다 — 이미
@@ -205,7 +205,7 @@ def _script(*, cwd: str, folder: str, command: str, conda: str, prefix: str, run
         inner = f"bash -c {q(command)}"
     return f"""#!/usr/bin/env bash
 # lab.remote 실행 {run_id} — lab.remote가 만든 파일이에요. 고쳐도 이미 시작한 실행에는 안 먹어요.
-# 중지(Ctrl+C)는 프로그램에만 가게 한다 — 이 셸은 끝까지 남아 종료코드를 적고,
+# 중지(Ctrl+C)는 프로그램에만 가게 한다 — 이 셸은 끝까지 남아 종료 코드를 적고,
 # tee는 SIGINT를 무시해 프로그램이 정리하며 찍는 출력도 받는다(안 그러면 SIGPIPE로 죽는다).
 trap 'true' INT
 cd -- {q(cwd)} || {{ echo 97 > {q(os.path.join(folder, "exit_code"))}; exit 97; }}
@@ -213,7 +213,7 @@ echo $$ > {q(os.path.join(folder, "pid"))}
 printf '▶ %s · %s\\n' "$(date '+%F %T')" {q(command)} >> {q(log)}
 {inner} 2>&1 | ( trap '' INT; exec tee -a {q(log)} )
 code=${{PIPESTATUS[0]}}
-printf '■ %s · 종료코드 %s\\n' "$(date '+%F %T')" "$code" >> {q(log)}
+printf '■ %s · 종료 코드 %s\\n' "$(date '+%F %T')" "$code" >> {q(log)}
 echo "$code" > {q(os.path.join(folder, "exit_code.tmp"))} && mv -f {q(os.path.join(folder, "exit_code.tmp"))} {q(os.path.join(folder, "exit_code"))}
 exit "$code"
 """
@@ -233,7 +233,7 @@ def start(project: str, command: str, *, env: str = "", cwd: str = "", name: str
         raise RunError("명령이 너무 길거나 쓸 수 없는 글자가 있어요.")
     name = (name or "").strip()
     if name and not NAME_RE.match(name):
-        raise RunError("실행 이름이 올바르지 않아요 (64자까지, / 는 쓸 수 없어요).")
+        raise RunError("실행 이름이 올바르지 않아요 (64자까지, /는 쓸 수 없어요).")
     try:
         workdir = files.base_of(root, cwd)
     except files.FileRefused as exc:
@@ -361,7 +361,7 @@ def refresh(root: str, record: dict) -> tuple[dict, bool]:
     code = process.read_exit_code(exit_file)
     now = time.time()
     if code is None and not (_tmux_alive(record) or _pid_alive(folder)):
-        # 두 확인 사이에 막 끝났을 수 있다 — 종료코드를 한 번 더 본다
+        # 두 확인 사이에 막 끝났을 수 있다 — 종료 코드를 한 번 더 본다
         code = process.read_exit_code(exit_file)
         alive = False
     else:
@@ -382,7 +382,7 @@ def refresh(root: str, record: dict) -> tuple[dict, bool]:
         else:
             record.update(
                 state="cut",
-                reason="데스크톱이 다시 켜지면서 끝났어요" if rebooted else "프로세스가 종료코드 없이 사라졌어요",
+                reason="데스크톱이 다시 켜지면서 끝났어요" if rebooted else "프로세스가 종료 코드 없이 사라졌어요",
             )
         try:
             ended = os.path.getmtime(os.path.join(folder, LOG_NAME))

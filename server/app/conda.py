@@ -251,7 +251,7 @@ def start_job(kind: str, env: str, *, tool: str = "", action: str = "", packages
     names: list[str] = []
     if kind == "change":
         if tool not in TOOLS or action not in ACTIONS:
-            raise CondaError("conda/pip와 설치/업데이트/제거 중에 골라 주세요.")
+            raise CondaError("도구는 conda나 pip, 작업은 설치 · 업데이트 · 제거 중에서 골라 주세요.")
         specs, names = _specs(packages or [])
         if not dry:
             reason = _lock_reason(env)
@@ -312,7 +312,7 @@ def _work(record: dict, argv: list[str]) -> None:
         ok = done.returncode == 0
         if not ok:
             tail = (done.stderr or done.stdout or "").strip().splitlines()[-3:]
-            record["error"] = " / ".join(tail)[-500:] or f"종료코드 {done.returncode}"
+            record["error"] = " / ".join(tail)[-500:] or f"종료 코드 {done.returncode}"
         final = "done" if ok else "failed"
     except subprocess.TimeoutExpired:
         final = "failed"

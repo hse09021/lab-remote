@@ -113,10 +113,11 @@ def install_warning(project: str, req: ApprovalRequest) -> str:
                 continue
             if named and r.get("env") != named.group(1):
                 continue
-            busy.append(f"{r.get('name') or r['id']}이 {r.get('env') or 'conda 없이'}")
+            env = r.get("env")
+            busy.append(f"{r.get('name') or r['id']}이 {env}로" if env else f"{r.get('name') or r['id']}이 conda 없이")
     if not busy:
         return ""
-    return f"{', '.join(busy[:3])}로 학습 중이에요. 지금 패키지를 바꾸면 학습이 깨질 수 있어요."
+    return f"{', '.join(busy[:3])} 학습 중이에요. 지금 패키지를 바꾸면 학습이 깨질 수 있어요."
 
 
 def _allow_key(req: ApprovalRequest) -> tuple:
@@ -408,7 +409,7 @@ class Manager:
             raise AgentError("메시지를 적어 주세요.")
         live = await self._ensure_live(sid, root, rec)
         if live.backend.busy:
-            raise AgentError("아직 앞 차례가 끝나지 않았어요. 멈추거나 끝나길 기다려 주세요.")
+            raise AgentError("아직 앞 응답이 끝나지 않았어요. 멈추거나 끝날 때까지 기다려 주세요.")
         live.last_used = time.time()
         self._append(root, sid, {"type": "user", "text": text})
         rec["state"] = "working"

@@ -250,7 +250,7 @@ def check(root: str, *, git: str = "git", config_args=(), env=None) -> dict:
 def describe(report: dict) -> str:
     if report.get("ok"):
         return ".git이 깨끗해요."
-    lines = [".git이 코드를 실행하게 만드는 설정을 가졌어요 — git을 돌리지 않았어요:"]
+    lines = [".git에 코드를 실행하게 하는 설정이 들어 있어요 — git을 돌리지 않았어요:"]
     lines += [f"  · {p}" for p in report.get("problems") or []]
-    lines.append("에이전트 세션이 쓴 코드가 심었을 수 있어요. 무엇이 들어갔는지 먼저 보세요.")
+    lines.append("에이전트 세션이 쓴 코드가 심었을 수 있어요. 무엇이 들어갔는지 먼저 확인해 주세요.")
     return "\n".join(lines)

@@ -34,12 +34,12 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
       )}
       {sc?.summary && <p className={s.summary}>{sc.summary}</p>}
 
-      {running && <div className={s.notice}>그리는 중이에요 · 읽기만 해요. 끝나면 여기에 떠요.</div>}
+      {running && <div className={s.notice}>그리는 중이에요. 코드는 읽기만 해요. 끝나면 여기에 떠요.</div>}
       {data?.job.state === 'error' && <div className={s.warn}>그리지 못했어요: {data.job.error}</div>}
       {sc && changed.length > 0 && (
         <div className={s.warn}>
-          그린 뒤로 <span className={s.mono}>{changed.slice(0, 3).join(', ')}</span>
-          {changed.length > 3 ? ` 외 ${changed.length - 3}개` : ''}가 바뀌었어요. 저절로 다시 그리지는 않아요.
+          그린 뒤로 바뀐 파일이 있어요: <span className={s.mono}>{changed.slice(0, 3).join(', ')}</span>
+          {changed.length > 3 ? ` 외 ${changed.length - 3}개` : ''}. 저절로 다시 그리지는 않아요.
         </div>
       )}
       <button type="button" className={s.drawBtn} disabled={running || draw.isPending} onClick={() => setAsking(true)}>
@@ -103,7 +103,7 @@ export function ScenarioView({ project, onFill }: { project: string; onFill: (co
       >
         <span>
           에이전트를 계획 모드로 열어 <b>읽기만</b> 해요(Read · Glob · Grep). 명령을 돌리거나 파일을 고치지 않아요. 프로젝트 크기에 따라 몇 분 걸리고
-          사용량을 조금 써요. 결과는 <code>.labremote/scenarios/main.json</code> 에 저장돼요.
+          사용량을 조금 써요. 결과는 <code>.labremote/scenarios/main.json</code>에 저장돼요.
         </span>
       </Dialog>
     </div>

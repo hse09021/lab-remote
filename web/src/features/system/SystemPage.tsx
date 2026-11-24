@@ -29,13 +29,13 @@ function tunnelCard(d: SystemOverview): Card {
     return {
       label: 'code tunnel',
       value: '꺼짐',
-      sub: [t.loggedIn === false ? '로그인 안 함' : t.loggedIn ? '로그인함' : '로그인 모름', t.service ? '서비스는 설치됨' : '서비스 없음'],
+      sub: [t.loggedIn === false ? '로그인 안 함' : t.loggedIn ? '로그인함' : '로그인 상태 모름', t.service ? '서비스는 설치됨' : '서비스 없음'],
       tone: 'off',
     }
   return {
     label: 'code tunnel',
     value: '연결됨',
-    sub: [t.url ? t.url.replace(/^https:\/\//, '') : '이름은 못 읽었어요', t.service ? '서비스로 켜져 있어요' : '손으로 띄움 · 재부팅하면 꺼져요'],
+    sub: [t.url ? t.url.replace(/^https:\/\//, '') : '주소를 못 읽었어요', t.service ? '서비스로 켜져 있어요' : '직접 띄움 · 재부팅하면 꺼져요'],
     tone: t.service ? 'ok' : 'warn',
   }
 }
@@ -82,8 +82,8 @@ function tree(d: SystemOverview, live: { live: number; open: number } | null) {
     : '예약 없음'
   const head = a.installed
     ? `부팅 → labremote-session.service   ${a.active === 'active' ? '●' : '○'} ${a.active || '?'}${a.restarts ? ` (재시작 ${a.restarts}회)` : ''}`
-    : '부팅 → (자동 시작 꺼짐 — 지금은 손으로 띄운 서버)'
-  const tunnelLine = t.state === 'up' ? `● 연결됨${t.service ? ' · VS Code 서비스' : ' · 손으로 띄움'}` : t.state === 'off' ? '○ 꺼짐' : t.state === 'absent' ? '○ 없음' : '? 모름'
+    : '부팅 → (자동 시작 꺼짐 — 지금은 직접 띄운 서버)'
+  const tunnelLine = t.state === 'up' ? `● 연결됨${t.service ? ' · VS Code 서비스' : ' · 직접 띄움'}` : t.state === 'off' ? '○ 꺼짐' : t.state === 'absent' ? '○ 없음' : '? 모름'
   return `${head}
   └ tmux "labremote"
       └ labremote serve    ● 127.0.0.1:${d.server.port ?? '?'} · nice ${d.server.nice ?? '?'}
@@ -112,7 +112,7 @@ export default function SystemPage() {
     <main className={s.page}>
       <div>
         <h1 className={s.title}>시스템</h1>
-        <p className={s.text}>lab.remote가 이 데스크톱에서 어떻게 떠 있는지, 무엇을 바꿨는지 보여 줘요. 여기 없는 시스템 설정은 건드리지 않아요.</p>
+        <p className={s.text}>lab.remote가 이 데스크톱에서 어떻게 돌고 있는지, 무엇을 바꿨는지 보여 줘요. 여기 없는 시스템 설정은 건드리지 않아요.</p>
       </div>
 
       <div className={s.cards}>
@@ -138,7 +138,7 @@ export default function SystemPage() {
         </h2>
         <p className={s.text}>
           이게 전부예요. 나머지 상태는 lab.remote 데이터 폴더(<span className={s.mono}>{d.server.dataDir}</span>)와, 등록한 프로젝트마다 하나씩
-          있는 <span className={s.mono}>.labremote/</span> 에만 있어요.
+          있는 <span className={s.mono}>.labremote/</span>에만 있어요.
         </p>
         <div className={s.tableWrap}>
           <table className={s.table}>
@@ -146,7 +146,7 @@ export default function SystemPage() {
               <tr>
                 <th>무엇</th>
                 <th>어디</th>
-                <th>언제 생겼나</th>
+                <th>생긴 때</th>
                 <th>되돌리기</th>
               </tr>
             </thead>
@@ -177,13 +177,13 @@ export default function SystemPage() {
           <pre className={s.pre}>{tree(d, agents.data ? { live: agents.data.live, open: agents.data.sessions.length } : null)}</pre>
           {a.installed ? (
             <p className={s.text}>
-              재부팅해도 로그인 없이 바로 떠요. 학습은 이 서비스와 분리돼서 세션을 다시 켜도 살아요. 예약은 이 서버가 시간을 재서, 서버가 꺼져
-              있으면 돌지 않아요. 서버 출력은 <span className={s.mono}>{a.tmux}</span> 로 봐요.
-              {!a.inside && ' 지금 보고 있는 서버는 자동 시작 밖에서 띄운 것이에요.'}
+              재부팅해도 로그인 없이 바로 떠요. 학습은 이 서비스와 분리돼 있어서 세션을 다시 켜도 계속 돌아요. 예약은 이 서버가 시간을 재기 때문에
+              서버가 꺼져 있으면 돌지 않아요. 서버 출력은 <span className={s.mono}>{a.tmux}</span>로 봐요.
+              {!a.inside && ' 지금 보고 있는 서버는 자동 시작과 상관없이 따로 띄운 거예요.'}
             </p>
           ) : (
             <p className={s.text}>
-              꺼져 있어요. 켜려면 데스크톱 터미널에서 <span className={s.mono}>{a.installCommand}</span> — 무엇이 바뀌는지 먼저 보여 주고 물어봐요.
+              꺼져 있어요. 켜려면 데스크톱 터미널에서 <span className={s.mono}>{a.installCommand}</span> 명령을 실행해 주세요. 무엇이 바뀌는지 먼저 보여 주고 물어봐요.
               {a.systemctl ? '' : ' (systemctl이 없어 이 컴퓨터에서는 쓸 수 없어요)'}
             </p>
           )}
@@ -202,7 +202,7 @@ export default function SystemPage() {
               </button>
             </div>
           )}
-          {restart.isSuccess && a.inside && <p className={s.note}>이 서버도 다시 떠요. 잠깐 끊겼다가 저절로 돌아와요.</p>}
+          {restart.isSuccess && a.inside && <p className={s.note}>이 서버도 다시 떠요. 잠깐 끊겼다가 저절로 다시 연결돼요.</p>}
           {restart.isError && <p className={s.err}>{errText(restart.error)}</p>}
         </section>
 
@@ -218,7 +218,7 @@ export default function SystemPage() {
             <div className={s.row}>
               <span>보내는 것</span>
               <span>
-                {rules.length}가지 중 {rules.filter((r) => r.on).length}개 · <Link to="/inbox">Inbox에서 바꾸기</Link>
+                {rules.length}개 중 {rules.filter((r) => r.on).length}개 켬 · <Link to="/inbox">Inbox에서 바꾸기</Link>
               </span>
             </div>
             <div className={s.row}>
@@ -228,7 +228,7 @@ export default function SystemPage() {
           </div>
           <div className={s.actions}>
             <button type="button" className={s.btn} disabled={!notify.data?.webhook.set || test.isPending} onClick={() => test.mutate()}>
-              시험 알림 보내기
+              테스트 알림 보내기
             </button>
             {test.isSuccess && <span className={s.note}>{test.data.sent ? '보냈어요' : (test.data.detail ?? '못 보냈어요')}</span>}
           </div>
@@ -242,8 +242,8 @@ export default function SystemPage() {
           보안
         </h2>
         <p className={s.text}>
-          터널이 늘 열려 있으면 그 GitHub 계정만 있으면 이 데스크톱의 터미널과 파일에 들어올 수 있어요. GitHub 2단계 인증을 켜 두세요. 서버는
-          127.0.0.1에만 열려서 터널을 거치지 않으면 닿지 않고, 적어 둔 바깥 주소가 아닌 곳에서 온 요청은 거절해요.
+          터널이 열려 있으면 그 GitHub 계정만으로 이 데스크톱의 터미널과 파일에 들어올 수 있어요. GitHub 2단계 인증을 켜 두세요. 서버는
+          127.0.0.1에서만 열려 있어서 터널을 거치지 않으면 접속할 수 없고, 적어 둔 바깥 주소가 아닌 곳에서 온 요청은 거절해요.
         </p>
       </section>
 
@@ -271,11 +271,11 @@ export default function SystemPage() {
           labremote-session 서비스를 멈추고 유닛 파일을 지워요.{' '}
           {a.lingerBefore === false
             ? d.tunnel.service
-              ? 'linger는 code tunnel 서비스도 써서 그대로 둬요.'
+              ? 'linger는 code tunnel 서비스도 쓰고 있어서 그대로 둬요.'
               : 'linger는 원래대로(no) 돌려요.'
-            : 'linger는 lab.remote가 켠 게 아니라 그대로 둬요.'}
+            : 'linger는 lab.remote가 켠 게 아니어서 그대로 둬요.'}
         </span>
-        <span>학습 실행은 따로 돌아서 계속 돌아요. {a.inside && '지금 보고 있는 이 서버도 꺼져서 화면이 끊겨요.'} 다시 켜려면 터미널에서 labremote autostart install.</span>
+        <span>학습 실행은 따로 돌기 때문에 멈추지 않아요. {a.inside && '지금 보고 있는 이 서버도 꺼져서 화면이 끊겨요.'} 다시 켜려면 터미널에서 labremote autostart install을 실행해요.</span>
       </Dialog>
     </main>
   )
@@ -297,8 +297,8 @@ function RemoteSection({ d }: { d: SystemOverview }) {
       </p>
       <pre className={s.pre}>{`code tunnel user login --provider github
 code tunnel service install --accept-server-license-terms
-# 휴대폰 · 다른 PC에서 ${t.url || 'https://vscode.dev/tunnel/<이름>'}를 열고
-# Ports 보기에서 ${d.server.port ?? 8000}을 전달(Forward a Port) → Forwarded Address를 아래에 적어요`}</pre>
+# 휴대폰이나 다른 PC에서 ${t.url || 'https://vscode.dev/tunnel/<이름>'} 주소를 열고
+# Ports 보기에서 ${d.server.port ?? 8000} 포트를 전달(Forward a Port) → Forwarded Address를 아래에 적어요`}</pre>
       <form
         className={s.remoteForm}
         onSubmit={(e) => {
@@ -322,7 +322,7 @@ code tunnel service install --accept-server-license-terms
       </form>
       <p className={s.note}>
         적으면 이 주소로 오는 요청을 받고, Discord 알림에 &lsquo;답하기&rsquo; 링크가 붙어요.
-        {via && ` 지금 ${window.location.hostname}으로 보고 있어요.`}
+        {via && ` 지금 보고 있는 주소: ${window.location.hostname}`}
         {d.tunnel.envHosts.length > 0 && ` 환경 변수로 허용한 주소: ${d.tunnel.envHosts.join(', ')}`}
       </p>
       {save.isError && <p className={s.err}>{errText(save.error)}</p>}

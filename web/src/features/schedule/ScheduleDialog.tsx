@@ -101,7 +101,7 @@ export function ScheduleDialog({
   return (
     <Dialog
       open={open}
-      title={edit ? '예약 고치기' : '예약 만들기'}
+      title={edit ? '예약 수정' : '예약 만들기'}
       confirmLabel={edit ? '저장' : '예약하기'}
       busy={busy}
       error={error instanceof ApiError ? error.message : error ? String(error) : undefined}

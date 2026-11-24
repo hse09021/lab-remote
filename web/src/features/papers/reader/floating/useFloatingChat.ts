@@ -250,7 +250,7 @@ function fallbackTopic(topicKey: string, sections: PaperSection[]): Topic {
   return {
     title: sec ? `${sec.n ? `§${sec.n} ` : ""}${sec.title} 풀어보기` : '설명',
     blocks: [
-      { p: '서버 없이 화면만 보는 모드라 이 섹션 설명은 미리 써 두지 않았어요. 서버에 붙으면 Claude가 이 섹션 본문을 읽고 풀어 써요.' },
+      { p: '서버 없이 화면만 보는 모드라 이 섹션 설명은 미리 써 두지 않았어요. 서버에 연결되면 Claude가 이 섹션 본문을 읽고 풀어 써요.' },
     ],
     qs: [],
   }

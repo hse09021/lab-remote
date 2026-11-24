@@ -41,7 +41,7 @@ export function AppHeader() {
   const tunnelUp = health.data?.tunnel === 'up'
   const connLabel = health.isPending ? '연결 확인 중' : !connected ? '서버 끊김' : 'Tunnel'
   const connTitle = !connected
-    ? 'lab.remote 서버에 닿지 않아요'
+    ? 'lab.remote 서버에 연결되지 않아요'
     : tunnelUp
       ? 'code tunnel이 켜져 있어요'
       : 'code tunnel이 꺼져 있어요 — 이 데스크톱에서만 열려요'

@@ -108,7 +108,7 @@ def attach_argv(project: str, *, name: str = "", run: str = "", write: bool = Fa
         got = runs.get(project, run)
         t = got.get("tmux") or {}
         if got["state"] != "running" or not t.get("socket"):
-            raise TerminalError("실행 중이 아니라 붙을 수 없어요. 로그는 실행 목록에서 봐요.")
+            raise TerminalError("실행 중이 아니라 붙을 수 없어요. 로그는 실행 목록에서 볼 수 있어요.")
         argv = [tmux, "-L", t["socket"], "attach-session", "-t", t.get("session") or "run"]
         return argv if write else argv + ["-r"]
     if not NAME_RE.match(name or "") or name not in {t["name"] for t in list_sessions(project)}:

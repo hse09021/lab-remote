@@ -179,11 +179,11 @@ export function AgentsGraph({ sessions, runs, finished }: { sessions: AgentSessi
               </span>
             </Link>
           ))}
-          {nodes.length === 0 && <div className={s.empty}>지금 도는 세션 · 학습이 없어요. "오늘 끝난 것도 보기"로 오늘 것을 볼 수 있어요.</div>}
+          {nodes.length === 0 && <div className={s.empty}>지금 돌고 있는 세션이나 학습이 없어요. "오늘 끝난 것도 보기"로 오늘 것을 볼 수 있어요.</div>}
         </div>
       </div>
       <p className={s.note}>
-        lab.remote로 띄운 세션 · 하위 에이전트 · 학습 실행만 보여요. 실선은 부모와 하위 에이전트, 점선은 서로 참고하는 관계(같은 worktree), 주황
+        lab.remote로 띄운 세션, 하위 에이전트, 학습 실행만 보여요. 실선은 부모와 하위 에이전트 사이, 점선은 서로 참고하는 관계(같은 worktree), 주황
         점선은 나를 기다리는 요청이에요. 노드를 누르면 그 세션이나 실행으로 가요.
       </p>
     </section>

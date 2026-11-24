@@ -94,7 +94,7 @@ export function RunsTab({ project, trees }: { project: ProjectDetail; trees?: Wo
                 </span>
                 <span className={s.runMeta}>
                   {whenShort(r.startedAt)} · {duration(r.durationSec)}
-                  {r.exitCode !== null && ` · 종료코드 ${r.exitCode}`}
+                  {r.exitCode !== null && ` · 종료 코드 ${r.exitCode}`}
                 </span>
               </button>
               <span className={s.runActions}>
@@ -291,7 +291,7 @@ function NewRunDialog({
       </label>
       <span className={s.muted}>
         실제로 도는 명령: <span className={s.mono}>{shown}</span> — tmux 안에서 돌고 로그는{' '}
-        <span className={s.mono}>.labremote/runs/</span> 에 남아요. 접속이 끊겨도 계속 돌아요.
+        <span className={s.mono}>.labremote/runs/</span>에 남아요. 접속이 끊겨도 계속 돌아요.
       </span>
       {from && from.state === 'cut' && (
         <span className={s.muted}>

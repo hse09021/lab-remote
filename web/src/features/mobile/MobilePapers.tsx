@@ -151,7 +151,7 @@ export function MobilePapers() {
       >
         <p className={s.sheetText}>{ask.live ? LIVE_HEAD.caption : chat.data?.caption}</p>
         {ask.live && ask.log.length === 0 && (
-          <span className={s.sheetNote}>보내기를 누를 때만 Claude에게 가요. 답은 1분쯤 걸릴 수 있어요.</span>
+          <span className={s.sheetNote}>보내기를 누를 때만 Claude에게 가요. 답이 오기까지 1분쯤 걸릴 수 있어요.</span>
         )}
         {(ask.live ? ask.log : (chat.data?.messages ?? [])).map((m, i) => (
           <p key={i} className={m.role === 'user' ? s.askUser : s.sheetText}>
@@ -261,7 +261,7 @@ function PaperSheet({
 
       <span className={s.sheetPath}>{paper.path ?? '아직 요약 없음'}</span>
       <span className={s.sheetNote}>
-        PC 리더에서 열기 — 모바일에서는 본문을 읽지 않아요.
+        본문은 PC 리더에서 열어 주세요. 모바일에서는 본문을 보여 주지 않아요.
       </span>
     </div>
   )

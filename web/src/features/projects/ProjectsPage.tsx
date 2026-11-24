@@ -33,7 +33,7 @@ export function gitLine(git: GitSummary, { long = false } = {}): string {
   }
   if (git.state === 'none') return 'git 저장소 아님'
   if (git.state === 'missing') return '폴더가 없어요'
-  if (git.state === 'refused') return 'git을 안 돌렸어요 (.git 설정)'
+  if (git.state === 'refused') return 'git을 실행하지 않았어요 (.git 설정 때문)'
   return 'git을 못 읽었어요'
 }
 
@@ -148,7 +148,7 @@ export default function ProjectsPage() {
             <div className={s.empty}>
               <h1 className={s.emptyTitle}>등록한 프로젝트가 없어요</h1>
               <p className={s.emptyText}>
-                연구 폴더를 등록하면 파일 · git · worktree를 여기서 봐요. 폴더 안에는{' '}
+                연구 폴더를 등록하면 파일, git, worktree를 여기서 볼 수 있어요. 폴더 안에는{' '}
                 <span className={s.mono}>.labremote/</span> 하나만 생겨요.
               </p>
               <div className={s.emptyActions}>
@@ -360,7 +360,7 @@ function RegisterDialog({ open, onClose, startNew = false }: { open: boolean; on
         <input className={ds.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="lora-rank-ablation" />
       </label>
       <span>
-        폴더 안에 <span className={s.mono}>.labremote/</span>를 만들어요. 스스로 git에서 빠지고, 프로젝트의{' '}
+        폴더 안에 <span className={s.mono}>.labremote/</span>를 만들어요. 이 폴더는 자체 .gitignore로 git에서 빠지고, 프로젝트의{' '}
         <span className={s.mono}>.gitignore</span>는 건드리지 않아요.
       </span>
     </Dialog>

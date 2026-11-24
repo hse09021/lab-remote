@@ -165,7 +165,7 @@ export default function PaperGraph() {
   const vault = graph.data.vault
   const askDraft = sel
     ? [
-        `지식그래프에서 "${sel.name}"과 이어진 것들 사이의 관계를 정리해 줘.`,
+        `지식그래프에서 "${sel.name}" 노드와 이어진 것들 사이의 관계를 정리해 줘.`,
         sel.path ? `- ${sel.name} · ${vault}/${sel.path}` : `- ${sel.name}`,
         ...links.map((l) => `- ${l.other.name} (${l.why})${l.other.path ? ` · ${vault}/${l.other.path}` : ''}`),
         '',
@@ -184,7 +184,7 @@ export default function PaperGraph() {
     ...(categories.length === 3
       ? [{ label: `논문 · ${categories[2]}`, color: PAPER_COLORS[2] }]
       : categories.length > 3
-        ? [{ label: `논문 · 그 밖 ${categories.length - 2}분류`, color: PAPER_COLORS[2] }]
+        ? [{ label: `논문 · 그 밖 ${categories.length - 2}개 분류`, color: PAPER_COLORS[2] }]
         : []),
   ]
 
@@ -268,7 +268,7 @@ export default function PaperGraph() {
           </span>
         </div>
 
-        <p className={s.hint}>인용은 참고문헌에서 읽고, 메모 연결은 vault의 [[링크]]를 따라가요. 노드 크기는 연결 수예요.</p>
+        <p className={s.hint}>인용은 참고문헌에서 읽고, 메모 연결은 vault의 [[링크]]를 따라가요. 노드가 클수록 연결이 많아요.</p>
         <button type="button" className={s.vault} onClick={() => setVaultOpen(true)} title={vault}>
           vault · <span className={s.mono}>{vault}</span>
         </button>
@@ -296,7 +296,7 @@ export default function PaperGraph() {
             <div className={s.empty}>
               <b>그래프에 나올 게 아직 없어요</b>
               <span>
-                vault의 Papers/ 폴더에 논문 노트(MD)를 두면 여기에 나와요. 앞쪽 메타의 cites가 인용, 메모의 [[링크]]가 메모
+                vault의 Papers/ 폴더에 논문 노트(MD)를 두면 여기에 나와요. frontmatter의 cites가 인용, 메모의 [[링크]]가 메모
                 연결이에요.
               </span>
               <Button variant="primary" size="md" onClick={() => setVaultOpen(true)}>
@@ -406,7 +406,7 @@ export default function PaperGraph() {
               </ul>
             </div>
             <div className={s.ask}>
-              <span className={s.askTitle}>연결된 논문들 사이 관계 묻기</span>
+              <span className={s.askTitle}>연결된 논문 사이의 관계 묻기</span>
               <span className={s.askText}>
                 ADE 새 세션에 질문을 채워 둬요. 보내기를 누를 때만 Claude에게 가요.
                 {askProject && (

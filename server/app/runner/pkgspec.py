@@ -169,7 +169,7 @@ def parse(data) -> dict:
 
     allow_source = data.get("allowSource", False)
     if not isinstance(allow_source, bool):
-        raise SpecError("allowSource는 true/false 여야 해요")
+        raise SpecError("allowSource는 true/false여야 해요")
 
     return {
         "packages": [seen[k] for k in sorted(seen)],

@@ -87,7 +87,7 @@ export function CheckNote({
         ))}
         {target && (
           <span className={s.checkNote}>
-            {savedNote ?? `재현 목표를 ${target}로 정했어요 · 요약 MD에도 남겼어요`}
+            {savedNote ?? `재현 목표를 ${target} 값으로 정했어요 · 요약 MD에도 남겼어요`}
           </span>
         )}
       </div>

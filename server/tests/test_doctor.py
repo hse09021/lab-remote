@@ -15,7 +15,7 @@ from app import doctor
 def test_경고는_종료코드를_안_바꾼다():
     report = {"ok": True, "checks": [doctor.warn("x", "y")], "limitations": []}
     text = doctor.render(report)
-    assert "⚠ x" in text and "⚠ 는 종료코드를 바꾸지 않아요" in text
+    assert "⚠ x" in text and "⚠는 종료 코드를 바꾸지 않아요" in text
 
 
 def test_run_은_v3_점검만_돈다(monkeypatch):
@@ -193,7 +193,7 @@ def test_빠졌으면_참고_한_줄_점검은_아니다(monkeypatch):
     partial = [i for i in doctor.NVIDIA_BLACKLIST if i != "cuda-"]
     monkeypatch.setattr(doctor, "apt_blacklist", lambda: _apt(partial, auto="true"))
     note = doctor.nvidia_hold_note()
-    assert "cuda-" in note and "Automatic-Reboot" in note and "lab.remote는 바꾸지 않아요" in note
+    assert "cuda-" in note and "Automatic-Reboot" in note and "lab.remote는 이 설정을 바꾸지 않아요" in note
     # 점검 목록에는 없다 — 경고 수를 늘리지 않는다
     monkeypatch.setattr(doctor, "run", doctor.run)
     assert "nvidia_hold_check" not in dir(doctor)

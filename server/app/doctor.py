@@ -29,7 +29,7 @@ class Check(dict):
 
     - `Check(True, …)` → `level="ok"`
     - `Check(False, …)` → `level="bad"`
-    - `Check(False, …, level="warn")` → ⚠ (종료코드 0)
+    - `Check(False, …, level="warn")` → ⚠ (종료 코드 0)
     """
 
     def __init__(
@@ -46,12 +46,12 @@ class Check(dict):
 
 
 def warn(title: str, detail: str = "", hint: str = "") -> Check:
-    """⚠ — 알려는 주지만 종료코드를 바꾸지 않는다."""
+    """⚠ — 알려는 주지만 종료 코드를 바꾸지 않는다."""
     return Check(False, title, detail, hint, level="warn")
 
 
 def _run(argv: list[str], timeout: int = 10) -> tuple[int, str]:
-    """명령을 돌려 `(종료코드, 출력)`. 못 띄우면 `(-1, 사유)`. 던지지 않는다."""
+    """명령을 돌려 `(종료 코드, 출력)`. 못 띄우면 `(-1, 사유)`. 던지지 않는다."""
     try:
         done = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
     except (OSError, subprocess.SubprocessError) as exc:
@@ -117,7 +117,7 @@ def tmux_check() -> Check:
 
     binary = runs.tmux_bin()
     if not binary:
-        return Check(False, "tmux", "없어요 — 실행이 접속과 떨어져 돌 수 없어요",
+        return Check(False, "tmux", "없어요 — 접속이 끊겨도 계속 도는 실행을 띄울 수 없어요",
                      hint="sudo apt install tmux")
     code, out = _run([binary, "-V"])
     lines = [l for l in out.splitlines() if l.startswith("tmux ")]
@@ -156,7 +156,7 @@ def linger_check() -> Check:
         return warn(
             "자동 시작",
             f"유닛 {enabled or '?'} · linger 꺼짐 — 로그아웃하면 서버가 내려가요",
-            hint="loginctl enable-linger $USER  (또는 labremote autostart install을 다시)",
+            hint="loginctl enable-linger $USER  (또는 labremote autostart install을 다시 실행)",
         )
     if active and active != "active":
         return warn("자동 시작", f"유닛 {enabled or '?'} · {active} — 서버가 안 떠 있어요",
@@ -256,7 +256,7 @@ def schema_check() -> Check:
         return warn("DB 스키마", f"못 읽었어요: {exc}")
     if got == db_mod.SCHEMA_VERSION:
         return Check(True, "DB 스키마", f"판 {got} · {db_mod.path()}")
-    return Check(False, "DB 스키마", f"판 {got} · 코드는 판 {db_mod.SCHEMA_VERSION}를 알아요")
+    return Check(False, "DB 스키마", f"판 {got} · 코드와 맞지 않아요 (코드 판 {db_mod.SCHEMA_VERSION})")
 
 
 # --- GPU -------------------------------------------------------------------
@@ -318,8 +318,8 @@ def nvidia_hold_note() -> str | None:
     if auto_reboot_on:
         why.append("Automatic-Reboot가 켜져 있어요")
     return (
-        "참고 · 드라이버 자동 업데이트를 막고 싶으면 직접 설정해요 (" + " · ".join(why) + "). "
-        "lab.remote는 바꾸지 않아요 — 방법은 docs/operations.md의 \"GPU 드라이버 자동 업데이트 막기\"."
+        "참고 · 드라이버 자동 업데이트를 막고 싶으면 직접 설정해 주세요 (" + " · ".join(why) + "). "
+        "lab.remote는 이 설정을 바꾸지 않아요 — 방법은 docs/operations.md의 \"GPU 드라이버 자동 업데이트 막기\"를 봐 주세요."
     )
 
 
@@ -363,7 +363,7 @@ def gpu_driver_check() -> Check:
     if not state.get("ok"):
         return warn("GPU 드라이버", "판을 못 읽었어요: " + str(state.get("reason") or "")[:120],
                     hint="nvidia 드라이버가 없는 기계면 정상이에요.")
-    detail = f"{kernel} (커널·유저랜드 같아요)"
+    detail = f"{kernel} (커널·유저랜드 판이 같아요)"
     if pending.get("pending"):
         detail += " · 재부팅 대기 있음 (nvidia는 아님)"
     return Check(True, "GPU 드라이버", detail)
@@ -384,7 +384,7 @@ def tunnel_note() -> str | None:
 
     t = tunnel.status()
     if t["state"] == "up" or t["service"]:
-        return ("터널이 열려 있으면 그 GitHub 계정만 있으면 이 데스크톱의 터미널과 파일에 들어올 수 있어요. "
+        return ("터널이 열려 있으면 그 GitHub 계정만으로 이 데스크톱의 터미널과 파일에 들어올 수 있어요. "
                 "GitHub 2단계 인증을 켜 두세요.")
     return None
 
@@ -427,7 +427,7 @@ def render(report: dict) -> str:
     if counts["bad"] or counts["warn"]:
         lines.append(
             f"✘ {counts['bad']}개 · ⚠ {counts['warn']}개 · ✔ {counts['ok']}개"
-            + ("  (⚠ 는 종료코드를 바꾸지 않아요)" if counts["warn"] else "")
+            + ("  (⚠는 종료 코드를 바꾸지 않아요)" if counts["warn"] else "")
         )
         lines.append("")
     for note in report.get("notes") or []:

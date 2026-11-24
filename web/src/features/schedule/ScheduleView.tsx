@@ -108,7 +108,7 @@ export function ScheduleView({ running }: { running: Run[] }) {
             <thead>
               <tr>
                 <th>이름</th>
-                <th>무엇을</th>
+                <th>내용</th>
                 <th>다음 실행</th>
                 <th>반복</th>
                 <th>위치</th>
@@ -158,7 +158,7 @@ export function ScheduleView({ running }: { running: Run[] }) {
                       aria-label={`${x.name} 켜짐`}
                       className={s.switch}
                       disabled={update.isPending || (!x.enabled && x.repeat === 'once' && !x.nextAt)}
-                      title={!x.enabled && x.repeat === 'once' && !x.nextAt ? '지난 한 번짜리예요 — 고치기로 시각을 다시 정해요' : undefined}
+                      title={!x.enabled && x.repeat === 'once' && !x.nextAt ? '이미 지난 한 번짜리 예약이에요 — 수정에서 시각을 다시 정해요' : undefined}
                       onClick={() => update.mutate({ id: x.id, enabled: !x.enabled })}
                     >
                       <span className={s.knob} />
@@ -184,7 +184,7 @@ export function ScheduleView({ running }: { running: Run[] }) {
         <li>예약 시각에 GPU를 다른 학습이 쓰고 있으면 끝날 때까지 기다렸다가 시작하고, 기다리기 시작할 때 알려요.</li>
         <li>"앞 실행이 끝나면 시작" 같은 연쇄 예약은 없어요. 예약은 시각으로만 걸어요.</li>
         <li>에이전트 예약은 그 시각에 세션을 열고 알리기만 해요. 승인이 필요하면 거기서 멈춰요.</li>
-        <li>lab.remote 서버가 시간을 재서 실행해요. cron이나 systemd 타이머를 만들지 않고, 서버가 꺼져 있던 사이 지난 예약은 늦게 돌리지 않아요.</li>
+        <li>lab.remote 서버가 시간을 재서 실행해요. cron이나 systemd 타이머를 만들지 않고, 서버가 꺼져 있는 동안 지나간 예약은 나중에 몰아서 돌리지 않아요.</li>
       </ul>
 
       <ScheduleDialog key={dialog.edit?.id ?? (dialog.open ? 'new' : 'closed')} open={dialog.open} edit={dialog.edit} onClose={() => setDialog({ open: false })} />

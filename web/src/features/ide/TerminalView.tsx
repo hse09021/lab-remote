@@ -100,7 +100,7 @@ export function TerminalView({ project, name, run, write = false }: { project: s
           {error || (status === 'connecting' ? '붙는 중이에요…' : '연결이 끊겼어요. 탭을 다시 열면 그대로 붙어요 (셸은 데스크톱에서 계속 돌아요).')}
         </div>
       )}
-      {run && !write && <div className={s.termNote}>학습 실행 보기 전용 · 잘못 누른 Ctrl+C로 멈추지 않게 입력을 막아 뒀어요</div>}
+      {run && !write && <div className={s.termNote}>학습 실행은 보기만 할 수 있어요 · Ctrl+C를 잘못 눌러 멈추지 않도록 입력을 막아 뒀어요</div>}
       <div ref={host} className={s.term} />
     </div>
   )

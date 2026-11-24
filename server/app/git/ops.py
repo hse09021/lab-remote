@@ -215,7 +215,7 @@ def run(root: str, args: list[str], *, check: bool = True, guarded: bool = True)
         raise GitError(f"git을 띄우지 못했어요: {exc}") from None
     if check and done.returncode != 0:
         raise GitError(
-            f"git {' '.join(args[:2])}가 실패했어요 (종료코드 {done.returncode}): "
+            f"git {' '.join(args[:2])}가 실패했어요 (종료 코드 {done.returncode}): "
             + (done.stderr or done.stdout or "").strip()[:400]
         )
     return done.stdout
@@ -284,7 +284,7 @@ def commit(root: str, message: str, paths_list: list[str]) -> dict:
     바뀐 게 없으면 커밋하지 않고 `{"committed": False}`를 돌려준다.
     """
     if not paths_list:
-        raise GitError("커밋할 경로를 지정해 주세요 (자유 add는 안 만들어요).")
+        raise GitError("커밋할 경로를 지정해 주세요 (경로 없이 통째로 add하지 않아요).")
     existing = [p for p in paths_list if os.path.exists(os.path.join(paths.real(root), p))]
     if not existing:
         return {"committed": False, "reason": "그 경로가 아직 없어요", "paths": []}

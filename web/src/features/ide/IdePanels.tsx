@@ -133,7 +133,7 @@ export function SearchPanel({ project, tree, onOpen }: { project: string; tree: 
           setTerm(text)
         }}
       >
-        <input className={s.input} value={text} onChange={(e) => setText(e.target.value)} placeholder="찾을 글 (Enter)" aria-label="찾을 글" />
+        <input className={s.input} value={text} onChange={(e) => setText(e.target.value)} placeholder="찾을 내용 (Enter)" aria-label="찾을 내용" />
         <button type="button" className={s.toggle} aria-pressed={caseOn} title="대소문자 구분" onClick={() => setCase(!caseOn)}>
           Aa
         </button>
@@ -242,7 +242,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
       ))}
       <Dialog
         open={prOpen}
-        title={`${st.branch}으로 PR 만들기`}
+        title={`${st.branch} 브랜치로 PR 만들기`}
         confirmLabel="PR 만들기"
         busy={pr.isPending}
         error={errText(pr.error) || undefined}
@@ -267,7 +267,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
       </Dialog>
       <Dialog
         open={asking}
-        title={`${st.branch}을 main에 합칠까요?`}
+        title={`${st.branch} 브랜치를 main에 합칠까요?`}
         confirmLabel="합치기"
         busy={merge.isPending}
         error={errText(merge.error) || undefined}
@@ -278,7 +278,7 @@ export function GitPanel({ project, tree, onDiff }: { project: string; tree: str
         onConfirm={() => merge.mutate(st.branch, { onSuccess: () => setAsking(false) })}
       >
         <span>
-          main worktree에서 <code>git merge --no-ff {st.branch}</code>를 해요. main 쪽에 커밋 안 한 변경이 있으면 하지 않고, 충돌이 나면 바로
+          main worktree에서 <code>git merge --no-ff {st.branch}</code> 명령을 실행해요. main 쪽에 커밋 안 한 변경이 있으면 합치지 않고, 충돌이 나면 바로
           되돌려요. push는 하지 않아요.
         </span>
       </Dialog>
@@ -341,7 +341,7 @@ export function RunPanel({
       <details className={s.details}>
         <summary>실제 실행 명령 보기</summary>
         <pre className={s.code}>{shown}</pre>
-        <span className={s.muted}>tmux 안에서 돌고 로그·종료코드는 .labremote/runs/에 남아요. 지표 파일은 설정의 규칙으로 찾아요.</span>
+        <span className={s.muted}>tmux 안에서 돌고 로그와 종료 코드는 .labremote/runs/에 남아요. 지표 파일은 설정에 적은 규칙으로 찾아요.</span>
       </details>
       <div className={s.row}>
         <button

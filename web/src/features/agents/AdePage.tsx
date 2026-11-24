@@ -287,7 +287,7 @@ function SessionList({
             ))}
           </div>
         ))}
-        {sessions.length === 0 && <div className={s.muted}>세션이 없어요. +로 시작해요.</div>}
+        {sessions.length === 0 && <div className={s.muted}>세션이 없어요. +를 눌러 시작해요.</div>}
         <button type="button" className={s.closedToggle} aria-expanded={showClosed} onClick={() => setShowClosed((v) => !v)}>
           {showClosed ? '▾' : '▸'} 닫은 세션{closed.data ? ` ${closed.data.length}` : ''}
         </button>
@@ -436,7 +436,7 @@ function Explorer({ project, tree, branch, onOpen }: { project: string; tree: st
         ))}
       </ul>
       <div className={s.muted}>
-        바뀐 파일을 누르면 오른쪽 변경 탭에 diff가 열려요. 직접 고치려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열기</Link>.
+        바뀐 파일을 누르면 오른쪽 변경 탭에 diff가 열려요. 직접 고치려면 <Link to={`/projects/${encodeURIComponent(project)}/ide`}>IDE에서 열어요</Link>.
       </div>
     </div>
   )
@@ -470,7 +470,7 @@ function Changes({
           {diff.isPending
             ? '불러오는 중이에요…'
             : diff.data?.diff ||
-              (changes.find((c) => c.path === path)?.label === '새 파일' ? '새 파일이에요 — git이 아직 모르는 파일이라 diff가 없어요.' : '바뀐 내용이 없어요.')}
+              (changes.find((c) => c.path === path)?.label === '새 파일' ? 'git이 아직 추적하지 않는 새 파일이라 diff가 없어요.' : '바뀐 내용이 없어요.')}
         </pre>
       )}
     </div>

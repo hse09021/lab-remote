@@ -276,8 +276,8 @@ function DesktopReader() {
             />
           </div>
           <p className={s.noteHint}>
-            PDF가 없어서 vault 노트만 보여요 · {paper.path}.
-            {paper.arxiv ? ' arXiv에서 PDF를 받으면 리더로 열려요. 노트는 고치지 않고 데이터 폴더에 받아 둬요.' : ' 라이브러리에서 PDF를 올리면 리더로 열려요.'}
+            PDF가 없어서 vault 노트({paper.path})만 보여요.
+            {paper.arxiv ? ' arXiv에서 PDF를 받으면 리더로 열려요. PDF는 데이터 폴더에 받아 두고, 노트는 고치지 않아요.' : ' 라이브러리에서 PDF를 올리면 리더로 열려요.'}
           </p>
           {paper.arxiv && (
             <div className={s.noteActions}>
@@ -376,7 +376,7 @@ function DesktopReader() {
             anchor: sel.place.anchor,
             boxes: sel.place.boxes,
           })
-          toast.show('하이라이트했어요 · 노트에 모아 둘게요')
+          toast.show('하이라이트했어요 · 노트 탭에서 볼 수 있어요')
         }
         break
       }
@@ -608,7 +608,7 @@ function DesktopReader() {
                 onAskChat={(sectionId, page) => {
                   setTab('chat')
                   ai.setOpen(true)
-                  toast.show(`${sectionLabel(sectionId)}를 맥락으로 채팅 탭을 열었어요`)
+                  toast.show(`${sectionLabel(sectionId)}에 대해 묻는 채팅 탭을 열었어요`)
                   setChatContext(`§${
                     data.sections.find((x) => x.id === sectionId)?.n || sectionId
                   } · p.${page}`)
@@ -686,7 +686,7 @@ function DesktopReader() {
                 target={data.discrepancy.chosen}
                 onTargetChange={(v) => {
                   chooseTarget.mutate({ target: v })
-                  toast.show(`재현 목표를 ${v}로 정했어요 · 요약 MD에도 남겼어요`)
+                  toast.show(`재현 목표를 ${v} 값으로 정했어요 · 요약 MD에도 남겼어요`)
                 }}
                 nudge={{
                   show: showNudge,
@@ -723,7 +723,7 @@ function DesktopReader() {
               chooseTarget.mutate(
                 { target: value, index },
                 {
-                  onSuccess: (r) => toast.show(`재현 목표를 ${value}로 정했어요${r.summary ? ' · 요약 MD에도 남겼어요' : ''}`),
+                  onSuccess: (r) => toast.show(`재현 목표를 ${value} 값으로 정했어요${r.summary ? ' · 요약 MD에도 남겼어요' : ''}`),
                   onError: (e) => toast.show(e instanceof Error ? e.message : String(e)),
                 },
               )

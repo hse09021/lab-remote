@@ -111,7 +111,7 @@ export function GotoPalette({ open, onClose }: { open: boolean; onClose: () => v
             } else if (e.key === 'Enter' && !e.nativeEvent.isComposing) go(shown[pick])
           }}
         />
-        <ul ref={listRef} className={s.list} role="listbox" aria-label="찾은 곳">
+        <ul ref={listRef} className={s.list} role="listbox" aria-label="검색 결과">
           {shown.map((it, i) => (
             <li key={`${it.group}${it.to}${it.label}`}>
               {(i === 0 || shown[i - 1].group !== it.group) && <div className={s.group}>{it.group}</div>}
@@ -129,7 +129,7 @@ export function GotoPalette({ open, onClose }: { open: boolean; onClose: () => v
               </button>
             </li>
           ))}
-          {shown.length === 0 && <li className={s.empty}>찾는 게 없어요.</li>}
+          {shown.length === 0 && <li className={s.empty}>맞는 결과가 없어요.</li>}
         </ul>
         <div className={s.foot}>↑↓ 고르기 · Enter 가기 · Esc 닫기</div>
       </div>

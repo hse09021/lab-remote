@@ -89,7 +89,7 @@ function EnvPanel({ name, onClone }: { name: string; onClone: () => void }) {
         <div role="status" className={s.banner}>
           <b>사용 중이라 잠겨 있어요</b>
           <span>
-            {d.usedBy.join(', ')}이 이 환경으로 학습 중이에요. 패키지를 바꾸면 학습이 깨질 수 있어서 끝날 때까지 설치 · 제거 · 삭제를 막아요.
+            {d.usedBy.join(', ')}에서 이 환경으로 학습하고 있어요. 패키지를 바꾸면 학습이 깨질 수 있어서 끝날 때까지 설치, 제거, 삭제를 막아 둬요.
             에이전트가 이 환경에 설치하려 하면 승인 카드에 경고가 떠요.
           </span>
           <Link to={`/projects/${encodeURIComponent(d.usedBy[0].split(' · ')[0])}?tab=work&run=${d.usedBy[0].split(' · ')[1]}`}>학습 보기</Link>
@@ -318,7 +318,7 @@ function DeleteBox({ env }: { env: CondaEnvDetail }) {
         <label className={s.srOnly} htmlFor="del-name">
           삭제 확인용 환경 이름
         </label>
-        <input id="del-name" className={s.input} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={`지우려면 ${env.name} 라고 적어 주세요`} disabled={!!env.lock} />
+        <input id="del-name" className={s.input} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={`지우려면 환경 이름(${env.name})을 적어 주세요`} disabled={!!env.lock} />
         <button
           type="button"
           className={s.danger}

@@ -165,7 +165,7 @@ export function FilesTab({ project, trees }: { project: ProjectDetail; trees?: W
         {listing.data?.truncated && <div className={s.muted}>항목이 많아 앞의 2000개만 보여요.</div>}
       </div>
       <div className={s.note}>
-        이름 바꾸기 · 이동 · 삭제는 ··· 에 있어요. 삭제는 한 번 더 확인하고, 실행 중인 학습이 쓰는 폴더는 지울 수 없어요.
+        이름 바꾸기, 이동, 삭제는 ··· 메뉴에 있어요. 삭제는 한 번 더 확인하고, 실행 중인 학습이 쓰는 폴더는 지울 수 없어요.
       </div>
 
       <FileDialogs project={project.name} tree={tree} dir={path} ask={ask} onClose={() => setAsk(null)} />
@@ -317,7 +317,7 @@ function FileDialogs({ project, tree, dir, ask, onClose }: { project: string; tr
         }
       >
         <label className={ds.field}>
-          새 경로 (이 worktree 안 상대 경로)
+          새 경로 (이 worktree 기준 상대 경로)
           <input className={ds.input} value={value} onChange={(e) => setValue(e.target.value)} autoFocus required />
         </label>
         <span>같은 이름이 이미 있으면 덮어쓰지 않고 멈춰요.</span>
@@ -339,7 +339,7 @@ function FileDialogs({ project, tree, dir, ask, onClose }: { project: string; tr
         {ask?.kind === 'delete' && (
           <span>
             <b className={s.mono}>{ask.entry.path}</b>
-            {ask.entry.kind === 'dir' && !ask.entry.link ? ' 폴더와 그 안의 모든 파일' : ''}을 지워요. 되돌릴 수 없어요.
+            {ask.entry.kind === 'dir' && !ask.entry.link ? ' 폴더와 그 안의 모든 파일을' : ask.entry.link ? ' 링크를' : ' 파일을'} 지워요. 되돌릴 수 없어요.
             {ask.entry.link && ' 링크만 지우고 링크가 가리키는 곳은 그대로 둬요.'}
           </span>
         )}

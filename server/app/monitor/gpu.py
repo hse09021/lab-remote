@@ -159,7 +159,7 @@ def driver_state() -> dict:
     elif mismatch:
         reason = f"커널 모듈 {kernel} vs 유저랜드 {userland}"
     elif boot["nvidia"]:
-        reason = "nvidia 패키지가 올라갔는데 재부팅을 안 했어요: " + ", ".join(boot["nvidia"])
+        reason = "nvidia 패키지가 업데이트됐는데 아직 재부팅을 안 했어요: " + ", ".join(boot["nvidia"])
 
     return {
         "ok": not mismatch and not boot["nvidia"],
@@ -188,7 +188,7 @@ def probe() -> dict:
     )
     if code != 0 or not stdout.strip():
         detail = [line.strip() for line in (stderr or "").splitlines() if line.strip()]
-        reason = detail[0] if detail else f"nvidia-smi가 실패했어요 (종료코드 {code})"
+        reason = detail[0] if detail else f"nvidia-smi가 실패했어요 (종료 코드 {code})"
         return {"available": False, "reason": reason, "devices": [], "driver": driver}
     devices = parse_csv(stdout)
     if not devices:

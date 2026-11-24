@@ -111,7 +111,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
           <div className={s.paperList} role="group" aria-label="쓰는 논문 고르기">
             {papers.isSuccess && papers.data.length === 0 && (
               <span className={s.muted}>
-                vault에 논문 노트가 없어요. <Link to="/papers">Papers</Link>의 vault 위치에서 정해요.
+                vault에 논문 노트가 없어요. vault 위치는 <Link to="/papers">Papers</Link>에서 정해요.
               </span>
             )}
             {paperRows.map((p) => (
@@ -130,7 +130,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
             ))}
           </div>
           <span className={s.muted}>
-            고른 논문은 Papers › Graph에 "프로젝트에서 사용"으로 이어져요. 지금 {used.length}편.
+            고른 논문은 Papers › Graph에 "프로젝트에서 사용"으로 이어져요. 지금 {used.length}편 골랐어요.
           </span>
         </div>
         <span />
@@ -148,9 +148,9 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
       </form>
 
       <div className={s.settingsNote}>
-        이 설정은 프로젝트의 <span className={s.mono}>.labremote/settings.json</span> 에 저장돼요. 시나리오는{' '}
-        <span className={s.mono}>.labremote/scenarios/</span>, worktree는 <span className={s.mono}>.labremote/worktrees/</span>{' '}
-        에 있어요.
+        이 설정은 프로젝트의 <span className={s.mono}>.labremote/settings.json</span>에 저장돼요. 시나리오는{' '}
+        <span className={s.mono}>.labremote/scenarios/</span>, worktree는 <span className={s.mono}>.labremote/worktrees/</span>에
+        있어요.
       </div>
 
       <button
@@ -167,7 +167,7 @@ function SettingsForm({ project }: { project: ProjectDetail }) {
         <span className={s.switchText}>
           <span className={s.switchTitle}>repo에 같이 올리기</span>
           <span className={s.muted}>
-            켜면 settings.json과 scenarios/ 만 git에 올라가요. worktree와 실행 기록은 계속 빠져요.
+            켜면 settings.json과 scenarios/만 git에 올라가요. worktree와 실행 기록은 계속 빠져요.
           </span>
         </span>
         <span aria-hidden="true" className={s.track} data-on={st.share}>
@@ -219,7 +219,7 @@ function UnregisterDialog({ name, open, onClose }: { name: string; open: boolean
       <label className={ds.check}>
         <input type="checkbox" checked={removeLabremote} onChange={(e) => setRemove(e.target.checked)} />
         <span>
-          <span className={s.mono}>.labremote/</span>도 지우기 — 설정 · Scenario · worktree 폴더가 함께 지워지고 되돌릴 수
+          <span className={s.mono}>.labremote/</span>도 지우기 — 설정, Scenario, worktree 폴더가 함께 지워지고 되돌릴 수
           없어요.
         </span>
       </label>

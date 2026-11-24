@@ -47,7 +47,7 @@ def _clean(url: str) -> str:
     if parts.scheme != "https" or not parts.hostname:
         raise RemoteError("https://로 시작하는 전체 주소를 적어 주세요 (VS Code Ports 보기의 Forwarded Address).")
     if parts.username or parts.password or parts.query or parts.fragment:
-        raise RemoteError("주소에 계정 · ? · # 은 넣지 말아 주세요.")
+        raise RemoteError("주소에 계정 · ? · #은 넣지 말아 주세요.")
     if parts.hostname in ("127.0.0.1", "localhost", "::1"):
         raise RemoteError("이 컴퓨터 주소는 적을 필요가 없어요. 터널로 전달된 바깥 주소를 적어 주세요.")
     netloc = parts.hostname + (f":{parts.port}" if parts.port else "")

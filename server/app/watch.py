@@ -3,7 +3,7 @@
 **AI 자동화가 아니다**(PLAN 1.4): 보고 알리기만 한다. 다시 돌리거나 이어서
 돌리지 않는다.
 
-- 10초마다 "실행 중"으로 적힌 기록만 본다(종료코드 파일·tmux 세션 확인).
+- 10초마다 "실행 중"으로 적힌 기록만 본다(종료 코드 파일·tmux 세션 확인).
   실행이 없으면 거의 아무것도 안 한다.
 - 서버가 뜰 때 한 번 훑어서 **재부팅으로 끊긴 실행**을 알아챈다.
 - 자원 경고(VRAM · 디스크 · 드라이버)는 실행이 돌고 있을 때 5분마다만 본다
@@ -42,7 +42,7 @@ def _run_where(record: dict) -> str:
     if record.get("cwd") and record["cwd"] != ".":
         parts.append(record["cwd"])
     if record.get("exitCode") is not None:
-        parts.append(f"종료코드 {record['exitCode']}")
+        parts.append(f"종료 코드 {record['exitCode']}")
     return " · ".join(p for p in parts if p)
 
 
@@ -59,10 +59,10 @@ def announce(conn, record: dict, *, poster=None) -> dict | None:
                   subject=f"run:{record.get('project')}:{record['id']}:{state}")
     mins = round(max(0, (record.get("endedAt") or 0) - (record.get("startedAt") or 0)) / 60)
     if state == "done":
-        return alerts.post(conn, "run", "done", f"{title} 끝남", body=f"{mins}분 걸렸어요. · {record.get('command')}", **common)
+        return alerts.post(conn, "run", "done", f"{title} 끝남", body=f"{mins}분 걸렸어요 · {record.get('command')}", **common)
     if state == "failed":
         return alerts.post(conn, "run", "fail", f"{title} 실패", act=True,
-                           body=f"종료코드 {record.get('exitCode')} · {record.get('command')}", **common)
+                           body=f"종료 코드 {record.get('exitCode')} · {record.get('command')}", **common)
     if state == "cut":
         return alerts.post(conn, "run", "fail", f"{title} 중간에 끊김", act=True,
                            body=f"{record.get('reason')}. 자동으로 다시 돌리지 않아요.", **common)

@@ -6,7 +6,7 @@
 lab.remote가 부르는 것은 두 가지뿐이다 (둘 다 로그인 · 상태를 바꾸지 않는다):
 
     code tunnel status      → {"tunnel": null | {...}, "service_installed": bool}   (실측: 꺼져 있을 때)
-    code tunnel user show   → "not logged in"(종료코드 1, 실측) | 로그인한 계정
+    code tunnel user show   → "not logged in"(종료 코드 1, 실측) | 로그인한 계정
 
 - 켜져 있을 때 (실측 2026-11-23, VS Code CLI 1.131):
       {"tunnel": {"name": "...", "started_at": "...", "tunnel": "Connected",
@@ -88,7 +88,7 @@ def _probe(run=_run) -> dict:
     except json.JSONDecodeError:
         data = None
     if not isinstance(data, dict):
-        out.update(state="unknown", detail=(text or f"종료코드 {code}")[:200])
+        out.update(state="unknown", detail=(text or f"종료 코드 {code}")[:200])
     else:
         out["service"] = bool(data.get("service_installed"))
         tun = data.get("tunnel")
@@ -108,7 +108,7 @@ def _probe(run=_run) -> dict:
         else:
             out["state"] = "off"
     code, text = run([cli, "tunnel", "user", "show"])
-    # 실측: 로그인 안 했으면 "not logged in"과 종료코드 1. 계정 이름은 내보내지 않는다 — 로그인했는지만
+    # 실측: 로그인 안 했으면 "not logged in"과 종료 코드 1. 계정 이름은 내보내지 않는다 — 로그인했는지만
     if "not logged in" in text.lower():
         out["loggedIn"] = False
     elif code == 0 and text:

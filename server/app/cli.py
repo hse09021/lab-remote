@@ -51,13 +51,13 @@ def cmd_notify(args) -> int:
         )
     # `notifier.send`는 `sent`·`status`를 돌려준다 (`ok`가 아니다).
     if got.get("suppressed"):
-        print("· 방금 같은 알림을 보내서 이번 건은 눌렸어요 (중복 제거).")
+        print("· 방금 같은 알림을 보내서 이번 건은 건너뛰었어요 (중복 제거).")
         return 0
     if not got.get("sent"):
         print(f"✘ 못 보냈어요: {got.get('reason') or got.get('error') or '사유 없음'}",
               file=sys.stderr)
         if got.get("status") == 403:
-            print("  403 이면 웹훅 주소가 틀렸거나 지워졌을 수 있어요.", file=sys.stderr)
+            print("  403이면 웹훅 주소가 틀렸거나 지워졌을 수 있어요.", file=sys.stderr)
         return 2
     print(f"✔ 보냈어요 (상태 {got.get('status')})")
     return 0
@@ -107,7 +107,7 @@ def cmd_autostart(args) -> int:
             print("자동 시작을 켜면 이것들이 바뀌어요 (sudo는 필요 없어요):")
             for st in autostart.plan(port=args.port):
                 print(f"  · {st['what']}\n      {st['detail']}")
-            print("code tunnel은 여기서 켜지 않아요 — 따로 `code tunnel service install` (docs/SETUP.md).")
+            print("code tunnel은 여기서 켜지 않아요 — 따로 `code tunnel service install`로 켜 주세요 (docs/SETUP.md).")
             if not _confirm("켤까요?", args.yes):
                 print("그만뒀어요. 아무것도 바꾸지 않았어요.")
                 return 1
@@ -118,7 +118,7 @@ def cmd_autostart(args) -> int:
                 return 0
             print("자동 시작을 끄면 서비스를 멈추고 유닛 파일을 지워요. linger는 lab.remote가 켰을 때만 원래대로 돌려요"
                   " (code tunnel 서비스가 있으면 그것도 linger를 써서 그대로 둬요).")
-            print("학습 실행은 서비스와 따로 돌아서 계속 돌아요.")
+            print("학습 실행은 서비스와 따로 돌아서 멈추지 않아요.")
             if not _confirm("끌까요?", args.yes):
                 print("그만뒀어요. 아무것도 바꾸지 않았어요.")
                 return 1
@@ -303,7 +303,7 @@ def cmd_runs(args) -> int:
                 print(json.dumps(items, ensure_ascii=False, indent=2))
             else:
                 for r in items:
-                    code = "" if r.get("exitCode") is None else f" · 종료코드 {r['exitCode']}"
+                    code = "" if r.get("exitCode") is None else f" · 종료 코드 {r['exitCode']}"
                     print(f"{r['id']:<9} {r['stateLabel']:<5} {r.get('name') or ''} {r['command'][:60]}{code}")
                 if not items:
                     print("실행 기록이 없어요.")
